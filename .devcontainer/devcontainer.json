@@ -8,6 +8,7 @@
     "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
   },
   "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin:/home/vscode/.opencode/bin",
     "OPENCODE_API_KEY": "${localEnv:OPENCODE_API_KEY}",
     "GH_TOKEN": "${localEnv:AGENT_GH_TOKEN}"
   },
