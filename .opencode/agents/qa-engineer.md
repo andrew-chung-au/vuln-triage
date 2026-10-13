@@ -7,3 +7,5 @@ permission:
     ".scratch/*": allow
 ---
 Read `AGENTS.md`, then `_docs/agent-kit/team/qa-engineer.md`, and follow both. You can write only in `.scratch/`, for check scripts and their output. If something needs the human's approval, return the request to the orchestrator instead of running it.
+
+Append an entry to _docs/ai-usage-log.md when the task is done.

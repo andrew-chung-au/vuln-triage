@@ -32,6 +32,8 @@ Current phase: PLANNING. No application code until the plan in _docs/ has passed
 - No new dependencies without asking.
 - Commit regularly; never push (the human reviews and pushes from the clean clone).
 - Mark any uncertain external API detail with "VERIFY:".
+- After finishing a task, append an entry to _docs/ai-usage-log.md. Facts only; never record a review or verification that did not happen.
+- When a new key prompt is used (one that defines a role, a stage or a task), save it verbatim in _docs/prompts/ and add it to the index.
 - The project brief will live at `_docs/project-brief.md`.
 
 ## Project gotchas
