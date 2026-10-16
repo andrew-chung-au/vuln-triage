@@ -40,6 +40,9 @@
       "gh api*": "ask",
       "grep *": "allow",
       "ls*": "allow",
+      "echo *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
       "git add *": "allow",
       "git commit *": "allow",
       "git add .": "deny",
@@ -51,7 +54,10 @@
       "*--no-verify*": "deny",
       "git push*": "deny",
       "git config core.hooksPath*": "deny",
-      "*>*": "ask"
+      "* > *": "ask",
+      "* >> *": "ask",
+      "*.env*": "deny",
+      "*.env.example*": "allow"
     }
   }
 }
