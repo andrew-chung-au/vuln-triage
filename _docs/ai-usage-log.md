@@ -234,3 +234,25 @@ Copy this template for each new entry:
 - files changed: `Makefile` (new `# --- Project targets (not from the kit) ---` section with `ISSUE_DIGITS_LEFT` validation and the `issue-dump` target; 13 insertions, commit f999cd6); `AGENTS.md` (`Fetch an issue` Commands line; 1 insertion, commit f999cd6); `agent-kit.conf` (`Makefile` added to PROTECTED; 1 insertion, commit fc29661)
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed) over 14 files / 368 insertions vs origin/main; `make issue-dump` with no N exits non-zero with `Usage: make issue-dump N=<issue number>`; `make issue-dump N=11a` exits non-zero with `N must be an issue number`; `make issue-dump N=11` wrote `.scratch/issue-11.json` (10910 bytes) containing body, title, state, labels and comments; `make help` lists `issue-dump`; `git diff --check` clean; recipe lines confirmed as tabs
 - human review (what I checked or corrected, or `none`): human approved the Makefile and `AGENTS.md` diffs and the `agent-kit.conf` PROTECTED addition, each committed with `HUMAN_APPROVED=1`; human corrected two facts — `Makefile` was not protected before this entry, and the Makefile had no project section until this change created one
+
+### 2026-10-16 — PM grooms issue #11 (final rubric impact)
+
+- date: 2026-10-16
+- task/issue: issue #11 — groom to task template; confront the missing verbatim criteria text; fix stale open-issue range
+- agent role: PM (Product Manager subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: opencode/space-bunny-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to groom #11 per `_docs/agent-kit/team/pm.md`, with instructions to confront the placeholder text and the stale issue range; no key prompt file in `_docs/prompts/`
+- files changed: none in working tree (draft in `.scratch/issue-11-groomed.md`)
+- verification (tests run, reviewer verdict): none (no code changed); PM read all five planning documents named in the issue; PM confirmed `_docs/rubric.md` is not in `agent-kit.conf` PROTECTED and that #2 is closed and #10 is open
+- human review (what I checked or corrected, or `none`): human supplied the full final Criteria text into the issue's Source section, answering the PM's blocker question; human corrected the PM's read of the source by updating the issue rather than the PM re-grooming it
+
+### 2026-10-16 — Engineer implements issue #11 (commits 0604233, 2cfdf95)
+
+- date: 2026-10-16
+- task/issue: issue #11 — replace `_docs/rubric.md` with the final 12 criteria verbatim; write the impact report at `_docs/reviews/2026-10-16-final-rubric-impact.md`
+- agent role: Software Engineer (subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: opencode/space-bunny-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to implement #11 from the filed body as amended by the PM comment, with an explicit state check that the interrupted prior run had committed nothing; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/rubric.md` (78 insertions, 36 deletions, commit 0604233); `_docs/reviews/2026-10-16-final-rubric-impact.md` (570 insertions, new, commit 2cfdf95); no PROTECTED path touched
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed); `git diff --check` clean; Engineer reported a scripted byte comparison of `_docs/rubric.md` line 2 onward against the criteria text in the issue Source section; counted 12 criteria, max points summing 24, "You need 10 points to pass". Not yet QA'd
+- human review (what I checked or corrected, or `none`): human paused the session before QA, having uncommitted their own `AGENTS.md` and `opencode.json` changes; human also stopped the `.scratch/` script approach for GitHub issue data after the PM wrote `dump_issue11.py` and `extract_source.py` in place of `gh --json`/`--jq`, which was a process deviation caused by the orchestrator's role prompts
