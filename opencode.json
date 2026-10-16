@@ -16,7 +16,9 @@
       "_docs/project-brief.md": "ask",
       "_docs/agent-kit/*": "ask",
       "opencode.json": "ask",
-      ".opencode/*": "ask"
+      ".opencode/*": "ask",
+      "CLAUDE.md": "ask",
+      ".claude/*": "ask"
     },
     "bash": {
       "*": "ask",
@@ -32,7 +34,7 @@
       "gh issue view*": "allow",
       "gh issue comment*": "allow",
       "gh issue close*": "ask",
-      "gh issue create*": "ask",
+      "gh issue create*": "allow",
       "gh issue edit*": "ask",
       "gh issue delete*": "deny",
       "gh api*": "ask",
