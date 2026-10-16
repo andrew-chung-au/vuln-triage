@@ -179,3 +179,47 @@ Copy this template for each new entry:
 - files changed: none in working tree (body drafted in `.scratch/followup-pm-qa-log-body.md`, removed by `make clean-scratch`)
 - verification (tests run, reviewer verdict): none (no code changed; new issue #2 returned with URL https://github.com/andrew-chung-au/vuln-triage/issues/2)
 - human review (what I checked or corrected, or `none`): human approved filing this follow-up and deferring the other three at the issue #1 decision point
+
+### 2026-10-16 — PM grooms issue #2 (orchestrator-appends rule)
+
+- date: 2026-10-16
+- task/issue: issue #2 — groom to task template (Goal + 7 checkable criteria + Out of scope + Constraints); recommend single rule (roles write only to `.scratch/`, orchestrator appends log entry after assert-clean)
+- agent role: PM (Product Manager subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: opencode/muse-spark-1.3-contributor-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to groom #2 per `_docs/agent-kit/team/pm.md` using `_docs/agent-kit/templates/task-template.md`; no key prompt file in `_docs/prompts/`
+- files changed: none in working tree (draft in `.scratch/issue-2-groomed.md`, later replaced by `.scratch/issue-2-groomed-v2.md`; both removed by `make clean-scratch`)
+- verification (tests run, reviewer verdict): none (no code changed)
+- human review (what I checked or corrected, or `none`): human confirmed the orchestrator-appends rule, chose keep-#2-PM/QA-only plus follow-up, and approved updating #2 with the groomed text
+
+### 2026-10-16 — Engineer implements issue #2 (commit 2dcc89d)
+
+- date: 2026-10-16
+- task/issue: issue #2 — replace contradicting log line with orchestrator-appends rule in 4 role files
+- agent role: Software Engineer (subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: opencode/muse-spark-1.3-contributor-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to implement groomed #2, leave protected edits uncommitted, run Verify, and return the diff; no key prompt file in `_docs/prompts/`
+- files changed: `.opencode/agents/pm.md`, `.opencode/agents/qa-engineer.md`, `.claude/agents/pm.md`, `.claude/agents/qa-engineer.md` (one-line swap each: 4 insertions, 4 deletions; committed as 2dcc89d after human approval with HUMAN_APPROVED=1)
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed); `git diff --check` clean; report posted as issue comment 6218874639
+- human review (what I checked or corrected, or `none`): human approved this exact diff before the protected commit
+
+### 2026-10-16 — QA checks issue #2 at 2dcc89d (PASS)
+
+- date: 2026-10-16
+- task/issue: issue #2 — full QA check of all 7 criteria at commit 2dcc89d
+- agent role: QA Engineer (subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: opencode/muse-spark-1.3-contributor-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check #2 per `_docs/agent-kit/team/qa-engineer.md` at commit 2dcc89d; no key prompt file in `_docs/prompts/`
+- files changed: none (QA changed nothing; `.scratch/` check script and output only, removed by `make clean-scratch`)
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase; whitespace PASS; no test files changed); `make assert-clean` PASS at 2dcc89d; verdict QA PASS — all 7 criteria PASS; E2E not run (`none` in AGENTS.md, no user-facing behaviour); verdict posted as issue comment 6218959705
+- human review (what I checked or corrected, or `none`): none
+
+### 2026-10-16 — Orchestrator close-out of issue #2 (follow-up #10, edit, commit, close)
+
+- date: 2026-10-16
+- task/issue: issue #2 close-out — file approved follow-up #10, update #2 body to groomed text, commit protected diff, close #2
+- agent role: Orchestrator
+- model: opencode/muse-spark-1.3-contributor-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): user instruction "work on the next issue and follow process.md"; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/ai-usage-log.md` (these entries); `_session-summaries/issue-002-qa-log-rule.md` (new); GitHub: created issue #10 (engineer/auditor log contradiction), edited #2 body to groomed text, posted PM/Engineer/QA relay comments, closed #2
+- verification (tests run, reviewer verdict): `make assert-clean` PASS and HEAD unmoved at 2dcc89d confirmed after QA; QA verdict QA PASS at 2dcc89d
+- human review (what I checked or corrected, or `none`): human approved the groomed-text edit, the protected commit, and closing #2
