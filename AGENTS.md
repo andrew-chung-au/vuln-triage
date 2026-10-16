@@ -19,6 +19,7 @@ Current phase: PLANNING. No application code until the plan in _docs/ has passed
 - **Assert clean:** `make assert-clean`: confirms nothing in this folder changed (used after QA).
 - **E2E:** `none`
 - **New migration:** `none`
+- **Fetch an issue:** `make issue-dump N=<number>`, then read `.scratch/issue-<number>.json` with your read tool. Use this instead of shell redirects or scripts.
 
 ## Project settings
 
