@@ -223,3 +223,14 @@ Copy this template for each new entry:
 - files changed: `_docs/ai-usage-log.md` (these entries); `_session-summaries/issue-002-qa-log-rule.md` (new); GitHub: created issue #10 (engineer/auditor log contradiction), edited #2 body to groomed text, posted PM/Engineer/QA relay comments, closed #2
 - verification (tests run, reviewer verdict): `make assert-clean` PASS and HEAD unmoved at 2dcc89d confirmed after QA; QA verdict QA PASS at 2dcc89d
 - human review (what I checked or corrected, or `none`): human approved the groomed-text edit, the protected commit, and closing #2
+
+### 2026-10-16 — Add `make issue-dump` target and protect the Makefile (commits f999cd6, fc29661)
+
+- date: 2026-10-16
+- task/issue: add a Makefile target so fetching a long issue needs no shell redirect or script; add the matching Commands line to `AGENTS.md`; add `Makefile` to the PROTECTED list
+- agent role: Orchestrator
+- model: opencode/space-bunny-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): user instruction to add the target with the supplied Make recipe and the `Fetch an issue` Commands line, to show both diffs before committing, and to add `Makefile` to PROTECTED; no key prompt file in `_docs/prompts/`
+- files changed: `Makefile` (new `# --- Project targets (not from the kit) ---` section with `ISSUE_DIGITS_LEFT` validation and the `issue-dump` target; 13 insertions, commit f999cd6); `AGENTS.md` (`Fetch an issue` Commands line; 1 insertion, commit f999cd6); `agent-kit.conf` (`Makefile` added to PROTECTED; 1 insertion, commit fc29661)
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed) over 14 files / 368 insertions vs origin/main; `make issue-dump` with no N exits non-zero with `Usage: make issue-dump N=<issue number>`; `make issue-dump N=11a` exits non-zero with `N must be an issue number`; `make issue-dump N=11` wrote `.scratch/issue-11.json` (10910 bytes) containing body, title, state, labels and comments; `make help` lists `issue-dump`; `git diff --check` clean; recipe lines confirmed as tabs
+- human review (what I checked or corrected, or `none`): human approved the Makefile and `AGENTS.md` diffs and the `agent-kit.conf` PROTECTED addition, each committed with `HUMAN_APPROVED=1`; human corrected two facts — `Makefile` was not protected before this entry, and the Makefile had no project section until this change created one
