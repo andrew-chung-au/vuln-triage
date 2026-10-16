@@ -1,36 +1,78 @@
-# Final project rubric (2026 draft)
+# AI Dev Tools Zoomcamp — Final Project page, Criteria section (page finalised 2026-10-17)
+##### Criteria
 
-Source: AI Dev Tools Zoomcamp Final Project page (draft; may change).
+There are 12 criteria worth 24 points. You need 10 points to pass.
 
-1. **Problem description**: the README clearly describes the problem, the
-   system functionality, and expected behaviour. (max 2)
-2. **AI-assisted development workflow**: clearly documents the AI workflow,
-   including prompts or task delegation, context files, manual review, and
-   verification. (max 2)
-3. **Technologies and system architecture**: clearly describes the frontend,
-   backend, database, containerisation, CI/CD, and how they fit together. (max 2)
-4. **Frontend implementation**: functional, well structured, centralised
-   backend communication, with tests covering core logic and clear instructions
-   for running them. (max 3)
-5. **API contract**: the OpenAPI specification reflects frontend requirements
-   and is used as the contract for backend development. (max 2)
-6. **Backend implementation**: well structured, follows the OpenAPI
-   specification, with tests covering core functionality. (max 3)
-7. **Database integration**: properly integrated, supports different
-   environments, and is documented. (max 2)
-8. **Containerisation**: the full system runs via Docker or Docker Compose
-   with clear instructions. (max 2)
-9. **Integration testing**: clearly separated from unit tests, covers key
-   workflows, and is documented. (max 2)
-10. **Deployment**: deployed to the cloud with a working URL or clear proof of
-    deployment. (max 2)
-11. **CI/CD pipeline**: runs tests and deploys the application when tests
-    pass. (max 2)
-12. **Agent extension pack**: a documented pack with project instructions, a
-    reusable workflow, a subagent/specialist, an MCP tool/server, a hook or
-    guardrail, and permission notes. (max 2)
-13. **Security, audit, and DevOps hardening**: includes PR audit output,
-    deterministic security scan findings, agent/extension security notes,
-    operational diagnosis output, and an AI tool/data policy. (max 2)
-14. **Reproducibility**: clear instructions to set up, run, test, and deploy
-    the system end to end. (max 2)
+You do not have to score full marks on every criterion.
+
+
+###### Problem Description
+
+- The problem is not described. (0 points)
+- The problem is described briefly, but it is unclear what the system does or what functionality is expected. (1 point)
+- The README clearly describes the problem, the system functionality, and expected behavior. (2 points)
+
+###### Product Specification
+
+- No written specs. (0 points)
+- A spec exists, but no public task tracker. (1 point)
+- A specification exists and there's a publicly accessible task tracker. The tasks define acceptance criteria and there's evidence that the agents used the tracker. (2 points)
+
+###### Agent Team Specification
+
+- No agent team described. (0 points)
+- Roles or agents are mentioned, but responsibilities are unclear. (1 point)
+- The project defines the agent team and process of how they work together. (2 points)
+
+###### Context Management
+
+- No project docs. (0 points)
+- An AGENTS.md (or equivalent) exists and describes the project. (1 point)
+- AGENTS.md exists and it also points to modular docs (process, teams, etc.). (2 points)
+
+###### Application
+
+- No working application, or frontend, backend, or persistent storage is missing. (0 points)
+- Frontend, backend, and database exist but are not fully connected. (1 point)
+- Full-stack application works end to end: frontend talks to backend, data persists in a database. Application runs locally with a single command. (2 points)
+
+###### Testing
+
+- No tests, or the tests do not run. (0 points)
+- Only unit tests or only integration tests exist. (1 point)
+- Both unit and integration tests exist, run with a single command, and pass. (2 points)
+
+###### Containerization
+
+- No containerization. (0 points)
+- Dockerfiles exist, but running the full system requires manual steps. (1 point)
+- The full system, including the database, runs via Docker or Docker Compose and starts with a single command. (2 points)
+
+###### Deployment
+
+- Application is not deployed. (0 points)
+- Deployment steps are described, but no working deployment is shown. (1 point)
+- The application is deployed and reachable at a public URL, or there's a clear demo with the deployment. (2 points)
+
+###### CI/CD
+
+- No CI/CD pipeline. (0 points)
+- CI runs the tests automatically on every pull request. (1 point)
+- CI runs tests and CD automatically deploys. (2 points)
+- CI runs tests, CD deploys to dev, and there's a manual deploy to production. (3 points)
+
+###### Observability
+
+- No telemetry. (0 points)
+- The app emits logs, but there are no metrics or traces, or the signals cannot be correlated to a single request. (1 point)
+- A key user journey is instrumented with metrics, traces, and structured logs that share a trace ID; no customer data or credentials are sent to telemetry; and the signals are collected, stored, and viewable in a UI. (2 points)
+
+###### Alerting on User Impact
+
+- No alerts. (0 points)
+- At least one alert exists. (1 point)
+
+###### On-Call Agent
+
+- No on-call agent. (0 points)
+- An agent wakes up on an alert and fixes the issue. (2 points)
