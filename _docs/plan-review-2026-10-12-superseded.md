@@ -1,3 +1,5 @@
+> Superseded: this review (2026-10-12) reviewed an empty plan (only the brief existed) and is superseded by the reviews in `_docs/reviews/`.
+
 # Plan review — VulnTriage (2026-10-12)
 
 Scope reviewed: `_docs/project-brief.md` (present) plus `product-spec.md`,

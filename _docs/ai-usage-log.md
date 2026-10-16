@@ -145,6 +145,19 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): reviewer verdict FAIL (2 High, 10 Medium, 6 Low findings; 6 questions for the human); `make verify` run before commit
 - human review (what I checked or corrected, or `none`): none
 
+### 2026-10-16 — turn plan review findings into GitHub issues
+
+- date: 2026-10-16
+- task/issue: convert `_docs/reviews/2026-10-16-plan-review.md` (ba39c5c) into GitHub issues #3-#9; record the human's decisions on the review questions
+- agent role: Reviewer (Claude Code)
+- model: claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human-pasted instruction in-session (one issue per High finding, Medium/Low grouped by topic in at most 5 issues, a carry-forward issue for later stages, task-template bodies, VERIFY: on feed assumptions, show titles before creating), then approval with changes (coverage check, Depends-on lines, recorded decisions); not saved as a key prompt (task instruction, not a role or stage definition)
+- files changed: `_docs/plan-review.md` renamed to `_docs/plan-review-2026-10-12-superseded.md` with a superseded first line (human decision); `_docs/prompts/reviewer-plan-review.md` (new, Reviewer prompt verbatim, human decision); `_docs/prompts/README.md` (index row); `_docs/ai-usage-log.md` (this entry)
+- GitHub issues created: #3 finding 1 (fixed version), #4 finding 2 (CVE aliases), #5 findings 4/7/8/9 (feeds and ingestion), #6 findings 3/10/13/16/17 (status and audit; depends on #3), #7 findings 5/6/15 (notifications; decisions on issue destination and issue-close sync), #8 findings 11/14 (security boundaries; depends on #7), #9 carry into later stages (findings 1, 2, 4, 11, 12, 15, 18 by stage; cloud hosting decision open). Coverage checked: findings 1-18 each appear in at least one issue; split findings (1, 2, 4, 11, 15) say which part each issue handles
+- human decisions recorded: specs.md is a draft until the review issues are resolved (in #3); cloud hosting target left open (in #9)
+- verification (tests run, reviewer verdict): issue numbers checked against each `gh issue create` result before cross-references were written; `make verify` run before commit; issue links point at ba39c5c, which resolve only after the human pushes
+- human review (what I checked or corrected, or `none`): human approved the issue titles and grouping and asked for the coverage check, Depends-on lines and recorded decisions before creation
+
 ### 2026-10-16 — QA re-check of issue #1 at ba39c5c (fresh PASS)
 
 - date: 2026-10-16
