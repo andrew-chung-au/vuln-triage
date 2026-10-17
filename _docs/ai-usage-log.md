@@ -345,3 +345,25 @@ Copy this template for each new entry:
 - files changed: `_docs/planning-process.md` (Stage 2 components, observability and deployment bullets, checklist; Stage 3 API design; Stage 4 telemetry, alerting, responder and CI security scan; Stage 5 milestones; Stage 6 12 criteria and Reviewer list), `README.md` (impact report link); committed together (not protected). `opencode.json` and `.claude/settings.json` (changed outside this work, not read) left out of the commit
 - verification (tests run, reviewer verdict): `git diff --check` clean; diff shown to the human before the final three additions, which were applied as instructed
 - human review (what I checked or corrected, or `none`): human accepted items 1-4 and supplied the additions above; human dropped nothing
+
+### 2026-10-17 — AI usage report header updated (§7.5, commit a535ff7)
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — apply report §7.5 to `_docs/ai-usage-report.md`
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human accepted the proposed header (not a scored criterion; kept for portfolio value and as supporting evidence) and the Orchestrator's change to section 2 (summarise and link `_docs/agent-team.md`, issue #12); no key prompt file in `_docs/prompts/`
+- files changed: `_docs/ai-usage-report.md` (6 insertions, 4 deletions, commit a535ff7; not protected)
+- verification (tests run, reviewer verdict): `git diff --check` clean
+- human review (what I checked or corrected, or `none`): human approved both changes before they were made
+
+### 2026-10-17 — Rubric Evidence Auditor regenerates rubric evidence for the 12 final criteria (§7.4, commit ad5b27d)
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — regenerate `_docs/rubric-evidence.md` for the final rubric (report §7.4)
+- agent role: Rubric Evidence Auditor (Claude Code subagent; entry appended by Orchestrator, since the Orchestrator limited the auditor to editing `_docs/rubric-evidence.md` only)
+- model: claude-opus-5-5 (Claude Code). Ran in Claude Code, not OpenCode, because OpenCode was unavailable; the human asked for this. An OpenCode re-audit is planned after Stage 2
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction per the human's spec for the table (criterion, max points, full-marks condition quoted from `_docs/rubric.md`, status, evidence, gap), evidence only from what exists now, §7.4 mapping as a cross-check only; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/rubric-evidence.md` (12-row table, header with audit date and commit; 43 insertions, 21 deletions; committed by the Orchestrator as ad5b27d)
+- verification (tests run, reviewer verdict): audited at a535ff7; 7 of 24 points evidenced (Problem Description PARTIAL 1; Product Specification, Agent Team Specification, Context Management MET 2 each; the other 8 MISSING). Auditor ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and opened the GitHub evidence with `gh --json/--jq`; no `.scratch/` scripts. Orchestrator checked `git status` showed only that file changed
+- human review (what I checked or corrected, or `none`): none yet. Auditor findings for the human: the #11 commits are not pushed, so the public repo (at bd616a5) lacks the evidence for criteria 2-4; `.claude/agents/rubric-auditor.md` still says "14 criteria" and tells the auditor to append to the log (the #10 contradiction); a stray tracked `test.md` at the repo root; the local `origin/main` ref is stale (27d4760 vs remote bd616a5)
