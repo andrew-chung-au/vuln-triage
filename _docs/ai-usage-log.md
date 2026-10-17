@@ -367,3 +367,14 @@ Copy this template for each new entry:
 - files changed: `_docs/rubric-evidence.md` (12-row table, header with audit date and commit; 43 insertions, 21 deletions; committed by the Orchestrator as ad5b27d)
 - verification (tests run, reviewer verdict): audited at a535ff7; 7 of 24 points evidenced (Problem Description PARTIAL 1; Product Specification, Agent Team Specification, Context Management MET 2 each; the other 8 MISSING). Auditor ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and opened the GitHub evidence with `gh --json/--jq`; no `.scratch/` scripts. Orchestrator checked `git status` showed only that file changed
 - human review (what I checked or corrected, or `none`): none yet. Auditor findings for the human: the #11 commits are not pushed, so the public repo (at bd616a5) lacks the evidence for criteria 2-4; `.claude/agents/rubric-auditor.md` still says "14 criteria" and tells the auditor to append to the log (the #10 contradiction); a stray tracked `test.md` at the repo root; the local `origin/main` ref is stale (27d4760 vs remote bd616a5)
+
+### 2026-10-17 — Orchestrator close-out of issue #11
+
+- date: 2026-10-17
+- task/issue: issue #11 close-out — clean scratch, session summary, close; plus human-requested housekeeping (fetch, remove `test.md`, #10 scope note, new README issue)
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human instruction to close #11 once `make assert-clean` passes, with an Orchestrator comment linking the decisions comment, and four extra items; no key prompt file in `_docs/prompts/`
+- files changed: `_session-summaries/issue-011-final-rubric-impact.md` (updated, commit d013f00); `test.md` removed (0554a9f, human-approved). GitHub: comment 6230949666 on #10 (both rubric-auditor files: 12 criteria, same log-entry rule); filed #13 (README: Problem Description 1 → 2 points); closing Orchestrator comment on #11 linking decisions comment 6228520087; #11 closed. Local `origin/main` refreshed with `git fetch` (27d4760 → bd616a5); nothing pushed
+- verification (tests run, reviewer verdict): `make assert-clean` PASS at d7f69a9 before close-out; `make clean-scratch` ran; QA PASS at c8dea47 and targeted re-check PASS at ed05530 stand
+- human review (what I checked or corrected, or `none`): human committed their own `opencode.json` fix (d7f69a9) to unblock assert-clean and approved deleting `test.md`
