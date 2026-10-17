@@ -36,8 +36,12 @@ resolved; where unsure, it uses the richer model):
   signed-in user may accept risk with a non-empty reason; login is one mocked fictional user whose name is the
   audit "who" (finding 13). Login and the reason are not in `specs.md` yet.
 - Stage 2 (`_docs/architecture.md`, not written): ASSUMPTION: tiers P1-P4 from
-  `_docs/planning-process.md` § Stage 2, ordered within a tier as the data
-  gives; criticality is low/medium/high/critical (`specs.md` Assumptions).
+  `_docs/planning-process.md` § Stage 2; the services layer returns findings
+  already ranked and the frontend does not re-sort; the mock data is
+  pre-ranked within a tier by the Stage 2 tie-breaks (EPSS higher first, then
+  asset criticality, then oldest finding first), with criticality higher
+  first and a missing EPSS after any score (Stage 2 does not say either);
+  criticality is low/medium/high/critical (`specs.md` Assumptions).
 
 Everything under `## Prompt`, and nothing else, is pasted into Lovable.
 
@@ -46,15 +50,16 @@ Everything under `## Prompt`, and nothing else, is pasted into Lovable.
 Build a React single-page app called VulnTriage. It ranks vulnerable software dependencies by real-world exploit risk and shows who owns each fix. This is a prototype with no backend.
 
 Architecture
+- Use React with TypeScript.
 - Centralise every backend call in one services layer, and create a mock implementation of it so the whole app runs without a real backend.
 - No backend, database, auth provider or third-party integration. Make no network calls outside the services layer; the mock returns in-memory data.
 - Keep the services layer to small typed functions, one per read or write, so they can later call a real API.
 
 Screens: build exactly these six, and no others.
 
-1. Login: a mocked sign-in with one fictional user. Wrong credentials show an error message and do not sign in. The signed-in user's name is the "who" in audit entries.
+1. Login: a mocked sign-in with one fictional user. Wrong credentials show an error message and do not sign in. The signed-in user's name is the "who" in audit entries. Show the demo credentials on the login screen. They are fictional; if the username is an email, it uses example.com.
 
-2. Findings dashboard: findings ranked by priority tier, P1 (highest) to P4; within a tier, keep the order the data gives. Each row shows tier, asset, package, status, and why it ranks there: KEV yes/no, EPSS score (or "EPSS: n/a" when missing), asset criticality and internet-facing flag. Status is one of open, risk accepted, fixed or withdrawn; withdrawn findings stay listed and visibly marked, never removed. Findings can be filtered or grouped by asset and filtered by status. With no findings, show an empty state.
+2. Findings dashboard: findings in the order the services layer returns them, already ranked by priority tier, P1 (highest) to P4. The frontend does not re-sort. Each row shows tier, asset, package, status, and why it ranks there: KEV yes/no, EPSS score (or "EPSS: n/a" when missing), asset criticality and internet-facing flag. Status is one of open, risk accepted, fixed or withdrawn; withdrawn findings stay listed and visibly marked, never removed. Findings can be filtered or grouped by asset and filtered by status. With no findings, show an empty state.
 
 3. Finding detail, showing:
 - the vulnerability id and all alias ids
@@ -72,7 +77,7 @@ Screens: build exactly these six, and no others.
 
 Out of scope: Grafana, n8n and MCP screens; any real API; visual polish beyond a clean, readable layout.
 
-Mock data: realistic, with fictional assets, owners and packages. Include at least:
+Mock data: realistic, with fictional assets, owners and packages. The mock services layer returns findings pre-ranked: by tier, then within a tier by EPSS (higher first, "EPSS: n/a" after any score), then asset criticality (higher first), then oldest finding first. Include at least:
 - one finding in each tier P1, P2, P3 and P4
 - one finding whose only affected range has no fixed version
 - one finding with two or more affected ranges, one of which has "no fixed version"
@@ -88,8 +93,8 @@ Mock data: realistic, with fictional assets, owners and packages. Include at lea
 
 Owner emails use only the example.com, example.org or example.net domains. Mock brief text contains no links other than one advisory reference. No real people's names, secrets or API keys.
 
-Tests: write tests for the core logic:
-- rank ordering (tier first, then data order within a tier)
+Tests: write tests for the core logic. Tests run with a single command (npm test).
+- the dashboard displays findings in the order the services layer returns them, with each finding's tier shown
 - validation of the risk acceptance reason (empty and whitespace-only reasons are rejected and the status is unchanged)
 - the mock services layer (it returns the mock data, and accepting risk records an audit entry with the reason)
 - affected range display (each range shows its fixed version, or "no fixed version" when it has none)
