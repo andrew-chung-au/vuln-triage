@@ -279,3 +279,25 @@ Copy this template for each new entry:
 - files changed: none (QA wrote only to `.scratch/`: `qa11_check.py`, `qa-11-comment.md`)
 - verification (tests run, reviewer verdict): verdict QA PASS, all criteria PASS, posted as issue comment 6227226075; QA ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and one `.scratch/` analysis script (byte comparison of `_docs/rubric.md` against the issue Source section and count checks). Orchestrator then ran `make assert-clean` PASS and confirmed HEAD unmoved at c8dea47. QA reported 8 risks outside the criteria (in the comment), none changing the verdict
 - human review (what I checked or corrected, or `none`): none yet; human to read the report and record decisions on the two Decision needed items before #11 is closed
+
+### 2026-10-17 — Engineer corrects #11 report for QA risks (commit ed05530)
+
+- date: 2026-10-17
+- task/issue: issue #11 follow-up — fix the six QA risks in `_docs/reviews/2026-10-16-final-rubric-impact.md` (US-12 before/after, E6 row, brief line number, #8 criteria count, §1 Totals deployment claim, GitHub Actions Docker VERIFY: tag, §9 counts) and add the source URL and a final newline to `_docs/rubric.md`
+- agent role: Software Engineer (Claude Code subagent; entry appended by Orchestrator)
+- model: claude-opus-5-5 (Claude Code). Ran in Claude Code, not OpenCode, because OpenCode was unavailable; the human asked for this
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human instruction listing the corrections, relayed by the Orchestrator; source URL supplied by the human (https://github.com/DataTalksClub/ai-dev-tools-zoomcamp/blob/main/project/README.md); no key prompt file in `_docs/prompts/`
+- files changed: `_docs/reviews/2026-10-16-final-rubric-impact.md`, `_docs/rubric.md` (43 insertions, 22 deletions, commit ed05530); Engineer comment 6227407227 on #11
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed); Orchestrator `make assert-clean` PASS at ed05530 before QA
+- human review (what I checked or corrected, or `none`): human supplied the source URL; the finalised date 2026-10-17 on rubric line 1 is left for the human to check against the live page
+
+### 2026-10-17 — QA targeted re-check of #11 corrections at ed05530 (PASS)
+
+- date: 2026-10-17
+- task/issue: issue #11 — targeted re-check of the seven correction points only (six report points, rubric line 1 and final newline, scope)
+- agent role: QA Engineer (fresh Claude Code subagent, separate from the Engineer's context; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: claude-opus-5-5 (Claude Code). Ran in Claude Code, not OpenCode, because OpenCode was unavailable; the human asked for this. Engineer and QA ran in the same tool and model this time, as separate subagents
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to re-check the listed points against the files and `gh`, not the Engineer's comment; no key prompt file in `_docs/prompts/`
+- files changed: none (QA wrote only to `.scratch/`: `qa11_recheck.py`, `qa11-recheck-comment.md`)
+- verification (tests run, reviewer verdict): verdict QA PASS, all seven points PASS, posted as comment 6227431094; QA ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and one `.scratch/` script (byte comparison of the US-12 BEFORE block against `_docs/specs.md` lines 90-96 and of rubric lines 2 onward against e0a2470). Orchestrator then ran `make assert-clean` PASS, HEAD unmoved at ed05530. QA reported 4 risks outside these points, none changing the verdict
+- human review (what I checked or corrected, or `none`): none yet
