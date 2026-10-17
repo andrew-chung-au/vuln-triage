@@ -467,3 +467,14 @@ Copy this template for each new entry:
 - files changed: none in the repo. GitHub: PM comments 6234146060 (proposed body, two decision questions) and 6234208915 (the human's answers). The issue body was replaced with the groomed body (`gh issue edit 12`): the tool blocked the PM's run, and the Orchestrator ran the command after the human typed it in session
 - verification (tests run, reviewer verdict): body length checked after the edit (9086 characters, against 1581 before)
 - human review (what I checked or corrected, or `none`): the human chose option 1 for both decisions (the PM's wording for the QA same-tool exception; intent plus record for tool and model)
+
+### 2026-10-17 — Engineer implements issue #12 (commit ede47bf)
+
+- date: 2026-10-17
+- task/issue: issue #12, lifecycle step 3: write `_docs/agent-team.md` and link it from `README.md`; propose the `AGENTS.md` line
+- agent role: Software Engineer (Claude Code subagent, launched by the Orchestrator; entry appended by the Engineer, as its role file says while #10 is open)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to implement the groomed #12 body with the human's answers in PM comment 6234208915 (option 1 for both decisions), base ccd13b6, and to return the `AGENTS.md` diff for approval rather than commit it; no key prompt file saved
+- files changed: `_docs/agent-team.md` (new), `README.md` (one link line); 116 insertions, commit ede47bf. `AGENTS.md` not edited; the one-line diff is proposed in Engineer comment 6234459590 on #12
+- verification (tests run, reviewer verdict): `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists; whitespace PASS; no test files changed); `.scratch/check_issue12.py` (relative links and anchors, 15 commits via `git cat-file -e`, cited issues and comment ids via `gh issue view --json`, verbatim exception and intent text, model ids, refused cases) PASS. QA not yet run
+- human review (what I checked or corrected, or `none`): none yet
