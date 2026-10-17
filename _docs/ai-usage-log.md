@@ -422,3 +422,15 @@ Copy this template for each new entry:
 - files changed: `_docs/prompts/lovable-frontend.md` (still Status: DRAFT; screen 2 and first test use the human's wording; mock data pre-ranked by the `_docs/planning-process.md` § Stage 2 tie-breaks; Stage 2 header ASSUMPTION updated, including criticality higher first and missing EPSS last, which Stage 2 does not state; prompt 774 words, up from 698, all from these edits; 67322c9). GitHub: Engineer comment 6232991787 on #14
 - verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); updated `.scratch/check_issue14_b.py` (word limit is 698 plus the net words of these edits; new-text checks) all PASS. QA not yet run
 - human review (what I checked or corrected, or `none`): none yet; the revised draft awaits QA and the human's approval
+
+### 2026-10-17 — Engineer corrects the record for the issue #14 prompt edits (commit 67322c9)
+
+- date: 2026-10-17
+- task/issue: issue #14, fix for QA FAIL comment 6233025035 (record correction only)
+- agent role: Software Engineer (Claude Code subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to correct the record after QA FAIL 6233025035, with the human's decision recorded in Orchestrator comment 6233052344; no key prompt file saved
+- correction: the previous entry (commit 67322c9) and Engineer comment 6232991787 said all 76 added words (698 to 774) came from the human's three edits. That was inaccurate. 12 of the 76 words were the Engineer's own sentence, added after the human's demo-credentials line: "They are fictional; if the username is an email, it uses example.com." QA FAIL comment 6233025035 found this. The human accepted the sentence as part of edit 3 and waived the 700-word limit for this prompt, so 774 words stands (Orchestrator comment 6233052344)
+- files changed: `_docs/ai-usage-log.md` (this entry only; the earlier entry is left as written). `_docs/prompts/lovable-frontend.md` not changed. GitHub: new Engineer comment on #14 with the same correction
+- verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` run after this commit; result reported in the Engineer comment on #14. QA not yet re-run
+- human review (what I checked or corrected, or `none`): the human decided to accept the sentence and waive the word limit (comment 6233052344); this entry itself not yet reviewed
