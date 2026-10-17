@@ -24,6 +24,10 @@ Workflow:
    exported as JSON into the repo.
 7. Re-scan: a finding closes automatically when a re-scan shows the fixed
    version is in place.
+8. Watch and respond: one key user journey is instrumented with metrics, traces
+   and structured logs sharing a trace ID; an alert fires when a top-priority
+   finding does not reach its owner; a responder agent wakes on that alert and
+   fixes the cause. No customer data or credentials are sent to telemetry.
 
 Also: a web dashboard of findings per asset with status (open / risk accepted /
 fixed) and an audit trail. An MCP server with read-only tools
@@ -34,8 +38,9 @@ acceptance is a human decision in the dashboard.
 Fixed stack (do not change): React frontend with all backend calls in one
 service layer; FastAPI backend (Python, uv for dependencies); SQLAlchemy with
 SQLite for development and Postgres for Docker Compose and production; Docker
-Compose; GitHub Actions CI/CD; n8n as a separate Compose service; MCP server in
-Python.
+Compose; GitHub Actions CI/CD: tests on every pull request, automatic deploy to
+a dev environment, and a manual promotion of the same image to production; n8n
+as a separate Compose service; MCP server in Python.
 
 Out of scope for the MVP: servers, network devices and commercial software;
 active scanning or penetration testing (the tool only reads inventory);
