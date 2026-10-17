@@ -1,8 +1,10 @@
 # AI usage report
 
-Skeleton for the AI-assisted workflow report (rubric criterion 2). Content
-is written in a later task; each section below holds only a `TODO` plus a
-one-line note of what belongs there.
+Short AI-assisted workflow report. Not a scored criterion in the final rubric
+(see `_docs/rubric.md`); kept for portfolio value and as supporting evidence for
+Product Specification and Agent Team Specification. The append-only record is
+`_docs/ai-usage-log.md`. Content is written in a later task; each section below
+holds only a `TODO` plus a one-line note of what belongs there.
 
 ## 1. Tools and models
 
@@ -10,7 +12,7 @@ TODO — list the AI tools and models used, with versions where known.
 
 ## 2. Workflow (roles and the loop)
 
-TODO — describe the roles (PM, engineer, QA, auditor) and the issue loop.
+TODO — summarise and link `_docs/agent-team.md` (issue #12), so the roles are described in one place.
 
 ## 3. Key prompts (excerpts linking to `_docs/prompts/`)
 
