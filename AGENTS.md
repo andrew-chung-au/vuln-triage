@@ -3,7 +3,19 @@
 <!-- PROJECT: specific to this folder. Protected: changes need human approval. -->
 
 VulnTriage ranks vulnerable software dependencies by real-world exploit risk and routes each fix to its owner.
-Layout: `AGENTS.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/project-brief.md` (project brief, to be written in planning).
+Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/` (planning documents).
+
+Where to read more:
+- `README.md`: the project in one page and the planning document index
+- `_docs/project-brief.md`: what VulnTriage does and its fixed stack
+- `_docs/specs.md`: the product spec. Read it before planning or implementing anything.
+- `_docs/rubric.md`: the final project criteria this project is graded against
+- `_docs/reviews/`: plan reviews and rubric-impact reviews
+- `_docs/agent-kit/process.md`: how an issue is worked. Read it before working any issue.
+- `_docs/agent-kit/team/`: one file per working role (`pm.md`, `software-engineer.md`, `qa-engineer.md`); the rubric auditor is in `.opencode/agents/` and `.claude/agents/`
+- `_docs/agent-kit/procedures/`: read the relevant procedure before verifying, asking the human, or writing a session summary.
+- `_docs/agent-kit/environments.md`: which environment runs where, and what each has
+- `_docs/ai-usage-log.md` and `_session-summaries/`: what each agent did, with which tool and model
 
 Current phase: PLANNING. No application code until the plan in _docs/ has passed review.
 
