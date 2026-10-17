@@ -312,3 +312,14 @@ Copy this template for each new entry:
 - files changed: `_docs/project-brief.md` (workflow step 8 "Watch and respond"; Fixed stack CI/CD item expanded to PR tests, auto deploy to dev, manual promotion of the same image to production; 7 insertions, 2 deletions, commit 111b001 with HUMAN_APPROVED=1); GitHub: posted the human's decisions verbatim as relayed Orchestrator comment 6228520087 on #11
 - verification (tests run, reviewer verdict): `git diff --check` clean; final diff shown to the human
 - human review (what I checked or corrected, or `none`): human rejected §7.1 1a (MCP server out of the MVP), approved 1b as written, and supplied the CI/CD sentence; human chose to apply all §7 changes before cleanup and closing #11
+
+### 2026-10-17 — Orchestrator applies approved spec and brief changes (commits 701951d, 16e1ec0, b8792b3)
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — apply the approved `_docs/specs.md` changes from report §7.2 and a further brief change; relay the human's hosting decision to #9
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human decisions on §7.2 (reject 2a; accept US-13 and US-14; replace US-15 with the human's text; accept E6 naming Grafana), human edits (Grafana in US-13; US-15 via pull request, CI deploys to dev; open question 5 on the responder's credential and merge; shorten "fixes it with a test"), human's observability-stack sentence for the brief, and the human's hosting decision text for #9; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/specs.md` (US-13, US-14, US-15, edge case E6, open questions 4 and 5; 32 insertions, commit 701951d; one-line US-15 follow-up, commit 16e1ec0); `_docs/project-brief.md` (Fixed stack adds OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana; 3 insertions, 1 deletion, commit b8792b3); all three commits with HUMAN_APPROVED=1. GitHub: posted the human's hosting decision verbatim as relayed Orchestrator comment 6229681999 on #9. `opencode.json` (human's own uncommitted change) left out of all commits at the human's instruction
+- verification (tests run, reviewer verdict): `git diff --check` clean before each commit; final diffs shown to the human before each commit (spec diff shown before the last two human edits, which were applied as instructed)
+- human review (what I checked or corrected, or `none`): human rejected §7.2 2a (US-12 stays with all three acceptance clauses), rewrote US-15, named Grafana, added open question 5; Orchestrator numbered the US-14 window question 4 because question 3 already existed
