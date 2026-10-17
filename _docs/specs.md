@@ -95,6 +95,32 @@ this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
   an unknown CVE returns an empty result, not an error; the MCP server offers
   no write operations.
 
+### US-13: The notification journey is instrumented
+As a security lead, I can see whether a top-priority finding reached its owner,
+as metrics, traces and structured logs that share one trace ID, viewable in
+Grafana.
+- Acceptance: one scan-to-notification journey emits a metric, a trace and a
+  structured log line carrying the same trace ID; Grafana shows them side by
+  side.
+  No telemetry payload contains advisory text, owner contact details, repository
+  URLs, lockfile content or any credential.
+
+### US-14: An alert fires when a top-priority finding is not notified
+As an asset owner, if my finding is never delivered to me, an alert fires so
+someone looks at it.
+- Acceptance: a top-priority finding whose notification fails or does not
+  complete within the agreed window fires exactly one alert naming the finding;
+  a successful notification fires none.
+
+### US-15: A responder agent wakes on the alert and fixes it
+A responder agent wakes on the US-14 alert, reproduces a defect in VulnTriage's
+notification path (e.g. a finding with no fixed version or several advisory IDs
+fails to format), fixes it with a test, and opens a pull request with the fix
+and a test; once merged, CI deploys it to dev.
+- Acceptance: the undelivered finding then reaches its owner, the alert
+  resolves, and the agent's actions are logged. Production promotion stays
+  manual.
+
 ## Non-goals (from the brief)
 
 - Servers, network devices, and commercial software.
@@ -111,6 +137,7 @@ this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
 | E3 | A feed (OSV / KEV / EPSS) is unavailable | Last-known data is kept and marked stale; scheduled run retries; no findings are deleted |
 | E4 | A vulnerability is later removed from a feed | Finding is marked withdrawn, not deleted, with an audit entry |
 | E5 | Lockfile fails to parse | Asset shows a scan error; previous findings are kept; error is visible in the dashboard |
+| E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
 
 ## Open questions
 
@@ -118,6 +145,11 @@ this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
    fixed in Stage 2.
 2. What are the overdue/escalation time windows for US-9?
 3. Which notification channel (email / chat) does the pilot use for US-8/US-9?
+4. What is the notification window for US-14 (how long before an undelivered
+   top-priority finding fires the alert)?
+5. What credential does the responder use, and how is it scoped (branch and
+   pull request only, no push to main)? Does a human merge or an automatic
+   merge after CI passes complete US-15?
 
 ## Assumptions
 
