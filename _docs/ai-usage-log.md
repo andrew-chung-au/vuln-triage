@@ -445,3 +445,25 @@ Copy this template for each new entry:
 - files changed: `_docs/prompts/lovable-frontend.md` (line 1 only, `Status: DRAFT` to `Status: APPROVED (human, 2026-10-17)`); `_docs/prompts/README.md` (one index row; "where executed" says Lovable, run by the human, not yet run, since the build is in #15 per Decision 2); efa250d, an amend of unpushed 7ba1140 that corrected the row's issue number from "stage D of #14" to #15. GitHub: Engineer comment on #14
 - verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); `git diff --stat` showed 2 files, 2 insertions, 1 deletion; `git log --follow` on the prompt lists 6327f01, 2cbffa9, 67322c9, 7ba1140 (re-run after the amend gives efa250d in its place). Decision 3 (approve before #3, #4, #6) was answered by the human, as recorded in PM comment 6232771876. QA of stage C not yet run
 - human review (what I checked or corrected, or `none`): the human approved the prompt text; this commit not yet reviewed
+
+### 2026-10-17 — PM re-grooms issue #15 for the Bolt build; issue parked
+
+- date: 2026-10-17
+- task/issue: issue #15, lifecycle step 2 (grooming), after the human's commit fea6fb7 added a Bolt-built frontend in `frontend-bolt/`
+- agent role: PM (Claude Code subagent), launched by the Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to re-groom #15 for the Bolt build, read-only on `frontend-bolt/`, no npm runs; no key prompt file saved
+- files changed: none in the repo (drafts in `.scratch/` only). GitHub: PM comments 6234073282 (re-grooming, three decision questions) and 6234079369 (marks Bolt as settled, quoting the human); Orchestrator comment 6234114564 (the human's answers; issue parked)
+- verification (tests run, reviewer verdict): none; the PM read `frontend-bolt/` and grepped it, with nothing run or installed. Issue body not edited
+- human review (what I checked or corrected, or `none`): the human explained the switch to Bolt ("I tried to build in lovable but hit a credit limit. I tried the same prompt in Bolt..."), confirmed the prompt was pasted verbatim with no follow-ups, kept `.bolt/` for now, and deferred the other decisions until the Lovable credits reset
+
+### 2026-10-17 — PM grooms issue #12 (agent-team document)
+
+- date: 2026-10-17
+- task/issue: issue #12, lifecycle step 2 (grooming)
+- agent role: PM (Claude Code subagent), launched by the Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to groom #12 per `task-template.md`; no key prompt file saved
+- files changed: none in the repo. GitHub: PM comments 6234146060 (proposed body, two decision questions) and 6234208915 (the human's answers). The issue body was replaced with the groomed body (`gh issue edit 12`): the tool blocked the PM's run, and the Orchestrator ran the command after the human typed it in session
+- verification (tests run, reviewer verdict): body length checked after the edit (9086 characters, against 1581 before)
+- human review (what I checked or corrected, or `none`): the human chose option 1 for both decisions (the PM's wording for the QA same-tool exception; intent plus record for tool and model)
