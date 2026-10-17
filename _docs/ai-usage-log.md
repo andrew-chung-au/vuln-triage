@@ -301,3 +301,14 @@ Copy this template for each new entry:
 - files changed: none (QA wrote only to `.scratch/`: `qa11_recheck.py`, `qa11-recheck-comment.md`)
 - verification (tests run, reviewer verdict): verdict QA PASS, all seven points PASS, posted as comment 6227431094; QA ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and one `.scratch/` script (byte comparison of the US-12 BEFORE block against `_docs/specs.md` lines 90-96 and of rubric lines 2 onward against e0a2470). Orchestrator then ran `make assert-clean` PASS, HEAD unmoved at ed05530. QA reported 4 risks outside these points, none changing the verdict
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-17 — Orchestrator relays #11 decisions and applies brief change (commit 111b001)
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — post the human's decisions; apply the approved `_docs/project-brief.md` change from report §7.1
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human decisions of 2026-10-17 (target 24/24 built as Tier A/B/C milestones; all no-longer-scored items kept; scoring path first, then LLM brief, MCP server and n8n; US-12 keeps all three acceptance criteria) and human approval of §7.1 1b plus a CI/CD sentence of the human's wording; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/project-brief.md` (workflow step 8 "Watch and respond"; Fixed stack CI/CD item expanded to PR tests, auto deploy to dev, manual promotion of the same image to production; 7 insertions, 2 deletions, commit 111b001 with HUMAN_APPROVED=1); GitHub: posted the human's decisions verbatim as relayed Orchestrator comment 6228520087 on #11
+- verification (tests run, reviewer verdict): `git diff --check` clean; final diff shown to the human
+- human review (what I checked or corrected, or `none`): human rejected §7.1 1a (MCP server out of the MVP), approved 1b as written, and supplied the CI/CD sentence; human chose to apply all §7 changes before cleanup and closing #11
