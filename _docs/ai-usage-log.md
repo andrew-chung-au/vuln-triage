@@ -256,3 +256,26 @@ Copy this template for each new entry:
 - files changed: `_docs/rubric.md` (78 insertions, 36 deletions, commit 0604233); `_docs/reviews/2026-10-16-final-rubric-impact.md` (570 insertions, new, commit 2cfdf95); no PROTECTED path touched
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed); `git diff --check` clean; Engineer reported a scripted byte comparison of `_docs/rubric.md` line 2 onward against the criteria text in the issue Source section; counted 12 criteria, max points summing 24, "You need 10 points to pass". Not yet QA'd
 - human review (what I checked or corrected, or `none`): human paused the session before QA, having uncommitted their own `AGENTS.md` and `opencode.json` changes; human also stopped the `.scratch/` script approach for GitHub issue data after the PM wrote `dump_issue11.py` and `extract_source.py` in place of `gh --json`/`--jq`, which was a process deviation caused by the orchestrator's role prompts
+
+### 2026-10-17 — Orchestrator resumes issue #11: Engineer handover comment, model record
+
+- date: 2026-10-17
+- task/issue: issue #11 — pick up after the pause; post the Engineer handover; record which tool and model built #11
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human handover prompt (read the issue, latest summary, git state, then stop) and human instruction to run step 1, name the tool/model that built #11, record the model change, run QA in a different tool, and not close #11; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/ai-usage-log.md` (these entries); GitHub: posted Engineer handover comment 6227197431 on #11
+- tool and model history for #11 (as far as the record shows): all #11 work recorded was done in OpenCode, none in Claude Code. The human states the model changed during #11 from Muse Spark 1.3 (`opencode/muse-spark-1.3-contributor-free`) to Space Bunny (`opencode/space-bunny-free`). Filing #11: not recorded. PM grooming: Space Bunny. First Engineer launch (interrupted, no commits): not recorded. Engineer commits 0604233 and 2cfdf95: Space Bunny. Orchestrator entries and summary (ad04f59): not recorded. Muse Spark 1.3's part in #11: not recorded. The human's commit c8dea47 pinned Muse Spark 1.3 in `opencode.json` after the Engineer work
+- verification (tests run, reviewer verdict): `make assert-clean` PASS at c8dea47 before QA; `make verify` PASS WITH WARNINGS at c8dea47 (no TEST_CMD: planning phase, no code exists; whitespace PASS; no test files changed)
+- human review (what I checked or corrected, or `none`): human confirmed the Orchestrator role for #11 and required QA in a tool other than the one that built it (OpenCode built it, so QA ran in Claude Code)
+
+### 2026-10-17 — QA checks issue #11 at c8dea47 (PASS)
+
+- date: 2026-10-17
+- task/issue: issue #11 — full QA check against the filed body as amended by PM comment 6226692732, at commit c8dea47 (Engineer commits 0604233, 2cfdf95)
+- agent role: QA Engineer (Claude Code subagent; entry appended by Orchestrator per the write-only-.scratch/ role limit)
+- model: claude-opus-5-5 (Claude Code; the qa-engineer agent sets no model, so it inherits the main session's)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check #11 per `_docs/agent-kit/team/qa-engineer.md` at c8dea47, carrying the AGENTS.md rule on GitHub issue data; no key prompt file in `_docs/prompts/`
+- files changed: none (QA wrote only to `.scratch/`: `qa11_check.py`, `qa-11-comment.md`)
+- verification (tests run, reviewer verdict): verdict QA PASS, all criteria PASS, posted as issue comment 6227226075; QA ran `make verify` (PASS WITH WARNINGS, no TEST_CMD) and one `.scratch/` analysis script (byte comparison of `_docs/rubric.md` against the issue Source section and count checks). Orchestrator then ran `make assert-clean` PASS and confirmed HEAD unmoved at c8dea47. QA reported 8 risks outside the criteria (in the comment), none changing the verdict
+- human review (what I checked or corrected, or `none`): none yet; human to read the report and record decisions on the two Decision needed items before #11 is closed
