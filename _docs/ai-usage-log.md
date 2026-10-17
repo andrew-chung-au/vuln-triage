@@ -334,3 +334,14 @@ Copy this template for each new entry:
 - files changed: `AGENTS.md` (Layout line updated; "Where to read more" list added; 13 insertions, 1 deletion; drafted by the Orchestrator, diff shown to the human, committed by the human as 4075318 with HUMAN_APPROVED=1). GitHub: filed issue #12 (Write `_docs/agent-team.md` for the Agent Team Specification criterion), not yet groomed by the PM
 - verification (tests run, reviewer verdict): every path in the list checked to exist with `ls` before proposing; final diff shown to the human before commit
 - human review (what I checked or corrected, or `none`): human chose option (a) with edits and ran the commit; the same-tool QA exception in #12's body is the Orchestrator's wording, flagged to the human for correction
+
+### 2026-10-17 — Planning process and README updated for the final rubric (§7.3)
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — apply report §7.3, adjusted to the human's decisions, to `_docs/planning-process.md`; link the impact report from `README.md`
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator's adjusted §7.3 proposal (items 1-4), accepted by the human with additions: Stage 3 file `_docs/api.md` and CI export of the generated OpenAPI document; Docker-capable dev environment and cost controls with teardown in the Stage 2 deployment bullet; deliberate, documented, removable responder defect in Stage 4; Stage 2 checklist line and component list; Stage 6 Reviewer reading list as a statement; no key prompt file in `_docs/prompts/`
+- files changed: `_docs/planning-process.md` (Stage 2 components, observability and deployment bullets, checklist; Stage 3 API design; Stage 4 telemetry, alerting, responder and CI security scan; Stage 5 milestones; Stage 6 12 criteria and Reviewer list), `README.md` (impact report link); committed together (not protected). `opencode.json` and `.claude/settings.json` (changed outside this work, not read) left out of the commit
+- verification (tests run, reviewer verdict): `git diff --check` clean; diff shown to the human before the final three additions, which were applied as instructed
+- human review (what I checked or corrected, or `none`): human accepted items 1-4 and supplied the additions above; human dropped nothing
