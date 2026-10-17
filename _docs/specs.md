@@ -115,7 +115,7 @@ someone looks at it.
 ### US-15: A responder agent wakes on the alert and fixes it
 A responder agent wakes on the US-14 alert, reproduces a defect in VulnTriage's
 notification path (e.g. a finding with no fixed version or several advisory IDs
-fails to format), fixes it with a test, and opens a pull request with the fix
+fails to format), fixes it, and opens a pull request with the fix
 and a test; once merged, CI deploys it to dev.
 - Acceptance: the undelivered finding then reaches its owner, the alert
   resolves, and the agent's actions are logged. Production promotion stays
