@@ -400,3 +400,14 @@ Copy this template for each new entry:
 - files changed: `_docs/prompts/lovable-frontend.md` (still Status: DRAFT; header adds the discovery-build line, #3 ASSUMPTION now fixed versions per affected range with a "no fixed version" state, #6 ASSUMPTION now open / risk accepted / fixed / withdrawn with sources; prompt updates dashboard, detail, mock data and tests; prompt 698 words; 2cbffa9)
 - verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); updated `.scratch/check_issue14_b.py` (Decision 3 checks added) all PASS. QA not yet run
 - human review (what I checked or corrected, or `none`): none yet; the draft awaits the human's approval (stage C)
+
+### 2026-10-17 — Orchestrator runs issue #14 grooming and decisions; applies Decision 1 (commits f6add8a, 79b43e4)
+
+- date: 2026-10-17
+- task/issue: issue #14 (human chose it as next); PM grooming, Engineer stages A and B, human's Decisions 1-3; follow-up #15 filed
+- agent role: Orchestrator (Claude Code main session), launching PM and Engineer subagents
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human: "work on the next issue and follow process.md", then chose #14; Decisions 1-3 and notes given in session (quoted in PM comment 6232771876 on #14)
+- files changed: `AGENTS.md` (protected, HUMAN_APPROVED=1; one line allowing a mocked frontend prototype in `frontend/` during planning; f6add8a); `_docs/planning-process.md` (same line, same wording; 79b43e4). GitHub, by PM subagent: grooming comment 6231923268 and approval request 6232722317 and decisions comment 6232771876 on #14; comment 6232771639 on #6; filed #15 (stages D-E)
+- verification (tests run, reviewer verdict): human reviewed both diffs before they were applied; QA of stages A and B not yet run (human to run it in a fresh OpenCode session, per the #11 rule that QA doesn't run in the tool that built the work)
+- human review (what I checked or corrected, or `none`): human approved Decision 1 wording and both diffs; accepted the Engineer's three choices (no "stale" status, dashboard status filter, a mock finding with no aliases); prompt approval to follow separately
