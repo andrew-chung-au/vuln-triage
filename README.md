@@ -13,6 +13,7 @@ Planning documents:
 
 AI workflow evidence:
 
+- [_docs/agent-team.md](_docs/agent-team.md) — the agent team, which tool and model run each role, and how work passes between them
 - [_docs/ai-usage-log.md](_docs/ai-usage-log.md) — append-only record of AI-assisted work
 - [_docs/rubric-evidence.md](_docs/rubric-evidence.md) — rubric criterion status (auditor-maintained)
 - [_docs/ai-usage-report.md](_docs/ai-usage-report.md) — AI-assisted workflow report (skeleton)
