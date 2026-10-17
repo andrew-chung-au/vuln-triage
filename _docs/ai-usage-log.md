@@ -323,3 +323,14 @@ Copy this template for each new entry:
 - files changed: `_docs/specs.md` (US-13, US-14, US-15, edge case E6, open questions 4 and 5; 32 insertions, commit 701951d; one-line US-15 follow-up, commit 16e1ec0); `_docs/project-brief.md` (Fixed stack adds OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana; 3 insertions, 1 deletion, commit b8792b3); all three commits with HUMAN_APPROVED=1. GitHub: posted the human's hosting decision verbatim as relayed Orchestrator comment 6229681999 on #9. `opencode.json` (human's own uncommitted change) left out of all commits at the human's instruction
 - verification (tests run, reviewer verdict): `git diff --check` clean before each commit; final diffs shown to the human before each commit (spec diff shown before the last two human edits, which were applied as instructed)
 - human review (what I checked or corrected, or `none`): human rejected §7.2 2a (US-12 stays with all three acceptance clauses), rewrote US-15, named Grafana, added open question 5; Orchestrator numbered the US-14 window question 4 because question 3 already existed
+
+### 2026-10-17 — AGENTS.md Layout and "Where to read more" (commit 4075318); issue #12 filed
+
+- date: 2026-10-17
+- task/issue: issue #11 decision point — apply report §7.0 to `AGENTS.md`; file the follow-up issue for `_docs/agent-team.md`
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human chose the Orchestrator's revised version of §7.0 (stale Layout fixed, Claude Code layer named, spec and brief added, `_docs/agent-team.md` left out until written) with the human's "when to read" wording for the spec, process and procedures entries; human asked for an issue to write `_docs/agent-team.md`; no key prompt file in `_docs/prompts/`
+- files changed: `AGENTS.md` (Layout line updated; "Where to read more" list added; 13 insertions, 1 deletion; drafted by the Orchestrator, diff shown to the human, committed by the human as 4075318 with HUMAN_APPROVED=1). GitHub: filed issue #12 (Write `_docs/agent-team.md` for the Agent Team Specification criterion), not yet groomed by the PM
+- verification (tests run, reviewer verdict): every path in the list checked to exist with `ls` before proposing; final diff shown to the human before commit
+- human review (what I checked or corrected, or `none`): human chose option (a) with edits and ran the commit; the same-tool QA exception in #12's body is the Orchestrator's wording, flagged to the human for correction
