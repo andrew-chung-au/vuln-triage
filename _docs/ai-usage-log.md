@@ -434,3 +434,14 @@ Copy this template for each new entry:
 - files changed: `_docs/ai-usage-log.md` (this entry only; the earlier entry is left as written). `_docs/prompts/lovable-frontend.md` not changed. GitHub: new Engineer comment on #14 with the same correction
 - verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` run after this commit; result reported in the Engineer comment on #14. QA not yet re-run
 - human review (what I checked or corrected, or `none`): the human decided to accept the sentence and waive the word limit (comment 6233052344); this entry itself not yet reviewed
+
+### 2026-10-17 — Engineer marks the issue #14 Lovable prompt APPROVED and indexes it (commit efa250d)
+
+- date: 2026-10-17
+- task/issue: issue #14 stage C (approval and index entry)
+- agent role: Software Engineer (Claude Code subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction quoting the human's approval given in session: "I looked at the prompt and approve it, date approval today." Prompt file: `_docs/prompts/lovable-frontend.md`
+- files changed: `_docs/prompts/lovable-frontend.md` (line 1 only, `Status: DRAFT` to `Status: APPROVED (human, 2026-10-17)`); `_docs/prompts/README.md` (one index row; "where executed" says Lovable, run by the human, not yet run, since the build is in #15 per Decision 2); efa250d, an amend of unpushed 7ba1140 that corrected the row's issue number from "stage D of #14" to #15. GitHub: Engineer comment on #14
+- verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); `git diff --stat` showed 2 files, 2 insertions, 1 deletion; `git log --follow` on the prompt lists 6327f01, 2cbffa9, 67322c9, 7ba1140 (re-run after the amend gives efa250d in its place). Decision 3 (approve before #3, #4, #6) was answered by the human, as recorded in PM comment 6232771876. QA of stage C not yet run
+- human review (what I checked or corrected, or `none`): the human approved the prompt text; this commit not yet reviewed
