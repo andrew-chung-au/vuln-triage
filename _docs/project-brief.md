@@ -40,7 +40,9 @@ service layer; FastAPI backend (Python, uv for dependencies); SQLAlchemy with
 SQLite for development and Postgres for Docker Compose and production; Docker
 Compose; GitHub Actions CI/CD: tests on every pull request, automatic deploy to
 a dev environment, and a manual promotion of the same image to production; n8n
-as a separate Compose service; MCP server in Python.
+as a separate Compose service; MCP server in Python; OpenTelemetry
+instrumentation through an OpenTelemetry Collector to Prometheus, Loki and
+Tempo, with Grafana for dashboards and alerting.
 
 Out of scope for the MVP: servers, network devices and commercial software;
 active scanning or penetration testing (the tool only reads inventory);
