@@ -1,4 +1,4 @@
-# AI Dev Tools Zoomcamp — Final Project page, Criteria section (page finalised 2026-10-17)
+# AI Dev Tools Zoomcamp — Final Project page, Criteria section (page finalised 2026-10-17), source: https://github.com/DataTalksClub/ai-dev-tools-zoomcamp/blob/main/project/README.md
 ##### Criteria
 
 There are 12 criteria worth 24 points. You need 10 points to pass.

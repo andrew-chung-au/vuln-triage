@@ -56,7 +56,7 @@ a measurement.
 | Application | 2 | Nothing. No code exists: `AGENTS.md` line 8 ("no application code"), `agent-kit.conf` `TEST_CMD=""`, `Makefile` has no `install`/`run` target. The shape is fixed in `_docs/project-brief.md` lines 34-38 (React, FastAPI, SQLAlchemy, Compose, GH Actions) | The whole application: frontend, backend, database, connected, running locally with a single command | Scope the MVP to the smallest slice that is real: register asset → dependencies read → findings ranked → dashboard list. `docker compose up` as the single command | L (ASSUMPTION); blocked by Docker, §8 |
 | Testing | 2 | Strategy only, in `_docs/planning-process.md` § Stage 4 (unit, integration, e2e, LLM evaluation, security fixtures); `agent-kit.conf` `TEST_FILES` already names the test patterns | No tests exist and no test command is configured; integration tests are specified against "real Postgres via Docker Compose" | Write `_docs/testing.md` (Stage 4), set `TEST_CMD` to a `make test`, keep unit tests runnable without Docker, run integration tests on CI | M (ASSUMPTION) |
 | Containerization | 2 | Compose is in the fixed stack (`_docs/project-brief.md` lines 36-37) and required by Stage 4's integration tests; nothing else | No Dockerfile, no Compose file; cannot be built or shown here | Author `Dockerfile` + `compose.yaml` for app, Postgres, n8n; prove "single command" on a Docker-capable machine or CI | M (ASSUMPTION); blocked by Docker, §8 |
-| Deployment | 2 | Nothing. `_docs/project-brief.md` line 35 names "production" as an environment but no host; the hosting decision is open in #9 | No host chosen, no deployed URL, no demo | Answer #9 (its recommendation: one VM running the same Compose file), then deploy dev and prod from it | M (ASSUMPTION); depends on #9 and Docker, §8 |
+| Deployment | 2 | Nothing. `_docs/project-brief.md` line 36 names "production" as an environment but no host; the hosting decision is open in #9 | No host chosen, no deployed URL, no demo | Answer #9 (its recommendation: one VM running the same Compose file), then deploy dev and prod from it | M (ASSUMPTION); depends on #9 and Docker, §8 |
 | CI/CD | 3 | `.github/workflows/verify.yml` runs `make verify` on every push and pull request (a real CI job, but it runs no tests because `TEST_CMD` is empty) | Only the 1-point rung ("CI runs the tests automatically on every pull request") is in reach; nothing deploys anywhere, no dev environment, no manual production deploy | See §4: add a test job to CI, auto-deploy to dev on `main`, manual `workflow_dispatch` deploy to production behind an environment protection | M (ASSUMPTION) |
 | Observability | 2 | Nothing. No stage, document or task mentions metrics, traces or a telemetry store | No instrumentation, no shared trace ID, no UI to view signals, no rule about what must stay out of telemetry | New stage after Testing; see §3.1 proposals | L (ASSUMPTION) |
 | Alerting on User Impact | 1 | Nothing. The plan has notifications to humans (US-8, US-9) and a weekly digest, but no monitoring or alerting | No alert rule, no alert destination | One candidate alert in §3.2 | S (ASSUMPTION) once Observability exists |
@@ -64,7 +64,9 @@ a measurement.
 
 Totals: 24 points available, 10 needed. The four documentation criteria are
 worth 8 points; the three observability/alerting/on-call criteria are worth 5;
-the remaining 11 points all need a built and deployed application.
+of the remaining 11 points, Application, Containerization, Deployment and CI/CD
+(9 points) need a built and deployed application, while Testing (2 points)
+needs built code and tests but no deployment.
 
 ## 2. No longer scored
 
@@ -322,7 +324,7 @@ the page's "taken all the way" wording, so it is not worth the risk.
 | [#5](https://github.com/andrew-chung-au/vuln-triage/issues/5) feeds, matching and ingestion gaps | still valid | Feed and ingestion edge cases are unaffected by the criteria; needed before any scan can produce real findings |
 | [#6](https://github.com/andrew-chung-au/vuln-triage/issues/6) status model, brief display, audit trail | still valid | The status model and audit trail are what the dashboard (Application) shows; rubric-neutral |
 | [#7](https://github.com/andrew-chung-au/vuln-triage/issues/7) notifications, due dates, routing | still valid | Still the right questions, and its Decision 1 now also protects criterion 2's "agents used the tracker" evidence if finding issues land in this repo |
-| [#8](https://github.com/andrew-chung-au/vuln-triage/issues/8) security boundaries for advisory text and the MCP token | needs change | The advisory-text criteria stay and gain a telemetry rule; the two MCP-token criteria (US-12 acceptance) are moot if §2.2 drops the MCP server, and the dependency on #7 weakens |
+| [#8](https://github.com/andrew-chung-au/vuln-triage/issues/8) security boundaries for advisory text and the MCP token | needs change | The advisory-text criteria stay and gain a telemetry rule; the three criteria concerning US-12 (MCP output marks advisory text as untrusted, finding 11; a write with the MCP token is rejected, and one acceptance line per tool, finding 14) are moot if §2.2 drops the MCP server, and the dependency on #7 weakens |
 | [#9](https://github.com/andrew-chung-au/vuln-triage/issues/9) carry into later stages | needs change | Its rows are still valid, but it cites old rubric numbers ("criterion 10", "rubric 11", "rubric 14") that must be renumbered, its hosting decision is now on the critical path for Deployment and CI/CD, and the Docker row (finding 12) now blocks three criteria, not one |
 | [#10](https://github.com/andrew-chung-au/vuln-triage/issues/10) same-shape log contradiction in role files | still valid | Criterion 3 is graded on the agent team being described consistently, and the contradiction is exactly what a reviewer would see |
 
@@ -394,14 +396,24 @@ MCP server.
 Add three stories and one edge case; US-12 changes or goes if the MCP server
 is dropped.
 
-- **BEFORE** (`_docs/specs.md` lines 90-96, US-12):
+- **BEFORE** (`_docs/specs.md` lines 90-96, US-12, the whole story):
   > ### US-12: Read-only assistant answers exposure questions
+  > As a developer using an AI assistant, I can ask "which assets are affected by
+  > this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
+  > `which_assets_affected`, `get_finding`, `get_asset`).
+  > - Acceptance: asking for a known CVE returns the affected assets; asking for
+  >   an unknown CVE returns an empty result, not an error; the MCP server offers
+  >   no write operations.
 
-- **AFTER** (if the MCP server leaves the MVP):
+- **AFTER** (if the MCP server leaves the MVP; replaces lines 90-96):
   > ### US-12: Read-only assistant answers exposure questions (later phase)
-  > Not in the MVP. The four tools (`list_top_exposures`, `which_assets_affected`,
-  > `get_finding`, `get_asset`) stay read-only when they are added, and each gets its
-  > own checkable acceptance line at that point.
+  > Not in the MVP. In a later phase, as a developer using an AI assistant, I can
+  > ask "which assets are affected by this CVE?" through the read-only MCP server
+  > (tools: `list_top_exposures`, `which_assets_affected`, `get_finding`,
+  > `get_asset`); each tool gets its own checkable acceptance line at that point.
+  > - Acceptance: asking for a known CVE returns the affected assets; asking for
+  >   an unknown CVE returns an empty result, not an error; the MCP server offers
+  >   no write operations.
 
 - **AFTER** (append after US-12, before `## Non-goals`):
   > ### US-13: The notification journey is instrumented
@@ -427,8 +439,7 @@ is dropped.
   >   same fixture run without the agent leaves the finding undelivered.
 
 - **AFTER** (append a row to `## Edge cases`):
-  > | E6 | A telemetry backend is unavailable | Buffer in-process and retry;
-  >   findings, notifications and alerts are unaffected; the gap is visible in the UI |
+  > | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in the UI |
 
 ### 7.3 `_docs/planning-process.md` (not protected, propose only)
 
@@ -507,7 +518,8 @@ Options, from `_docs/agent-kit/environments.md`:
    what "the sandbox" means.
 3. **Keep this sandbox for docs and unit tests, and run every Compose-dependent
    check on GitHub Actions** — CI already exists (`.github/workflows/verify.yml`)
-   and runners have Docker; `.github/` and `.devcontainer/` changes at the repo
+   and runners have Docker (VERIFY: Docker and Compose preinstalled on the
+   `ubuntu-latest` runner image); `.github/` and `.devcontainer/` changes at the repo
    root ask for human approval per environments.md line 47.
 4. **A dedicated Compose-based container recipe** for the services (environments.md
    line 57) so the agent can reach them without controlling Docker.
@@ -520,7 +532,13 @@ to run `docker compose up` locally.
 
 ## 9. Tracker evidence (Product Specification, 2 points)
 
-- **Is the repo public?** Yes. Check run:
+Counts and visibility in this section were refreshed on 2026-10-17 with `gh`
+(`gh repo view --json ...` and `gh issue list --state all --json
+number,body,comments --jq ...`), before the Engineer's 2026-10-17 follow-up
+comment on #11 was posted. They are a snapshot and will change as issues are
+worked.
+
+- **Is the repo public?** Yes (checked 2026-10-17). Check run:
   `gh repo view --json nameWithOwner,visibility,isPrivate,url` →
   `andrew-chung-au/vuln-triage`, `PUBLIC`, `isPrivate: false`,
   <https://github.com/andrew-chung-au/vuln-triage>.
@@ -533,14 +551,16 @@ to run `docker compose up` locally.
 - **Do the tasks define acceptance criteria?** Yes: every issue except #10 has
   an `## Acceptance criteria` section with `- [ ]` items (11 boxes in #1, 7 in
   #2, 8 in #3, 6 in #4, 10 in #5, 8 in #6, 7 in #7, 6 in #8, 9 in #9, 14 in
-  #11; counted from the `make issue-dump` output). #10 has none — its body was
+  #11; counted on 2026-10-17 with `gh issue list --json body --jq`, lines
+  matching `- [ ]` or `- [x]`). #10 has none — its body was
   filed with literal `\n` sequences instead of newlines, so its `## Goal` and
   `## Constraints` headings are not even parseable as headings.
 - **Is there evidence that agents used the tracker?** Partly, and it is thin.
-  Comment counts (`make issue-dump` for #1-#11): #1 has 6 role-prefixed comments
-  (`PM:`/`Engineer:`/`QA:` x3/`Orchestrator:`), #2 has 4, #11 has 1 (`PM:`
-  grooming), #3-#10 have 0. So 3 of 11 issues show agent activity, and no open
-  review issue has been worked at all.
+  Comment counts (2026-10-17, `gh issue list --json comments --jq`): #1 has 6
+  role-prefixed comments (`PM:`/`Engineer:`/`QA:` x3/`Orchestrator:`), #2 has 4
+  (`PM:`/`Engineer:`/`QA:`/`Orchestrator:`), #11 has 3 (`PM:` grooming,
+  `Engineer:` handover, `QA:` PASS), #3-#10 have 0. So 3 of 11 issues show agent
+  activity, and none of the open review issues #3-#10 has been worked at all.
 - **Consequence:** criterion 2 is worth 2 points and is within reach: keep
   public issues, keep the `- [ ]` acceptance criteria in the bodies, and post
   the role-prefixed handover comments (the pattern already in `AGENTS.md`
@@ -556,8 +576,9 @@ to run `docker compose up` locally.
    edge case E6; retitle or defer US-12 (BEFORE/AFTER in §7.2).
 3. Change `_docs/project-brief.md` (protected, needs approval): add workflow
    step 8 and record the MCP decision (BEFORE/AFTER in §7.1).
-4. Change issue #8: drop the MCP-token criteria if the MCP server leaves the
-   MVP; add the telemetry data rule to the advisory-text list.
+4. Change issue #8: drop its three criteria concerning US-12 (MCP output
+   marking, MCP-token write rejection, one line per tool) if the MCP server
+   leaves the MVP; add the telemetry data rule to the advisory-text list.
 5. Change issue #9: renumber the rubric references, make the hosting decision
    blocking for Deployment and CI/CD, and extend the Docker row.
 6. New: answer the five Decisions in §2 and the scope Decision in §5 (one
