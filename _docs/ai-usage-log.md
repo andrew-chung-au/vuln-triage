@@ -411,3 +411,14 @@ Copy this template for each new entry:
 - files changed: `AGENTS.md` (protected, HUMAN_APPROVED=1; one line allowing a mocked frontend prototype in `frontend/` during planning; f6add8a); `_docs/planning-process.md` (same line, same wording; 79b43e4). GitHub, by PM subagent: grooming comment 6231923268 and approval request 6232722317 and decisions comment 6232771876 on #14; comment 6232771639 on #6; filed #15 (stages D-E)
 - verification (tests run, reviewer verdict): human reviewed both diffs before they were applied; QA of stages A and B not yet run (human to run it in a fresh OpenCode session, per the #11 rule that QA doesn't run in the tool that built the work)
 - human review (what I checked or corrected, or `none`): human approved Decision 1 wording and both diffs; accepted the Engineer's three choices (no "stale" status, dashboard status filter, a mock finding with no aliases); prompt approval to follow separately
+
+### 2026-10-17 — Engineer applies the human's three edits to the issue #14 Lovable prompt (commit 67322c9)
+
+- date: 2026-10-17
+- task/issue: issue #14 stage B revision, the human's three edits before prompt approval (services-layer order with no re-sort and pre-ranked mock data; React with TypeScript and `npm test`; demo credentials on the login screen)
+- agent role: Software Engineer (Claude Code subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction quoting the human's three edits verbatim; no key prompt file saved
+- files changed: `_docs/prompts/lovable-frontend.md` (still Status: DRAFT; screen 2 and first test use the human's wording; mock data pre-ranked by the `_docs/planning-process.md` § Stage 2 tie-breaks; Stage 2 header ASSUMPTION updated, including criticality higher first and missing EPSS last, which Stage 2 does not state; prompt 774 words, up from 698, all from these edits; 67322c9). GitHub: Engineer comment 6232991787 on #14
+- verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); updated `.scratch/check_issue14_b.py` (word limit is 698 plus the net words of these edits; new-text checks) all PASS. QA not yet run
+- human review (what I checked or corrected, or `none`): none yet; the revised draft awaits QA and the human's approval
