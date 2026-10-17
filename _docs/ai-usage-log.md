@@ -389,3 +389,14 @@ Copy this template for each new entry:
 - files changed: `_docs/planning-process.md` (§ Stage 3, one sentence, 3 lines added; 7c12cd4); `_docs/prompts/lovable-frontend.md` (new, Status: DRAFT, prompt 605 words; 6327f01). GitHub: Engineer comment 6232712832 on #14
 - verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); `.scratch/` check of the stage B criteria, including the secrets scan and its refused-case fixture, all PASS. QA not yet run
 - human review (what I checked or corrected, or `none`): none yet; the draft awaits the human's approval (stage C)
+
+### 2026-10-17 — Engineer revises the issue #14 Lovable prompt for Decision 3 (commit 2cbffa9)
+
+- date: 2026-10-17
+- task/issue: issue #14 stage B revision, applying the human's Decision 3 (build v1 now as discovery; richer model where unsure)
+- agent role: Software Engineer (Claude Code subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction quoting Decision 3 verbatim; no key prompt file saved
+- files changed: `_docs/prompts/lovable-frontend.md` (still Status: DRAFT; header adds the discovery-build line, #3 ASSUMPTION now fixed versions per affected range with a "no fixed version" state, #6 ASSUMPTION now open / risk accepted / fixed / withdrawn with sources; prompt updates dashboard, detail, mock data and tests; prompt 698 words; 2cbffa9)
+- verification (tests run, reviewer verdict): `make verify BASE=ee0fcfe` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists); updated `.scratch/check_issue14_b.py` (Decision 3 checks added) all PASS. QA not yet run
+- human review (what I checked or corrected, or `none`): none yet; the draft awaits the human's approval (stage C)
