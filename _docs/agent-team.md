@@ -36,11 +36,12 @@ From 2026-10-17 the record differs from that intent because OpenCode was unavail
 
 ### Recorded history
 
-Model ids are copied from [ai-usage-log.md](ai-usage-log.md). Where an entry names a model but no tool, the Tool column says so.
+Model ids are copied from [ai-usage-log.md](ai-usage-log.md). Where an entry names a model but no tool, the Tool column says so. Where an entry records the agent role as "not recorded", the Role column says "not recorded" and no role is inferred: the role-recording policy was not applied at the time (the human, [comment 6243801494](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243801494)).
 
 | Role | Tool | Model | Issues and source |
 |---|---|---|---|
-| Orchestrator | not recorded | not recorded | 2026-10-12 setup, brief, rubric, planning process, spec and README entries (role and model "not recorded"); #11 Orchestrator entries and summary `ad04f59` ("not recorded", log 2026-10-17 "Orchestrator resumes issue #11") |
+| not recorded | not recorded | not recorded | 2026-10-12 setup, brief, rubric, planning process, spec and README entries; 2026-10-12 plan review `c631603` (log 2026-10-12; agent role, model and prompt "not recorded") |
+| Orchestrator | not recorded | not recorded | #11 Orchestrator entries and summary `ad04f59` ("not recorded", log 2026-10-17 "Orchestrator resumes issue #11") |
 | | not stated in the entry | `opencode/muse-spark-1.3-contributor-free` | #1 comments and token permissions (log 2026-10-13); #2 close-out (log 2026-10-16) |
 | | not stated in the entry | `opencode/space-bunny-free` | `make issue-dump` target, no issue (log 2026-10-16, commits `f999cd6`, `fc29661`) |
 | | Claude Code | `claude-opus-5-5` | Claude Code layer install (log 2026-10-16); #11 from 2026-10-17 to close-out; #14 (log 2026-10-17 "Orchestrator runs issue #14 grooming and decisions") |
@@ -51,12 +52,11 @@ Model ids are copied from [ai-usage-log.md](ai-usage-log.md). Where an entry nam
 | Software Engineer | not stated in the entry | `opencode/muse-spark-1.3-contributor-free` | #1 (log 2026-10-12); #2, commit `2dcc89d` (log 2026-10-16) |
 | | OpenCode | not recorded | #11 first launch, interrupted, no commits (log 2026-10-17 "Orchestrator resumes issue #11") |
 | | OpenCode | `opencode/space-bunny-free` | #11 commits `0604233`, `2cfdf95` (log 2026-10-16; #11 summary line 11) |
-| | Claude Code | `claude-opus-5-5` | #11 follow-up `ed05530`; #14 stages A to C (log 2026-10-17) |
+| | Claude Code | `claude-opus-5-5` | #11 follow-up `ed05530`; #14 stages A to C (log 2026-10-17); #12 `ede47bf` (log 2026-10-17 "Engineer implements issue #12") |
 | QA Engineer | not recorded | not recorded | #1 first check and re-check at `0b2a18f` (no log entry; #1 summary line 47) |
 | | not stated in the entry | `opencode/muse-spark-1.3-contributor-free` | #1 re-check at `ba39c5c`; #2 at `2dcc89d` (log 2026-10-16) |
-| | Claude Code | `claude-opus-5-5` | #11 at `c8dea47` and re-check at `ed05530` (log 2026-10-17); #14 (#14 summary lines 15 and 36) |
-| Reviewer | not recorded | not recorded | 2026-10-12 plan review `c631603` (log 2026-10-12) |
-| | Claude Code | `claude-opus-5-5` | Stage 1 plan review `ba39c5c`; issues #3 to #9 (log 2026-10-16) |
+| | Claude Code | `claude-opus-5-5` | #11 at `c8dea47` and re-check at `ed05530` (log 2026-10-17); #14 (#14 summary lines 15 and 36); #12 at `948e332`, same-tool exception ([comment 6243727864](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243727864); log 2026-10-18 "QA checks issue #12") |
+| Reviewer | Claude Code | `claude-opus-5-5` | Stage 1 plan review `ba39c5c`; issues #3 to #9 (log 2026-10-16) |
 | Rubric Evidence Auditor | Claude Code | `claude-opus-5-5` | #11 §7.4 audit `ad5b27d` (log 2026-10-17); "An OpenCode re-audit is planned after Stage 2" |
 
 Muse Spark 1.3's part in #11 is not recorded. The human stated that the model changed during #11 from Muse Spark 1.3 to Space Bunny (log 2026-10-17 "Orchestrator resumes issue #11").
@@ -71,10 +71,11 @@ Muse Spark 1.3's part in #11 is not recorded. The human stated that the model ch
 
 A same-tool QA run that doesn't meet all of these conditions (the other tool unavailable, the human asked, a fresh subagent, the tool and reason recorded) doesn't meet the rule.
 
-Recorded uses of the exception. In both, OpenCode, the tool QA should have run in, was the one unavailable:
+Recorded uses of the exception. In all three, OpenCode, the tool QA should have run in, was the one unavailable:
 
 1. #11 follow-up re-check at `ed05530`: Engineer and QA both ran in Claude Code as separate subagents ([comment 6227431094](https://github.com/andrew-chung-au/vuln-triage/issues/11#issuecomment-6227431094); log 2026-10-17 "QA targeted re-check of #11 corrections at ed05530 (PASS)").
 2. #14 QA: "OpenCode would not start; QA ran as fresh Claude Code subagents, a recorded exception to the #11 rule" ([#14 summary](../_session-summaries/issue-014-lovable-frontend-prompt.md) line 36).
+3. #12 QA at `948e332`: #12 was built in Claude Code, and QA ran there too as a fresh qa-engineer subagent, because OpenCode is not available and the human chose "Claude Code, fresh subagent" ([comment 6243691600](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243691600)). The QA comment names the tool and the reason ([comment 6243727864](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243727864)), and so does the log entry (2026-10-18 "QA checks issue #12").
 
 In either tool, QA is a fresh run separate from the author's context: a tool with subagents launches each role as its own subagent, and a tool without them runs each role in a fresh session, because "the reviewer shouldn't share the context of the author" ([process.md § Roles](agent-kit/process.md#roles)). After QA, the Orchestrator runs **Assert clean** and confirms HEAD hasn't moved; if either fails, QA changed something, so its verdict is discarded and QA runs again (lifecycle step 5).
 
@@ -97,8 +98,8 @@ Every question to the human follows [procedures/asking-the-human.md](agent-kit/p
 
 ### Handover between OpenCode and Claude Code
 
-- Both tools read [AGENTS.md](../AGENTS.md): [CLAUDE.md](../CLAUDE.md) only imports it, so there is one source of truth ([planning summary 2026-10-16](../_session-summaries/planning-2026-10-16-claude-code-layer.md) line 11).
-- Each tool's config is protected from the other: [opencode.json](../opencode.json) asks before editing `CLAUDE.md` and `.claude/*`, and Claude Code ([.claude/settings.json](../.claude/settings.json)) asks before editing `opencode.json` and `.opencode/*` (planning summary line 10). Both also sit in `agent-kit.conf` PROTECTED.
+- Both tools read [AGENTS.md](../AGENTS.md), so there is one source of truth ([planning summary 2026-10-16](../_session-summaries/planning-2026-10-16-claude-code-layer.md) line 11). [CLAUDE.md](../CLAUDE.md) contains only `@AGENTS.md`, which imports it. Since `6541893` the rule to keep scratch files in `.scratch/`, not the tool's session scratchpad, is in [AGENTS.md](../AGENTS.md) Conventions; before that it was a second line in `CLAUDE.md`.
+- Each tool's config is protected from the other: [opencode.json](../opencode.json) asks before editing `CLAUDE.md` and `.claude/*`, and Claude Code ([.claude/settings.json](../.claude/settings.json)) asks before editing `opencode.json` and `.opencode/*` (planning summary line 10). Both also sit in `agent-kit.conf` PROTECTED. Both are tracked project settings files: [AGENTS.md](../AGENTS.md) Conventions (since `6541893`) let any role read them, never edit them without approval, and never read user-level or home settings. The #12 Engineer read `.claude/settings.json` to confirm the Claude Code ask rules ([comment 6234459590](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6234459590), choice 6) before this rule was written; QA raised it as a risk, and the human then chose "Allowed for tracked files" ([comment 6243801494](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243801494)), so such a read is within the rule.
 - The two tools are not run against the same working tree at the same time, and OpenCode's work is reviewed after it has been committed (planning summary line 65).
 - Issue comments that start with a role label (`PM:`, `Engineer:`, `QA:`, `Orchestrator:`) are the handover record, because all roles usually share one GitHub account and the label is the only way to tell them apart ([AGENTS.md](../AGENTS.md) Conventions). The log entry for each run records the tool and model.
 
