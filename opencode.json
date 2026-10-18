@@ -34,6 +34,8 @@
       "git branch -vv*": "allow",
       "git branch --show-current*": "allow",
       "git config --get*": "allow",
+      "git ls-files*": "allow",
+      "pgrep *": "allow",
 
       "gh issue list*": "allow",
       "gh issue view*": "allow",
