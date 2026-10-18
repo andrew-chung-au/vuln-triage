@@ -1,4 +1,4 @@
-# Issue #015: Frontend v1: choose Lovable, import into frontend/ (stages D and E1)
+# Issue #015: Frontend v1: choose Lovable, import into frontend/ (stages D, E1 and E2)
 
 **Date:** 2026-10-18
 **Spec version:** d3a8f11
@@ -8,7 +8,9 @@
 - The PM re-groomed #15 and split stage E into E1 (no Node needed) and E2 (after #20). It filed #20 to #27 for the next steps and #28 to #30 for the verify gate.
 - The Engineer moved `frontend-lovable/` to `frontend/`, deleted `frontend-bolt/`, ignored `.env` in `frontend/`, and wrote the run record, the "(private)" link markings and the services list.
 - #28 (verify gate: treat test renames as moves, plus `APPROVED_TEST_DELETIONS`) was needed because the gate reported the moved Lovable tests and the approved Bolt deletions as deleted tests. It passed QA and is closed.
-- QA: #15 D/E1 failed once on commit scope (a `--grep` criterion caught d3a8f11). After the criterion was reworded, it passed (6247797817). E2 is not started.
+- QA: #15 D/E1 failed once on commit scope (a `--grep` criterion caught d3a8f11). After the criterion was reworded, it passed (6247797817).
+- E2 (after #20 closed): the first install ran as `npm install --before=2026-10-18` in `frontend/` (npm 11.19.1 accepted the flag; `frontend/package-lock.json` created and committed in `71e5103`). The Engineer added the `frontend-install`/`frontend-start`/`frontend-stop`/`frontend-test` targets and an all-tests `test` target, set `TEST_CMD="make test"`, and updated the AGENTS.md Install/Run/Test lines (protected, approved and committed as `e3de014`). `make frontend-test` and `make test` run the 10 cases in `src/test/`; the login page is HTTP 200 on `127.0.0.1:5173` with no backend.
+- QA E2 first PASS at `e3de014` was discarded: the opencode runtime persisted two allow rules into the protected `opencode.json` during the run, so `make assert-clean` failed (process step 5). The human approved keeping the rules; committed as `352ff95` with `HUMAN_APPROVED=1`. QA re-ran on the clean tree and passed at `352ff95` (6250305366).
 
 ## Files created or modified
 - `_docs/reviews/2026-10-18-frontend-comparison.md` (51b477a)
@@ -17,6 +19,8 @@
 - `frontend-bolt/**` deleted (cbe2123)
 - `_docs/prompts/lovable-frontend.md` and `_docs/prompts/README.md` (4a9f328, 26b8757)
 - `_docs/agent-kit/scripts/verify.sh` and `agent-kit.conf` (035eafd, #28, `HUMAN_APPROVED=1`)
+- E2: `frontend/package-lock.json` (`71e5103`); `frontend/README.md` "Make targets" section (`99781ee`); `Makefile`, `AGENTS.md`, `agent-kit.conf` (E2 targets, Install/Run/Test/Verify lines, `TEST_CMD`) (`e3de014`, `HUMAN_APPROVED=1`)
+- `opencode.json` (two allow rules the tool persisted during QA; kept and committed `352ff95`, `HUMAN_APPROVED=1`)
 - `_docs/ai-usage-log.md` (several entries); `_session-summaries/issue-028-verify-renames.md`; this file
 
 ## Decisions made by the human
@@ -28,6 +32,7 @@
 - n8n/MCP contract issue filed (#27); `specs.md` owner assumption added.
 - #28: fix the gate, approved as shown. QA risks: file #29 (print moves) and #30 (non-ASCII names, low priority); approvals-never-expire not filed ("bolt was not used"), with a note on #21.
 - #15 QA FAIL: list the commits explicitly; add the "(private)" markings.
+- E2: approved the protected changes (Makefile targets, AGENTS.md Install/Run/Test/Verify lines, `TEST_CMD="make test"`) as shown; kept the two `opencode.json` allow rules the tool persisted during QA (`352ff95`); posted the Engineer follow-up comment naming the remaining E2 commits.
 
 ## Mismatches with the spec or design docs
 - AGENTS.md "Current phase: PLANNING" conflicts with course steps 4 to 6 (backend code). They are gated in #24 to #26.
@@ -35,24 +40,24 @@
 - `_docs/architecture.md` (Stage 2) is not written; #22 to #26 use labelled ASSUMPTIONs.
 
 ## Commands to validate
-- **Verify:** `make verify BASE=0dd108a` (PASS WITH WARNINGS: no TEST_CMD until E2)
-- **Assert clean:** `make assert-clean`
+- **Verify:** `make verify` and `make verify BASE=0dd108a` (both PASS, no warnings, after E2; earlier runs PASS WITH WARNINGS until `TEST_CMD` existed)
+- **Assert clean:** `make assert-clean` (PASS at `352ff95`)
 
 ## Proposed AGENTS.md changes
-- None now. E2 will update Install, Run and Test, and #20 the Environment line (protected, approved when they are worked).
+- Applied: #20's Environment line (`a90d182`); E2's Install/Run/Test lines and the stale Verify line (`e3de014`). Both with `HUMAN_APPROVED=1`.
 
 ## Temporary changes
-- None. No system changes, no installs, no processes started.
+- E2 started the frontend dev server only through `make frontend-start` and stopped it with `make frontend-stop` (both QA runs). Nothing left running.
 
 ## Interruptions
-- None. One QA run (#15 re-check) reported an inline `python3 -c "print(1)"` against the AGENTS.md rule; it changed nothing (`make assert-clean` PASS).
+- None. One QA run (#15 re-check) reported an inline `python3 -c "print(1)"` against the AGENTS.md rule; it changed nothing (`make assert-clean` PASS). The E2 QA first run dirtied `opencode.json` (tool-persisted allow rules); resolved with the human's decision, not by QA.
 
 ## Unrelated problems noticed but not fixed
-- `.devcontainer/devcontainer.json` has the `PATH` key twice under `remoteEnv` (folded into #20).
+- `.devcontainer/devcontainer.json` had the `PATH` key twice under `remoteEnv` (fixed in #20).
 - `frontend/AGENTS.md` and `frontend/README.md` still carry Lovable sync text (#21 removes it).
+- The opencode runtime persists newly approved `ask` permissions into the tracked `opencode.json`, which can dirty the tree mid-run and fail `make assert-clean`; two rules were kept this session (`352ff95`).
 
 ## Follow-ups for the next session
-- #20 (Node.js and uv in the dev container) needs the human's approval and a container rebuild, then #15 E2. #15 stays open.
-- Then #21 → #22 → #23 (and #27); #24 to #26 wait for the phase-line change. #29 and #30 are verify-gate hardening.
-- `make clean-scratch` was **not** run: #15 is still open, and the E1 scan and fixture scripts in `.scratch/` are reused by E2 QA. Run it when #15 closes.
-- After the human pushes #15, the four `APPROVED_TEST_DELETIONS` entries may be removed (note on #21).
+- #15 is done (D, E1, E2 all PASS) and is closed. #20 is closed. Next: #21 → #22 → #23 (and #27); #24 to #26 wait for the phase-line change. #29 and #30 are verify-gate hardening.
+- `make clean-scratch` was run at the end of #15 (no process was running) and `.scratch/` was emptied.
+- After the human pushes #15, the four `APPROVED_TEST_DELETIONS` entries in `agent-kit.conf` may be removed (note on #21).
