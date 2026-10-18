@@ -578,3 +578,14 @@ Copy this template for each new entry:
 - files changed: b566fb6 (`git mv frontend-lovable frontend`, 94 renames at 100%); cbe2123 (`git rm -r frontend-bolt`, 37 deletions, human-approved decision 2; code stays at fea6fb7); 73a70af (`frontend/.gitignore`: `.env`, `.env.*`, `!.env.example`); 4a9f328 (`_docs/prompts/lovable-frontend.md` run record and follow-ups line, `_docs/prompts/README.md` "Used with" row, `frontend/README.md` Services layer section); this entry. GitHub: Engineer comment on #15
 - verification (tests run, reviewer verdict): `.scratch/issue15_scan.py` over the 94 files in `git ls-files frontend`: 1 hit, the fictional demo password `triage-demo` (harmless); fixture `.scratch/issue15_fixture.txt` flagged all 3 lines. `.scratch/issue15_prompt_check.py`: Status line and `## Prompt` section identical to 0dd108a. Network and backend-key greps run. `make verify`: FAIL on "test files deleted" (2 renamed Lovable tests, a false positive of the gate's `--no-renames` diff, and 4 Bolt tests in the approved deletion); referred to the human. No tests run: no Node.js
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — Orchestrator and PM act on the human's #15 install, Stage 3, n8n/MCP and spec answers
+
+- date: 2026-10-18
+- task/issue: issue #15 follow-ups (the human's answers to the PM's three questions and spec note)
+- agent role: Orchestrator (Claude Code main session) and PM (Claude Code pm subagent, resumed; entry appended by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's in-session answers: E2 first install with `npm install --before=2026-10-18`; the Stage 3 wording in the human's own text (only the spaces lost to line wrapping restored), recorded on #11 as a change to its decision 2; file the n8n/MCP contract issue; add the owner assumption to `specs.md`
+- files changed: `_docs/specs.md` (one Assumptions line, d3a8f11, `HUMAN_APPROVED=1`). GitHub: Orchestrator comment 6244293385 on #11; PM: #15 body (E2 install criterion), comment 6244314164; #23 body (approved Stage 3 text, human review of `openapi.yaml`), comment 6244314486; new issue #27 (n8n and MCP server endpoints, depends on #23)
+- verification (tests run, reviewer verdict): `git diff` of the `specs.md` change matched the approved line; `git diff --check` clean
+- human review (what I checked or corrected, or `none`): the human approved the `specs.md` line and the Stage 3 text in session
