@@ -633,3 +633,25 @@ Copy this template for each new entry:
 - files changed: none in the repo (`.scratch/qa15_recheck.py` and its comment body only). GitHub: QA PASS comment 6247797817
 - verification (tests run, reviewer verdict): QA PASS for D/E1. All seven listed #15 Engineer commits touch only allowed paths; 3 link lines carry "(private)" and no VERIFY line is left; the usage log diff since d85632b removes no line; `## Prompt` byte-identical to 0dd108a; `make verify BASE=0dd108a` PASS WITH WARNINGS (no TEST_CMD only). E2 not yet checked (waits for #20). QA reported running one inline `python3 -c "print(1)"`, against the AGENTS.md rule; it changed nothing. After QA, `make assert-clean` PASS, HEAD unchanged at 3abcc65
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — PM grooms issue #20 (dev container Node.js + uv)
+
+- date: 2026-10-18
+- task/issue: issue #20 — first grooming; pin the open Node/uv values, correct the stale feature id, close the lockfile question, add refused cases
+- agent role: PM (Product Manager subagent, launched by the Orchestrator; entry appended by the Orchestrator per the write-only-`.scratch/` role limit)
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to groom #20 per `_docs/agent-kit/team/pm.md`; no key prompt file saved
+- files changed: none in the repo (drafts in `.scratch/`). GitHub: PM grooming comment 6247960494; #20 body edited to the groomed text; PM decisions comment 6248923707; filed follow-up #31 (Docker/Compose), linked from #20 out-of-scope
+- verification (tests run, reviewer verdict): none (no code changed). PM read `frontend/package.json` (vite 8.1.5), the devcontainers/features node feature, nodejs/Release schedule and PyPI/uv metadata to pin the values
+- human review (what I checked or corrected, or `none`): the human answered the four grooming decisions (Node `24.22.0`; uv via `pipx install uv==0.13.1`; file #31; apply the body edits as drafted)
+
+### 2026-10-18 — Engineer implements #20 (uncommitted, held for the human's gated commit)
+
+- date: 2026-10-18
+- task/issue: issue #20 — add pinned Node.js (`ghcr.io/devcontainers/features/node:2` at `24.22.0`, `pnpmVersion: none`), remove the duplicate `remoteEnv.PATH`, and add `pipx install uv==0.13.1`
+- agent role: Software Engineer (opencode software-engineer subagent, launched by the Orchestrator; entry appended by the Orchestrator per the write-only-`.scratch/` role limit)
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to implement #20 from the groomed body, not rebuild, and return the diff and approval request; no key prompt file saved
+- files changed: `.devcontainer/devcontainer.json` and `.devcontainer/setup.sh` in the working tree only — UNCOMMITTED, because the pre-commit hook gates any `.devcontainer/` change behind `HUMAN_APPROVED=1`; the Engineer stopped and returned the approval request. `.scratch/issue-20-check.py`, `.scratch/issue-20-tooling.sh`, `.scratch/issue-20-pipx-writable.py` (git-ignored). Proposed (not edited) AGENTS.md Environment line. This entry and `_session-summaries/issue-020-node-uv-devcontainer.md`
+- verification (tests run, reviewer verdict): `make verify BASE=HEAD` PASS WITH WARNINGS (only the no-`TEST_CMD` warning; project in planning, no code); `.scratch/issue-20-check.py` all static criteria PASS including the refused-case patterns. Runtime `node`/`npm`/`uv` not run (no Node or uv in this container; deferred to QA after the human rebuilds). `.devcontainer/devcontainer-lock.json` not regenerated (no devcontainer CLI here); raised as a decision question
+- human review (what I checked or corrected, or `none`): the human chose to run the `.devcontainer/` commit commands themselves and chose lockfile option 1 with checks (show the regenerated-lock diff after the rebuild; only new feature entries; `github-cli` unchanged; if not updated, stop). The commit and rebuild are pending
