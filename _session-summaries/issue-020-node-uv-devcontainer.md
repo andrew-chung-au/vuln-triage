@@ -11,6 +11,10 @@
 - The Engineer implemented the recipe and stopped before the `.devcontainer/` commit: the pre-commit hook gates `.devcontainer/` behind `HUMAN_APPROVED=1`. The change is staged in the working tree, uncommitted.
 - The Engineer could not regenerate `.devcontainer/devcontainer-lock.json`: this container has no devcontainer CLI (nor node/npx/docker). Raised as a decision question instead of committing a stale digest.
 - Mid-session, on a direct human instruction (no issue), the Orchestrator added a `make tool-versions` target (node, npm, uv, python3, docker, or `<tool>: missing`) and a "Tool versions" line in AGENTS.md's Commands section. Committed in its own protected commit, which also carried the human's pre-existing AGENTS.md Project-rules edits.
+- Post-rebuild (continuation, same issue): the human ran the `.devcontainer/` commit (`4eb0485`) and rebuilt. `make tool-versions` then printed node `v24.22.0`, npm `11.19.1`, uv `0.13.1`, python3 `3.12.15`, docker `missing`.
+- The regenerated `.devcontainer/devcontainer-lock.json` was inspected against the agreed check (only the `node:2` entry added, `github-cli` unchanged) and committed as `f3ed87d` after the human approved.
+- The Engineer ran the post-rebuild runtime checks, posted its #20 comment (6249655264) and logged it (`abaed5d`). QA checked every criterion and posted PASS (6249711806) at `abaed5d`.
+- Decision point: the human approved the AGENTS.md Environment line, committed as `a90d182` with `HUMAN_APPROVED=1`, and confirmed the `opencode.json` change bundled into `4eb0485` was intended (no action). The issue was closed.
 
 ## Files created or modified
 
@@ -20,6 +24,7 @@
 - GitHub: #20 body edited to the groomed text; PM comment 6247960494 (grooming) and 6248923707 (decisions applied); new issue #31.
 - `.scratch/` (git-ignored): `issue-20-check.py`, `issue-20-tooling.sh`, `issue-20-pipx-writable.py`, and the PM's drafts. Kept for the post-rebuild work.
 - `Makefile` (protected): new `tool-versions` target. `AGENTS.md` (protected): Commands "Tool versions" line; committed with the human's pre-existing Project-rules edits.
+- Post-rebuild commits: `.devcontainer/devcontainer.json` + `.devcontainer/setup.sh` (`4eb0485`, the human); `.devcontainer/devcontainer-lock.json` (`f3ed87d`, HUMAN_APPROVED); `_docs/ai-usage-log.md` (`abaed5d`, Engineer; `20c0944`, QA); `AGENTS.md` Environment line (`a90d182`, HUMAN_APPROVED). Note: `4eb0485` also carried an intended `opencode.json` permission change (outside #20's Constraints; human confirmed at the decision point; it drops the file's trailing newline).
 - This summary.
 
 ## Decisions made by the human
@@ -31,6 +36,7 @@
 - The human runs the `.devcontainer/` commit commands themselves (keeps `HUMAN_APPROVED=1` with the human), then rebuilds.
 - Approved committing the `tool-versions` change (`Makefile` + `AGENTS.md`) with `HUMAN_APPROVED=1`, including the pre-existing AGENTS.md Project-rules edits.
 - Lockfile (criterion 4): option 1 with checks — after the rebuild, show the `devcontainer-lock.json` diff before committing; it must add only the new feature entries with their versions and digests and leave `github-cli` unchanged. If the rebuild did not update it, stop and tell the human, who will regenerate it with the devcontainer CLI on their machine (option 2).
+- Post-rebuild decision point: approved committing the lockfile (`f3ed87d`) after seeing the diff; approved applying the AGENTS.md Environment line with `HUMAN_APPROVED=1` (`a90d182`); confirmed the `opencode.json` permission change bundled into `4eb0485` was intended (kept as committed).
 
 ## Mismatches with the spec or design docs
 
@@ -38,13 +44,13 @@
 
 ## Commands to validate
 
-- **Verify:** `make verify BASE=HEAD` — PASS WITH WARNINGS, the only warning being the no-`TEST_CMD` one (project still in planning, no code). Also PASS over all unpushed work since `origin/main`.
+- **Verify:** `make verify BASE=dc843de` and `make verify` — PASS WITH WARNINGS, the only warning being the no-`TEST_CMD` one (project still in planning, no code).
 - Static check: `python3 .scratch/issue-20-check.py` — all criteria PASS on the working-tree diff, including the refused-case patterns.
-- Runtime (after the human rebuilds): `node --version` (`v24.22.0`), `npm --version` (`11.19.1`), `uv --version` (`uv 0.13.1`) — QA's job, not yet run.
+- Runtime (after the rebuild, run by the Engineer and re-run by QA): `node --version` → `v24.22.0`, `npm --version` → `11.19.1`, `uv --version` → `uv 0.13.1 (x86_64-unknown-linux-gnu)`; all three resolve in a non-interactive `sh -c` and via `make tool-versions`. QA PASS at `abaed5d` (comment 6249711806).
 
 ## Proposed AGENTS.md changes
 
-One line, protected, not yet approved or applied:
+One line, protected, approved and applied at the decision point (`a90d182`, `HUMAN_APPROVED=1`):
 
 ```
 - **Environment:** local sandbox (dev container; no Docker). The recipe installs Node.js `24.22.0` and uv `0.13.1`. GitHub token: read-only code (you can't push); read and write issues (you can post comments and close issues). See `_docs/agent-kit/environments.md`.
@@ -65,10 +71,6 @@ None. The Engineer stopped on purpose before the gated commit and returned an ap
 
 ## Follow-ups for the next session
 
-- The human commits `.devcontainer/devcontainer.json` and `.devcontainer/setup.sh` with `HUMAN_APPROVED=1`, then rebuilds the container.
-  - `git add .devcontainer/devcontainer.json .devcontainer/setup.sh`
-  - `HUMAN_APPROVED=1 git commit -m "Issue #20: install pinned Node.js 24.22.0 and uv 0.13.1 in the dev container"`
-- After the rebuild: inspect the `devcontainer-lock.json` diff (only the new node entries added, `github-cli` unchanged) and show it to the human before committing it; if the rebuild did not update it, stop and tell the human (they will regenerate it with the CLI).
-- Then append the usage-log entries, post the Engineer comment, and run QA: `node --version`, `npm --version`, `uv --version`, and the non-interactive `make`-shell check.
-- Only after QA PASS, the decision point applies the AGENTS.md Environment line with `HUMAN_APPROVED=1`.
-- `make clean-scratch` was **not** run: #20 is still open and the `.scratch/` check scripts are needed after the rebuild.
+- All #20 tasks are done and the issue is closed; nothing left here.
+- Next: #15 part E2 (install, run, test). Start with `node --version` / `npm --version`, then `npm install --before=2026-10-18` in `frontend/`, add the `frontend-install`/`frontend-start`/`frontend-stop`/`frontend-test` targets, point `TEST_CMD` and the AGENTS.md Install/Run/Test lines at the all-tests target (protected, `HUMAN_APPROVED=1` at the decision point), run the tests, and re-run the secrets scan after `package-lock.json`.
+- `make clean-scratch` was **not** run: #15 is still open and its `.scratch/` E1 scan and fixture scripts are reused by E2 QA. Run it when #15 closes.
