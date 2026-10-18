@@ -611,3 +611,14 @@ Copy this template for each new entry:
 - files changed: none in the repo (QA scripts in `.scratch/` only). GitHub: QA PASS on #28 (comment 6246783716); QA FAIL on #15 D/E1 (comment 6246840624); Orchestrator decision comments 6247718969 (#28) and 6247719173 (#15)
 - verification (tests run, reviewer verdict): #28: QA's `.scratch/qa-28-checks.sh` passed all 27 criteria checks; the Engineer's fixture script passed 24/24; `make verify BASE=0dd108a` PASS WITH WARNINGS (no TEST_CMD only). #15: every D/E1 check passed except E1 (c): `git log --grep="#15"` also matched d3a8f11 (`specs.md`, human-approved), which is outside the allowed paths. After each QA run, `make assert-clean` PASS and HEAD unchanged at d32840c
 - human review (what I checked or corrected, or `none`): the human decided QA's risks: #28 risks 1 and 2 to be filed as follow-ups, risk 3 not filed ("bolt was not used"), with a note on #21; #15 E1 (c) to list commits explicitly, "(private)" markings added to #15, and the Lovable project "not linked" to this repo
+
+### 2026-10-18 — Engineer marks the #15 project links "(private)" (new stage D criterion)
+
+- date: 2026-10-18
+- task/issue: issue #15, stage D, the new "(private)" criterion (Orchestrator decision comment 6247719173, decision 2; PM comment 6247739573). This entry adds to the d85632b entry, which is not edited
+- agent role: Software Engineer (Claude Code software-engineer subagent, launched by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to mark the links, replace the VERIFY line with the human's answer, and list every #15 Engineer commit for E1 (c); no key prompt file saved
+- files changed: 26b8757 (`_docs/prompts/lovable-frontend.md`: "(private)" on the Bolt and Lovable link lines, the run record's VERIFY line replaced with the human's answer "both are private on gh" from comment 6246359512; `frontend/README.md`: "(private)" on the Lovable link line); this entry. GitHub: Engineer comment on #15
+- verification (tests run, reviewer verdict): `grep -nE "bolt\.new/|lovable\.dev/projects/|VERIFY"` on both files lists 3 link lines, each with "(private)", and no VERIFY line. `.scratch/issue15_prompt_check.py`: Status line and `## Prompt` section identical to 0dd108a. `make verify BASE=0dd108a` result is in the Engineer comment
+- human review (what I checked or corrected, or `none`): none yet
