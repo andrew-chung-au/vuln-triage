@@ -30,3 +30,6 @@ issue-dump: ## Fetch an issue as JSON: make issue-dump N=<issue number>
 	@mkdir -p .scratch
 	gh issue view $(N) --json number,title,body,state,labels,comments > .scratch/issue-$(N).json
 	@echo "Wrote .scratch/issue-$(N).json"
+
+tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool>: missing")
+	@for t in node npm uv python3 docker; do if command -v "$$t" >/dev/null 2>&1; then printf '%s: ' "$$t"; "$$t" --version; else echo "$$t: missing"; fi; done

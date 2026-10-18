@@ -655,3 +655,14 @@ Copy this template for each new entry:
 - files changed: `.devcontainer/devcontainer.json` and `.devcontainer/setup.sh` in the working tree only — UNCOMMITTED, because the pre-commit hook gates any `.devcontainer/` change behind `HUMAN_APPROVED=1`; the Engineer stopped and returned the approval request. `.scratch/issue-20-check.py`, `.scratch/issue-20-tooling.sh`, `.scratch/issue-20-pipx-writable.py` (git-ignored). Proposed (not edited) AGENTS.md Environment line. This entry and `_session-summaries/issue-020-node-uv-devcontainer.md`
 - verification (tests run, reviewer verdict): `make verify BASE=HEAD` PASS WITH WARNINGS (only the no-`TEST_CMD` warning; project in planning, no code); `.scratch/issue-20-check.py` all static criteria PASS including the refused-case patterns. Runtime `node`/`npm`/`uv` not run (no Node or uv in this container; deferred to QA after the human rebuilds). `.devcontainer/devcontainer-lock.json` not regenerated (no devcontainer CLI here); raised as a decision question
 - human review (what I checked or corrected, or `none`): the human chose to run the `.devcontainer/` commit commands themselves and chose lockfile option 1 with checks (show the regenerated-lock diff after the rebuild; only new feature entries; `github-cli` unchanged; if not updated, stop). The commit and rebuild are pending
+
+### 2026-10-18 — Add `make tool-versions` target and document it (human instruction, no issue)
+
+- date: 2026-10-18
+- task/issue: add a `make tool-versions` target that prints the version of node, npm, uv, python3 and docker (or `<tool>: missing`), and add it to the AGENTS.md Commands section (human instruction, no issue)
+- agent role: Orchestrator
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human instruction in-session ("Add a `tool-versions` target to the Makefile's project section (protected; show me the diff) that prints the version of node, npm, uv, python3 and docker, or \"<tool>: missing\" ... Add it to AGENTS.md's Commands section."); no key prompt file saved
+- files changed: `Makefile` (new `tool-versions` target with `##` help text, in the project section; 3 insertions); `AGENTS.md` (Commands line "Tool versions:"; the whole file was committed, carrying the human's pre-existing uncommitted Project-rules additions); this entry
+- verification (tests run, reviewer verdict): `make tool-versions` printed `node: missing`, `npm: missing`, `uv: missing`, `python3: Python 3.12.15`, `docker: missing`; `make help` lists `tool-versions`; `git diff --check` clean
+- human review (what I checked or corrected, or `none`): the human approved committing `Makefile` and `AGENTS.md` with `HUMAN_APPROVED=1`, including the pre-existing AGENTS.md Project-rules edits
