@@ -478,3 +478,25 @@ Copy this template for each new entry:
 - files changed: `_docs/agent-team.md` (new), `README.md` (one link line); 116 insertions, commit ede47bf. `AGENTS.md` not edited; the one-line diff is proposed in Engineer comment 6234459590 on #12
 - verification (tests run, reviewer verdict): `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists; whitespace PASS; no test files changed); `.scratch/check_issue12.py` (relative links and anchors, 15 commits via `git cat-file -e`, cited issues and comment ids via `gh issue view --json`, verbatim exception and intent text, model ids, refused cases) PASS. QA not yet run
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — Orchestrator commits the approved AGENTS.md line for issue #12 (commit 948e332)
+
+- date: 2026-10-18
+- task/issue: issue #12, protected-file change
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's in-session answer "Approve as written" to the line proposed in Engineer comment 6234459590; no key prompt file saved
+- files changed: `AGENTS.md` (one line in "Where to read more"), committed on its own with `HUMAN_APPROVED=1` as 948e332. GitHub: Orchestrator comment 6243691600 records the approval and the human's choice of QA tool
+- verification (tests run, reviewer verdict): `git diff` showed the approved line only; `git diff --check` clean. QA checked it afterwards (next entry)
+- human review (what I checked or corrected, or `none`): the human approved the exact line in session
+
+### 2026-10-18 — QA checks issue #12 (PASS at 948e332)
+
+- date: 2026-10-18
+- task/issue: issue #12, lifecycle step 4
+- agent role: QA Engineer (fresh Claude Code qa-engineer subagent, launched by the Orchestrator; entry appended by the Orchestrator after `make assert-clean`, as the QA role file says)
+- model: claude-opus-5-5 (Claude Code). It ran in Claude Code, the same tool as the build, because OpenCode is unavailable and the human chose this (comment 6243691600), under the exception in comment 6234208915
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to check every #12 criterion independently at 948e332, base ccd13b6; no key prompt file saved
+- files changed: none in the repo (`.scratch/qa12_check.py`, `.scratch/qa12_hook_test.sh` and `.scratch/qa12-comment.md` only). GitHub: QA comment 6243727864
+- verification (tests run, reviewer verdict): QA PASS, all 21 criteria. `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD); QA's own link, commit, issue, quote and refused-case checks; a hook test in a throwaway repo under `.scratch/` (unapproved `AGENTS.md` staging refused, `HUMAN_APPROVED=1` allowed). The guard hook blocked one `git config core.hooksPath`; QA re-ran it as `git config --get core.hooksPath` (result `.githooks`). After QA, `make assert-clean` PASS and HEAD unchanged at 948e332
+- human review (what I checked or corrected, or `none`): none yet; QA's risks go to the human at the decision point
