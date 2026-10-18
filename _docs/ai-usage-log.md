@@ -566,3 +566,15 @@ Copy this template for each new entry:
 - files changed: none in the repo. GitHub: #15 body and title rewritten (stage D run record; stage E split into E1, no Node needed, and E2, after #20), PM comment 6244224555; new issues #20 (dev container Node and uv), #21 (frontend clean-up), #22 (services layer ready for a real API), #23 (API contract), #24 (FastAPI in-memory backend), #25 (connect frontend and backend), #26 (SQLAlchemy persistence). #24-#26 are blocked until the human changes the AGENTS.md "Current phase" line
 - verification (tests run, reviewer verdict): none; the issues are not yet implemented
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — Engineer records the frontend runs and moves Lovable to frontend/ (#15 stage D and part E1)
+
+- date: 2026-10-18
+- task/issue: issue #15, stage D (run record) and part E1 (move, delete, scan, document). Part E2 not started: Node.js is not installed and E2 waits for #20
+- agent role: Software Engineer (Claude Code software-engineer subagent, launched by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to implement #15 stage D and E1 only; no key prompt file saved
+- run facts recorded (from the human, relayed by the Orchestrator; the agent never used either tool): the prompt was `_docs/prompts/lovable-frontend.md` `## Prompt`, pasted verbatim into both tools. Lovable first attempt 2026-10-17 stopped at the credit limit. Bolt, 2026-10-17: no follow-up prompts, credits not recorded, project https://bolt.new/~/sb1-fvxy4uq3, committed by the human in fea6fb7 under `frontend-bolt/` (compared, not chosen). Lovable, build completed 2026-10-18: 6 credits in total, no follow-up prompts (continued with Lovable's resume function), project https://lovable.dev/projects/f9cb1f93-46d1-4d9b-baa6-4e09b65a57f3, committed by the human in 0dd108a under `frontend-lovable/` (chosen)
+- files changed: b566fb6 (`git mv frontend-lovable frontend`, 94 renames at 100%); cbe2123 (`git rm -r frontend-bolt`, 37 deletions, human-approved decision 2; code stays at fea6fb7); 73a70af (`frontend/.gitignore`: `.env`, `.env.*`, `!.env.example`); 4a9f328 (`_docs/prompts/lovable-frontend.md` run record and follow-ups line, `_docs/prompts/README.md` "Used with" row, `frontend/README.md` Services layer section); this entry. GitHub: Engineer comment on #15
+- verification (tests run, reviewer verdict): `.scratch/issue15_scan.py` over the 94 files in `git ls-files frontend`: 1 hit, the fictional demo password `triage-demo` (harmless); fixture `.scratch/issue15_fixture.txt` flagged all 3 lines. `.scratch/issue15_prompt_check.py`: Status line and `## Prompt` section identical to 0dd108a. Network and backend-key greps run. `make verify`: FAIL on "test files deleted" (2 renamed Lovable tests, a false positive of the gate's `--no-renames` diff, and 4 Bolt tests in the approved deletion); referred to the human. No tests run: no Node.js
+- human review (what I checked or corrected, or `none`): none yet
