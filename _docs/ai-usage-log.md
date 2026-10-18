@@ -511,3 +511,25 @@ Copy this template for each new entry:
 - files changed: `_docs/agent-team.md` (history table gains a "not recorded" role row for the 2026-10-12 entries and `c631603`; #12 Engineer and QA added; third recorded exception use; handover bullets on `CLAUDE.md` and tracked settings files; 10 insertions, 9 deletions, commit 32ed2a3). GitHub: Engineer comment 6243814434 on #12
 - verification (tests run, reviewer verdict): `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists; whitespace PASS; no test files changed); `git diff --check` clean. QA re-check not yet run
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — Orchestrator commits the approved settings and scratchpad change at the issue #12 decision point (commit 6541893)
+
+- date: 2026-10-18
+- task/issue: issue #12, lifecycle step 7 (decision point), protected-file change
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's in-session answers, recorded in Orchestrator comment 6243801494: the tracked-settings rule in the human's wording (only the missing spaces from line wrapping fixed, and backticks added); the scratchpad line moved from `CLAUDE.md` into `AGENTS.md`; "Approve as shown" for the exact diff
+- files changed: `AGENTS.md` (scratch-files line extended; tracked-settings rule added; home-folder and environment-variables rule kept), `CLAUDE.md` (now only `@AGENTS.md`); committed with `HUMAN_APPROVED=1` as 6541893
+- verification (tests run, reviewer verdict): `git diff` reviewed against the approved diff; `git diff --check` clean. QA re-check PASS (next entry)
+- human review (what I checked or corrected, or `none`): the human approved the exact diff in session
+
+### 2026-10-18 — QA re-checks the issue #12 decision-point changes (PASS at 92d9926)
+
+- date: 2026-10-18
+- task/issue: issue #12, lifecycle step 7: QA re-checks only what changed (6541893, 32ed2a3, 92d9926)
+- agent role: QA Engineer (fresh Claude Code qa-engineer subagent, launched by the Orchestrator; entry appended by the Orchestrator after `make assert-clean`)
+- model: claude-opus-5-5 (Claude Code). It ran in Claude Code, the same tool as the build, because OpenCode is unavailable and the human chose this (comment 6243691600), under the exception in comment 6234208915
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to re-check the three commits against comments 6243801494 and 6243814434, and to re-confirm file scope over ccd13b6..HEAD; no key prompt file saved
+- files changed: none in the repo (`.scratch/qa12_recheck.py` and `.scratch/qa12-recheck-comment.md` only). GitHub: QA comment 6243839013
+- verification (tests run, reviewer verdict): QA PASS. `python3 .scratch/qa12_recheck.py`: 19 checks, 0 failed. `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD). Scope note: `CLAUDE.md`, and the second `AGENTS.md` change, fall outside the criterion's file list; both come from the human-approved 6541893. After QA, `make assert-clean` PASS and HEAD unchanged at 92d9926
+- human review (what I checked or corrected, or `none`): none yet
