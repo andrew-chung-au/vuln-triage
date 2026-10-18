@@ -589,3 +589,14 @@ Copy this template for each new entry:
 - files changed: `_docs/specs.md` (one Assumptions line, d3a8f11, `HUMAN_APPROVED=1`). GitHub: Orchestrator comment 6244293385 on #11; PM: #15 body (E2 install criterion), comment 6244314164; #23 body (approved Stage 3 text, human review of `openapi.yaml`), comment 6244314486; new issue #27 (n8n and MCP server endpoints, depends on #23)
 - verification (tests run, reviewer verdict): `git diff` of the `specs.md` change matched the approved line; `git diff --check` clean
 - human review (what I checked or corrected, or `none`): the human approved the `specs.md` line and the Stage 3 text in session
+
+### 2026-10-18 — Engineer fixes the weakened-tests check for renames and approved deletions (#28)
+
+- date: 2026-10-18
+- task/issue: issue #28 (verify gate: test-file renames count as moves; `APPROVED_TEST_DELETIONS` in `agent-kit.conf`)
+- agent role: Software Engineer (Claude Code software-engineer subagent, launched by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to implement #28, run the fixture script and `make verify BASE=0dd108a`, and return the protected diff with an approval request before committing; no key prompt file saved
+- files changed: `_docs/agent-kit/scripts/verify.sh` (rename-aware `-M` diff, R100 moves skipped, edited renames diffed old to new, exact-path approved deletions, glob entries fail) and `agent-kit.conf` (`APPROVED_TEST_DELETIONS` with the four `frontend-bolt/` test paths), both protected, committed alone in 035eafd with `HUMAN_APPROVED=1` (`git show --stat --format= 035eafd` lists only those two files); `lib.sh` unchanged; this entry; `_session-summaries/issue-028-verify-renames.md`. GitHub: Engineer comment on #28
+- verification (tests run, reviewer verdict): `.scratch/issue-28-verify-fixtures.sh`: 24 passed, 0 failed (throwaway repos under `.scratch/issue-28-fixtures/`; this repository's HEAD and `git status --short` the same before and after). `make verify BASE=0dd108a` (uncommitted changes): weakened-tests section lists the four Bolt paths under "Deleted with approval", no deletion FAIL; result PASS WITH WARNINGS (only the no-TEST_CMD warning); same result after 035eafd. No QA yet
+- human review (what I checked or corrected, or `none`): the human approved the exact diff of `verify.sh` and `agent-kit.conf` in session, 2026-10-18 ("Approve as shown (Recommended)", relayed by the Orchestrator, who checked the working-tree diff matched)
