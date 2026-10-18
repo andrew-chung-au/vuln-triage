@@ -544,3 +544,25 @@ Copy this template for each new entry:
 - files changed: none in the repo. GitHub: #16 (agent-team.md history table upkeep), #17 (`_docs/agent-kit/scripts/check-staged.sh` doesn't enforce "committed alone"; a protected path), #18 (record approvals as exact text), #19 (`_docs/ai-usage-report.md` §2 TODO)
 - verification (tests run, reviewer verdict): the PM checked open issues #3-#10, #13 and #15 for duplicates and found none. Not groomed yet
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — Orchestrator compares the Bolt and Lovable prototypes (#15)
+
+- date: 2026-10-18
+- task/issue: issue #15. The human asked for both prototypes (`frontend-bolt/` at fea6fb7, `frontend-lovable/` at 0dd108a) to be reviewed, one chosen and renamed `frontend/`, and follow-up issues drafted for course steps 3-6
+- agent role: Orchestrator (Claude Code main session)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's in-session request; no key prompt file saved
+- files changed: `_docs/reviews/2026-10-18-frontend-comparison.md` (51b477a). GitHub: Orchestrator comment 6244151098 on #15 recording the human's four decisions (Lovable chosen; `frontend-bolt/` deleted in its own commit; F0-F6 filed with F4-F6 gated on the phase line; `openapi.yaml` as contract plus a FastAPI conformance test)
+- verification (tests run, reviewer verdict): static read only. Node.js and npm are not installed (`node --version`: command not found), so neither app was installed, built or tested. Read-only greps: every email in both `src/` trees uses example.com/.org/.net; network-call grep hits recorded in the review
+- human review (what I checked or corrected, or `none`): the human chose the recommended option on all four decisions
+
+### 2026-10-18 — PM re-grooms #15 for Lovable and files #20-#26
+
+- date: 2026-10-18
+- task/issue: issue #15 (lifecycle step 2, re-grooming) and follow-ups F0-F6 from the 2026-10-18 frontend comparison
+- agent role: PM (Claude Code pm subagent, launched by the Orchestrator; entry appended by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to re-groom #15 per the human's decisions and file F0-F6; the human's stage D values relayed during the run ("build completition date 18-10-2026. total credits used is 6. no follow up prompts used, only the resume function"); no key prompt file saved
+- files changed: none in the repo. GitHub: #15 body and title rewritten (stage D run record; stage E split into E1, no Node needed, and E2, after #20), PM comment 6244224555; new issues #20 (dev container Node and uv), #21 (frontend clean-up), #22 (services layer ready for a real API), #23 (API contract), #24 (FastAPI in-memory backend), #25 (connect frontend and backend), #26 (SQLAlchemy persistence). #24-#26 are blocked until the human changes the AGENTS.md "Current phase" line
+- verification (tests run, reviewer verdict): none; the issues are not yet implemented
+- human review (what I checked or corrected, or `none`): none yet
