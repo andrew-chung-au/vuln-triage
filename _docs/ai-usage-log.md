@@ -533,3 +533,14 @@ Copy this template for each new entry:
 - files changed: none in the repo (`.scratch/qa12_recheck.py` and `.scratch/qa12-recheck-comment.md` only). GitHub: QA comment 6243839013
 - verification (tests run, reviewer verdict): QA PASS. `python3 .scratch/qa12_recheck.py`: 19 checks, 0 failed. `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD). Scope note: `CLAUDE.md`, and the second `AGENTS.md` change, fall outside the criterion's file list; both come from the human-approved 6541893. After QA, `make assert-clean` PASS and HEAD unchanged at 92d9926
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — PM files four follow-up issues from #12 (#16 to #19)
+
+- date: 2026-10-18
+- task/issue: #12 follow-ups (lifecycle step 7). After #12 closed, the human asked for the QA risks to be filed as future issues. This replaces "none selected" in Orchestrator comment 6243801494 and in the #12 session summary
+- agent role: PM (Claude Code subagent, launched by the Orchestrator; entry appended by the Orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to file one ungroomed issue per risk; no key prompt file saved. A first PM run stopped when the session ended, before filing anything (checked: no new issues or comments, clean tree); a fresh PM run did the task
+- files changed: none in the repo. GitHub: #16 (agent-team.md history table upkeep), #17 (`_docs/agent-kit/scripts/check-staged.sh` doesn't enforce "committed alone"; a protected path), #18 (record approvals as exact text), #19 (`_docs/ai-usage-report.md` §2 TODO)
+- verification (tests run, reviewer verdict): the PM checked open issues #3-#10, #13 and #15 for duplicates and found none. Not groomed yet
+- human review (what I checked or corrected, or `none`): none yet
