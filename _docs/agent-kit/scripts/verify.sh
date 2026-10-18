@@ -5,6 +5,9 @@
 # Exit 0 = PASS (warnings need a stated reason), 1 = FAIL.
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
+# Optional in agent-kit.conf; reset here so a missing array means "none approved"
+# and nothing from the environment can add an approval.
+APPROVED_TEST_DELETIONS=()
 load_conf
 
 BASE="${1:-}"
@@ -51,22 +54,79 @@ else
 fi
 
 section "Weakened tests"
-changed_tests=()
+# Renames are detected with -M (git's default similarity threshold, 50%). A rename
+# line is "R<score><TAB>old<TAB>new":
+#   - R100 from a test path to a test path is a move: not a deletion, not a change.
+#   - R<100 to a test path is a changed test, diffed from the old to the new contents.
+#   - a rename whose new path no longer matches TEST_FILES deletes the old test file.
+#   - a move edited so much that git doesn't pair the two paths shows as D + A, so it
+#     counts as a deletion. This is deliberate: when in doubt, fail.
+# A deletion passes only if its exact path is in APPROVED_TEST_DELETIONS.
+changed_tests=()   # new paths of changed test files
+diff_paths=()      # pathspecs for the content diff (includes the old side of renames)
 deleted_tests=()
-while IFS=$'\t' read -r status path; do
+while IFS=$'\t' read -r status path newpath; do
   [ -z "$path" ] && continue
+  if [ "${status:0:1}" = "R" ] && [ -n "$newpath" ]; then
+    old_is_test=0
+    matches_any "$path" "${TEST_FILES[@]}" && old_is_test=1
+    if matches_any "$newpath" "${TEST_FILES[@]}"; then
+      if [ "$old_is_test" -eq 1 ] && [ "$status" = "R100" ]; then
+        continue
+      fi
+      changed_tests+=("$newpath")
+      diff_paths+=("$newpath")
+      # Only pair with the old contents if the old file was a test file too;
+      # otherwise the new test file is checked as an addition, as before.
+      [ "$old_is_test" -eq 1 ] && diff_paths+=("$path")
+    elif [ "$old_is_test" -eq 1 ]; then
+      deleted_tests+=("$path")
+    fi
+    continue
+  fi
   matches_any "$path" "${TEST_FILES[@]}" || continue
-  if [ "$status" = "D" ]; then deleted_tests+=("$path"); else changed_tests+=("$path"); fi
-done < <(git diff --relative --name-status --no-renames "$BASE")
+  if [ "$status" = "D" ]; then
+    deleted_tests+=("$path")
+  else
+    changed_tests+=("$path")
+    diff_paths+=("$path")
+  fi
+done < <(git diff --relative --name-status -M "$BASE")
 
-if [ "${#deleted_tests[@]}" -gt 0 ]; then
+# Approved deletions: exact paths only. A glob entry is a config error and is never matched.
+approved=()
+for entry in "${APPROVED_TEST_DELETIONS[@]}"; do
+  case "$entry" in
+    *[\*\?\[]*)
+      echo "FAIL: APPROVED_TEST_DELETIONS entry '$entry' contains a glob character; only exact paths are allowed"
+      fail=1
+      ;;
+    *) approved+=("$entry") ;;
+  esac
+done
+unapproved_deletions=()
+approved_deletions=()
+for path in "${deleted_tests[@]}"; do
+  ok=0
+  for entry in "${approved[@]}"; do
+    if [ "$path" = "$entry" ]; then ok=1; break; fi
+  done
+  if [ "$ok" -eq 1 ]; then approved_deletions+=("$path"); else unapproved_deletions+=("$path"); fi
+done
+
+if [ "${#approved_deletions[@]}" -gt 0 ]; then
+  echo "Deleted with approval (APPROVED_TEST_DELETIONS in agent-kit.conf):"
+  printf '  %s\n' "${approved_deletions[@]}"
+fi
+
+if [ "${#unapproved_deletions[@]}" -gt 0 ]; then
   echo "FAIL: test files deleted:"
-  printf '  %s\n' "${deleted_tests[@]}"
+  printf '  %s\n' "${unapproved_deletions[@]}"
   fail=1
 fi
 
 if [ "${#changed_tests[@]}" -gt 0 ]; then
-  test_diff="$(git diff -U0 "$BASE" -- "${changed_tests[@]}")"
+  test_diff="$(git diff -U0 -M "$BASE" -- "${diff_paths[@]}")"
   added="$(printf '%s\n' "$test_diff" | grep -E '^\+[^+]' || true)"
   removed="$(printf '%s\n' "$test_diff" | grep -E '^-[^-]' || true)"
 
