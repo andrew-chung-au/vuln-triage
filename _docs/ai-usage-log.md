@@ -622,3 +622,14 @@ Copy this template for each new entry:
 - files changed: 26b8757 (`_docs/prompts/lovable-frontend.md`: "(private)" on the Bolt and Lovable link lines, the run record's VERIFY line replaced with the human's answer "both are private on gh" from comment 6246359512; `frontend/README.md`: "(private)" on the Lovable link line); this entry. GitHub: Engineer comment on #15
 - verification (tests run, reviewer verdict): `grep -nE "bolt\.new/|lovable\.dev/projects/|VERIFY"` on both files lists 3 link lines, each with "(private)", and no VERIFY line. `.scratch/issue15_prompt_check.py`: Status line and `## Prompt` section identical to 0dd108a. `make verify BASE=0dd108a` result is in the Engineer comment
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-18 — QA re-checks #15 stage D / part E1 (PASS at 3abcc65)
+
+- date: 2026-10-18
+- task/issue: issue #15, stage D and part E1, lifecycle step 4 re-check of what changed after QA FAIL 6246840624
+- agent role: QA Engineer (fresh Claude Code qa-engineer subagent, launched by the Orchestrator; entry appended by the Orchestrator after `make assert-clean`)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to re-check only the reworded E1 (c), the new "(private)" criterion, the prompt byte-check and `make verify`; no key prompt file saved
+- files changed: none in the repo (`.scratch/qa15_recheck.py` and its comment body only). GitHub: QA PASS comment 6247797817
+- verification (tests run, reviewer verdict): QA PASS for D/E1. All seven listed #15 Engineer commits touch only allowed paths; 3 link lines carry "(private)" and no VERIFY line is left; the usage log diff since d85632b removes no line; `## Prompt` byte-identical to 0dd108a; `make verify BASE=0dd108a` PASS WITH WARNINGS (no TEST_CMD only). E2 not yet checked (waits for #20). QA reported running one inline `python3 -c "print(1)"`, against the AGENTS.md rule; it changed nothing. After QA, `make assert-clean` PASS, HEAD unchanged at 3abcc65
+- human review (what I checked or corrected, or `none`): none yet
