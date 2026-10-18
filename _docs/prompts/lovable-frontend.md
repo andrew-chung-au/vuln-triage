@@ -111,14 +111,15 @@ None. The build was continued with Lovable's resume function.
 - Bolt (compared, not chosen): the approved `## Prompt` section pasted
   verbatim; follow-up prompts: none; credits: not recorded; committed by the
   human in `fea6fb7` (2026-10-17) under `frontend-bolt/`; Bolt project
-  https://bolt.new/~/sb1-fvxy4uq3; deleted from the tree in `cbe2123`, see
+  https://bolt.new/~/sb1-fvxy4uq3 (private); deleted from the tree in `cbe2123`, see
   `_docs/reviews/2026-10-18-frontend-comparison.md`.
 - Lovable (chosen): build completed 2026-10-18; total credits used: 6;
   follow-up prompts: none; the build was continued after the credit reset with
   Lovable's "resume" function, which is not a prompt; Lovable project
-  https://lovable.dev/projects/f9cb1f93-46d1-4d9b-baa6-4e09b65a57f3 (from
+  https://lovable.dev/projects/f9cb1f93-46d1-4d9b-baa6-4e09b65a57f3 (private) (from
   `frontend-lovable/README.md` at `0dd108a`); committed by the human in
   `0dd108a` under `frontend-lovable/`; moved to `frontend/` in `b566fb6`.
 
-VERIFY: whether either project link is viewable by anyone other than the
-human.
+Both project links are private (the human, 2026-10-18: "both are private on
+gh"). The public record of each build is its commit: Bolt `fea6fb7`, Lovable
+`0dd108a`.
