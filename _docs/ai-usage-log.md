@@ -500,3 +500,14 @@ Copy this template for each new entry:
 - files changed: none in the repo (`.scratch/qa12_check.py`, `.scratch/qa12_hook_test.sh` and `.scratch/qa12-comment.md` only). GitHub: QA comment 6243727864
 - verification (tests run, reviewer verdict): QA PASS, all 21 criteria. `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD); QA's own link, commit, issue, quote and refused-case checks; a hook test in a throwaway repo under `.scratch/` (unapproved `AGENTS.md` staging refused, `HUMAN_APPROVED=1` allowed). The guard hook blocked one `git config core.hooksPath`; QA re-ran it as `git config --get core.hooksPath` (result `.githooks`). After QA, `make assert-clean` PASS and HEAD unchanged at 948e332
 - human review (what I checked or corrected, or `none`): none yet; QA's risks go to the human at the decision point
+
+### 2026-10-18 — Engineer fixes `_docs/agent-team.md` after the #12 decision point (commit 32ed2a3)
+
+- date: 2026-10-18
+- task/issue: issue #12, lifecycle step 7 back to step 3: apply the human's decision-point answers (Orchestrator comment 6243801494) to `_docs/agent-team.md`
+- agent role: Software Engineer (Claude Code subagent, launched by the Orchestrator; entry appended by the Engineer, as its role file says while #10 is open)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction listing the human's four decisions (role "not recorded" where the log says so; `CLAUDE.md` claims match `6541893`; add the #12 Engineer and QA runs, QA under the same-tool exception; settings text consistent with the new `AGENTS.md` rule) and "Don't change anything else"; no key prompt file saved
+- files changed: `_docs/agent-team.md` (history table gains a "not recorded" role row for the 2026-10-12 entries and `c631603`; #12 Engineer and QA added; third recorded exception use; handover bullets on `CLAUDE.md` and tracked settings files; 10 insertions, 9 deletions, commit 32ed2a3). GitHub: Engineer comment 6243814434 on #12
+- verification (tests run, reviewer verdict): `make verify BASE=ccd13b6` PASS WITH WARNINGS (only warning: no TEST_CMD, no code exists; whitespace PASS; no test files changed); `git diff --check` clean. QA re-check not yet run
+- human review (what I checked or corrected, or `none`): none yet
