@@ -710,3 +710,14 @@ Copy this template for each new entry:
 - files changed: none in the repo by QA (`.scratch/` scripts only). GitHub: QA PASS comments 6250209261 (first run, discarded) and 6250305366 (kept re-run). `opencode.json` (protected) gained two allow rules (`git ls-files*`, `pgrep *`) during the first run — the tool persisted them; the human approved keeping them and they were committed as `352ff95` with `HUMAN_APPROVED=1`
 - verification (tests run, reviewer verdict): first run QA PASS at `e3de014` (10/10 tests, `/login` HTTP 200 on `127.0.0.1:5173`, secrets scan clean), but `make assert-clean` then FAILED on ` M opencode.json`, so the verdict was discarded per process step 5. Re-run at `352ff95`: QA PASS, all E2 criteria — node v24.22.0, npm 11.19.1, `make frontend-install` (`npm ci`) exit 0, `make frontend-test` and `make test` 10/10, `frontend-start` recorded PID 47104 and `frontend-stop` stopped only it, `/login` and `/` HTTP 200 on port 5173 with no backend, `package.json` unchanged since `0dd108a`, 95-file secrets scan clean and its fixture flagged, no path outside the allowed list for any #15 commit (`352ff95` is the unrelated opencode.json commit). `make verify` and `make verify BASE=0dd108a` both PASS, no warnings. After the re-run `make assert-clean` PASS and HEAD unchanged at `352ff95`
 - human review (what I checked or corrected, or `none`): the human chose "Keep and commit" for the two `opencode.json` allow rules (they were the tool persisting an approved read-only check); committed with `HUMAN_APPROVED=1` as `352ff95`
+
+### 2026-10-18 — #15 E2 decision point, follow-up comment, and close
+
+- date: 2026-10-18
+- task/issue: issue #15, lifecycle steps 7-9 (decision point, cleanup and summary, close)
+- agent role: Orchestrator; Software Engineer (one follow-up comment)
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human decisions at the E2 decision point (post the Engineer follow-up comment naming the remaining E2 commits; then update the summary, clean up and close); no key prompt file saved
+- files changed: this entry; `_session-summaries/issue-015-frontend-choice.md` (updated for E2). GitHub: Engineer follow-up comment 6250367523 naming `c95643b` and `e3de014` (and noting `352ff95` is the unrelated `opencode.json` commit). No code changed
+- verification (tests run, reviewer verdict): QA PASS at `352ff95` stands; `make assert-clean` PASS; `make clean-scratch` run (`.scratch/` emptied; no process was running)
+- human review (what I checked or corrected, or `none`): the human chose to post the Engineer follow-up comment (recommended) rather than accept QA's judgement on the strict E1(c) reading
