@@ -157,6 +157,7 @@ and a test; once merged, CI deploys it to dev.
   low/medium/high/critical); final values in Stage 2.
 - ASSUMPTION: pilot repos plus OWASP Juice Shop give real findings; pilot
   asset list in a later stage.
+- ASSUMPTION: an asset owner has a name and a contact email; an asset is ownerless when neither is set.
 
 ## Suggested additions (not in the plan unless approved)
 
