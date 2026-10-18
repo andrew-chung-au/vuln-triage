@@ -23,6 +23,22 @@ npm i
 npm run dev
 ```
 
+## Make targets
+
+Run these from the repository root; they wrap the commands above for `frontend/`:
+
+| Target | Does |
+|---|---|
+| `make frontend-install` | Installs dependencies from `package-lock.json` (`npm ci`). |
+| `make frontend-test` | Runs the unit tests once (`vitest run`, the 10 cases in `src/test/`). |
+| `make test` | Runs all the project's tests (currently the frontend's). |
+| `make frontend-start` | Starts the Vite dev server in the background on host `127.0.0.1`, port `5173` (log: `.scratch/frontend.log`, PID: `.scratch/frontend.pid`). |
+| `make frontend-stop` | Stops the server that `make frontend-start` started (only the recorded PID). |
+
+`frontend-start` passes `--host 127.0.0.1 --port 5173` explicitly, so it does not
+depend on Lovable's sandbox detection. The app serves with no backend running:
+every backend call is mocked in the services layer.
+
 ## Services layer
 
 Every backend call goes through the `Services` interface in
