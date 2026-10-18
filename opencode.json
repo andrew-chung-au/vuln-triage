@@ -11,19 +11,21 @@
     "edit": {
       "*": "allow",
       "AGENTS.md": "ask",
+      "CLAUDE.md": "ask",
       "Makefile": "ask",
       "agent-kit.conf": "ask",
+      "opencode.json": "ask",
       "_docs/specs.md": "ask",
       "_docs/project-brief.md": "ask",
-      "_docs/agent-kit/*": "ask",
-      "opencode.json": "ask",
-      ".opencode/*": "ask",
-      "CLAUDE.md": "ask",
-      ".claude/*": "ask"
+      "_docs/agent-kit/**": "ask",
+      ".opencode/**": "ask",
+      ".claude/**": "ask"
     },
     "bash": {
       "*": "ask",
+
       "make *": "allow",
+
       "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
@@ -31,19 +33,28 @@
       "git rev-parse*": "allow",
       "git branch -vv*": "allow",
       "git branch --show-current*": "allow",
+      "git config --get*": "allow",
+
       "gh issue list*": "allow",
       "gh issue view*": "allow",
       "gh issue comment*": "allow",
-      "gh issue close*": "ask",
       "gh issue create*": "allow",
+      "gh issue close*": "ask",
       "gh issue edit*": "ask",
       "gh issue delete*": "deny",
+      "gh label list*": "allow",
+      "gh repo view*": "allow",
       "gh api*": "ask",
+
+      "command -v *": "allow",
+      "ls *": "allow",
       "grep *": "allow",
-      "ls*": "allow",
-      "echo *": "allow",
       "head *": "allow",
       "tail *": "allow",
+      "wc *": "allow",
+      "jq *": "allow",
+      "echo *": "allow",
+
       "git add *": "allow",
       "git commit *": "allow",
       "git add .": "deny",
@@ -55,11 +66,10 @@
       "*--no-verify*": "deny",
       "git push*": "deny",
       "git config core.hooksPath*": "deny",
-      "wc *": "allow",
-      "gh repo view*": "allow",
-      "jq *": "allow",
+
       "* > *": "ask",
       "* >> *": "ask",
+
       "*.env*": "deny",
       "*.env.example*": "allow"
     }

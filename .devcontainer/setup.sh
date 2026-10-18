@@ -13,6 +13,10 @@ fi
 command -v opencode >/dev/null || curl -fsSL https://opencode.ai/install | bash
 command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | bash
 
+# uv for the backend toolchain (pinned, #20); pipx ships in the base image.
+# Installs to the image's pipx dir, which is on the image PATH.
+pipx install uv==0.13.1
+
 git config --global user.name "Andrew Chung"
 git config --global user.email "177896104+andrew-chung-au@users.noreply.github.com"
 
