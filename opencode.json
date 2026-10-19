@@ -64,6 +64,7 @@
       "tail *": "allow",
       "wc *": "allow",
       "jq *": "allow",
+      "rg *": "allow",
       "echo *": "allow",
       "pgrep *": "allow",
       "stat *": "allow",
