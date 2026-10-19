@@ -10,6 +10,7 @@ Where to read more:
 - `_docs/project-brief.md`: what VulnTriage does and its fixed stack
 - `_docs/specs.md`: the product spec. Read it before planning or implementing anything.
 - `_docs/rubric.md`: the final project criteria this project is graded against
+- `_docs/roadmap.md`: the order of open work; check it before picking the next issue, and add a check-in line at the end of each issue session
 - `_docs/reviews/`: plan reviews and rubric-impact reviews
 - `_docs/agent-kit/process.md`: how an issue is worked. Read it before working any issue.
 - `_docs/agent-kit/team/`: one file per working role (`pm.md`, `software-engineer.md`, `qa-engineer.md`); the rubric auditor is in `.opencode/agents/` and `.claude/agents/`
