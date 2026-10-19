@@ -10,8 +10,7 @@ layer.
 
 You need Node.js and npm (the project is developed with Node.js 24 and npm 11).
 Install dependencies and start the Vite dev server with the make targets below;
-do not run a bare `npm install` — it would rewrite the lockfile outside the
-committed resolution.
+installing by hand would rewrite the lockfile outside the committed resolution.
 
 ```sh
 git clone <this-repository-url>
@@ -62,7 +61,7 @@ services.
 `frontend/.npmrc` sets `min-release-age=1`, so npm skips package versions
 published less than one day ago. This replaces the Bun `minimumReleaseAge` guard
 that was removed with `bunfig.toml` (review item E in
-`_docs/reviews/2026-10-18-review-issues-15-20.md`). An npm install only reads
+`_docs/reviews/2026-10-18-review-issues-15-20.md`). The install step only reads
 this file when it runs from `frontend/`; the make targets do that with
 `npm --prefix frontend`.
 

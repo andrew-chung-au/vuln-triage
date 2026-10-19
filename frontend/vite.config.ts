@@ -1,7 +1,7 @@
 // Explicit Vite config for the VulnTriage frontend (issue #21).
 //
-// This replaces `@lovable.dev/vite-tanstack-config`. Every plugin the app needs
-// is named here. The render/build target (SPA mode, Node server preset, or plain
+// This replaces the app builder's shared Vite preset. Every plugin the app
+// needs is named here. The render/build target (SPA mode, Node server preset, or plain
 // TanStack Router) is still a human decision on #21, so this config keeps the
 // dev server working and leaves the production target to be added.
 import { fileURLToPath } from "node:url";
