@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AffectedRanges } from "@/components/vt/AffectedRanges";
+import { AuditTrail } from "@/components/vt/AuditTrail";
 import { Flag, StatusBadge, TierBadge, formatDate, formatEpss } from "@/components/vt/Badges";
-import { services } from "@/services";
+import { ServiceError, isOwnerless, services } from "@/services";
 
 export const Route = createFileRoute("/_authed/findings/$findingId")({
   head: () => ({
@@ -28,10 +29,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Detail() {
   const { findingId } = Route.useParams();
-  const { data: f, isLoading } = useQuery({ queryKey: ["finding", findingId], queryFn: () => services.getFinding(findingId) });
+  const { data: f, isLoading, error } = useQuery({ queryKey: ["finding", findingId], queryFn: () => services.getFinding(findingId) });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (!f) return <p>Finding not found. <Link to="/findings" className="text-primary underline">Back to findings</Link></p>;
+  if (error || !f) {
+    const message = error instanceof ServiceError ? error.message : "Something went wrong.";
+    return <p>{message} <Link to="/findings" className="text-primary underline">Back to findings</Link></p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -68,7 +72,15 @@ function Detail() {
             <Flag>{formatEpss(f.epss)}</Flag>
           </div>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">Owner</dt><dd>{f.asset.owner ?? <Flag tone="warning">ownerless</Flag>}</dd>
+            <dt className="text-muted-foreground">Owner</dt>
+            <dd data-testid="asset-owner">
+              {isOwnerless(f.asset) ? <Flag tone="warning">ownerless</Flag> : (
+                <span>
+                  <span>{f.asset.ownerName ?? "—"}</span>
+                  <span className="block text-muted-foreground">{f.asset.ownerEmail ?? "—"}</span>
+                </span>
+              )}
+            </dd>
             <dt className="text-muted-foreground">Criticality</dt><dd>{f.asset.criticality}</dd>
             <dt className="text-muted-foreground">Internet-facing</dt><dd>{f.asset.internetFacing ? "yes" : "no"}</dd>
           </dl>
@@ -93,26 +105,7 @@ function Detail() {
       </Section>
 
       <Section title="Audit trail">
-        {f.auditTrail.length === 0 ? <p className="text-sm text-muted-foreground">No changes recorded.</p> : (
-          <div className="overflow-x-auto rounded-md border bg-card">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
-                <tr><th className="px-3 py-2">Who</th><th className="px-3 py-2">When</th><th className="px-3 py-2">Previous</th><th className="px-3 py-2">New</th><th className="px-3 py-2">Reason</th></tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {f.auditTrail.map((a, i) => (
-                  <tr key={i}>
-                    <td className="px-3 py-2">{a.who}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{formatDate(a.when)}</td>
-                    <td className="px-3 py-2">{a.previousValue}</td>
-                    <td className="px-3 py-2">{a.newValue}</td>
-                    <td className="px-3 py-2">{a.reason ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <AuditTrail entries={f.auditTrail} />
       </Section>
     </div>
   );

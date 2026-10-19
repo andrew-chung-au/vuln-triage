@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { validateAssetName } from "@/lib/validation";
-import { services, type Criticality } from "@/services";
+import { ServiceError, services, type Criticality } from "@/services";
 
 export const Route = createFileRoute("/_authed/assets/new")({
   head: () => ({
@@ -23,7 +23,8 @@ function NewAsset() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [name, setName] = useState("");
-  const [owner, setOwner] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
   const [criticality, setCriticality] = useState<Criticality>("medium");
   const [internetFacing, setInternetFacing] = useState(false);
   const [repositoryUrl, setRepositoryUrl] = useState("");
@@ -34,11 +35,11 @@ function NewAsset() {
     const v = validateAssetName(name);
     if (v) return setError(v);
     try {
-      await services.registerAsset({ name, owner, criticality, internetFacing, repositoryUrl });
+      await services.registerAsset({ name, ownerName, ownerEmail, criticality, internetFacing, repositoryUrl });
       await qc.invalidateQueries({ queryKey: ["assets"] });
       navigate({ to: "/assets" });
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof ServiceError ? err.message : "Something went wrong.");
     }
   }
 
@@ -48,7 +49,8 @@ function NewAsset() {
       <h1 className="text-xl font-semibold">Register asset</h1>
       <form onSubmit={submit} className="space-y-4 rounded-md border bg-card p-4">
         <div className="space-y-1.5"><Label htmlFor="name">Name (required)</Label><Input id="name" value={name} onChange={(e) => { setName(e.target.value); setError(null); }} /></div>
-        <div className="space-y-1.5"><Label htmlFor="owner">Owner (optional)</Label><Input id="owner" placeholder="team@example.com" value={owner} onChange={(e) => setOwner(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="owner-name">Owner name (optional)</Label><Input id="owner-name" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="owner-email">Owner email (optional)</Label><Input id="owner-email" type="text" placeholder="team@example.com" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="crit">Criticality</Label>
           <select id="crit" className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm" value={criticality} onChange={(e) => setCriticality(e.target.value as Criticality)}>

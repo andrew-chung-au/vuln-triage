@@ -6,13 +6,13 @@ export const DEMO_USER: User = { id: "u1", name: "Jordan Vale", email: "analyst@
 
 export function seedAssets(): Asset[] {
   return [
-    { id: "a1", name: "payments-api", owner: "payments-team@example.com", criticality: "critical", internetFacing: true, repositoryUrl: "https://git.example.com/acme/payments-api", scanStatus: "scanned" },
-    { id: "a2", name: "customer-portal", owner: "web-team@example.org", criticality: "high", internetFacing: true, repositoryUrl: "https://git.example.com/acme/customer-portal", scanStatus: "scanned" },
-    { id: "a3", name: "reporting-worker", owner: "data-eng@example.net", criticality: "medium", internetFacing: false, repositoryUrl: "https://git.example.com/acme/reporting-worker", scanStatus: "scanned" },
-    { id: "a4", name: "internal-wiki", owner: null, criticality: "low", internetFacing: false, repositoryUrl: "https://git.example.com/acme/internal-wiki", scanStatus: "scanned" },
-    { id: "a5", name: "legacy-billing", owner: "finance-it@example.com", criticality: "high", internetFacing: false, repositoryUrl: "https://git.example.com/acme/legacy-billing", scanStatus: "scan_error" },
-    { id: "a6", name: "mobile-bff", owner: "mobile-team@example.org", criticality: "medium", internetFacing: true, repositoryUrl: "https://git.example.com/acme/mobile-bff", scanStatus: "not_scanned" },
-    { id: "a7", name: "docs-site", owner: "docs@example.net", criticality: "low", internetFacing: true, repositoryUrl: "https://git.example.com/acme/docs-site", scanStatus: "scanned" },
+    { id: "a1", name: "payments-api", ownerName: "Payments team", ownerEmail: "payments-team@example.com", criticality: "critical", internetFacing: true, repositoryUrl: "https://git.example.com/acme/payments-api", scanStatus: "scanned" },
+    { id: "a2", name: "customer-portal", ownerName: "Web team", ownerEmail: "web-team@example.org", criticality: "high", internetFacing: true, repositoryUrl: "https://git.example.com/acme/customer-portal", scanStatus: "scanned" },
+    { id: "a3", name: "reporting-worker", ownerName: "Data engineering", ownerEmail: "data-eng@example.net", criticality: "medium", internetFacing: false, repositoryUrl: "https://git.example.com/acme/reporting-worker", scanStatus: "scanned" },
+    { id: "a4", name: "internal-wiki", ownerName: null, ownerEmail: null, criticality: "low", internetFacing: false, repositoryUrl: "https://git.example.com/acme/internal-wiki", scanStatus: "scanned" },
+    { id: "a5", name: "legacy-billing", ownerName: "Finance IT", ownerEmail: "finance-it@example.com", criticality: "high", internetFacing: false, repositoryUrl: "https://git.example.com/acme/legacy-billing", scanStatus: "scan_error" },
+    { id: "a6", name: "mobile-bff", ownerName: "Mobile team", ownerEmail: "mobile-team@example.org", criticality: "medium", internetFacing: true, repositoryUrl: "https://git.example.com/acme/mobile-bff", scanStatus: "not_scanned" },
+    { id: "a7", name: "docs-site", ownerName: "Docs team", ownerEmail: "docs@example.net", criticality: "low", internetFacing: true, repositoryUrl: "https://git.example.com/acme/docs-site", scanStatus: "scanned" },
   ];
 }
 
@@ -53,7 +53,7 @@ export function seedFindings(): Finding[] {
       brief: brief("Formula injection when exporting CSV.", "Exported reports may execute formulas when opened in spreadsheet tools.", "Upgrade to 2.0.5 or sanitise leading = + - @ characters.", "GHSA-c5vk-lite-88qd"),
       structuredSummary: "CSV formula injection in export path.",
       auditTrail: [
-        { who: "Jordan Vale", when: "2026-09-01T14:32:00Z", field: "status", previousValue: "open", newValue: "risk accepted", reason: "Exports are only consumed by an internal pipeline that never opens them in spreadsheet software. Revisit Q1." },
+        { id: "aud-f4-1", who: "Jordan Vale", when: "2026-09-01T14:32:00Z", field: "status", previousValue: "open", newValue: "risk_accepted", reason: "Exports are only consumed by an internal pipeline that never opens them in spreadsheet software. Revisit Q1." },
       ],
     },
     {
@@ -74,7 +74,7 @@ export function seedFindings(): Finding[] {
       brief: brief("Stored XSS via link titles.", "Wiki editors could inject scripts into pages.", "Upgrade to 5.1.3.", "GHSA-mdt1-3hq7-wx5c"),
       structuredSummary: "Cross-site scripting in rendered link titles.",
       auditTrail: [
-        { who: "scanner (lockfile rescan)", when: "2026-08-05T16:12:00Z", field: "status", previousValue: "open", newValue: "fixed" },
+        { id: "aud-f6-1", who: "scanner (lockfile rescan)", when: "2026-08-05T16:12:00Z", field: "status", previousValue: "open", newValue: "fixed" },
       ],
     },
     {
@@ -98,7 +98,7 @@ export function seedFindings(): Finding[] {
       brief: brief("Symlink following during log rotation.", "Local users could overwrite files writable by the worker.", "Upgrade to 0.3.5.", "GHSA-lgrt-55v2-k0jm"),
       structuredSummary: "Insecure symlink handling.",
       auditTrail: [
-        { who: "feed sync (GitHub Advisory)", when: "2026-07-15T03:00:00Z", field: "status", previousValue: "open", newValue: "withdrawn" },
+        { id: "aud-f7-1", who: "feed sync (GitHub Advisory)", when: "2026-07-15T03:00:00Z", field: "status", previousValue: "open", newValue: "withdrawn" },
       ],
     },
     {

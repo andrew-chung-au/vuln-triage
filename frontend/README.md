@@ -31,7 +31,7 @@ Run these from the repository root; they wrap the frontend commands:
 |---|---|
 | `make install` | Installs all dependencies (currently the frontend's). |
 | `make frontend-install` | Installs dependencies from `package-lock.json` (`npm ci`). |
-| `make frontend-test` | Runs the unit tests once (`vitest run`, the 10 cases in `src/test/`). |
+| `make frontend-test` | Runs the unit tests once (`vitest run`, the 35 cases in `src/test/`). |
 | `make test` | Runs all the project's tests (currently the frontend's). |
 | `make frontend-start` | Starts the Vite dev server in the background on host `127.0.0.1`, port `5173` (log: `.scratch/frontend.log`, PID: `.scratch/frontend.pid`). |
 | `make frontend-stop` | Stops the server that `make frontend-start` started (only the recorded PID). |
@@ -60,8 +60,11 @@ git-ignored.
   without touching screens.
 - The services layer returns findings pre-ranked; the UI must never re-sort them.
   Why: ranking is a backend responsibility per the spec.
-- Auth is a mocked client-side session (`src/lib/auth.ts`); protected screens live
-  under the `_authed` layout. Why: the prototype has no backend.
+- The services layer owns the signed-in session and persists it in
+  `sessionStorage`, so the session survives a reload. The login and sign-out
+  screens keep the UI's `src/lib/auth.ts` session in sync from the returned
+  `User`. Why: the service session behaves like a real API's; #25 replaces the
+  local copy in `lib/auth.ts` with `currentUser()`.
 
 The mock data lives in module memory (`src/services/mockService.ts`, seeded from
 `src/services/mockData.ts`). The app is client-only, so there is no server-side
@@ -81,19 +84,47 @@ this file when it runs from `frontend/`; the make targets do that with
 Every backend call goes through the `Services` interface in
 `src/services/types.ts`. `src/services/index.ts` exports `services`, which is
 the in-memory mock (`src/services/mockService.ts`, data in
-`src/services/mockData.ts`). No method makes a network call today.
+`src/services/mockData.ts`), plus `demoCredentials` for the login screen. No
+method makes a network call today.
 
-Every method is async: it returns a `Promise`. Errors are untyped: a failing
-call rejects with a plain `Error` whose `message` is shown to the user.
+Every method is async and returns a `Promise`. Rejections are `ServiceError`
+instances exported from `src/services/index.ts`; the mock never throws a plain
+`Error` or a string. `ServiceError` has a `message` and one of four `code`
+values, which #23 maps to HTTP status codes:
 
-| Method | Parameters | Returns | Throws today |
-|---|---|---|---|
-| `login` | `username: string`, `password: string` | `Promise<User>` | `Error("Incorrect username or password.")` when the credentials don't match the demo user |
-| `listFindings` | none | `Promise<FindingWithAsset[]>`, already ranked (tier, then EPSS high first with n/a last, then asset criticality high first, then oldest `firstSeen` first) | nothing |
-| `getFinding` | `id: string` | `Promise<FindingWithAsset \| null>`; `null` when no finding has that id | nothing (not found is `null`, not an error) |
-| `acceptRisk` | `id: string`, `reason: string`, `user: User` | `Promise<FindingWithAsset>`, the updated finding with status `risk_accepted` and a new audit entry | `Error("A reason is required to accept this risk.")` for an empty or whitespace-only reason; `Error("Finding not found.")`; `Error("Only open findings can be risk accepted.")` |
-| `listAssets` | none | `Promise<Asset[]>` | nothing |
-| `registerAsset` | `input: NewAssetInput` (`name`, `owner`, `criticality`, `internetFacing`, `repositoryUrl`) | `Promise<Asset>`, the new asset with `scanStatus: "not_scanned"`; an empty `owner` is stored as `null` | `Error("Asset name is required.")` for an empty or whitespace-only name |
+| Code | HTTP (proposed) | When |
+|---|---|---|
+| `validation` | 422 | an empty or whitespace-only reason, an empty asset name |
+| `not_found` | 404 | no finding or asset has that id |
+| `conflict` | 409 | accepting risk on a finding that is not `open` |
+| `unauthenticated` | 401 | no signed-in session, or wrong/empty credentials |
+
+`login` establishes the services session; `logout` clears it and is idempotent;
+`currentUser` returns the signed-in `User`. Every other method rejects
+`unauthenticated` when nobody is signed in. The session is persisted in
+`sessionStorage`, so a page reload keeps it.
+
+`acceptRisk` records `who` from the signed-in user's name. Audit entries store
+the wire status values (`open`, `risk_accepted`, `fixed`, `withdrawn`) and the
+screen renders them through `STATUS_LABEL`, so the table shows "risk accepted".
+
+An asset is ownerless only when both `ownerName` and `ownerEmail` are `null`
+(`specs.md` E2). A partial owner keeps the one value that is set and is not
+ownerless (no notification rule is decided here).
+
+The table marks each HTTP call "proposed until #23":
+
+| Method | Parameters | Returns | Error codes | Proposed HTTP call (until #23) |
+|---|---|---|---|---|
+| `login` | `username: string`, `password: string` | `Promise<User>` | `unauthenticated` | `POST /auth/login` |
+| `logout` | none | `Promise<void>` | none (idempotent) | `POST /auth/logout` |
+| `currentUser` | none | `Promise<User>` | `unauthenticated` | `GET /auth/me` |
+| `listFindings` | none | `Promise<FindingWithAsset[]>`, already ranked (tier, then EPSS high first with n/a last, then asset criticality high first, then oldest `firstSeen` first) | `unauthenticated` | `GET /findings` |
+| `getFinding` | `id: string` | `Promise<FindingWithAsset>` (the finding joined with its asset) | `unauthenticated`, `not_found` | `GET /findings/{id}` |
+| `acceptRisk` | `id: string`, `reason: string` | `Promise<FindingWithAsset>`, updated to `risk_accepted` with a new audit entry | `unauthenticated`, `validation`, `not_found`, `conflict` | `POST /findings/{id}/risk-acceptance` |
+| `listAssets` | none | `Promise<Asset[]>` | `unauthenticated` | `GET /assets` |
+| `getAsset` | `id: string` | `Promise<Asset>` | `unauthenticated`, `not_found` | `GET /assets/{id}` |
+| `registerAsset` | `input: NewAssetInput` (`name`, `ownerName`, `ownerEmail`, `criticality`, `internetFacing`, `repositoryUrl`) | `Promise<Asset>`, the new asset with `scanStatus: "not_scanned"` | `unauthenticated`, `validation` | `POST /assets` |
 
 The types (`User`, `Asset`, `Finding`, `FindingWithAsset`, `AffectedRange`,
 `Brief`, `AuditEntry`, `NewAssetInput`) are defined in the same file. This

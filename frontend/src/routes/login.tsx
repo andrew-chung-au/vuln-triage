@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setUser } from "@/lib/auth";
-import { services } from "@/services";
-import { DEMO_CREDENTIALS } from "@/services/mockData";
+import { ServiceError, demoCredentials, services } from "@/services";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -35,7 +34,7 @@ function Login() {
       setUser(user);
       navigate({ to: "/findings" });
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof ServiceError ? err.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
@@ -62,8 +61,8 @@ function Login() {
         </form>
         <div className="rounded-md border border-dashed p-3 text-sm">
           <p className="font-medium">Demo credentials (fictional)</p>
-          <p className="font-mono">{DEMO_CREDENTIALS.username}</p>
-          <p className="font-mono">{DEMO_CREDENTIALS.password}</p>
+          <p className="font-mono">{demoCredentials.username}</p>
+          <p className="font-mono">{demoCredentials.password}</p>
         </div>
       </div>
     </main>

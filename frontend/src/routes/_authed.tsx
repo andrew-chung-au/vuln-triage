@@ -2,6 +2,7 @@ import { Link, Outlet, createFileRoute, useNavigate } from "@tanstack/react-rout
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { setUser, useUser } from "@/lib/auth";
+import { services } from "@/services";
 
 export const Route = createFileRoute("/_authed")({
   component: AuthedLayout,
@@ -17,6 +18,15 @@ function AuthedLayout() {
 
   if (!user) return null;
 
+  async function signOut() {
+    try {
+      await services.logout();
+    } finally {
+      setUser(null);
+      navigate({ to: "/login" });
+    }
+  }
+
   const nav = "rounded px-2 py-1 text-sm text-muted-foreground hover:text-foreground";
   const active = { className: "rounded px-2 py-1 text-sm bg-secondary text-foreground font-medium" };
 
@@ -31,7 +41,7 @@ function AuthedLayout() {
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">{user.name}</span>
-            <Button variant="outline" size="sm" onClick={() => { setUser(null); navigate({ to: "/login" }); }}>Sign out</Button>
+            <Button variant="outline" size="sm" onClick={signOut}>Sign out</Button>
           </div>
         </div>
       </header>

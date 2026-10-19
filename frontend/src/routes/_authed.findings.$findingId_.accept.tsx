@@ -4,9 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getUser } from "@/lib/auth";
 import { validateRiskReason } from "@/lib/validation";
-import { services } from "@/services";
+import { ServiceError, services } from "@/services";
 
 export const Route = createFileRoute("/_authed/findings/$findingId_/accept")({
   head: () => ({
@@ -24,7 +23,7 @@ function Accept() {
   const { findingId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: f } = useQuery({ queryKey: ["finding", findingId], queryFn: () => services.getFinding(findingId) });
+  const { data: f, isLoading, error: loadError } = useQuery({ queryKey: ["finding", findingId], queryFn: () => services.getFinding(findingId) });
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,15 +32,13 @@ function Accept() {
     e.preventDefault();
     const v = validateRiskReason(reason);
     if (v) return setError(v);
-    const user = getUser();
-    if (!user) return;
     setBusy(true);
     try {
-      await services.acceptRisk(findingId, reason, user);
+      await services.acceptRisk(findingId, reason);
       await qc.invalidateQueries();
       navigate({ to: "/findings/$findingId", params: { findingId } });
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof ServiceError ? err.message : "Something went wrong.");
       setBusy(false);
     }
   }
@@ -50,19 +47,25 @@ function Accept() {
     <div className="max-w-xl space-y-4">
       <Link to="/findings/$findingId" params={{ findingId }} className="text-sm text-muted-foreground hover:text-foreground">← Back to finding</Link>
       <h1 className="text-xl font-semibold">Accept risk</h1>
-      {f && <p className="text-sm"><span className="font-mono">{f.packageName}@{f.installedVersion}</span> on {f.asset.name} · {f.vulnerabilityId}</p>}
-      {f && f.status !== "open" ? (
-        <p className="text-sm text-muted-foreground">Only open findings can be risk accepted.</p>
-      ) : (
-        <form onSubmit={submit} className="space-y-3 rounded-md border bg-card p-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="reason">Reason (required)</Label>
-            <Textarea id="reason" rows={4} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} />
-          </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={busy}>Accept risk</Button>
-        </form>
-      )}
+      {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p>
+        : loadError || !f ? (
+          <p role="alert">
+            {loadError instanceof ServiceError ? loadError.message : "Something went wrong."}{" "}
+            <Link to="/findings" className="text-primary underline">Back to findings</Link>
+          </p>
+        ) : f.status !== "open" ? (
+          <p className="text-sm text-muted-foreground">Only open findings can be risk accepted.</p>
+        ) : (
+          <form onSubmit={submit} className="space-y-3 rounded-md border bg-card p-4">
+            <p className="text-sm"><span className="font-mono">{f.packageName}@{f.installedVersion}</span> on {f.asset.name} · {f.vulnerabilityId}</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="reason">Reason (required)</Label>
+              <Textarea id="reason" rows={4} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} />
+            </div>
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={busy}>Accept risk</Button>
+          </form>
+        )}
     </div>
   );
 }

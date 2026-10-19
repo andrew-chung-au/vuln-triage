@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Flag } from "@/components/vt/Badges";
-import { services } from "@/services";
+import { isOwnerless, services } from "@/services";
 
 export const Route = createFileRoute("/_authed/assets/")({
   head: () => ({
@@ -39,7 +39,14 @@ function Assets() {
               return (
                 <tr key={a.id}>
                   <td className="px-3 py-2 font-mono">{a.name}</td>
-                  <td className="px-3 py-2">{a.owner ?? <Flag tone="warning">ownerless</Flag>}</td>
+                  <td className="px-3 py-2" data-testid={`asset-owner-${a.id}`}>
+                    {isOwnerless(a) ? <Flag tone="warning">ownerless</Flag> : (
+                      <span>
+                        <span>{a.ownerName ?? "—"}</span>
+                        <span className="block text-xs text-muted-foreground">{a.ownerEmail ?? "—"}</span>
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{a.criticality}</td>
                   <td className="px-3 py-2">{a.internetFacing ? "yes" : "no"}</td>
                   <td className="px-3 py-2">

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { STATUS_LABEL, type FindingStatus, type Tier } from "@/services/types";
+import { STATUS_LABEL, type FindingStatus, type Tier } from "@/services";
 
 const tierClass: Record<Tier, string> = {
   P1: "bg-tier-p1 text-tier-foreground",

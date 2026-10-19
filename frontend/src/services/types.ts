@@ -3,6 +3,19 @@ export type FindingStatus = "open" | "risk_accepted" | "fixed" | "withdrawn";
 export type Criticality = "low" | "medium" | "high" | "critical";
 export type ScanStatus = "scanned" | "scan_error" | "not_scanned";
 
+export type ServiceErrorCode = "validation" | "not_found" | "conflict" | "unauthenticated";
+
+/** Every rejection from the services layer is one of these. */
+export class ServiceError extends Error {
+  readonly code: ServiceErrorCode;
+
+  constructor(code: ServiceErrorCode, message: string) {
+    super(message);
+    this.name = "ServiceError";
+    this.code = code;
+  }
+}
+
 export interface User {
   id: string;
   name: string;
@@ -12,11 +25,17 @@ export interface User {
 export interface Asset {
   id: string;
   name: string;
-  owner: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
   criticality: Criticality;
   internetFacing: boolean;
   repositoryUrl: string;
   scanStatus: ScanStatus;
+}
+
+/** An asset is ownerless only when neither owner field is set. */
+export function isOwnerless(asset: Pick<Asset, "ownerName" | "ownerEmail">): boolean {
+  return asset.ownerName === null && asset.ownerEmail === null;
 }
 
 export interface AffectedRange {
@@ -32,6 +51,7 @@ export interface Brief {
 }
 
 export interface AuditEntry {
+  id: string;
   who: string;
   when: string;
   field: string;
@@ -67,7 +87,8 @@ export interface FindingWithAsset extends Finding {
 
 export interface NewAssetInput {
   name: string;
-  owner: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
   criticality: Criticality;
   internetFacing: boolean;
   repositoryUrl: string;
@@ -76,10 +97,13 @@ export interface NewAssetInput {
 /** Every backend call the app makes goes through this interface. */
 export interface Services {
   login(username: string, password: string): Promise<User>;
+  logout(): Promise<void>;
+  currentUser(): Promise<User>;
   listFindings(): Promise<FindingWithAsset[]>;
-  getFinding(id: string): Promise<FindingWithAsset | null>;
-  acceptRisk(id: string, reason: string, user: User): Promise<FindingWithAsset>;
+  getFinding(id: string): Promise<FindingWithAsset>;
+  acceptRisk(id: string, reason: string): Promise<FindingWithAsset>;
   listAssets(): Promise<Asset[]>;
+  getAsset(id: string): Promise<Asset>;
   registerAsset(input: NewAssetInput): Promise<Asset>;
 }
 
