@@ -908,3 +908,14 @@ Copy this template for each new entry:
 - files changed: protected `AGENTS.md` (commit `2efa508`, committed alone with `HUMAN_APPROVED=1`), this entry
 - verification (tests run, reviewer verdict): `git diff --check` clean; no tests run (docs only)
 - human review (what I checked or corrected, or `none`): the human approved the exact line shown in the session before it was written. Commands that stopped for approval: the `HUMAN_APPROVED=1 git commit` (intended)
+
+### 2026-10-19 — Implement issue #13 README problem, functionality and expected behaviour
+
+- date: 2026-10-19
+- task/issue: issue #13, "README: describe the problem, functionality and expected behaviour (Problem Description, 1 → 2 points)" (groomed; PM comment made no repo changes and asked whether to file a follow-up for post-implementation README work)
+- agent role: Software Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to read `AGENTS.md`, `_docs/agent-kit/team/software-engineer.md`, `_docs/agent-kit/procedures/verify.md`, issue #13 and its latest PM comment, change only `README.md`, run Verify, commit with explicit paths, and append this entry; no key prompt file saved
+- files changed: commit `1a000c2` (`README.md` only): added "The problem", "What VulnTriage does" and "Expected behaviour" sections, an explicit planning/not-implemented note, and expanded OSV.dev, CISA KEV, FIRST EPSS, LLM, MCP and n8n on first use; kept the planning and AI-workflow index. This entry in `_docs/ai-usage-log.md` (project rule). Git-ignored `.scratch/issue-13.json`, `.scratch/check_readme_13.py`
+- verification (tests run, reviewer verdict): `make verify` before the log entry (README diff identical to `1a000c2`) PASS WITH WARNINGS: tests 2 files / 35 tests passed, whitespace PASS, weakened tests 7 rewritten assertions that predate this task (issue #22 test changes already in the unpushed range; this task changed no test). `.scratch/check_readme_13.py` PASS: every relative link resolves and all three required headings and fixed names are present. No QA run
+- human review (what I checked or corrected, or `none`): none yet; issue left open for QA. Commands that stopped for approval: none
