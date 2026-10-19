@@ -754,3 +754,14 @@ Copy this template for each new entry:
 - files changed: this entry. GitHub: issue #32 created (body edited once to replace an issue-number placeholder with #32). Not groomed; the PM grooms it first
 - verification (tests run, reviewer verdict): none; read the push check (`pre-push` lines 23, 29 and 45), the Makefile and `verify.sh` to confirm the facts in the issue
 - human review (what I checked or corrected, or `none`): none yet
+
+### 2026-10-19 — Implement issue #32 Part A proposal and Part B devcontainer fix
+
+- date: 2026-10-19
+- task/issue: issue #32, Part A (push check `install` target and `frontend-test` guard; protected-file diffs proposed) and Part B (pin nvm, remove corepack shims)
+- agent role: Software Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to read `AGENTS.md`, the Engineer role file and issue #32, implement Part A as protected-file diffs (not edits) and Part B with option (b) `corepack disable`, commit only non-protected paths, run `make frontend-install`/`make test`/`make verify`, and post an `Engineer:` comment; no key prompt file saved
+- files changed: `.devcontainer/devcontainer.json` (adds `"nvmVersion": "0.40.8"`) and `.devcontainer/setup.sh` (pins the node bin path and runs `corepack disable`), edited and staged; the commit needs `HUMAN_APPROVED=1` and was left for the orchestrator/human. `_docs/ai-usage-log.md` (this entry) and `_session-summaries/issue-032-push-check-and-devcontainer.md`. `Makefile` and `AGENTS.md` (protected) were not edited; their exact proposed diffs are in the `Engineer:` comment on #32. `.devcontainer/devcontainer-lock.json` unchanged. Git-ignored `.scratch/issue-32.json`, `.scratch/issue32-makefile-test/`, `.scratch/proposed-AGENTS.md`
+- verification (tests run, reviewer verdict): `make frontend-install` (`npm ci`) exit 0, 518 packages, `frontend/package-lock.json` unchanged; `make test` 2 files / 10 tests passed; `make verify` PASS, no warnings (tests 10/10, whitespace PASS, weakened tests none; the four `frontend-bolt/` deletions are approved). Scratch guard test with the proposed Makefile and no `frontend/node_modules` printed `frontend/node_modules is missing: run make install first` and exited 1; `grep -E '^install[[:space:]]*::?'` matched the proposed target; `make help` listed `install`; `jq . .devcontainer/devcontainer.json` valid; `bash -n .devcontainer/setup.sh` clean. Current container: the four corepack shims still exist, `corepack --version` 0.36.0, node bin dir `drwxrwsr-x vscode nvm`, `nvm --version` 0.40.8. Post-rebuild checks not run; QA not run
+- human review (what I checked or corrected, or `none`): none yet; the `.devcontainer/` commit is pending human approval and rebuild, and the protected diffs are pending the Orchestrator's approved commit
