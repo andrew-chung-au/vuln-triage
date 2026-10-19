@@ -721,3 +721,25 @@ Copy this template for each new entry:
 - files changed: this entry; `_session-summaries/issue-015-frontend-choice.md` (updated for E2). GitHub: Engineer follow-up comment 6250367523 naming `c95643b` and `e3de014` (and noting `352ff95` is the unrelated `opencode.json` commit). No code changed
 - verification (tests run, reviewer verdict): QA PASS at `352ff95` stands; `make assert-clean` PASS; `make clean-scratch` run (`.scratch/` emptied; no process was running)
 - human review (what I checked or corrected, or `none`): the human chose to post the Engineer follow-up comment (recommended) rather than accept QA's judgement on the strict E1(c) reading
+
+### 2026-10-18 — Independent review of OpenCode's work on #20 and #15 stage E2
+
+- date: 2026-10-18
+- task/issue: issues #20 and #15 (stage E2 and close-out), independent review at HEAD `ac06c02`
+- agent role: Reviewer (independent review, asked by the human)
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request for an independent review of OpenCode's work on #20 and #15; exact text not recorded
+- files changed: `_docs/reviews/2026-10-18-review-issues-15-20.md` (new; committed 2026-10-19 with the entry below)
+- verification (tests run, reviewer verdict): no tests run; read the issues, comments, diffs, Makefile, devcontainer recipe, push check, `verify.sh`, log entries and session summaries; checked the built container. Findings: 1 High (the push check will fail: no `install` target, and the `python:3.12` image has no Node), 2 Medium (corepack shims and unpinned nvm in the rebuilt container; QA ran in the build tool with no recorded exception), 4 Low, 8 not-recommended choices, 4 decisions for the human
+- human review (what I checked or corrected, or `none`): none yet; the review's four decisions are open. Finding 3 was overtaken by the 2026-10-19 QA rule change (entry below)
+
+### 2026-10-19 — QA independence rule changed
+
+- date: 2026-10-19
+- task/issue: no issue; process rule change in `_docs/agent-team.md` § QA independence
+- agent role: Orchestrator
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to replace the QA rule with: "QA always runs in a fresh, isolated context—either in a separate session or via an isolated subagent, never within the context that performed the build. A different tool or model is preferred; when it isn't available, QA proceeds anyway and the QA comment and log entry record which tool and model did the build and the QA."
+- files changed: `_docs/agent-team.md` (new rule quoted word for word; the earlier rule, its #12 exception and the three recorded uses kept under "Earlier rule (until 2026-10-19)"; fresh-run and Assert-clean paragraph moved under the new rule); this entry; `_docs/reviews/2026-10-18-review-issues-15-20.md` committed unchanged
+- verification (tests run, reviewer verdict): `git diff --check` clean; grep confirmed the rule appears in no role file, `process.md`, `AGENTS.md` or other protected file
+- human review (what I checked or corrected, or `none`): the human set the rule wording and approved this commit

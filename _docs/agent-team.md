@@ -63,22 +63,29 @@ Muse Spark 1.3's part in #11 is not recorded. The human stated that the model ch
 
 ## QA independence
 
+**The rule** (set by the human on 2026-10-19, replacing the earlier rule and exception below):
+
+> QA always runs in a fresh, isolated context—either in a separate session or via an isolated subagent, never within the context that performed the build. A different tool or model is preferred; when it isn't available, QA proceeds anyway and the QA comment and log entry record which tool and model did the build and the QA.
+
+A QA run that shares context with the build doesn't meet the rule. Neither does a QA comment or log entry that doesn't name the build's tool and model and the QA's tool and model.
+
+In either tool, QA is a fresh run separate from the author's context: a tool with subagents launches each role as its own subagent, and a tool without them runs each role in a fresh session, because "the reviewer shouldn't share the context of the author" ([process.md § Roles](agent-kit/process.md#roles)). After QA, the Orchestrator runs **Assert clean** and confirms HEAD hasn't moved; if either fails, QA changed something, so its verdict is discarded and QA runs again (lifecycle step 5).
+
+### Earlier rule (until 2026-10-19)
+
 **The rule:** "QA does not run in the tool that built the work." Source: [#11 summary](../_session-summaries/issue-011-final-rubric-impact.md) § Decisions made by the human. First use: #11 was built in OpenCode, and QA ran in Claude Code ([comment 6227226075](https://github.com/andrew-chung-au/vuln-triage/issues/11#issuecomment-6227226075)).
 
 **The exception** (the human's answer to Decision 1 on #12, option 1, 2026-10-17, [comment 6234208915](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6234208915)):
 
 > QA does not run in the tool that built the work. If that other tool is unavailable and the human asks, QA may run in the build tool as a fresh subagent that shares no context with the Engineer; the QA comment and the log entry name the tool and say why.
 
-A same-tool QA run that doesn't meet all of these conditions (the other tool unavailable, the human asked, a fresh subagent, the tool and reason recorded) doesn't meet the rule.
+Under that rule, a same-tool QA run that didn't meet all of these conditions (the other tool unavailable, the human asked, a fresh subagent, the tool and reason recorded) didn't meet the rule.
 
 Recorded uses of the exception. In all three, OpenCode, the tool QA should have run in, was the one unavailable:
 
 1. #11 follow-up re-check at `ed05530`: Engineer and QA both ran in Claude Code as separate subagents ([comment 6227431094](https://github.com/andrew-chung-au/vuln-triage/issues/11#issuecomment-6227431094); log 2026-10-17 "QA targeted re-check of #11 corrections at ed05530 (PASS)").
 2. #14 QA: "OpenCode would not start; QA ran as fresh Claude Code subagents, a recorded exception to the #11 rule" ([#14 summary](../_session-summaries/issue-014-lovable-frontend-prompt.md) line 36).
 3. #12 QA at `948e332`: #12 was built in Claude Code, and QA ran there too as a fresh qa-engineer subagent, because OpenCode is not available and the human chose "Claude Code, fresh subagent" ([comment 6243691600](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243691600)). The QA comment names the tool and the reason ([comment 6243727864](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243727864)), and so does the log entry (2026-10-18 "QA checks issue #12").
-
-In either tool, QA is a fresh run separate from the author's context: a tool with subagents launches each role as its own subagent, and a tool without them runs each role in a fresh session, because "the reviewer shouldn't share the context of the author" ([process.md § Roles](agent-kit/process.md#roles)). After QA, the Orchestrator runs **Assert clean** and confirms HEAD hasn't moved; if either fails, QA changed something, so its verdict is discarded and QA runs again (lifecycle step 5).
-
 ## How the team works together
 
 ### The issue lifecycle
