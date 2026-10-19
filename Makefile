@@ -38,7 +38,7 @@ tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install frontend-start frontend-stop frontend-test
+.PHONY: install test frontend-install frontend-start frontend-stop frontend-build frontend-test
 
 test: ## Run all tests (currently the frontend's)
 	@$(MAKE) frontend-test
@@ -49,6 +49,10 @@ frontend-install: ## Install frontend dependencies (npm ci)
 frontend-test: ## Run the frontend unit tests (vitest run)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
 	@npm --prefix frontend test
+
+frontend-build: ## Build the frontend production output (vite build)
+	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
+	@npm --prefix frontend run build
 
 frontend-start: ## Start the frontend Vite dev server in the background (log: .scratch/frontend.log)
 	@mkdir -p .scratch
