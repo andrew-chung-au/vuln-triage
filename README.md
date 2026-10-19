@@ -1,7 +1,44 @@
 # VulnTriage
-Ranks vulnerable dependencies and routes each fix to its owner.
+Ranks vulnerable dependencies by real-world exploit risk and routes each fix to the owner who can make it.
 
-The project is in planning: no application code until the plan in _docs/ has passed review.
+The project is in planning: the plan in `_docs/` has not passed review, and the application is not implemented or deployed. Everything below describes intended functionality and expected behaviour, not something that is currently available.
+
+## The problem
+
+Vulnerabilities are published faster than teams can triage them. Most do not affect a given organisation, but the few that do are hard to find. Hand-maintained asset lists go stale, and severity alone does not show what attackers actually exploit. Findings that never reach an owner do not get fixed.
+
+VulnTriage addresses that gap: it combines what is installed, what is known to be exploited in the wild, and who owns each asset, then routes the work to that person.
+
+## What VulnTriage does
+
+VulnTriage is intended to cover the whole path from inventory to a fix owned by a person:
+
+1. **Inventory.** Register apps and services as assets with an owner, a criticality value and an internet-facing flag. Read each asset's dependency files automatically: `uv.lock`, `requirements.txt` and `package-lock.json`.
+2. **Match.** Query OSV.dev (the Open Source Vulnerabilities database) for known vulnerabilities in each installed package version, recording the fixed version when one exists.
+3. **Enrich.** Add CISA KEV (Cybersecurity and Infrastructure Security Agency Known Exploited Vulnerabilities catalog) status, the FIRST EPSS (Exploit Prediction Scoring System from the Forum of Incident Response and Security Teams) probability score, and the asset's criticality and internet-facing flag.
+4. **Rank.** Give every finding a deterministic, explainable rank that shows why it sits where it does. No AI is involved in the ranking.
+5. **Brief.** An LLM (large language model) writes a short plain-language brief for the asset owner from the structured finding. The application rejects any brief whose fixed version differs from the finding's recorded fixed version, and treats advisory text as untrusted data.
+6. **Route.** The n8n workflow automation tool runs the scheduled work: refresh KEV and EPSS data daily and re-score findings through the API; notify the owner and open a GitHub issue for a new top-priority finding; send reminders and escalation for overdue findings; and send the security lead a weekly digest. Workflows are exported as JSON into the repository.
+7. **Re-scan.** Close a finding automatically when a re-scan shows that the fixed version is in place.
+8. **Watch and respond.** One key journey, scan to owner notification, is instrumented with metrics, traces and structured logs that share a trace ID and are viewable in Grafana. An alert fires when a top-priority finding is not delivered. A responder agent wakes on that alert, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. No customer data, advisory text or credentials are sent to telemetry.
+
+Alongside that workflow:
+
+- A planned web dashboard lists findings per asset with status (`open`, `risk accepted`, `fixed`) and an audit trail. Only a human can set `risk accepted`.
+- An MCP (Model Context Protocol) server offers read-only tools, `list_top_exposures`, `which_assets_affected`, `get_finding` and `get_asset`, which call the API with a read-only token. It has no write tools.
+
+VulnTriage does not actively scan networks or applications, does not patch software automatically, and does not expose write tools through MCP.
+
+## Expected behaviour
+
+- A new top-priority finding produces exactly one owner notification and exactly one GitHub issue referencing the finding.
+- A re-scan that finds the fixed version sets the finding to `fixed` with a timestamp. Findings on still-vulnerable versions stay `open`.
+- A package with no fixed version stays `open` and is never given an invented fixed version.
+- An ownerless asset's findings are still recorded and ranked. The notification is held, and the dashboard flags the asset as ownerless.
+- If an OSV.dev, KEV or EPSS feed is unavailable, the last-known data is kept and marked stale, the scheduled run retries, and no findings are deleted.
+- Only a human can set `risk accepted`. The audit trail records who made the change, when, and the previous value.
+- The MCP server returns an empty result, not an error, for an unknown CVE, and offers no write tools.
+- An undelivered top-priority finding fires exactly one alert. The responder agent's actions are logged, and promotion to production stays manual.
 
 Planning documents:
 
