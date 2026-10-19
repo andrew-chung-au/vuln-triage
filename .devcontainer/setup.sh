@@ -17,6 +17,16 @@ command -v claude >/dev/null || curl -fsSL https://claude.ai/install.sh | bash
 # Installs to the image's pipx dir, which is on the image PATH.
 pipx install uv==0.13.1
 
+# Pin the node bin dir so corepack resolves in this non-interactive script,
+# even if nvm's PATH update (from /etc/bash.bashrc) has not run here.
+export PATH="/usr/local/share/nvm/versions/node/v24.22.0/bin:$PATH"
+
+# Remove the corepack yarn/pnpm shims (#32, option b). The node feature runs
+# `corepack enable`, so a rebuild recreates them. The node bin directory is
+# group-writable by the `nvm` group, so no sudo is needed; a second run is a
+# no-op.
+corepack disable
+
 git config --global user.name "Andrew Chung"
 git config --global user.email "177896104+andrew-chung-au@users.noreply.github.com"
 

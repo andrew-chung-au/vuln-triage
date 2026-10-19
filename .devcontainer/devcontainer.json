@@ -3,7 +3,7 @@
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:2": { "version": "24.22.0", "pnpmVersion": "none" }
+    "ghcr.io/devcontainers/features/node:2": { "version": "24.22.0", "nvmVersion": "0.40.8", "pnpmVersion": "none" }
   },
   "containerEnv": {
     "SSH_AUTH_SOCK": "",
