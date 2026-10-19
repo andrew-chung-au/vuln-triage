@@ -864,3 +864,14 @@ Copy this template for each new entry:
 - files changed: commit `9f742d2` (protected `_docs/specs.md`, human-approved, committed alone); commit `c85c6e8` (protected `AGENTS.md` and `agent-kit.conf`, human-approved, committed alone); this entry; `_session-summaries/issue-022-services-layer.md`. GitHub: PM comment 6278909287, Engineer comment 6279079561, QA PASS comment 6279190817, issue #22 closed
 - verification (tests run, reviewer verdict): `make frontend-test` 35/35; `make verify` PASS WITH WARNINGS at `759735a` (7 changed-contract assertions rewritten stronger, each justified); QA independently PASS at `f790ddc` for all 34 criteria and refused cases; `make assert-clean` PASS and HEAD unchanged at `f790ddc`; `make clean-scratch` run
 - human review (what I checked or corrected, or `none`): the human chose the three grooming options and approved the spec and protected test-count changes at the decision point
+
+### 2026-10-19 — Senior review of closed issue #22
+
+- date: 2026-10-19
+- task/issue: issue #22, "Frontend services layer ready for a real API" (review after close)
+- agent role: Orchestrator (senior engineering review)
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for a review of opencode's finished #22 "as a senior engineer who still has a lot more review work this week to complete", then approved posting the follow-ups and this log entry. No key prompt file saved
+- files changed: this entry. GitHub: comment on #25 (6279525860: an auth failure shows up as an empty findings/assets list; suggested redirect to `/login`, error states, no retry, one UI test) and on #23 (6279526319: the order in which errors are checked; whether owner fields are always present). Git-ignored `.scratch/issue-22.json`, `.scratch/comment-25.md`, `.scratch/comment-23.md`
+- verification (tests run, reviewer verdict): read the diffs of `759735a`, `9f742d2`, `c85c6e8`, the current `frontend/src/services/{types,index,mockService}.ts`, and the PM, Engineer, QA and Orchestrator comments on #22; grep of the list routes' error handling. Verdict: approve, no reopen. Tests and `make verify` not re-run (QA and the orchestrator ran them at `f790ddc`)
+- human review (what I checked or corrected, or `none`): the human approved posting both follow-up comments. Commands that stopped for approval: none
