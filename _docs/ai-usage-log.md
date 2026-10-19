@@ -743,3 +743,14 @@ Copy this template for each new entry:
 - files changed: `_docs/agent-team.md` (new rule quoted word for word; the earlier rule, its #12 exception and the three recorded uses kept under "Earlier rule (until 2026-10-19)"; fresh-run and Assert-clean paragraph moved under the new rule); this entry; `_docs/reviews/2026-10-18-review-issues-15-20.md` committed unchanged
 - verification (tests run, reviewer verdict): `git diff --check` clean; grep confirmed the rule appears in no role file, `process.md`, `AGENTS.md` or other protected file
 - human review (what I checked or corrected, or `none`): the human set the rule wording and approved this commit
+
+### 2026-10-19 — File issue #32 from review errors 1 and 2
+
+- date: 2026-10-19
+- task/issue: issue #32 (new), from errors 1 and 2 of `_docs/reviews/2026-10-18-review-issues-15-20.md`
+- agent role: Orchestrator
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for an issue covering the two errors that the OpenCode agent can work, with priority and order assessed
+- files changed: this entry. GitHub: issue #32 created (body edited once to replace an issue-number placeholder with #32). Not groomed; the PM grooms it first
+- verification (tests run, reviewer verdict): none; read the push check (`pre-push` lines 23, 29 and 45), the Makefile and `verify.sh` to confirm the facts in the issue
+- human review (what I checked or corrected, or `none`): none yet
