@@ -17,8 +17,9 @@ Deferred to later stages: prioritisation formula (Stage 2), LLM guardrails
 ### US-1: Register an asset
 As a security lead, I register an app/service with its owner, criticality,
 and whether it is internet-facing.
-- Acceptance: an asset record shows owner, criticality, and internet-facing
-  flag; listing assets shows all three fields.
+- Acceptance: an asset record shows the owner's name and contact email (or an
+  ownerless marker when both are unset), criticality, and internet-facing flag;
+  listing assets shows all three fields.
 
 ### US-2: Dependencies read automatically
 As a security lead, dependencies are picked up from the asset's lockfiles
@@ -157,7 +158,7 @@ and a test; once merged, CI deploys it to dev.
   low/medium/high/critical); final values in Stage 2.
 - ASSUMPTION: pilot repos plus OWASP Juice Shop give real findings; pilot
   asset list in a later stage.
-- ASSUMPTION: an asset owner has a name and a contact email; an asset is ownerless when neither is set.
+- ASSUMPTION: an asset owner has a name and a contact email. An asset is ownerless when both are unset; if only one is set, the asset is not ownerless and the dashboard shows the missing field. Whether a partial owner is notified is decided in Stage 2.
 
 ## Suggested additions (not in the plan unless approved)
 
