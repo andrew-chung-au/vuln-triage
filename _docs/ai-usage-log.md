@@ -886,3 +886,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (new), `README.md` (link), this entry
 - verification (tests run, reviewer verdict): checked opencode's claims against `_docs/planning-process.md`, `_docs/agent-kit/process.md`, `_docs/rubric.md`, `_docs/rubric-evidence.md`, `agent-kit.conf`, `.github/workflows/verify.yml`, the open issue list, #9, #26, #34 and recent CI runs (`55ad78c` success). Found the scope decision already made (2026-10-17) and the 7-point audit likely stale (Testing 1 and CI/CD 1 unconfirmed). No auditor run; tests not run
 - human review (what I checked or corrected, or `none`): the human asked for the roadmap; the four open decisions in it are not yet answered. Commands that stopped for approval: none
+
+### 2026-10-19 — Keep deadlines out of the roadmap
+
+- date: 2026-10-19
+- task/issue: no issue; follow-up to the roadmap entry above
+- agent role: Orchestrator
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human decided that timelines and dates stay out of agent-facing docs because they can adversely affect the agents; the human controls timing. No key prompt file saved
+- files changed: `_docs/roadmap.md` (deadline line replaced by "timing and scope trade-offs are the human's"; the deadline decision row removed), this entry
+- verification (tests run, reviewer verdict): `git diff --check` clean; no tests run (docs only)
+- human review (what I checked or corrected, or `none`): the human declined a proposed deadline edit, then approved this wording. Commands that stopped for approval: none

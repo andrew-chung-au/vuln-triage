@@ -6,7 +6,7 @@ that the plan review checks (`_docs/planning-process.md` Stages 1-6).
 
 - Adopted: 2026-10-19, from a review of opencode's status analysis (Claude Code, claude-opus-5-5); see `_docs/ai-usage-log.md`.
 - Goal: 24/24, built as Tier A → B → C milestones (human decision of 2026-10-17; tiers in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5).
-- Deadline: not recorded. The human sets it; until then "on track" can only mean "in order".
+- Timing and scope trade-offs are the human's. "On track" here means steps are done in order and the audited score meets the checkpoint for the steps done.
 - Source of truth for status: the GitHub tracker and `_docs/rubric-evidence.md`. The status column here is a snapshot taken at each check-in, not live state.
 
 ## Sequence
@@ -42,7 +42,6 @@ Later, not scheduled: #10, #16, #19, #29, #30.
 | 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | open |
 | 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | open |
 | 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | open |
-| 4 | Project deadline | The human sets it | open |
 
 ## Score checkpoints
 
