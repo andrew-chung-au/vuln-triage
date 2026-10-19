@@ -1,9 +1,11 @@
 # VulnTriage Makefile. Core targets from _docs/agent-kit/templates/Makefile.mk.
-# install/test/run targets will be added when the project is scaffolded.
+# Project targets (install, test, run) are below.
 # Recipe lines must start with a TAB.
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_ -]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+install: frontend-install ## Install all dependencies
 
 verify: ## Run the verification gate: make verify [BASE=<commit>]
 	@bash _docs/agent-kit/scripts/verify.sh $(BASE)
@@ -36,7 +38,7 @@ tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: test frontend-install frontend-start frontend-stop frontend-test
+.PHONY: install test frontend-install frontend-start frontend-stop frontend-test
 
 test: ## Run all tests (currently the frontend's)
 	@$(MAKE) frontend-test
@@ -45,6 +47,7 @@ frontend-install: ## Install frontend dependencies (npm ci)
 	@npm --prefix frontend ci
 
 frontend-test: ## Run the frontend unit tests (vitest run)
+	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
 	@npm --prefix frontend test
 
 frontend-start: ## Start the frontend Vite dev server in the background (log: .scratch/frontend.log)
