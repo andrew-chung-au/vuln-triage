@@ -1,15 +1,14 @@
 // Explicit Vite config for the VulnTriage frontend (issue #21).
 //
 // This replaces the app builder's shared Vite preset. Every plugin the app
-// needs is named here. The render/build target (SPA mode, Node server preset, or plain
-// TanStack Router) is still a human decision on #21, so this config keeps the
-// dev server working and leaves the production target to be added.
+// needs is named here. Render mode (issue #21, human decision 2026-10-19):
+// plain TanStack Router + Vite, a client-only SPA built to `frontend/dist/`.
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
 export default defineConfig(({ mode }) => {
   // Make VITE_* values available to `import.meta.env` in client and server code
@@ -46,16 +45,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       tsConfigPaths({ projects: ["./tsconfig.json"] }),
-      ...tanstackStart({
-        importProtection: {
-          behavior: "error",
-          client: {
-            files: ["**/server/**"],
-            specifiers: ["server-only"],
-          },
-        },
-        server: { entry: "server" },
-      }),
+      tanstackRouter({ target: "react", autoCodeSplitting: true }),
       react(),
     ],
   };

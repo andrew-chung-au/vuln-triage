@@ -35,11 +35,23 @@ Run these from the repository root; they wrap the frontend commands:
 | `make test` | Runs all the project's tests (currently the frontend's). |
 | `make frontend-start` | Starts the Vite dev server in the background on host `127.0.0.1`, port `5173` (log: `.scratch/frontend.log`, PID: `.scratch/frontend.pid`). |
 | `make frontend-stop` | Stops the server that `make frontend-start` started (only the recorded PID). |
-| `make frontend-build` | Builds the production output for the chosen render mode. |
+| `make frontend-build` | Builds the production SPA to `frontend/dist/` (`vite build`). |
 
 `frontend-start` passes `--host 127.0.0.1 --port 5173` explicitly, so it does not
 depend on app-builder sandbox detection. The app serves with no backend running:
 every backend call is mocked in the services layer.
+
+## Render mode and build
+
+Render mode (human decision on #21, 2026-10-19): **plain TanStack Router + Vite**,
+a client-only SPA. `vite.config.ts` runs the `tanstackRouter` plugin (not
+`@tanstack/react-start`), and `index.html` plus `src/main.tsx` mount the router.
+There is no server renderer and no Node runtime.
+
+`make frontend-build` writes the production output to **`frontend/dist/`**, with
+`frontend/dist/index.html` as the entry point. Serve that folder as static files
+and rewrite unmatched routes to `index.html` (SPA fallback). `frontend/dist/` is
+git-ignored.
 
 ## Architecture notes
 
@@ -52,9 +64,8 @@ every backend call is mocked in the services layer.
   under the `_authed` layout. Why: the prototype has no backend.
 
 The mock data lives in module memory (`src/services/mockService.ts`, seeded from
-`src/services/mockData.ts`). If the frontend renders on a server, the server and
-the browser each hold their own copy; issue #25 must not carry that into the HTTP
-services.
+`src/services/mockData.ts`). The app is client-only, so there is no server-side
+copy today; issue #25 must not carry this in-memory mock into the HTTP services.
 
 ## Supply-chain guard
 
