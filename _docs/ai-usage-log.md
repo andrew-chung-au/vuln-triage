@@ -765,3 +765,25 @@ Copy this template for each new entry:
 - files changed: `.devcontainer/devcontainer.json` (adds `"nvmVersion": "0.40.8"`) and `.devcontainer/setup.sh` (pins the node bin path and runs `corepack disable`), edited and staged; the commit needs `HUMAN_APPROVED=1` and was left for the orchestrator/human. `_docs/ai-usage-log.md` (this entry) and `_session-summaries/issue-032-push-check-and-devcontainer.md`. `Makefile` and `AGENTS.md` (protected) were not edited; their exact proposed diffs are in the `Engineer:` comment on #32. `.devcontainer/devcontainer-lock.json` unchanged. Git-ignored `.scratch/issue-32.json`, `.scratch/issue32-makefile-test/`, `.scratch/proposed-AGENTS.md`
 - verification (tests run, reviewer verdict): `make frontend-install` (`npm ci`) exit 0, 518 packages, `frontend/package-lock.json` unchanged; `make test` 2 files / 10 tests passed; `make verify` PASS, no warnings (tests 10/10, whitespace PASS, weakened tests none; the four `frontend-bolt/` deletions are approved). Scratch guard test with the proposed Makefile and no `frontend/node_modules` printed `frontend/node_modules is missing: run make install first` and exited 1; `grep -E '^install[[:space:]]*::?'` matched the proposed target; `make help` listed `install`; `jq . .devcontainer/devcontainer.json` valid; `bash -n .devcontainer/setup.sh` clean. Current container: the four corepack shims still exist, `corepack --version` 0.36.0, node bin dir `drwxrwsr-x vscode nvm`, `nvm --version` 0.40.8. Post-rebuild checks not run; QA not run
 - human review (what I checked or corrected, or `none`): none yet; the `.devcontainer/` commit is pending human approval and rebuild, and the protected diffs are pending the Orchestrator's approved commit
+
+### 2026-10-19 — Close out issue #32 after QA PASS and the human's gated push
+
+- date: 2026-10-19
+- task/issue: issue #32, lifecycle steps 4-9 (QA, assert-clean, decision point, cleanup and close)
+- agent role: Orchestrator; QA engineer (fresh isolated subagent)
+- model: opencode/deepseek-v4.1-flash-free (build and QA; QA ran in a fresh isolated subagent, per the 2026-10-19 QA rule)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "check issues and continue", then the gate output pasted into the session; no key prompt file saved
+- files changed: `_session-summaries/issue-032-push-check-and-devcontainer.md` (final state); this entry. GitHub: Orchestrator comments 6270008516 and 6271319915; issue #32 closed at the end of this close-out
+- verification (tests run, reviewer verdict): QA PASS at `eb2e64b`, all Part A and Part B criteria (rebuilt-container checks: no `yarn`/`yarnpkg`/`pnpm`/`pnpx`, nvm `0.40.8`, node `v24.22.0`, npm `11.19.1`, uv `0.13.1`, `make install verify` PASS). `make assert-clean` PASS before the close-out edits and HEAD unchanged at `eb2e64b`. Human gate in the clean clone: `sandbox/main` and HEAD at `eb2e64b`; `node:24.22.0-bookworm` pulled (digest `sha256:14078204b6bb268c107ceff6d3c43f45a888105e5c2b18b14c32b3409d93a1b0`); `command -v bash git make node npm` printed `/usr/bin/bash`, `/usr/bin/git`, `/usr/bin/make`, `/usr/local/bin/node`, `/usr/local/bin/npm`; the gated push ran `make -C . install verify` (npm ci 518 packages, 10/10 tests, whitespace PASS, weakened tests none), printed `VERIFY: PASS`, and pushed `c1896e4..eb2e64b main -> main`. `make verify` after the close-out edits; `make assert-clean` and `make clean-scratch` at close-out
+- human review (what I checked or corrected, or `none`): the human approved the protected diffs and the `.devcontainer/` commit, rebuilt the container, set `AGENT_PUSH_CHECK_IMAGE=node:24.22.0-bookworm`, and ran the real gated push
+
+### 2026-10-19 — Groom issue #21 and resolve the `.npmrc` ownership decision
+
+- date: 2026-10-19
+- task/issue: issue #21 (grooming only)
+- agent role: PM (subagent); Orchestrator relaying the human's decision
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instructions to groom #21 against the task template and to apply the human's option 1 for `frontend/.npmrc`; no key prompt file saved
+- files changed: none in the repo. GitHub: issue #21 body rewritten twice; PM comments 6270448389 and 6271129779
+- verification (tests run, reviewer verdict): read-only checks only: `git status --short` clean at `eb2e64b`; `make tool-versions` (node `v24.22.0`, npm `11.19.1`, uv `0.13.1`, python3 `3.12.15`, `docker: missing`); `make frontend-test` 2 files / 10 tests passed; a `.scratch/` audit found 46 `frontend/src/components/ui/` files, exactly 4 imported outside that folder, and 10 `it(` tests; Lovable, network and lockfile greps. No product code changed; no implementation
+- human review (what I checked or corrected, or `none`): the human chose option 1: #21 adds `frontend/.npmrc` with `min-release-age=1`; #33 hardening D later appends `ignore-scripts=true`
