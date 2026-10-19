@@ -82,7 +82,8 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
    - Confirm temporary system changes are undone, or that the human chose to keep them.
    - If a `.scratch/` script is worth keeping, propose it as a test or a make target at the decision point (step 7). Nothing in `.scratch/` survives cleanup.
    - Run `make clean-scratch`. It empties `.scratch/`, including session logs and test tokens, and refuses while a started process is still running. Record in the summary that it ran.
-9. Close the issue. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
+   - Fill in the summary's Permission review section from every role comment's "Commands that stopped for approval" line, plus your own.
+9. Close the issue, but only once the session summary is committed with its Permission review section. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
 10. The human reviews the diff and pushes (see Commits).
 11. Repeat until the backlog is empty and every part of the spec is built.
 
@@ -104,7 +105,7 @@ An issue is done when:
 - **Verify** passes and QA has posted PASS, so every acceptance criterion is met.
 - The changes are committed.
 - Docs affected by the change are updated, and any AGENTS.md change has human approval.
-- The session summary is written.
+- The session summary is written, including its Permission review section.
 - The orchestrator has closed the issue.
 
 The human's diff review and push come after this, outside the agent's definition of done.

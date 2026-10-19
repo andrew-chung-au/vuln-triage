@@ -23,6 +23,15 @@
 
 <System changes, processes started and large installs, each with whether it was undone, stopped or deleted. Write "none" if there were none.>
 
+## Permission review
+
+<Every command that stopped for approval, from each role's "Commands that stopped for approval" line and the orchestrator's own, grouped as below. Also list any command that ran without asking although a settings rule says `ask`. Write "none" in a group with nothing in it.>
+
+- Read-only (propose allowing):
+- Writes to the record (keep asking):
+- Risky (propose denying):
+- Proposed `opencode.json` and `.claude/settings.json` changes: <the exact rules, or "none">
+
 ## Interruptions
 
 <Roles that stopped early, what they left behind and how it was checked. Write "none" if there were none.>
