@@ -10,19 +10,23 @@
 - 42 unused `src/components/ui/*.tsx` files and the packages only they used are removed; `frontend/bun.lock` and `frontend/bunfig.toml` are gone, and `frontend/.npmrc` carries `min-release-age=1` (review item E).
 - The three server-only files (`src/server.ts`, `src/lib/error-capture.ts`, `src/lib/error-page.ts`) and `src/start.ts` are removed; `frontend/index.html` and `frontend/src/main.tsx` mount the plain router. `@tanstack/react-start` and `nitro` are removed and the lockfile pruned.
 - `frontend/README.md` is rewritten (what the app is, make targets, render mode and `frontend/dist/` output, provenance, architecture notes, the services methods list unchanged from #15).
+- Protected commit `682c69f` (human-approved, committed alone) adds the `frontend-build` target and its `.PHONY` entry to `Makefile` and the one Build line to `AGENTS.md`.
+- QA PASS at `682c69f`: all acceptance criteria and refused cases; `make verify` PASS; `make frontend-build` writes `frontend/dist/index.html`; the built output serves HTTP 200; the source app renders in jsdom from login through demo sign-in to findings.
 
 ## Files created or modified
 
-- Commits `c816d51` (clean-up), `e65448e` (refused-case grep fixes) and `e367e49` (render mode: plain TanStack Router + Vite).
+- Commits `c816d51` (clean-up), `e65448e` (refused-case grep fixes), `e367e49` (render mode: plain TanStack Router + Vite), `682c69f` (protected Makefile/AGENTS.md, `HUMAN_APPROVED=1`); logs/summaries in `31af1a2`, `25c9b68`, `41c42ca`.
 - Removed: `frontend/bun.lock`, `frontend/bunfig.toml`, `frontend/AGENTS.md`, `frontend/.lovable/project.json`, `frontend/src/lib/lovable-error-reporting.ts`, 42 `frontend/src/components/ui/*.tsx`, `frontend/src/server.ts`, `frontend/src/lib/error-capture.ts`, `frontend/src/lib/error-page.ts`, `frontend/src/start.ts`.
-- Added: `frontend/.npmrc`, `frontend/index.html`, `frontend/src/main.tsx`. Modified: `frontend/README.md`, `frontend/vite.config.ts`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/routes/__root.tsx` (Lovable coupling only), `frontend/src/styles.css` (fonts), `frontend/src/routeTree.gen.ts` (regenerated, Start augmentation dropped).
-- Protected files were not edited. The approved `Makefile` `frontend-build` diff and the approved `AGENTS.md` Build line are for the Orchestrator to apply and commit (`HUMAN_APPROVED=1`) after this confirmation.
+- Added: `frontend/.npmrc`, `frontend/index.html`, `frontend/src/main.tsx`. Modified: `frontend/README.md`, `frontend/vite.config.ts`, `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/routes/__root.tsx` (Lovable coupling only), `frontend/src/styles.css` (fonts), `frontend/src/routeTree.gen.ts` (regenerated, Start augmentation dropped), `Makefile`, `AGENTS.md`.
+- `agent-kit.conf` unchanged; no test file deleted or changed.
 
 ## Decisions made by the human
 
 - `frontend/.npmrc` ownership (2026-10-19, option 1): #21 adds `min-release-age=1`; #33 hardening D later appends `ignore-scripts=true`.
 - Render mode (2026-10-19, Orchestrator comment 6276301196): **option 3, plain TanStack Router + Vite**, production output `frontend/dist/` with `frontend/dist/index.html`. This ends the `src/server.ts` network-grep exception.
-- Protected `Makefile` `frontend-build` target approved as proposed; protected `AGENTS.md` gets one Build line. The Orchestrator applies both after the Engineer confirms the output path (it is `frontend/dist/`, unchanged from the proposal).
+- Protected `Makefile` `frontend-build` target approved as proposed; protected `AGENTS.md` gets one Build line. Applied and committed alone in `682c69f`.
+- End this session after #21; do not start #22.
+- Do not run `uptime` or similar nonessential system probes unless a task requires it.
 
 ## Mismatches with the spec or design docs
 
@@ -30,39 +34,37 @@ None. `_docs/specs.md` covers product behaviour; render mode, npm configuration 
 
 ## Commands to validate
 
-- **Install:** `make install` / `make frontend-install`: `npm ci`, 351 packages, lockfile stable (sha256 unchanged across two `npm ci` runs). `npm --prefix frontend config get min-release-age` prints `1`.
+- **Install:** `make install` / `make frontend-install`: `npm ci`, 351 packages, lockfile stable. `npm --prefix frontend config get min-release-age` prints `1`.
 - **Test:** `make test` and `make frontend-test`: 2 files, 10 tests passed (baseline unchanged).
 - **Verify:** `make verify`: PASS (tests 10/10, whitespace PASS, weakened tests none).
-- **Build:** `npm --prefix frontend run build` exits 0 and writes `frontend/dist/index.html` (963 bytes) plus `frontend/dist/assets/` (main bundle 305233 bytes). The approved `make frontend-build` wraps it and is not applied yet.
-- **Serve:** `.scratch/serve_check.py` served `frontend/dist` with `python3 -m http.server` on `127.0.0.1:8137`; `GET /` returned HTTP 200 (963 bytes, `#root` present) and the main JS asset returned HTTP 200 (305233 bytes); the script stopped only its own server.
-- **Run:** `make frontend-start`, then `/login` returns HTTP 200 with the sign-in form and demo credential hint; `make frontend-stop` stops only the recorded PID.
-- Refused-case greps: `grep -rni lovable frontend --exclude=package-lock.json` → one hit (README provenance); `grep -rn "@lovable.dev" frontend/src frontend/vite.config.ts frontend/vitest.config.ts frontend/package.json` → none; `grep -nE "npm i([[:space:]]|$)|npm install" frontend/README.md` → none; network grep → `src/services/mockData.ts` only (the `src/server.ts` exception has ended).
+- **Build frontend:** `make frontend-build`: exit 0, writes `frontend/dist/index.html` (963 bytes) plus `frontend/dist/assets/` (main bundle 305233 bytes); output is git-ignored.
+- **Serve:** QA served `frontend/dist/` with `python3 -m http.server`; `GET /` and the main asset returned HTTP 200.
+- **Run:** `make frontend-start` then `/` and `/login` HTTP 200; QA rendered the source app in jsdom from login through demo sign-in to findings (8 rows); `make frontend-stop` stops only the recorded PID.
+- Refused-case greps: `grep -rni lovable frontend --exclude=package-lock.json` → one hit (README provenance); no `@lovable.dev`; no `npm i`/`npm install` in the README; network grep → `src/services/mockData.ts` only (the `src/server.ts` exception has ended).
 
 ## Proposed AGENTS.md changes
 
-One approved Build line for the Commands list, to be applied by the Orchestrator with `HUMAN_APPROVED=1`:
-
-- **Build frontend:** `make frontend-build`: builds the production output to `frontend/dist/`.
+Applied in `682c69f` with human approval. No pending changes.
 
 ## Temporary changes
 
-- Render-mode spike configs `frontend/vite.spa-evidence.config.ts`, `frontend/vite.node-evidence.config.ts`, `frontend/vite.router-evidence.config.ts` and the build outputs `frontend/.output`, `frontend/node_modules/.nitro` were created for evidence and deleted. The final `frontend/index.html`, `frontend/src/main.tsx` and `frontend/dist` are now part of the chosen build.
-- `.scratch/node-build-start.sh`/`node-build-stop.sh` served the nitro Node build on `127.0.0.1:3100`; the process was stopped by its own stop script. `.scratch/serve_check.py` served `frontend/dist` on `127.0.0.1:8137` and stopped only its own process. `make frontend-start`/`frontend-stop` was likewise started and stopped by the agent.
-- No system configuration changed and nothing was installed outside `frontend/node_modules`.
+- Render-mode spike configs `frontend/vite.spa-evidence.config.ts`, `frontend/vite.node-evidence.config.ts`, `frontend/vite.router-evidence.config.ts` and the build outputs `frontend/.output`, `frontend/node_modules/.nitro` were created for evidence and deleted.
+- `.scratch/` servers (`node-build-start.sh`/`node-build-stop.sh` on `127.0.0.1:3100`, `serve_check.py` on `127.0.0.1:8137`, and the QA dev check) were started and stopped by their own scripts; `make clean-scratch` ran at close-out.
+- No system configuration changed; nothing installed outside `frontend/node_modules` and `frontend/dist`.
 
 ## Interruptions
 
-None. QA has not run yet.
+None. QA ran at `682c69f` and posted PASS (comment 6277400761).
 
 ## Unrelated problems noticed but not fixed
 
-- `vite-tsconfig-paths` logs "Vite now supports tsconfig paths resolution natively via the `resolve.tsconfigPaths` option" on every build. Vite `8.1.5` could use the native option and drop the plugin; not changed here because the issue keeps `vite-tsconfig-paths` as a build tool.
-- `nitro` was removed with the option 3 decision (nothing imports it now); `@tanstack/router-plugin` is imported directly by `frontend/vite.config.ts`, so it stays.
-- `frontend/package.json` still has no `packageManager` field; left as it is per the issue edge case.
+- `frontend/src/routes/__root.tsx`'s root `shellComponent` now renders `<html>` inside `#root`; React warns "In HTML, `<html>` cannot be a child of `<div>`. This will cause a hydration error." Content still rendered in jsdom. QA reported this outside the criteria; a follow-up issue is proposed.
+- The built `frontend/dist/index.html` has no stylesheet `<link>`; CSS is injected at runtime by `HeadContent`, so a JS-less or slow load is unstyled (FOUC). QA reported this outside the criteria; a follow-up issue is proposed.
+- `vite-tsconfig-paths` logs a Vite 8 native-resolution warning on every build; `frontend/package.json` still carries the leftover name `tanstack_start_ts`.
+- `682c69f` bundles the `Makefile` and `AGENTS.md` changes in one protected commit; the human approved both together, but the process text prefers separate protected commits.
 
 ## Follow-ups for the next session
 
-- The Orchestrator applies the approved protected `Makefile` `frontend-build` diff and the approved `AGENTS.md` Build line, each committed with `HUMAN_APPROVED=1`, before QA. The output path is `frontend/dist/`, so the approved diff is unchanged; if the Makefile `frontend-build` recipe differs from `npm --prefix frontend run build`, say so before QA.
-- QA then checks the static `frontend/dist/index.html` output (HTTP 200 serve), the absent-backend run and the remaining #21 criteria, and re-runs the refused-case greps.
-- #22 (services interface and README methods list) and #23 (API contract) remain out of scope for #21.
-- `frontend/package.json` still carries the leftover name `tanstack_start_ts`; renaming it is cosmetic and was left out of #21's scope (noting it, not fixing it).
+- Human decision pending: file follow-up issue(s) for the `shellComponent` DOM-nesting/hydration risk and the missing stylesheet link, and decide whether to fold in the `vite-tsconfig-paths` warning and the `package.json` name.
+- #22 (services interface and README methods list) and #23 (API contract) remain; #33 is deferred.
+- #21 is closed; nothing was started for #22 in this session.
