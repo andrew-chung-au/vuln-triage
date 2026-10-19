@@ -68,3 +68,10 @@ None. QA ran at `682c69f` and posted PASS (comment 6277400761).
 - Human decision pending: file follow-up issue(s) for the `shellComponent` DOM-nesting/hydration risk and the missing stylesheet link, and decide whether to fold in the `vite-tsconfig-paths` warning and the `package.json` name.
 - #22 (services interface and README methods list) and #23 (API contract) remain; #33 is deferred.
 - #21 is closed; nothing was started for #22 in this session.
+
+## Permission review
+
+- Read-only commands (propose allowing): none stopped for approval.
+- Writes to the record (keep asking): `HUMAN_APPROVED=1 git commit` for the protected `Makefile`/`AGENTS.md` change (human-approved in this session); `gh issue close` for #32 and #21 (currently `ask` in `opencode.json`).
+- Risky (propose denying): none.
+- No system configuration change, install or network command was requested in the sandbox.
