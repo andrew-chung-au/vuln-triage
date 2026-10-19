@@ -897,3 +897,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (deadline line replaced by "timing and scope trade-offs are the human's"; the deadline decision row removed), this entry
 - verification (tests run, reviewer verdict): `git diff --check` clean; no tests run (docs only)
 - human review (what I checked or corrected, or `none`): the human declined a proposed deadline edit, then approved this wording. Commands that stopped for approval: none
+
+### 2026-10-19 — Link the roadmap from AGENTS.md
+
+- date: 2026-10-19
+- task/issue: no issue; follow-up to the roadmap entries above
+- agent role: Orchestrator
+- model: Claude Code, claude-opus-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved the proposed one-line addition to `AGENTS.md` "Where to read more". No key prompt file saved
+- files changed: protected `AGENTS.md` (commit `2efa508`, committed alone with `HUMAN_APPROVED=1`), this entry
+- verification (tests run, reviewer verdict): `git diff --check` clean; no tests run (docs only)
+- human review (what I checked or corrected, or `none`): the human approved the exact line shown in the session before it was written. Commands that stopped for approval: the `HUMAN_APPROVED=1 git commit` (intended)
