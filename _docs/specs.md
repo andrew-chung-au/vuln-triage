@@ -1,5 +1,7 @@
 # VulnTriage product spec (Stage 1)
 
+Status: draft, pending the 2026-10-16 review issues
+
 Source: `_docs/project-brief.md`. Criteria: `_docs/rubric.md`.
 Deferred to later stages: prioritisation formula (Stage 2), LLM guardrails
 (Stage 2), API contract (Stage 3), tests (Stage 4).
@@ -11,6 +13,29 @@ Deferred to later stages: prioritisation formula (Stage 2), LLM guardrails
 | Asset owner | Engineer owning an app/service | Know what to fix first, with a correct fix version, without triaging feeds |
 | Security lead | Person accountable for exposure | See ranked exposure across assets, get a weekly digest, track overdue fixes |
 | Developer (AI-assisted) | Developer using an AI assistant | Ask "which assets are affected by this CVE?" and get a correct answer |
+
+## Defined terms
+
+### fixed version for this dependency
+
+The **fixed version for this dependency** is the lowest version greater than
+the installed version that is outside every affected range containing the
+installed version, considering all ranges and all advisories for that
+vulnerability so that the upgrade clears every one. If no such version exists,
+the finding has **no fixed version for this dependency**.
+
+- An advisory with fixed versions on several release lines (for example 1.2.5
+  on the 1.x line and 2.0.1 on the 2.x line): installed 1.2.0 → `1.2.5`;
+  installed 2.0.0 → `2.0.1`.
+- `VERIFY:` an advisory may have no `fixed` event, and two advisories for the
+  same vulnerability may list different fixed versions; in both cases apply
+  the rule to all ranges and all advisories.
+- `VERIFY:` OSV advisories represent affected versions as ranges with
+  `introduced` and `fixed` events, and the same vulnerability may have several
+  ranges or several advisories.
+
+The fixed version for this dependency is the only value the US-6 brief
+guardrail compares against.
 
 ## User stories
 
@@ -30,9 +55,10 @@ As a security lead, dependencies are picked up from the asset's lockfiles
 
 ### US-3: Match vulnerabilities with fixed versions
 As an asset owner, each dependency version is matched against known
-vulnerabilities, showing the fixed version when one exists.
+vulnerabilities, showing the fixed version for this dependency when one exists.
 - Acceptance: a dependency with a known vulnerability shows a finding with the
-  vulnerability id and the fixed version; a clean dependency shows no finding.
+  vulnerability id and the fixed version for this dependency when one exists;
+  a clean dependency shows no finding.
 
 ### US-4: Enrich with real-world exploit signals
 As an asset owner, each finding shows CISA KEV status, FIRST EPSS score, and
@@ -51,8 +77,8 @@ As an asset owner, I get a short plain-language brief per finding built from
 the structured finding (what is affected, why it matters, what version to
 move to). (Guardrail design in Stage 2; brief content tests in Stage 4.)
 - Acceptance: an open finding shows a brief naming the affected package and
-  the fixed version; the fixed version in the brief matches the finding's
-  fixed version.
+  the fixed version for this dependency; the fixed version in the brief matches
+  the finding's fixed version for this dependency.
 
 ### US-7: Daily refresh and re-score
 As a security lead, KEV/EPSS data is refreshed daily and findings are
@@ -75,10 +101,12 @@ get a weekly digest of exposure.
 
 ### US-10: Re-scan closes fixed findings
 As an asset owner, a finding closes automatically when a re-scan shows the
-fixed version is in place.
-- Acceptance: after upgrading to the fixed version and re-scanning, the
-  finding status is `fixed` with a timestamp; findings on still-vulnerable
-  versions stay open.
+installed version no longer falls in any affected range.
+- Acceptance: after upgrading to a version outside every affected range (for
+  example 2.0.3 when the fixed version for this dependency is 2.0.1) and
+  re-scanning, the finding status is `fixed` with a timestamp; if the installed
+  version is still inside any affected range (even after an upgrade), the
+  finding stays `open`.
 
 ### US-11: Dashboard with status and audit trail
 As a security lead, I see findings per asset with status (`open` /
@@ -133,7 +161,7 @@ and a test; once merged, CI deploys it to dev.
 
 | # | Case | Expected behaviour |
 |---|---|---|
-| E1 | Package with no fixed version yet | Finding stays open with "no fixed version"; ranked by exploit signals (tier rule in Stage 2) |
+| E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
 | E3 | A feed (OSV / KEV / EPSS) is unavailable | Last-known data is kept and marked stale; scheduled run retries; no findings are deleted |
 | E4 | A vulnerability is later removed from a feed | Finding is marked withdrawn, not deleted, with an audit entry |
