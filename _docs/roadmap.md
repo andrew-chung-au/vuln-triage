@@ -17,10 +17,10 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 |---|---|---|---|---|---|
 | 1 | Refresh the rubric evidence | (auditor skill) | none | `_docs/rubric-evidence.md` re-audited at current `main`; confirms or rejects Testing 1 and CI/CD 1 | done (2026-10-20 audit, 10/24 at `74e9cfc`) |
 | 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | done (auditor confirmed MET 2) |
-| 3 | Push check plan-mode fix | #35 | none | #35 closed | todo (groomed 2026-10-20) |
+| 3 | Push check plan-mode fix | #35 | none | #35 closed | doing (implementation `df72298`; QA pending) |
 | 4 | Remaining #15/#20 findings | #33 | none | #33 closed | todo (groomed 2026-10-20) |
-| 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | todo |
-| 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | doing (all six groomed 2026-10-20; batched decision pending) |
+| 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
+| 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | doing (all six groomed and the batched answers recorded 2026-10-20; implementation pending) |
 | 7 | Stage 2: `_docs/architecture.md` | new issue | 6 | Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | todo |
 | 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | todo |
 | 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
@@ -39,9 +39,9 @@ Later, not scheduled: #10, #16, #19, #29, #30.
 
 | # | Decision | Recommendation | Status |
 |---|---|---|---|
-| 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | open (grooming done 2026-10-20; batched answer pending) |
+| 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | resolved 2026-10-20: groomed and answered as one batch |
 | 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | open |
-| 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | open |
+| 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | resolved 2026-10-20: both landed before the spec commits |
 
 ## Score checkpoints
 
@@ -77,3 +77,4 @@ Off-track signals:
 | 2026-10-19 | none (roadmap adopted) | 7 (2026-10-17 audit) | yes | Baseline |
 | 2026-10-20 | step 2 implementation (#13) | 7 (not re-audited) | yes | #13 QA PASS at `e46fadf`; step 2 started ahead of step 1 at the human's request and stays `doing` until the auditor confirms Problem Description 2 |
 | 2026-10-20 | steps 1 and 2; step 6 grooming; #35/#33 grooming | 10 (2026-10-20 audit) | yes | Auditor re-audited at `74e9cfc` (commit `639b9a9`) and confirmed Testing 1, CI/CD 1 and Problem Description 2. All six spec-review issues are groomed; the batched decision is still open, so step 6 stays `doing`. #35 and #33 are groomed; PM filed follow-ups #36 and #37. |
+| 2026-10-20 | step 5 (#17, #18); step 6 batched answers | 10 (2026-10-20 audit) | yes | #17 (`64308d7`) and #18 (`efae1ea`) closed after QA PASS; #39 and #40 filed from #17 QA risks. The six #3-#8 answers are recorded in the issues; step 6 implementation is next. #35 is implemented (`df72298`) and waits for QA in the paused session. |
