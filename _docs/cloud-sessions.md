@@ -1,6 +1,6 @@
 # Running VulnTriage work in Claude Code cloud sessions
 
-How to use Claude Code on the web (cloud sessions) for this project, what has to change in the repo first, and the steps to follow. Status: proposal, 2026-10-20. The repo changes in step 3 touch protected files and wait for the human's approval.
+How to use Claude Code on the web (cloud sessions) for this project, what has to change in the repo first, and the steps to follow. Status: optional reference, deferred (human, 2026-10-20). Cloud credit is limited, so the project must not depend on it. The default Docker setup is option A in the local sandbox (`_docs/docker-runbook.md`). The repo changes in section 3 are not planned; they touch protected files and would need the human's approval.
 
 Sources: <https://code.claude.com/docs/en/claude-code-on-the-web> and <https://code.claude.com/docs/en/cloud-environments>, read 2026-10-20. Details the docs don't state, or that may change, are marked `VERIFY:`. Check them in the trial session (step 5).
 

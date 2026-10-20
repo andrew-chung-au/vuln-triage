@@ -1195,3 +1195,15 @@ Copy this template for each new entry:
 - files changed: `_docs/cloud-sessions.md` (new; proposal, protected-file changes listed but not made), this log
 - verification (tests run, reviewer verdict): none; the doc marks undocumented details `VERIFY:` for a trial session. Repo facts checked: `.claude/settings.json` denies `git push *`, `guard_git.py` blocks push, `make issue-dump` uses `gh issue view`, CI uses the runner's default Node
 - human review (what I checked or corrected, or `none`): none yet. Commands that stopped for approval: none
+- follow-up, same day: the human chose not to depend on cloud credit; `_docs/cloud-sessions.md` is marked an optional, deferred reference
+
+### 2026-10-20 — Docker options and the human-in-the-loop runbook
+
+- date: 2026-10-20
+- task/issue: none directly (feeds step 7 D1 and #31); human request for the cost of Docker in the sandbox, then step-by-step instructions for the human
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for a technical cost breakdown, chose option A (Compose service containers, agent has no Docker control), and asked for instructions for the human who runs containers outside the sandbox; no key prompt file saved
+- files changed: `_docs/docker-runbook.md` (new), `_docs/cloud-sessions.md` (status line), this log
+- verification (tests run, reviewer verdict): none (documentation). Facts checked: the repo is public (`gh repo view`), the agent token can read Actions runs (`gh run list`), `verify.yml` runs on every push. Setup hours are estimates, not measured
+- human review (what I checked or corrected, or `none`): the human chose option A. Commands that stopped for approval: none
