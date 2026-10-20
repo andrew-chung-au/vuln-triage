@@ -20,7 +20,7 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 | 3 | Push check plan-mode fix | #35 | none | #35 closed | doing (implementation `df72298`; QA pending) |
 | 4 | Remaining #15/#20 findings | #33 | none | #33 closed | todo (groomed 2026-10-20) |
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
-| 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | doing (all six groomed and the batched answers recorded 2026-10-20; implementation pending) |
+| 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
 | 7 | Stage 2: `_docs/architecture.md` | new issue | 6 | Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | todo |
 | 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | todo |
 | 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
@@ -34,6 +34,8 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 | 17 | Tier B and C build | step 12 issues | 15, 16 | Auditor: all 12 criteria MET | todo |
 
 Later, not scheduled: #10, #16, #19, #29, #30.
+
+#41 (spec fixes from the #3-#8 QA risks) is a step 6 follow-up: its spec commit should land before or alongside step 7, and its Out-of-scope list is input to step 7.
 
 ## Open decisions
 
@@ -78,3 +80,4 @@ Off-track signals:
 | 2026-10-20 | step 2 implementation (#13) | 7 (not re-audited) | yes | #13 QA PASS at `e46fadf`; step 2 started ahead of step 1 at the human's request and stays `doing` until the auditor confirms Problem Description 2 |
 | 2026-10-20 | steps 1 and 2; step 6 grooming; #35/#33 grooming | 10 (2026-10-20 audit) | yes | Auditor re-audited at `74e9cfc` (commit `639b9a9`) and confirmed Testing 1, CI/CD 1 and Problem Description 2. All six spec-review issues are groomed; the batched decision is still open, so step 6 stays `doing`. #35 and #33 are groomed; PM filed follow-ups #36 and #37. |
 | 2026-10-20 | step 5 (#17, #18); step 6 batched answers | 10 (2026-10-20 audit) | yes | #17 (`64308d7`) and #18 (`efae1ea`) closed after QA PASS; #39 and #40 filed from #17 QA risks. The six #3-#8 answers are recorded in the issues; step 6 implementation is next. #35 is implemented (`df72298`) and waits for QA in the paused session. |
+| 2026-10-20 | step 6 (#3-#8) | 10 (2026-10-20 audit) | yes | Six protected spec commits `45f6fa6`..`fdc7b51`, each with an approval record; all six QA PASS. The OpenCode orchestrator stopped during QA of #5, #7 and #8; Claude Code reran those three fresh and closed out the step. The human chose to file the QA risks outside the criteria as one follow-up, #41. Step 3 (#35 QA) is still `doing`; step 7 is next. |

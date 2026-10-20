@@ -1029,3 +1029,69 @@ Copy this template for each new entry:
 - files changed: `AGENTS.md`, `_docs/agent-kit/procedures/asking-the-human.md`, `_docs/agent-kit/process.md`, `_docs/agent-kit/templates/AGENTS.md.template` (commit `efae1ea`, protected, committed alone with `HUMAN_APPROVED=1`); approval record comment 6282041221; `_docs/roadmap.md` (commit `8bc389e`: step 5 done, step 6 answers recorded, decisions 1 and 3 resolved); `_session-summaries/issue-018-approval-record.md` (commit `6b953f5`); this entry. No other repository change
 - verification (tests run, reviewer verdict): QA PASS at `efae1ea`; `make verify BASE=ea257c9` PASS; `make assert-clean` PASS; its own approval record passed the diff, path, blob, parent and `PROTECTED` checks
 - human review (what I checked or corrected, or `none`): the human chose to include the template and approved the exact diff; QA's outside-criteria notes need no action. Commands that stopped for approval: none
+
+### 2026-10-20 — Engineer drafts for spec issues #3-#8
+
+- date: 2026-10-20
+- task/issue: issues #3, #6, #4, #5, #7, #8 (roadmap step 6), drafted as cumulative `_docs/specs.md` patches
+- agent role: Software Engineer
+- model: opencode/deepseek-v4.1-flash-free (project default in `opencode.json`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to draft each issue's spec change from its recorded batched answers without editing tracked files; no key prompt file saved
+- files changed: no tracked file; patches in `.scratch/spec-draft/`; Engineer comments 6284843229 (#3), 6284856636 (#6), 6284857967 (#4), 6284859024 (#5), 6284863547 (#7), 6284865043 (#8). This entry was appended by the Claude Code orchestrator from those comments
+- verification (tests run, reviewer verdict): each comment reports the patch applies cleanly in order and the cumulative scratch spec passes its checks
+- human review (what I checked or corrected, or `none`): the human approved each exact diff before its commit. Commands that stopped for approval: none (all six comments)
+
+### 2026-10-20 — Orchestrator commits for spec issues #3-#8
+
+- date: 2026-10-20
+- task/issue: roadmap step 6, six protected spec commits and approval records
+- agent role: Orchestrator
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's approval of each exact spec diff; no key prompt file saved
+- files changed: `_docs/specs.md` in `45f6fa6` (#3), `999fd88` (#6), `e52a07c` (#4), `e0a60ac` (#5), `b03539b` (#7), `fdc7b51` (#8), each committed alone with `HUMAN_APPROVED=1`; approval records 6285069644, 6285087536, 6285106147, 6285123424, 6285146604, 6285163520. This entry was appended by the Claude Code orchestrator; the OpenCode session stopped before logging
+- verification (tests run, reviewer verdict): the record for #8 was compared with `git show` by a `.scratch/` script (PASS); every record was later re-checked by QA
+- human review (what I checked or corrected, or `none`): approved each diff. Commands that stopped for approval: not collected, because the session was interrupted
+
+### 2026-10-20 — QA for spec issues #3, #6 and #4
+
+- date: 2026-10-20
+- task/issue: issues #3, #6, #4
+- agent role: QA Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check each issue's criteria and approval record at its commit and post a verdict; no key prompt file saved
+- files changed: none. QA comments 6285218980 (#3), 6285234570 (#6), 6286250358 (#4). This entry was appended by the Claude Code orchestrator
+- verification (tests run, reviewer verdict): PASS for all three; `make verify` PASS (35 tests); approval records byte-identical to `git show`; each reports `make assert-clean` PASS at `fdc7b51`
+- human review (what I checked or corrected, or `none`): outside-criteria risks went to the step 6 decision point (option 1, #41). Commands that stopped for approval: none
+
+### 2026-10-20 — QA reruns for spec issues #5, #7 and #8
+
+- date: 2026-10-20
+- task/issue: issues #5, #7, #8; the OpenCode QA runs stopped before posting, so these are fresh runs
+- agent role: QA Engineer
+- model: claude-opus-5-5 (Claude Code `qa-engineer` subagent)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check criteria and approval record, run Verify, not reuse the partial `.scratch/qa-5/`, and post a verdict; no key prompt file saved
+- files changed: none. QA comments 6286739493 (#5), 6286726338 (#7), 6286723784 (#8)
+- verification (tests run, reviewer verdict): PASS for all three; `make verify` with each parent as `BASE` PASS (35 tests); records byte-identical to `git show`; orchestrator `make assert-clean` PASS, HEAD `fdc7b51` unchanged
+- human review (what I checked or corrected, or `none`): outside-criteria risks went to the step 6 decision point (option 1, #41). Commands that stopped for approval: none
+
+### 2026-10-20 — PM follow-up #41 from the #3-#8 QA risks
+
+- date: 2026-10-20
+- task/issue: step 6 decision point, option 1
+- agent role: PM
+- model: claude-opus-5-5 (Claude Code `pm` subagent)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to file one groomed issue for the spec contradictions and gaps, list the Stage 2 details as step 7 inputs, and comment once on #23; no key prompt file saved
+- files changed: no tracked file; created #41; comment 6286808327 on #23
+- verification (tests run, reviewer verdict): none; #41 asks the human decisions D1-D4 before implementation
+- human review (what I checked or corrected, or `none`): the human chose option 1. Commands that stopped for approval: none
+
+### 2026-10-20 — Orchestrator close-out for spec issues #3-#8
+
+- date: 2026-10-20
+- task/issue: roadmap step 6 close-out after the OpenCode orchestrator stopped
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to finish the interrupted task; no key prompt file saved
+- files changed: `_session-summaries/planning-2026-10-20-spec-review-3-8.md`, `_docs/roadmap.md` (step 6 done, #41 noted, check-in line), this log; closed #3-#8
+- verification (tests run, reviewer verdict): checked the state left behind (clean tree, HEAD `fdc7b51`, no verdict on #5/#7/#8, no PID files); `make assert-clean` PASS after the QA reruns
+- human review (what I checked or corrected, or `none`): the human chose option 1 at the decision point. Commands that stopped for approval: none
