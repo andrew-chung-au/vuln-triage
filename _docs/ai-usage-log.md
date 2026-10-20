@@ -919,3 +919,14 @@ Copy this template for each new entry:
 - files changed: commit `1a000c2` (`README.md` only): added "The problem", "What VulnTriage does" and "Expected behaviour" sections, an explicit planning/not-implemented note, and expanded OSV.dev, CISA KEV, FIRST EPSS, LLM, MCP and n8n on first use; kept the planning and AI-workflow index. This entry in `_docs/ai-usage-log.md` (project rule). Git-ignored `.scratch/issue-13.json`, `.scratch/check_readme_13.py`
 - verification (tests run, reviewer verdict): `make verify` before the log entry (README diff identical to `1a000c2`) PASS WITH WARNINGS: tests 2 files / 35 tests passed, whitespace PASS, weakened tests 7 rewritten assertions that predate this task (issue #22 test changes already in the unpushed range; this task changed no test). `.scratch/check_readme_13.py` PASS: every relative link resolves and all three required headings and fixed names are present. No QA run
 - human review (what I checked or corrected, or `none`): none yet; issue left open for QA. Commands that stopped for approval: none
+
+### 2026-10-20 — Close out issue #13
+
+- date: 2026-10-20
+- task/issue: issue #13, "README: describe the problem, functionality and expected behaviour (Problem Description, 1 → 2 points)"
+- agent role: Orchestrator
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to check `_docs/roadmap.md` and start the next issue following `_docs/agent-kit/process.md`; no key prompt file saved
+- files changed: `_session-summaries/issue-013-readme-problem-description.md` (new), `_docs/roadmap.md` (step 2 status and check-in line), this entry. Implementation `1a000c2` and the Engineer's log entry `e46fadf` were made by the Engineer
+- verification (tests run, reviewer verdict): PM grooming, Engineer implementation and QA PASS were separate subagent runs. QA ran `make verify BASE=1be4f95` PASS (35 tests, whitespace PASS, no test files changed) and `make assert-clean` PASS at `e46fadf`. The orchestrator re-ran `make assert-clean` and confirmed HEAD stayed `e46fadf`. No auditor run
+- human review (what I checked or corrected, or `none`): the human answered the decision point: do not file a README follow-up now, and no action on QA's minor findings. The roadmap records that step 2 started ahead of step 1 at the human's request. Commands that stopped for approval: none
