@@ -8,6 +8,7 @@ load_conf
 fail=0
 forbidden=()
 protected=()
+unprotected=()
 while IFS=$'\t' read -r status path; do
   [ -z "$path" ] && continue
   if [ "$status" != "D" ] && matches_any "$path" "${FORBIDDEN[@]}" && ! matches_any "$path" "${ALLOWED[@]}"; then
@@ -15,6 +16,8 @@ while IFS=$'\t' read -r status path; do
   fi
   if matches_any "$path" "${PROTECTED[@]}"; then
     protected+=("$path")
+  else
+    unprotected+=("$path")
   fi
 done < <(git diff --cached --relative --name-status --no-renames)
 
@@ -32,6 +35,13 @@ if [ "${#protected[@]}" -gt 0 ] && [ "${HUMAN_APPROVED:-}" != "1" ]; then
   printf '  %s\n' "${protected[@]}" >&2
   echo "  Protected files change only with human approval. If the human has approved" >&2
   echo "  this specific change, commit with: HUMAN_APPROVED=1 git commit ..." >&2
+  fail=1
+fi
+
+if [ "${#protected[@]}" -gt 0 ] && [ "${#unprotected[@]}" -gt 0 ] && [ "${HUMAN_APPROVED:-}" = "1" ]; then
+  echo "agent-kit [$project]: protected changes must be committed alone. Unstage these:" >&2
+  printf '  %s\n' "${unprotected[@]}" >&2
+  echo "  Commit the protected paths in their own commit with HUMAN_APPROVED=1." >&2
   fail=1
 fi
 
