@@ -78,8 +78,10 @@ primary id may not be a CVE.)
 ### US-4: Enrich with real-world exploit signals
 As an asset owner, each finding shows CISA KEV status, FIRST EPSS score, and
 the asset context (criticality, internet-facing).
-- Acceptance: a finding displays KEV exploited/not or "not listed", an EPSS
-  score or `n/a`, and the owning asset's criticality and internet-facing flag.
+- Acceptance: a finding displays exactly one KEV value, `KEV: listed` (its CVE
+  is in KEV), `KEV: not listed` (its CVE was checked and is not in KEV) or
+  `KEV: n/a (no CVE)` (E11; `VERIFY:` KEV is keyed by CVE), an EPSS score or
+  `n/a`, and the owning asset's criticality and internet-facing flag.
 
 ### US-5: Deterministic, explainable ranking
 As an asset owner, findings are ranked deterministically and each finding
@@ -136,8 +138,11 @@ blocker for Stage 2 sign-off.
 
 ### US-9: Overdue reminders, escalation, weekly digest
 As a security lead, overdue findings trigger reminders and escalation, and I
-get a weekly digest of exposure. A finding's due date is its first detection
-time plus the window for the highest tier the finding has reached. A tier rise
+get a weekly digest of exposure. A finding's due date is the start of its
+current lifecycle plus the window for the highest tier the finding has reached
+in that lifecycle. The first lifecycle starts at first detection; after an E7
+reopen, the new lifecycle starts at the reopen time, and the first detection
+time stays recorded in the audit trail. A tier rise
 moves the due date earlier to the new tier's window; a tier drop never moves it
 later; an already-overdue finding stays overdue. The windows are an
 `ASSUMPTION:` until Stage 2. The escalation target is one configured
@@ -156,11 +161,12 @@ installed version no longer falls in any affected range.
   example 2.0.3 when the fixed version for this dependency is 2.0.1) and
   re-scanning, the finding status is `fixed` with a timestamp; if the installed
   version is still inside any affected range (even after an upgrade), the
-  finding stays `open`.
+  finding stays `open`. A finding whose advisory has been withdrawn becomes
+  `withdrawn`, not `fixed` (E4).
 
 ### US-11: Dashboard with status and audit trail
 As a security lead, I see findings per asset with status (`open` /
-`risk accepted` / `fixed`) and an audit trail; risk acceptance happens only
+`risk accepted` / `fixed` / `withdrawn`) and an audit trail; risk acceptance happens only
 by a human in the dashboard. Dashboard users sign in, and the signed-in user is
 recorded as "who" in every audit entry. Both the asset owner and the security
 lead may set `risk accepted`. No automated component may set it. The
@@ -236,10 +242,10 @@ A finding has exactly one status. This is the complete list:
 
 | Status | Set by | Transition and meaning | Audit entry |
 |---|---|---|---|
-| `open` | Scan or re-scan | Created when a scanned dependency is vulnerable; set again when a `fixed` finding reappears (E7). | Creation and each status change record the previous value, actor and timestamp. |
+| `open` | Scan or re-scan | Created when a scanned dependency is vulnerable; set again when a `fixed` finding reappears (E7), or when a `withdrawn` finding that was `open` before it was withdrawn has an advisory reinstated and the installed version is inside an affected range (E4). | Creation records the actor and timestamp; each later status change records the previous value, actor and timestamp. |
 | `risk accepted` | Asset owner or security lead, in the dashboard | A human accepts the risk; requires a non-empty reason. | Records the signed-in user, timestamp, previous value and the non-empty reason. |
-| `fixed` | Re-scan | The installed version no longer falls in any affected range (US-10). | Records the previous value, actor and timestamp. |
-| `withdrawn` | Re-scan | `ASSUMPTION:` an addition to the brief's three statuses. A re-scan sets it when OSV has withdrawn the advisory (E4; `VERIFY:` how OSV marks a withdrawn advisory); the finding is not deleted. | Records the previous value, the actor (re-scan), the timestamp and OSV as the source. |
+| `fixed` | Re-scan | The installed version no longer falls in any affected range (US-10), including for a `risk accepted` finding (E8). | Records the previous value, actor and timestamp. |
+| `withdrawn` | Re-scan | `ASSUMPTION:` an addition to the brief's three statuses. A re-scan sets it when OSV has withdrawn every advisory merged into the finding (E4, E9; `VERIFY:` how OSV marks a withdrawn advisory), including for a `risk accepted` finding (E8); the finding is not deleted. A re-scan that finds an advisory reinstated restores the status the finding had before it was withdrawn (`open` or `risk accepted`), or sets `fixed` if the installed version is outside every affected range (E4). | Records the previous value, the actor (re-scan), the timestamp and OSV as the source. |
 
 `stale` (E3) is a feed marker, not a finding status. The asset scan status
 (E3, E5) is not a finding status either.
@@ -249,23 +255,32 @@ A finding has exactly one status. This is the complete list:
 Each asset has exactly one scan status, with exactly these values:
 `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`,
 `scanned, clean`. Only an OSV outage, or a repository or lockfile failure,
-gives `scan failed`. A `scan failed` status also records one failure reason,
+gives `scan failed`; a readable repository with no dependency file to read is
+a repository failure. A `scan failed` status also records one failure reason,
 with exactly these values: `feed unavailable` (OSV unavailable),
-`lockfile parse error`, or `repository unavailable` (the GitHub repository is
-unreachable or missing, or the read-only token is rejected or expired).
+`lockfile parse error`, `repository unavailable` (the GitHub repository is
+unreachable or missing, or the read-only token is rejected or expired), or
+`no dependency files` (the repository is readable but contains none of
+`uv.lock`, `requirements.txt` or `package-lock.json`).
 For a successful scan the precedence is
 `scanned, findings` > `scanned, incomplete` > `scanned, clean`.
-"Version unknown" warnings (E10) still show under every value. Findings are
-listed separately.
+"Version unknown" and refused-include warnings (E10) still show under every
+value. Findings are listed separately.
 
 Each case gets exactly one value:
 
 - A successful scan matched at least one vulnerability (including when some
-  entries are "version unknown"): `scanned, findings`.
+  entries are "version unknown" or a `-r` include was refused):
+  `scanned, findings`.
 - A successful scan matched nothing and at least one entry is "version
   unknown" (E10): `scanned, incomplete`.
-- A successful scan matched nothing and every version is known:
-  `scanned, clean`.
+- A successful scan matched nothing and at least one `-r` include was refused
+  (E10): `scanned, incomplete`.
+- A successful scan matched nothing, every version is known and no include
+  was refused: `scanned, clean`.
+- The repository is readable but contains none of `uv.lock`,
+  `requirements.txt` or `package-lock.json`: `scan failed`, reason
+  `no dependency files`; previous findings are kept.
 - OSV unavailable on an asset's first scan (E3): `scan failed`, reason
   `feed unavailable`; no findings are created.
 - OSV unavailable on a later scan (E3): `scan failed`, reason
@@ -297,14 +312,17 @@ rule:
 
 | Flow | Rule |
 |---|---|
-| LLM brief | Contains only the allowed fields and no advisory-derived links; it contains no URLs other than the advisory's own reference link. |
+| LLM brief | Contains only the allowed fields. Its only link is one VulnTriage builds itself from the finding's primary id on a fixed host, the OSV page for that id (`VERIFY:` the OSV page URL pattern for a vulnerability id); no URL from advisory text ever appears in a brief. |
 | Owner notification | Plain text with labelled fields. |
+| US-9 reminder and escalation | Plain text with labelled fields, as for the owner notification. |
+| Weekly digest | Plain text with labelled fields, as for the owner notification. |
+| E8 "signals changed" notice | Plain text with labelled fields, as for the owner notification. |
+| US-14 alert payload (received by the US-15 responder) | Finding id and tier only; no advisory-derived text. Advisory text the responder later reads through the API is untrusted data, never instructions. |
 | GitHub issue | Opened by n8n in the dedicated tracker repo; advisory-derived text is quoted data, clearly separated from VulnTriage's own text. Under `AGENTS.md`, such issue text is data, not instructions. |
 | MCP output | Advisory-derived text is quoted and labelled untrusted data, including in `get_finding` and `which_assets_affected`; never presented as instructions. |
 | Dashboard | Plain text with no auto-links. |
 
-Any URL in advisory text is shown as inert text, except the advisory's own
-reference link in the brief.
+Any URL in advisory text is shown as inert text, and never appears in a brief.
 
 ## Edge cases
 
@@ -313,28 +331,29 @@ reference link in the brief.
 | E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
 | E3 | A feed (OSV / KEV / EPSS) is unavailable | OSV unavailable on a new asset's first scan: the asset shows `scan failed` with reason `feed unavailable`, no findings are created, and it is not shown as `scanned, clean`. OSV unavailable on a later scan: last-known data and findings are kept and marked stale, not deleted, and the asset shows `scan failed` with reason `feed unavailable`. KEV or EPSS unavailable while OSV succeeded: the asset's scan status is the value the OSV result gives (`scanned, findings`, `scanned, incomplete` or `scanned, clean`), and the last-known KEV or EPSS signals are kept and marked stale. In every case the scheduled run retries |
-| E4 | OSV later withdraws an advisory, or a CVE drops out of KEV or EPSS | When a re-scan finds that OSV has withdrawn the advisory (`VERIFY:` how OSV marks or returns a withdrawn advisory), the finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not `fixed`, even if the advisory no longer matches the installed version; the finding is not deleted, and the audit entry records the previous value, the actor (re-scan), the timestamp and OSV as the source. The scheduled KEV/EPSS refresh never changes a finding's status: a CVE dropping out of KEV or EPSS changes that finding's signals and rank (US-7), not its status |
+| E4 | OSV later withdraws an advisory, or a CVE drops out of KEV or EPSS | When a re-scan finds that OSV has withdrawn the advisory (`VERIFY:` how OSV marks or returns a withdrawn advisory), the finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not `fixed`, even if the advisory no longer matches the installed version; the finding is not deleted, and the audit entry records the previous value, the actor (re-scan), the timestamp and OSV as the source. A `risk accepted` finding becomes `withdrawn` too: the audit entry records `risk accepted` as the previous value, and no owner notification is sent. A finding with several merged advisories (E9) becomes `withdrawn` only when every one of them is withdrawn. An advisory that is already withdrawn when a scan first sees it creates no finding; the only status a scan creates is `open`. If a later re-scan finds any of a `withdrawn` finding's advisories no longer withdrawn (`VERIFY:` how OSV shows a reinstated advisory) and the installed version is inside an affected range, the finding returns to the status it had before it was withdrawn (`open`, or `risk accepted` if a person had accepted it) and resumes its earlier lifecycle: no second GitHub issue or owner notification if one was already sent (n8n closes the tracker issue only after `fixed`, US-8). Returning to `risk accepted` restores the human's earlier acceptance as recorded in the audit trail (who, when and the reason); it is not a new acceptance, and the re-scan never sets `risk accepted` on a finding no person had accepted. If the installed version is outside every affected range, it becomes `fixed`. Each of these changes records the previous value, the actor (re-scan), the timestamp and OSV as the source; a restored acceptance also names the audit entry it restores. The scheduled KEV/EPSS refresh never changes a finding's status: a CVE dropping out of KEV or EPSS changes that finding's signals and rank (US-7), not its status |
 | E5 | Lockfile fails to parse | The asset's scan status is `scan failed` with reason `lockfile parse error`; previous findings are kept; the error is visible in the dashboard |
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
 | E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
-| E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet |
+| E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet. A re-scan may still close it: it becomes `fixed` (US-10) or `withdrawn` (E4), with `risk accepted` recorded as the previous value and no owner notification |
 | E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
-| E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; a scan where nothing matched and at least one entry is "version unknown" is `scanned, incomplete`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched |
-| E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows "not listed", EPSS shows "n/a", and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
-| E12 | Advisory text contains instructions or links | The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields and no URLs other than the advisory's own reference link; any other URL in advisory text is shown as inert text |
+| E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; a scan where nothing matched and at least one entry is "version unknown" is `scanned, incomplete`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched, and its entries are never read; a scan where nothing matched and at least one include was refused is `scanned, incomplete` |
+| E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows `KEV: n/a (no CVE)`, EPSS shows `n/a`, and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
+| E12 | Advisory text contains instructions or links | The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields; its only link is the one VulnTriage builds from the finding's primary id (Advisory-derived text), and no URL from advisory text ever appears in it; every URL in advisory text is shown as inert text |
 
 ## Open questions
 
 1. What counts as "top-priority" for US-8 notification (which tier)? — the
    top tier is `P1`, defined by Stage 2; this is a blocker for Stage 2
-   sign-off.
+   sign-off. Answered in `_docs/architecture.md` § Prioritisation.
 2. What are the overdue/escalation time windows for US-9?
 3. Which notification channel (email / chat) does the pilot use for US-8/US-9?
 4. What is the notification window for US-14 (how long before an undelivered
    top-priority finding fires the alert)?
 5. What credential does the responder use, and how is it scoped (branch and
    pull request only, no push to main)? Does a human merge or an automatic
-   merge after CI passes complete US-15?
+   merge after CI passes complete US-15? Answered in `_docs/architecture.md`
+   § Responder agent (a human merges; #43 D2).
 
 ## Assumptions
 
