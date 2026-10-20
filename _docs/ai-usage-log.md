@@ -996,3 +996,36 @@ Copy this template for each new entry:
 - files changed: `_docs/agent-kit/scripts/check-staged.sh` (commit `64308d7`, protected, committed alone with `HUMAN_APPROVED=1` after approval); approval record comment 6280810952; `_session-summaries/issue-017-committed-alone.md` (commit `199f4b7`); this entry; issues #38, #39 and #40 filed by PM. No other repository change
 - verification (tests run, reviewer verdict): QA PASS at `df72298`; `make verify BASE=1d31aac` PASS; `make assert-clean` PASS; approval record matches `git show` and blob `3712882`. The first QA run overlapped with the concurrent #35 session and was re-run at the stable HEAD after the human paused that session
 - human review (what I checked or corrected, or `none`): the human approved the exact diff, chose script-only enforcement, chose to leave the duplicate folder for #38, approved filing #39/#40, and paused the concurrent orchestration. Commands that stopped for approval: none
+
+### 2026-10-20 — Engineer proposal for issue #18 approval record
+
+- date: 2026-10-20
+- task/issue: issue #18, "Record human approvals of protected changes so the exact approved text can be confirmed"; propose-only because all four changed files are protected
+- agent role: Software Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to read `AGENTS.md`, the engineer role, `verify.md`, #18 and its comments, draft the exact diffs without editing tracked files, check them against the criteria, and post Engineer comments; no key prompt file saved
+- files changed: no tracked file; diffs returned to the orchestrator and posted in comments 6281798553 (three files) and 6281870795 (the template, after the human chose to include it). Drafts and checks in `.scratch/propose/`. This entry was appended by the orchestrator
+- verification (tests run, reviewer verdict): `git apply --check` passed; all four paths match `PROTECTED`; `make verify BASE=ea257c9` PASS (35 tests, whitespace PASS); no docs tests exist, so the criterion check was a read of the drafted text
+- human review (what I checked or corrected, or `none`): the human chose to include the template in the same protected commit and approved the exact four-file text; the orchestrator applied it and committed `efae1ea`. Commands that stopped for approval: none
+
+### 2026-10-20 — QA for issue #18
+
+- date: 2026-10-20
+- task/issue: issue #18, committed state and its first approval record
+- agent role: QA Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to check every criterion at `efae1ea`, compare the posted record with the stated `git show`, check paths/blob IDs/parent, run Verify and assert-clean, and post a QA verdict; no key prompt file saved
+- files changed: none. QA comment 6282208055. This entry was appended by the orchestrator
+- verification (tests run, reviewer verdict): PASS. `make verify BASE=ea257c9` PASS (35 tests, whitespace PASS, no weakened tests); posted diff and `git show` output both 8394 bytes and `cmp` clean; `Paths` and all four blob IDs match; single parent; all four paths `PROTECTED`; refused cases rejected by the written rule; `make assert-clean` PASS at `efae1ea`
+- human review (what I checked or corrected, or `none`): the QA notes outside the criteria are the documented documentation-only limit and an `index`-line difference in draft snippets; no action requested. Commands that stopped for approval: none
+
+### 2026-10-20 — Orchestrator close-out for issue #18
+
+- date: 2026-10-20
+- task/issue: issue #18, protected docs commit and close-out
+- agent role: Orchestrator
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved the four protected paths (including the template) and approved the exact diff; no key prompt file saved
+- files changed: `AGENTS.md`, `_docs/agent-kit/procedures/asking-the-human.md`, `_docs/agent-kit/process.md`, `_docs/agent-kit/templates/AGENTS.md.template` (commit `efae1ea`, protected, committed alone with `HUMAN_APPROVED=1`); approval record comment 6282041221; `_docs/roadmap.md` (commit `8bc389e`: step 5 done, step 6 answers recorded, decisions 1 and 3 resolved); `_session-summaries/issue-018-approval-record.md` (commit `6b953f5`); this entry. No other repository change
+- verification (tests run, reviewer verdict): QA PASS at `efae1ea`; `make verify BASE=ea257c9` PASS; `make assert-clean` PASS; its own approval record passed the diff, path, blob, parent and `PROTECTED` checks
+- human review (what I checked or corrected, or `none`): the human chose to include the template and approved the exact diff; QA's outside-criteria notes need no action. Commands that stopped for approval: none
