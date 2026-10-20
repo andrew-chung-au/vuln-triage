@@ -139,23 +139,26 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 |---|---|
 | `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the four failure reasons) |
 | `FindingStatus` value `risk_accepted` | `risk accepted` (exact spec string) |
-| `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed; the credential table's refused cases need one (403: n8n or MCP token writes, owner accepting risk on another owner's asset) |
+| `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed. Cases that need a 403: risk acceptance with the n8n API token, and a job retry `POST` with the responder API token (both in the Security boundaries credential table); an asset owner accepting risk on another owner's asset (Security boundaries, dashboard authentication paragraph, A30; the status code is #23's). The MCP token write is "a 4xx" (credential table, US-12), so #23 may use the same code for it. The existing codes cover the other refused cases: expired session 401 (`unauthenticated`), whitespace-only reason 422 (`validation`), a second claim of a claimed job (`conflict`) |
 | `User { id, name, email }` | `User.username`, `display_name`, `email`, `role` (`security lead` or `asset owner`); `password_hash` and Sessions stay server-side |
 | `Asset` fields | Same fields, plus `scan_failure_reason`, `last_scan_at`, `last_commit_sha`, and scan warnings (on `Scan.warnings`) |
+| No scan record | Scan entity per run: `trigger`, `started_at`, `finished_at`, `scan_status`, `failure_reason`, `warnings`, `trace_id` |
+| No dependency entity | Dependency entity: `ecosystem`, `name`, `version` (nullable = "version unknown"), `source_file`, `direct` |
 | `repositoryUrl: string` (on `Asset` and `NewAssetInput`) | Required, `https://github.com/<owner>/<repo>` only, validated at registration |
 | `Finding.vulnerabilityId`: the primary id as a string | `Finding.vulnerability_id` is a foreign key to Vulnerability; the primary id is `Advisory.osv_id`, and the identity key is the CVE when present (E9) |
 | `Finding.aliases: string[]` | VulnerabilityAlias rows, lookup by any id (US-12) |
 | No CVE field | `Vulnerability.cve_id` (nullable); it decides `KEV: n/a (no CVE)` and EPSS `n/a` (E11) |
 | `Finding.packageName`, no ecosystem | `Finding.ecosystem` + `package`; the finding is unique on (asset, ecosystem, package, vulnerability) |
 | `Finding.installedVersion`: one string | No installed version on Finding: a finding links to one or more Dependency entries, each with its own `version` (A6) |
-| `AffectedRange { range: string, fixedVersion }`; no finding-level fixed version | `Advisory.affected` as structured ranges and events; `Finding.fixed_version` (nullable = "no fixed version") |
+| `Finding.affectedRanges: AffectedRange[]`, each `{ range: string, fixedVersion }`; no finding-level fixed version | Ranges live on each merged Advisory (`Advisory.affected`, structured ranges and events), not on Finding; `Finding.fixed_version` (nullable = "no fixed version") |
 | `kev: boolean` | One KEV value of three, derived from Signal; plus `Signal.kev_stale` |
-| `epss: number \| null` | Same, from `Signal.epss_score`; plus `Signal.epss_stale` |
+| `epss: number \| null` | The score only, from `Signal.epss_score` (null shows `n/a`); plus `Signal.epss_stale` |
 | `tier`, but no rank reason | `Finding.tier`, `rank_inputs`, `rank_reason` (US-5) |
 | `firstSeen` only | `Finding.first_detected_at`, plus `Lifecycle.started_at` and `Lifecycle.due_at` (US-9) |
 | `fixedAt` | `Finding.fixed_at` (same) |
 | No lifecycle or notification state | Lifecycle (`highest_tier`, `entered_p1_at`, `tracker_issue_number`, `owner_notified_at`) and NotificationJob state |
 | No stale, signals-changed or withdrawal fields | `Finding.stale`, `stale_since`, `signals_changed` (E8), `status_before_withdrawal` (E4) |
+| `Finding.brief: Brief \| null`, one per finding; a rejected brief is `null` | Many Brief rows per finding, each with `lifecycle_id`, cached per (lifecycle, fixed version, prompt version, model) (A23); an `unavailable` brief is a stored row with `rejection_reason` (internal). Which brief the API returns is #23's decision |
 | `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
 | `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
 | `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent with the "brief unavailable" marker; no stored summary text |
@@ -164,6 +167,8 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 | `AuditEntry.previousValue: string` | Nullable (none on creation, I7) |
 | `AuditEntry.reason?` (optional) | Required and non-empty for `risk accepted` (US-11); plus `source` and `restores_entry_id` (E4) |
 | `Finding.auditTrail` embedded in the finding | AuditEntry rows linked to a Finding or an Asset |
+
+Data-model fields that neither match a mock field unchanged (for example `Finding.status`, `Asset.criticality`) nor appear in this table are server-side only; the API exposes only what #23 defines. Examples: `Signal.kev_date_added`, `epss_percentile`, `epss_date`, `kev_fetched_at`, `epss_fetched_at`; `Advisory.modified`, `withdrawn_at`; `Finding.current_lifecycle_id`; NotificationJob `idempotency_key`, `attempts`, `last_error_code`, `traceparent`; `Lifecycle.number`, `ended_at`; `Session` and `User.password_hash`.
 
 Owner name and email stay nullable fields that are always present, as in the mock.
 
