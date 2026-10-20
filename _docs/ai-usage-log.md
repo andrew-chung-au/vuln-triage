@@ -1151,3 +1151,25 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): none (decisions recorded only)
 - human review (what I checked or corrected, or `none`): the human chose option 1 for D1, D2, D3 and decision 2 in a multiple-choice question; D4 unanswered. Commands that stopped for approval: none
 - follow-up, same day: the human chose D4 option 1 (the recommended status line); recorded in #41 comment 6287964999
+
+### 2026-10-20 — #41 step 3: proposed spec diff
+
+- date: 2026-10-20
+- task/issue: #41 lifecycle step 3 (implementation as a proposed diff to the protected `_docs/specs.md`)
+- agent role: Engineer (subagent of the orchestrator)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's step 3 task: draft D1-D4 (option 1 each) and D5 option 1 against the PM's groomed criteria (comment 6288008663) in a scratch copy, without editing or committing the spec; no key prompt file saved
+- files changed: none tracked except this log. Scratch only: `.scratch/spec-41/specs.md` (draft), `.scratch/spec-41/specs-41.patch` (headers retargeted to `_docs/specs.md`), `.scratch/spec-41/check_41.py` (read-only check), `.scratch/spec-41/comment-41.md`; Engineer comment 6288084947 on #41 with the full diff
+- verification (tests run, reviewer verdict): `check_41.py` 61/61 automated checks pass, plus a manual read of the status-setting sentences and external-claim lines it prints; `git apply --check` on the patch passes; `make verify` PASS WITH WARNINGS (35 tests; the removed-assertion warning comes from earlier frontend commits since `origin/main`). No QA or human review yet
+- human review (what I checked or corrected, or `none`): none yet; D5 (`repository unavailable`) awaits the human at diff approval. Commands that stopped for approval: none
+
+### 2026-10-20 — #41 protected spec commit and approval record
+
+- date: 2026-10-20
+- task/issue: #41, after the human approved the exact diff
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved the diff as shown and chose D5 option 1; no key prompt file saved
+- files changed: `_docs/specs.md` in `1445ca5`, committed alone with `HUMAN_APPROVED=1`; approval record comment 6288541138; this log
+- verification (tests run, reviewer verdict): the applied diff was compared byte for byte with the approved patch before staging (`cmp`, identical), and again after the commit by `.scratch/spec-41/build_record.py` (one parent, only `_docs/specs.md`, `git show` identical to the patch); QA not yet run
+- human review (what I checked or corrected, or `none`): approved the exact diff and D5 option 1. Commands that stopped for approval: none
