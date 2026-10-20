@@ -1173,3 +1173,14 @@ Copy this template for each new entry:
 - files changed: `_docs/specs.md` in `1445ca5`, committed alone with `HUMAN_APPROVED=1`; approval record comment 6288541138; this log
 - verification (tests run, reviewer verdict): the applied diff was compared byte for byte with the approved patch before staging (`cmp`, identical), and again after the commit by `.scratch/spec-41/build_record.py` (one parent, only `_docs/specs.md`, `git show` identical to the patch); QA not yet run
 - human review (what I checked or corrected, or `none`): approved the exact diff and D5 option 1. Commands that stopped for approval: none
+
+### 2026-10-20 — QA and close-out for #41
+
+- date: 2026-10-20
+- task/issue: #41 lifecycle steps 4-9
+- agent role: QA Engineer (Claude Code `qa-engineer` subagent), then Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check the groomed criteria and the approval record, run Verify with `BASE=c77a437`, and post a verdict; no key prompt file saved
+- files changed: QA comment 6288587511; decision-point comment 6289212246; `_session-summaries/issue-041-spec-fixes-from-qa-risks.md` (`71aa176`); `_docs/roadmap.md` (step 7 doing, check-in line), this log; `make clean-scratch` ran; closed #41
+- verification (tests run, reviewer verdict): QA PASS (own script 81/82, the one miss a gap in its prefix list, cross-checked); `make verify BASE=c77a437` PASS (35 tests); `make assert-clean` PASS at `6a33ba0`, HEAD unchanged
+- human review (what I checked or corrected, or `none`): at the decision point the human chose to send QA risks 1-3 to the step 7 issue. Commands that stopped for approval: none

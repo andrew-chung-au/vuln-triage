@@ -25,7 +25,7 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 | 4 | Remaining #15/#20 findings | #33 | none | #33 closed | deferred (2026-10-20, priority rule: tooling hardening; moved to "Later") |
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
 | 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
-| 7 | Stage 2: `_docs/architecture.md` (next) | #41, then a new issue | 6 | #41's spec commit landed; Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | todo |
+| 7 | Stage 2: `_docs/architecture.md` (next) | #41, then a new issue | 6 | #41's spec commit landed; Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | doing (#41 done: `1445ca5`, QA PASS, closed 2026-10-20; architecture issue not yet filed) |
 | 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | todo |
 | 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
 | 10 | Stage 4: `_docs/testing.md` | new issue | 8 | Stage 4 checklist PASS; #9's testing rows ticked | todo |
@@ -39,7 +39,7 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 
 Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19, #29, #30, #33, #36, #37, #38, #39, #40, #42. #38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does. #19 (ai-usage-report) is graded evidence; pick it up with the Tier C work.
 
-#41 (spec fixes from the #3-#8 QA risks) opens step 7: its spec commit lands first, and its Out-of-scope list is input to the architecture.
+#41 (spec fixes from the #3-#8 QA risks) opened step 7 and is closed. Inputs to the architecture issue: #41's Out-of-scope list, PM comment 6288008663, the status-model risks in 6289212246, and #9.
 
 ## Open decisions
 
@@ -92,3 +92,4 @@ Off-track signals:
 | 2026-10-20 | none (review check-in) | 10 (2026-10-20 audit) | yes | Reviewed `48cbb9d` and `b1ab1e5` against the tracker: statuses match. `make verify` PASS WITH WARNINGS at `b1ab1e5`; the 7 removed assertion lines come from earlier frontend work since `origin/main`, not these commits. Placed the unscheduled follow-ups #36-#40 and #42 under "Later"; decision 4 asks whether to promote #38 and #39. Score table updated with the 2026-10-20 audit. Next: step 4 (#33), and step 7 with #41. |
 | 2026-10-20 | none (reprioritised) | 10 (2026-10-20 audit) | yes | The human said the project was sidetracked by safeguards. Added the priority rule; deferred step 4 (#33) to "Later"; withdrew decision 4. Step 7 is next and starts with #41's spec commit, then the plan stages 8-14 lead to the Tier A build. |
 | 2026-10-20 | none (decisions) | 10 (2026-10-20 audit) | yes | The human answered #41 D1-D3 (all option 1; comment 6287579005); D4 unanswered, so the status line stays unless answered before the spec diff. Decision 2 resolved: #31 no longer waits on #26 (comment 6287579525). #41 is unblocked; step 7 can start. |
+| 2026-10-20 | #41 (first part of step 7) | 10 (2026-10-20 audit) | yes | Spec commit `1445ca5` (D1-D5 option 1), approval record 6288541138, QA PASS, assert clean PASS, closed. QA's status-model risks go to the architecture issue (human's choice). Next: the PM proposes the Stage 2 architecture issue. |
