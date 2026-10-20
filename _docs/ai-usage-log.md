@@ -1264,3 +1264,7 @@ Copy this template for each new entry:
 - files changed: `_docs/specs.md` in `3ecd54b`, committed alone with `HUMAN_APPROVED=1`; approval record 6291380101; `_docs/architecture.md` in `631706e` (A7, A12, A14 cite the spec); this log
 - verification (tests run, reviewer verdict): the applied diff was `cmp`-identical to the approved patch before staging; after the commit, `.scratch/spec-43b/build_record.py` confirmed one parent, only `_docs/specs.md`, and `git show` identical to the patch. QA next
 - human review (what I checked or corrected, or `none`): approved the decisions, the criteria change and the exact diff. Commands that stopped for approval: none
+
+### 2026-10-20 — #43 QA FAIL fix: types.ts differences table
+
+- Engineer (Claude Code `software-engineer` subagent, claude-opus-5-5), after QA FAIL 6291494669: completed the Data model differences table against `frontend/src/services/types.ts` field by field, changed the spec version on line 3 to `3ecd54b`, and made the US-14 rule `max by (finding_id, tier)` to match its text; `_docs/architecture.md` only, in `974c3f6`. Check script 26/26 PASS (added a check that every `specs.md` commit since the base touches only that file); `make verify BASE=16b445b` PASS. Comment https://github.com/andrew-chung-au/vuln-triage/issues/43#issuecomment-6291539799. QA re-check not yet run. Commands that stopped for approval: none
