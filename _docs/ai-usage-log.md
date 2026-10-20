@@ -1117,3 +1117,14 @@ Copy this template for each new entry:
 - files changed: approval record 6287006555 (built and checked by a `.scratch/` script against the approval request and `git show`); correction comment 6287127239; QA PASS 6287037242; PM created #42; `_session-summaries/issue-035-push-check-plan-mode.md`, `_docs/roadmap.md` (step 3 done, check-in line), this log; `make clean-scratch` ran; closed #35
 - verification (tests run, reviewer verdict): QA re-check PASS (34 record checks, 0 failures; #35 paths unchanged since `df72298`; `make verify BASE=4454518` PASS); `make assert-clean` PASS at `48cbb9d`
 - human review (what I checked or corrected, or `none`): the human approved the diff before `df72298` and chose option 1 at the decision point. Commands that stopped for approval: none
+
+### 2026-10-20 — Review of the step 3/6 close-out commits and roadmap check-in
+
+- date: 2026-10-20
+- task/issue: roadmap check-in after `48cbb9d` and `b1ab1e5`
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to review the recent commits and update the roadmap; no key prompt file saved
+- files changed: `_docs/roadmap.md` (unscheduled follow-ups #36-#40 and #42 placed under "Later", #38/#36 note, decision 4, score table from the 2026-10-20 audit, check-in line), this log
+- verification (tests run, reviewer verdict): compared the roadmap with `gh issue list --state all`; `make verify` PASS WITH WARNINGS at `b1ab1e5` (35 tests; the removed-assertion warning comes from earlier frontend commits since `origin/main`)
+- human review (what I checked or corrected, or `none`): none yet. Commands that stopped for approval: none

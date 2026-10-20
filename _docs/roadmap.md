@@ -33,7 +33,9 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 | 16 | Docker-capable environment | #31 | 7 | Compose runs Postgres in the dev environment | blocked (see decision 2) |
 | 17 | Tier B and C build | step 12 issues | 15, 16 | Auditor: all 12 criteria MET | todo |
 
-Later, not scheduled: #10, #16, #19, #29, #30.
+Later, not scheduled: #10, #16, #19, #29, #30, #36, #37, #38, #39, #40, #42 (see decision 4 for #38 and #39).
+
+#38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does.
 
 #41 (spec fixes from the #3-#8 QA risks) is a step 6 follow-up: its spec commit should land before or alongside step 7, and its Out-of-scope list is input to step 7.
 
@@ -44,6 +46,7 @@ Later, not scheduled: #10, #16, #19, #29, #30.
 | 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | resolved 2026-10-20: groomed and answered as one batch |
 | 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | open |
 | 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | resolved 2026-10-20: both landed before the spec commits |
+| 4 | Schedule #39 (quoted filenames bypass the protected-path check) and #38 (remove the stale `agent-kit/` copy) before step 14, instead of leaving them under "Later" | Yes: #39 is a gap in the protection that the step 15 build relies on, and #38 stops kit fixes landing in only one copy | open |
 
 ## Score checkpoints
 
@@ -51,9 +54,10 @@ Evidenced points come only from `_docs/rubric-evidence.md`; estimates are labell
 
 | Checkpoint | Expected points | Basis |
 |---|---|---|
-| Last audit (2026-10-17) | 7 | Audited |
-| After step 1 | 9 (ASSUMPTION) | Testing 1 (35 unit tests) and CI/CD 1 (`verify.yml` runs them on every PR), if the auditor accepts them |
-| After step 2 | 10 (ASSUMPTION) | Problem Description 2: pass mark on paper |
+| Baseline audit (2026-10-17) | 7 | Audited |
+| After step 1 | 9 | Audited 2026-10-20 at `74e9cfc`: Testing 1 and CI/CD 1 confirmed |
+| After step 2 | 10 | Audited 2026-10-20 at `74e9cfc`: Problem Description 2 confirmed |
+| After steps 3-6 | 10 (ASSUMPTION) | Process and spec work only; no criterion expected to move, not re-audited |
 | After step 15 | 12 | Tier A |
 | After step 17 | 24 | Tier C |
 
@@ -82,3 +86,4 @@ Off-track signals:
 | 2026-10-20 | step 5 (#17, #18); step 6 batched answers | 10 (2026-10-20 audit) | yes | #17 (`64308d7`) and #18 (`efae1ea`) closed after QA PASS; #39 and #40 filed from #17 QA risks. The six #3-#8 answers are recorded in the issues; step 6 implementation is next. #35 is implemented (`df72298`) and waits for QA in the paused session. |
 | 2026-10-20 | step 6 (#3-#8) | 10 (2026-10-20 audit) | yes | Six protected spec commits `45f6fa6`..`fdc7b51`, each with an approval record; all six QA PASS. The OpenCode orchestrator stopped during QA of #5, #7 and #8; Claude Code reran those three fresh and closed out the step. The human chose to file the QA risks outside the criteria as one follow-up, #41. Step 3 (#35 QA) is still `doing`; step 7 is next. |
 | 2026-10-20 | step 3 (#35) | 10 (2026-10-20 audit) | yes | QA failed only criterion 10 (no approval record). The Claude Code orchestrator posted a record in the #18 format (6287006555), and the QA re-check passed. The human chose to file the QA risks outside the criteria as #42 (low priority). Step 4 (#33) and step 7 are next. `.scratch/` cleaned. |
+| 2026-10-20 | none (review check-in) | 10 (2026-10-20 audit) | yes | Reviewed `48cbb9d` and `b1ab1e5` against the tracker: statuses match. `make verify` PASS WITH WARNINGS at `b1ab1e5`; the 7 removed assertion lines come from earlier frontend work since `origin/main`, not these commits. Placed the unscheduled follow-ups #36-#40 and #42 under "Later"; decision 4 asks whether to promote #38 and #39. Score table updated with the 2026-10-20 audit. Next: step 4 (#33), and step 7 with #41. |
