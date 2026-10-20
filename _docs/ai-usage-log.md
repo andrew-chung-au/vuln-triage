@@ -1150,3 +1150,4 @@ Copy this template for each new entry:
 - files changed: comments 6287579005 (#41) and 6287579525 (#31); `_docs/roadmap.md` (decision 2 resolved, step 16 unblocked, check-in line), this log
 - verification (tests run, reviewer verdict): none (decisions recorded only)
 - human review (what I checked or corrected, or `none`): the human chose option 1 for D1, D2, D3 and decision 2 in a multiple-choice question; D4 unanswered. Commands that stopped for approval: none
+- follow-up, same day: the human chose D4 option 1 (the recommended status line); recorded in #41 comment 6287964999
