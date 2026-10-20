@@ -47,11 +47,22 @@ and whether it is internet-facing.
   listing assets shows all three fields.
 
 ### US-2: Dependencies read automatically
-As a security lead, dependencies are picked up from the asset's lockfiles
-(`uv.lock`, `requirements.txt`, `package-lock.json`) without manual entry.
-- Acceptance: pointing an asset at a repo with a supported lockfile produces
-  dependency entries with package name and installed version; no per-package
-  typing is needed.
+As a security lead, dependencies are picked up automatically from the asset's
+GitHub repository URL, read with a read-only token scoped to repository
+contents. The files read are `uv.lock`, `requirements.txt` and
+`package-lock.json`; no per-package typing is needed. This GitHub repository
+URL is the only ingestion mechanism in the MVP; there is no local-path or
+upload option.
+- Acceptance: `uv.lock` produces a dependency entry for every package,
+  including transitive entries, with package name and installed version.
+- Acceptance: `requirements.txt` produces a dependency entry for every direct
+  requirement, with package name and installed version, or an explicit
+  "version unknown" with a visible warning.
+- Acceptance: `package-lock.json` produces a dependency entry for every
+  package, including transitive entries, with package name and installed
+  version.
+- Transitive dependencies are in scope for `uv.lock` and `package-lock.json`
+  (every entry). For `requirements.txt` only direct entries are in scope.
 
 ### US-3: Match vulnerabilities with fixed versions
 As an asset owner, each dependency version is matched against known
@@ -67,8 +78,8 @@ primary id may not be a CVE.)
 ### US-4: Enrich with real-world exploit signals
 As an asset owner, each finding shows CISA KEV status, FIRST EPSS score, and
 the asset context (criticality, internet-facing).
-- Acceptance: a finding displays KEV exploited/not, an EPSS score, and the
-  owning asset's criticality and internet-facing flag.
+- Acceptance: a finding displays KEV exploited/not or "not listed", an EPSS
+  score or `n/a`, and the owning asset's criticality and internet-facing flag.
 
 ### US-5: Deterministic, explainable ranking
 As an asset owner, findings are ranked deterministically and each finding
@@ -182,6 +193,15 @@ A finding has exactly one status. This is the complete list:
 `stale` (E3) is a feed marker, not a finding status. The asset scan status
 (E3, E5) is not a finding status either.
 
+## Asset scan status
+
+Each asset has exactly one scan status, with exactly these values: `not yet
+scanned`, `scan failed`, `scanned, clean`. A `scan failed` status also records
+one failure reason: `feed unavailable` or `lockfile parse error`. Findings are
+listed separately. `scanned, clean` means a successful scan matched nothing.
+The scan status is not a finding status, and the `stale` feed marker is not a
+finding status.
+
 ## Non-goals (from the brief)
 
 - Servers, network devices, and commercial software.
@@ -195,13 +215,15 @@ A finding has exactly one status. This is the complete list:
 |---|---|---|
 | E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
-| E3 | A feed (OSV / KEV / EPSS) is unavailable | Last-known data is kept and marked stale; scheduled run retries; no findings are deleted |
+| E3 | A feed (OSV / KEV / EPSS) is unavailable | OSV unavailable on a new asset's first scan: the asset shows `scan failed` with reason `feed unavailable`, no findings are created, and it is not shown as `scanned, clean`. On a later scan with a feed unavailable, last-known data and findings are kept and marked stale, not deleted, and the asset shows `scan failed` with reason `feed unavailable`; the scheduled run retries |
 | E4 | A vulnerability is later removed from a feed | Finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not deleted, with an audit entry recording the previous value and the feed |
-| E5 | Lockfile fails to parse | Asset shows a scan error; previous findings are kept; error is visible in the dashboard |
+| E5 | Lockfile fails to parse | The asset's scan status is `scan failed` with reason `lockfile parse error`; previous findings are kept; the error is visible in the dashboard |
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
 | E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
 | E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet |
 | E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
+| E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; an unknown version does not make the asset `scanned, clean`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched |
+| E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows "not listed", EPSS shows "n/a", and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
 
 ## Open questions
 
