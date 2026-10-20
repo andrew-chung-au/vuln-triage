@@ -1207,3 +1207,14 @@ Copy this template for each new entry:
 - files changed: `_docs/docker-runbook.md` (new), `_docs/cloud-sessions.md` (status line), this log
 - verification (tests run, reviewer verdict): none (documentation). Facts checked: the repo is public (`gh repo view`), the agent token can read Actions runs (`gh run list`), `verify.yml` runs on every push. Setup hours are estimates, not measured
 - human review (what I checked or corrected, or `none`): the human chose option A. Commands that stopped for approval: none
+
+### 2026-10-20 — Step 7 issue proposal and creation (#43)
+
+- date: 2026-10-20
+- task/issue: roadmap step 7, second part
+- agent role: PM (Claude Code `pm` subagent) for the proposal; Orchestrator for creation
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to propose, not create, the Stage 2 issue from the Stage 2 checklist, #9, #41's inputs and QA risks, #31 and #23; no key prompt file saved
+- files changed: created #43 from the PM's draft (title line removed); comment 6289876616 with the human's answers; `_docs/roadmap.md` (step 7 row, check-in line), this log
+- verification (tests run, reviewer verdict): none; the PM mapped every input (I1-I17, R1-R3, #9 rows) to a criterion or an out-of-scope line
+- human review (what I checked or corrected, or `none`): the human approved creating the issue, and chose D1 option 1 (in the Docker discussion), D2 option 1 and the PM's recommendations for D3-D8. Commands that stopped for approval: none (PM and orchestrator)
