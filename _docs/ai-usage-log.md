@@ -1241,3 +1241,26 @@ Copy this template for each new entry:
 - files changed: `_docs/specs.md` in `faea412`, committed alone with `HUMAN_APPROVED=1`; approval record comment 6290689973; this log. Before review I added only an `index` header line to the first draft's patch, which the Engineer's script later regenerated
 - verification (tests run, reviewer verdict): the applied diff was `cmp`-identical to the approved patch before staging; after the commit, `.scratch/spec-43/build_record.py` confirmed one parent, only `_docs/specs.md`, and `git show` identical to the patch. QA runs after Part 2
 - human review (what I checked or corrected, or `none`): approved the exact revised diff. Commands that stopped for approval: none
+
+### 2026-10-20 — #43 Parts 2 and 3: architecture.md and README link
+
+- date: 2026-10-20
+- task/issue: #43 Parts 2 and 3 (Stage 2 `_docs/architecture.md`, README link, stage report)
+- agent role: Engineer (Claude Code `software-engineer` subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to write `architecture.md` to #43's Part 2 criteria and Stage 2, against the spec at HEAD (`faea412`) and the human's answers (comment 6289876616), check it with one script, run Verify and post the stage report; no key prompt file saved
+- files changed: `_docs/architecture.md` (new) and `README.md` (one link) in `072c17e`; check script `.scratch/arch-43/check_arch_43.py`; comment https://github.com/andrew-chung-au/vuln-triage/issues/43#issuecomment-6290918784; this log (not committed by me)
+- verification (tests run, reviewer verdict): check script 25/25 PASS; `make verify BASE=e15bf29` PASS (35 frontend tests passed, whitespace PASS, no weakened tests). No web fetches: every unconfirmed external detail is tagged `VERIFY:`. No QA verdict yet
+- human review (what I checked or corrected, or `none`): none yet. Three spec notes raised for the human (US-4 KEV value before the first KEV fetch, E10 for versionless lockfile entries, stale mark for every `scan failed` reason). Commands that stopped for approval: none
+- second spec diff, same day: after the human decided the three spec notes (comment 6291276406), drafted `.scratch/spec-43b/specs-43b.patch` (`index 782a27c..c034181`, 4 hunks, +14 / -9; `git apply --check` passes; `.scratch/spec-43b/check_spec_43b.py` 18/18 PASS) and edited `_docs/architecture.md` in the working tree (A7, A12, A14 now cite the spec; architecture check 25/25 PASS), neither committed; posted in https://github.com/andrew-chung-au/vuln-triage/issues/43#issuecomment-6291326008, awaiting approval of the exact diff. Commands that stopped for approval: none
+
+### 2026-10-20 — #43 second spec commit and architecture touch-up
+
+- date: 2026-10-20
+- task/issue: #43, the Engineer's three spec notes, before QA
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human chose KEV option A, approved fixing all three notes before QA as a second spec commit (criteria change recorded in 6291276406), then approved the exact diff (6291326008); no key prompt file saved
+- files changed: `_docs/specs.md` in `3ecd54b`, committed alone with `HUMAN_APPROVED=1`; approval record 6291380101; `_docs/architecture.md` in `631706e` (A7, A12, A14 cite the spec); this log
+- verification (tests run, reviewer verdict): the applied diff was `cmp`-identical to the approved patch before staging; after the commit, `.scratch/spec-43b/build_record.py` confirmed one parent, only `_docs/specs.md`, and `git show` identical to the patch. QA next
+- human review (what I checked or corrected, or `none`): approved the decisions, the criteria change and the exact diff. Commands that stopped for approval: none
