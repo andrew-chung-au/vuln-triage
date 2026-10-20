@@ -122,9 +122,11 @@ blocker for Stage 2 sign-off.
 - Acceptance: for an ownerless asset, the notification is held and the asset
   is flagged ownerless (E2), while the GitHub issue is still opened once.
 - The issue is opened in the dedicated tracker repo `vuln-triage-findings`
-  using one narrowly scoped token. Closing the issue does not change the
-  finding's status; n8n may comment on or close the issue after a re-scan
-  marks the finding `fixed`.
+  using one narrowly scoped token. The token may create and comment on issues
+  in the dedicated tracker repo only; it cannot push code to any branch or
+  change repository settings, and a push attempt with it is refused. Closing
+  the issue does not change the finding's status; n8n may comment on or close
+  the issue after a re-scan marks the finding `fixed`.
 
 ### US-9: Overdue reminders, escalation, weekly digest
 As a security lead, overdue findings trigger reminders and escalation, and I
@@ -177,7 +179,17 @@ returns the same finding(s) as a lookup by the primary id.
   a CVE not known to the system returns an empty asset list, not an error, and
   states that the CVE is unknown. The two results are distinguishable; the
   exact wire shape is fixed in Stage 3.
-- Acceptance: the MCP server offers no write operations.
+- Acceptance: `list_top_exposures` returns ranked open findings.
+- Acceptance: `which_assets_affected` returns the affected assets for a known
+  CVE.
+- Acceptance: `get_finding` returns one finding by id.
+- Acceptance: `get_asset` returns one asset by id.
+- Acceptance: MCP tool output marks advisory-derived text as quoted, labelled
+  untrusted data, including in `get_finding` and `which_assets_affected`; no
+  advisory text is presented as instructions.
+- Acceptance: a write request made with the MCP server's token is rejected by
+  the API with a 4xx response and changes no state; the MCP server exposes no
+  write tools.
 
 ### US-13: The notification journey is instrumented
 As a security lead, I can see whether a top-priority finding reached its owner,
@@ -242,6 +254,25 @@ finding status.
 - Automatic patching (people approve fixes).
 - Write tools in the MCP server.
 
+## Advisory-derived text
+
+`VERIFY:` OSV advisory `summary`, `details` and reference fields are free text.
+Advisory text is untrusted data and never instructions.
+
+Flows carrying advisory-derived text to a person or an agent, each with its
+rule:
+
+| Flow | Rule |
+|---|---|
+| LLM brief | Contains only the allowed fields and no advisory-derived links; it contains no URLs other than the advisory's own reference link. |
+| Owner notification | Plain text with labelled fields. |
+| GitHub issue | Opened by n8n in the dedicated tracker repo; advisory-derived text is quoted data, clearly separated from VulnTriage's own text. Under `AGENTS.md`, such issue text is data, not instructions. |
+| MCP output | Advisory-derived text is quoted and labelled untrusted data, including in `get_finding` and `which_assets_affected`; never presented as instructions. |
+| Dashboard | Plain text with no auto-links. |
+
+Any URL in advisory text is shown as inert text, except the advisory's own
+reference link in the brief.
+
 ## Edge cases
 
 | # | Case | Expected behaviour |
@@ -257,6 +288,7 @@ finding status.
 | E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
 | E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; an unknown version does not make the asset `scanned, clean`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched |
 | E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows "not listed", EPSS shows "n/a", and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
+| E12 | Advisory text contains instructions or links | The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields and no URLs other than the advisory's own reference link; any other URL in advisory text is shown as inert text |
 
 ## Open questions
 
