@@ -104,16 +104,42 @@ re-scored through the API.
 
 ### US-8: New top-priority finding notifies and opens an issue
 As an asset owner, a new top-priority finding notifies me and opens a GitHub
-issue automatically.
+issue automatically. "New" means the first time this finding enters the top
+tier in its current lifecycle. It covers a newly created finding and an
+existing finding promoted into the top tier by a daily KEV/EPSS refresh. The
+top tier is `P1` as defined by the Stage 2 formula, and Open question 1 is a
+blocker for Stage 2 sign-off.
 - Acceptance: a newly appearing top-priority finding produces exactly one
   owner notification and exactly one GitHub issue referencing the finding.
+- Acceptance: a finding that leaves and re-enters the top tier without being
+  fixed produces no second GitHub issue and no second owner notification; a
+  finding that was `fixed` and reappears (E7) starts a new lifecycle and may
+  produce at most one new issue and one new notification.
+- Acceptance: exactly one owner notification and exactly one GitHub issue are
+  created per finding lifecycle, even if the daily refresh runs twice or
+  retries after a partial failure. The idempotency basis is the finding
+  lifecycle.
+- Acceptance: for an ownerless asset, the notification is held and the asset
+  is flagged ownerless (E2), while the GitHub issue is still opened once.
+- The issue is opened in the dedicated tracker repo `vuln-triage-findings`
+  using one narrowly scoped token. Closing the issue does not change the
+  finding's status; n8n may comment on or close the issue after a re-scan
+  marks the finding `fixed`.
 
 ### US-9: Overdue reminders, escalation, weekly digest
 As a security lead, overdue findings trigger reminders and escalation, and I
-get a weekly digest of exposure.
+get a weekly digest of exposure. A finding's due date is its first detection
+time plus the window for the highest tier the finding has reached. A tier rise
+moves the due date earlier to the new tier's window; a tier drop never moves it
+later; an already-overdue finding stays overdue. The windows are an
+`ASSUMPTION:` until Stage 2. The escalation target is one configured
+security-lead contact (name and email) in deployment configuration, not an
+asset record.
 - Acceptance: an open finding past its due date produces a reminder to the
   owner and an escalation to the security lead; a weekly digest listing open
   findings by rank is delivered once per week.
+- Acceptance: a missing security-lead contact is a visible configuration
+  error, not a silent drop.
 
 ### US-10: Re-scan closes fixed findings
 As an asset owner, a finding closes automatically when a re-scan shows the
@@ -179,6 +205,13 @@ and a test; once merged, CI deploys it to dev.
   resolves, and the agent's actions are logged. Production promotion stays
   manual.
 
+### US-16: n8n workflows are exported into the repo
+As a security lead, the n8n workflows that route findings are exported as JSON
+into the repository, so the workflow the repo runs is reviewable.
+- Acceptance: each workflow has a committed JSON file under `n8n/workflows/`,
+  named after the workflow, and the exported file is the workflow the repo
+  runs.
+
 ## Finding statuses
 
 A finding has exactly one status. This is the complete list:
@@ -227,8 +260,9 @@ finding status.
 
 ## Open questions
 
-1. What counts as "top-priority" for US-8 notification (which tier)? — to be
-   fixed in Stage 2.
+1. What counts as "top-priority" for US-8 notification (which tier)? — the
+   top tier is `P1`, defined by Stage 2; this is a blocker for Stage 2
+   sign-off.
 2. What are the overdue/escalation time windows for US-9?
 3. Which notification channel (email / chat) does the pilot use for US-8/US-9?
 4. What is the notification window for US-14 (how long before an undelivered
