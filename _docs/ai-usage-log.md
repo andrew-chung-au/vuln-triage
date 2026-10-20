@@ -1218,3 +1218,26 @@ Copy this template for each new entry:
 - files changed: created #43 from the PM's draft (title line removed); comment 6289876616 with the human's answers; `_docs/roadmap.md` (step 7 row, check-in line), this log
 - verification (tests run, reviewer verdict): none; the PM mapped every input (I1-I17, R1-R3, #9 rows) to a criterion or an out-of-scope line
 - human review (what I checked or corrected, or `none`): the human approved creating the issue, and chose D1 option 1 (in the Docker discussion), D2 option 1 and the PM's recommendations for D3-D8. Commands that stopped for approval: none (PM and orchestrator)
+
+### 2026-10-20 — #43 Part 1: proposed spec diff
+
+- date: 2026-10-20
+- task/issue: #43 Part 1 (the `_docs/specs.md` diff only; `architecture.md` not started)
+- agent role: Engineer (Claude Code `software-engineer` subagent)
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to draft the Part 1 spec diff in `.scratch/` from #43's criteria and the human's answers (comment 6289876616: D1, D2 and D3-D8 option 1), check it with one script and post it; no key prompt file saved
+- files changed: none committed; drafts in `.scratch/spec-43/` (`specs.md`, `specs-43.patch`, `check_spec_43.py`); comment https://github.com/andrew-chung-au/vuln-triage/issues/43#issuecomment-6290123115; this log
+- verification (tests run, reviewer verdict): `.scratch/spec-43/check_spec_43.py` 43/43 PASS (includes `git apply --check`, hunk locations, `VERIFY:` on new external claims, status/scan status/reason/KEV consistency). No reviewer verdict yet
+- human review (what I checked or corrected, or `none`): the human approved the first diff except uncovered choice 3, and decided that a reinstated `withdrawn` finding restores its pre-withdrawal status (`risk accepted` or `open`). Commands that stopped for approval: none
+- revision, same day: changed hunks 4 (`open` and `withdrawn` rows) and 7 (E4) for that decision, stated as restoring the human's recorded acceptance rather than a new one; the patch now carries `index 2d02ddc..782a27c 100644`; check script 48/48 PASS; revised diff posted in https://github.com/andrew-chung-au/vuln-triage/issues/43#issuecomment-6290358382, awaiting approval of the exact revised diff
+
+### 2026-10-20 — #43 Part 1 protected spec commit and approval record
+
+- date: 2026-10-20
+- task/issue: #43 Part 1, after the human approved the exact revised diff
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved the revised diff (6290358382) without the optional `risk accepted` row clause; no key prompt file saved
+- files changed: `_docs/specs.md` in `faea412`, committed alone with `HUMAN_APPROVED=1`; approval record comment 6290689973; this log. Before review I added only an `index` header line to the first draft's patch, which the Engineer's script later regenerated
+- verification (tests run, reviewer verdict): the applied diff was `cmp`-identical to the approved patch before staging; after the commit, `.scratch/spec-43/build_record.py` confirmed one parent, only `_docs/specs.md`, and `git show` identical to the patch. QA runs after Part 2
+- human review (what I checked or corrected, or `none`): approved the exact revised diff. Commands that stopped for approval: none
