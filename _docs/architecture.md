@@ -357,12 +357,12 @@ Telemetry exclusions (US-13: advisory text, owner contact details, repository UR
 
 US-14 alert rule:
 - The backend sets `vt_top_tier_notification_overdue{finding_id,tier}` to 1 while a `top tier` owner job is `failed`, or still `pending` or `claimed` after the window W from its creation; 0 once it is `sent`. The value is computed from stored job state, so it survives restarts.
-- Grafana rule: `max by (finding_id, tier) (vt_top_tier_notification_overdue) == 1`, evaluated every minute, so the alert carries the finding id and tier labels. Each finding is one alert instance, because the `tier` label is the tier recorded when the job was created and never changes for that job; the notification policy groups by `finding_id` and has a 24-hour repeat interval, so one finding gives exactly one alert, and it resolves when the job is `sent` (VERIFY: Grafana alert instances per label set, notification policy grouping and repeat interval). A successful notification never sets the metric.
+- Grafana rule: `max by (finding_id, tier) (vt_top_tier_notification_overdue) == 1`, evaluated every minute, so the alert carries the finding id and tier labels. Each finding is one alert instance, because the `tier` label is the tier recorded when the job was created and never changes for that job; the notification policy groups by `finding_id` and never re-sends an alert while it stays unresolved, so one finding gives exactly one alert, and it resolves when the job is `sent` (VERIFY: Grafana alert instances per label set and notification policy grouping; VERIFY: whether a Grafana notification policy can turn repeat notifications off, or only set a repeat interval longer than any alert can stay open, and that interval's upper limit). Chasing an overdue finding is the job of US-9's reminders and escalation, not of this alert. A successful notification never sets the metric.
 - Window W = 30 minutes (spec Open question 4).
 - Exactly one alert naming the finding without excluded data: the only identifying label is the opaque finding id; tier is the only other label.
 - Destination: a Grafana webhook contact point to the responder (Responder agent), and an email to the human.
 
-ASSUMPTION: (A33) W, the evaluation interval and the 24-hour repeat. ASSUMPTION: (A39) held jobs (`held: ownerless`, `held: owner email missing`, `held: configuration error`) never set the metric; they are visible in the dashboard instead.
+ASSUMPTION: (A33) W and the evaluation interval (no repeat notification is the human's decision of 2026-10-20 at the #43 decision point). ASSUMPTION: (A39) held jobs (`held: ownerless`, `held: owner email missing`, `held: configuration error`) never set the metric; they are visible in the dashboard instead.
 
 ## Responder agent
 
@@ -492,7 +492,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A30) Dashboard authentication values (Argon2id, session lifetimes, lockout, CSRF header) and the owner-match rule for risk acceptance.
 - (A31) URL defanging and `@` mention handling in emails and issue bodies.
 - (A32) The telemetry attribute allowlist.
-- (A33) US-14 window 30 minutes, 1-minute evaluation, 24-hour repeat.
+- (A33) US-14 window 30 minutes, 1-minute evaluation.
 - (A34) The responder runs as a container in the observability stack; branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
 - (A35) The demo defect is switched by `VT_DEMO_DEFECT`, refused in production.
 - (A36) One EC2 instance per environment running Compose; `t3.small` / `t3.medium`; Postgres in a container on EBS.
