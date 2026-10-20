@@ -1095,3 +1095,25 @@ Copy this template for each new entry:
 - files changed: `_session-summaries/planning-2026-10-20-spec-review-3-8.md`, `_docs/roadmap.md` (step 6 done, #41 noted, check-in line), this log; closed #3-#8
 - verification (tests run, reviewer verdict): checked the state left behind (clean tree, HEAD `fdc7b51`, no verdict on #5/#7/#8, no PID files); `make assert-clean` PASS after the QA reruns
 - human review (what I checked or corrected, or `none`): the human chose option 1 at the decision point. Commands that stopped for approval: none
+
+### 2026-10-20 — QA for issue #35 (first run)
+
+- date: 2026-10-20
+- task/issue: issue #35, committed state `df72298`
+- agent role: QA Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator instruction to check every criterion and post a verdict; no key prompt file saved
+- files changed: none. QA comment 6281291470. This entry was appended by the Claude Code orchestrator
+- verification (tests run, reviewer verdict): FAIL on criterion 10 only (no approval comment); criteria 1-9, 11, 12 PASS; independent 83-check harness 0 failures; `make verify BASE=4454518` PASS
+- human review (what I checked or corrected, or `none`): none. Commands that stopped for approval: none
+
+### 2026-10-20 — Orchestrator close-out for issue #35
+
+- date: 2026-10-20
+- task/issue: issue #35 (roadmap step 3), after the OpenCode orchestrator stopped
+- agent role: Orchestrator, with a QA Engineer re-check and a PM follow-up as Claude Code subagents
+- model: claude-opus-5-5 (Claude Code); the earlier commit `df72298` and free-form note 6281324989 were made by the OpenCode orchestrator (opencode/deepseek-v4.1-flash-free)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to finish the interrupted session; no key prompt file saved
+- files changed: approval record 6287006555 (built and checked by a `.scratch/` script against the approval request and `git show`); correction comment 6287127239; QA PASS 6287037242; PM created #42; `_session-summaries/issue-035-push-check-plan-mode.md`, `_docs/roadmap.md` (step 3 done, check-in line), this log; `make clean-scratch` ran; closed #35
+- verification (tests run, reviewer verdict): QA re-check PASS (34 record checks, 0 failures; #35 paths unchanged since `df72298`; `make verify BASE=4454518` PASS); `make assert-clean` PASS at `48cbb9d`
+- human review (what I checked or corrected, or `none`): the human approved the diff before `df72298` and chose option 1 at the decision point. Commands that stopped for approval: none

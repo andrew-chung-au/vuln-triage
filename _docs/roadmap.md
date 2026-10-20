@@ -17,7 +17,7 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 |---|---|---|---|---|---|
 | 1 | Refresh the rubric evidence | (auditor skill) | none | `_docs/rubric-evidence.md` re-audited at current `main`; confirms or rejects Testing 1 and CI/CD 1 | done (2026-10-20 audit, 10/24 at `74e9cfc`) |
 | 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | done (auditor confirmed MET 2) |
-| 3 | Push check plan-mode fix | #35 | none | #35 closed | doing (implementation `df72298`; QA pending) |
+| 3 | Push check plan-mode fix | #35 | none | #35 closed | done (`df72298`, QA PASS after the approval record; closed 2026-10-20; follow-up #42) |
 | 4 | Remaining #15/#20 findings | #33 | none | #33 closed | todo (groomed 2026-10-20) |
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
 | 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
@@ -81,3 +81,4 @@ Off-track signals:
 | 2026-10-20 | steps 1 and 2; step 6 grooming; #35/#33 grooming | 10 (2026-10-20 audit) | yes | Auditor re-audited at `74e9cfc` (commit `639b9a9`) and confirmed Testing 1, CI/CD 1 and Problem Description 2. All six spec-review issues are groomed; the batched decision is still open, so step 6 stays `doing`. #35 and #33 are groomed; PM filed follow-ups #36 and #37. |
 | 2026-10-20 | step 5 (#17, #18); step 6 batched answers | 10 (2026-10-20 audit) | yes | #17 (`64308d7`) and #18 (`efae1ea`) closed after QA PASS; #39 and #40 filed from #17 QA risks. The six #3-#8 answers are recorded in the issues; step 6 implementation is next. #35 is implemented (`df72298`) and waits for QA in the paused session. |
 | 2026-10-20 | step 6 (#3-#8) | 10 (2026-10-20 audit) | yes | Six protected spec commits `45f6fa6`..`fdc7b51`, each with an approval record; all six QA PASS. The OpenCode orchestrator stopped during QA of #5, #7 and #8; Claude Code reran those three fresh and closed out the step. The human chose to file the QA risks outside the criteria as one follow-up, #41. Step 3 (#35 QA) is still `doing`; step 7 is next. |
+| 2026-10-20 | step 3 (#35) | 10 (2026-10-20 audit) | yes | QA failed only criterion 10 (no approval record). The Claude Code orchestrator posted a record in the #18 format (6287006555), and the QA re-check passed. The human chose to file the QA risks outside the criteria as #42 (low priority). Step 4 (#33) and step 7 are next. `.scratch/` cleaned. |
