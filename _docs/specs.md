@@ -76,9 +76,10 @@ shows why it ranks where it does. (Formula in Stage 2; no AI involved.)
 As an asset owner, I get a short plain-language brief per finding built from
 the structured finding (what is affected, why it matters, what version to
 move to). (Guardrail design in Stage 2; brief content tests in Stage 4.)
-- Acceptance: an open finding shows a brief naming the affected package and
-  the fixed version for this dependency; the fixed version in the brief matches
-  the finding's fixed version for this dependency.
+- Acceptance: an open finding shows either a brief whose fix version matches
+  the finding's fixed version for this dependency, or the structured finding
+  with a visible "brief unavailable" marker; never a brief with a mismatched
+  version.
 
 ### US-7: Daily refresh and re-score
 As a security lead, KEV/EPSS data is refreshed daily and findings are
@@ -111,10 +112,16 @@ installed version no longer falls in any affected range.
 ### US-11: Dashboard with status and audit trail
 As a security lead, I see findings per asset with status (`open` /
 `risk accepted` / `fixed`) and an audit trail; risk acceptance happens only
-by a human in the dashboard.
+by a human in the dashboard. Dashboard users sign in, and the signed-in user is
+recorded as "who" in every audit entry. Both the asset owner and the security
+lead may set `risk accepted`. No automated component may set it. The
+authentication mechanism is defined in Stage 2.
 - Acceptance: the dashboard lists findings per asset with current status;
   changing status records who, when, and the previous value; no automated
   component sets `risk accepted`.
+- Acceptance: risk acceptance records a non-empty reason in the audit entry;
+  an empty or whitespace-only reason is rejected and the status does not
+  change.
 
 ### US-12: Read-only assistant answers exposure questions
 As a developer using an AI assistant, I can ask "which assets are affected by
@@ -150,6 +157,20 @@ and a test; once merged, CI deploys it to dev.
   resolves, and the agent's actions are logged. Production promotion stays
   manual.
 
+## Finding statuses
+
+A finding has exactly one status. This is the complete list:
+
+| Status | Set by | Transition and meaning | Audit entry |
+|---|---|---|---|
+| `open` | Scan or re-scan | Created when a scanned dependency is vulnerable; set again when a `fixed` finding reappears (E7). | Creation and each status change record the previous value, actor and timestamp. |
+| `risk accepted` | Asset owner or security lead, in the dashboard | A human accepts the risk; requires a non-empty reason. | Records the signed-in user, timestamp, previous value and the non-empty reason. |
+| `fixed` | Re-scan | The installed version no longer falls in any affected range (US-10). | Records the previous value, actor and timestamp. |
+| `withdrawn` | Scheduled refresh | `ASSUMPTION:` an addition to the brief's three statuses. The vulnerability is removed from a feed (E4); the finding is not deleted. | Records the previous value, the feed and the timestamp. |
+
+`stale` (E3) is a feed marker, not a finding status. The asset scan status
+(E3, E5) is not a finding status either.
+
 ## Non-goals (from the brief)
 
 - Servers, network devices, and commercial software.
@@ -164,9 +185,11 @@ and a test; once merged, CI deploys it to dev.
 | E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
 | E3 | A feed (OSV / KEV / EPSS) is unavailable | Last-known data is kept and marked stale; scheduled run retries; no findings are deleted |
-| E4 | A vulnerability is later removed from a feed | Finding is marked withdrawn, not deleted, with an audit entry |
+| E4 | A vulnerability is later removed from a feed | Finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not deleted, with an audit entry recording the previous value and the feed |
 | E5 | Lockfile fails to parse | Asset shows a scan error; previous findings are kept; error is visible in the dashboard |
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
+| E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
+| E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet |
 
 ## Open questions
 
@@ -190,5 +213,5 @@ and a test; once merged, CI deploys it to dev.
 
 ## Suggested additions (not in the plan unless approved)
 
-- None. Severity scores (e.g. CVSS) as a display-only field alongside
-  KEV/EPSS, if wanted.
+- Severity scores (e.g. CVSS) as a display-only field alongside KEV/EPSS, if
+  wanted.
