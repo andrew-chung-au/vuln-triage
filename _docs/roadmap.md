@@ -9,19 +9,23 @@ that the plan review checks (`_docs/planning-process.md` Stages 1-6).
 - Timing and scope trade-offs are the human's. "On track" here means steps are done in order and the audited score meets the checkpoint for the steps done.
 - Source of truth for status: the GitHub tracker and `_docs/rubric-evidence.md`. The status column here is a snapshot taken at each check-in, not live state.
 
+## Priority rule
+
+VulnTriage is the product; the agent kit and dev container are tooling. From 2026-10-20 (human direction), the next product step always comes first. Kit, hook and dev-container issues go under "Later, not scheduled" unless one blocks the next product step, and then it joins that step's row. The one tooling step kept in the sequence is step 16, because Postgres needs it.
+
 ## Sequence
 
-Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the steps it depends on are `done`.
+Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts only when the steps it depends on are `done`; a `deferred` step does not block anything.
 
 | # | Step | Issues | Depends on | Done when | Status (2026-10-20) |
 |---|---|---|---|---|---|
 | 1 | Refresh the rubric evidence | (auditor skill) | none | `_docs/rubric-evidence.md` re-audited at current `main`; confirms or rejects Testing 1 and CI/CD 1 | done (2026-10-20 audit, 10/24 at `74e9cfc`) |
 | 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | done (auditor confirmed MET 2) |
 | 3 | Push check plan-mode fix | #35 | none | #35 closed | done (`df72298`, QA PASS after the approval record; closed 2026-10-20; follow-up #42) |
-| 4 | Remaining #15/#20 findings | #33 | none | #33 closed | todo (groomed 2026-10-20) |
+| 4 | Remaining #15/#20 findings | #33 | none | #33 closed | deferred (2026-10-20, priority rule: tooling hardening; moved to "Later") |
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
 | 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
-| 7 | Stage 2: `_docs/architecture.md` | new issue | 6 | Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | todo |
+| 7 | Stage 2: `_docs/architecture.md` (next) | #41, then a new issue | 6 | #41's spec commit landed; Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | todo |
 | 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | todo |
 | 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
 | 10 | Stage 4: `_docs/testing.md` | new issue | 8 | Stage 4 checklist PASS; #9's testing rows ticked | todo |
@@ -33,11 +37,9 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 | 16 | Docker-capable environment | #31 | 7 | Compose runs Postgres in the dev environment | blocked (see decision 2) |
 | 17 | Tier B and C build | step 12 issues | 15, 16 | Auditor: all 12 criteria MET | todo |
 
-Later, not scheduled: #10, #16, #19, #29, #30, #36, #37, #38, #39, #40, #42 (see decision 4 for #38 and #39).
+Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19, #29, #30, #33, #36, #37, #38, #39, #40, #42. #38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does. #19 (ai-usage-report) is graded evidence; pick it up with the Tier C work.
 
-#38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does.
-
-#41 (spec fixes from the #3-#8 QA risks) is a step 6 follow-up: its spec commit should land before or alongside step 7, and its Out-of-scope list is input to step 7.
+#41 (spec fixes from the #3-#8 QA risks) opens step 7: its spec commit lands first, and its Out-of-scope list is input to the architecture.
 
 ## Open decisions
 
@@ -46,7 +48,7 @@ Later, not scheduled: #10, #16, #19, #29, #30, #36, #37, #38, #39, #40, #42 (see
 | 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | resolved 2026-10-20: groomed and answered as one batch |
 | 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | open |
 | 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | resolved 2026-10-20: both landed before the spec commits |
-| 4 | Schedule #39 (quoted filenames bypass the protected-path check) and #38 (remove the stale `agent-kit/` copy) before step 14, instead of leaving them under "Later" | Yes: #39 is a gap in the protection that the step 15 build relies on, and #38 stops kit fixes landing in only one copy | open |
+| 4 | Schedule #39 (quoted filenames bypass the protected-path check) and #38 (remove the stale `agent-kit/` copy) before step 14, instead of leaving them under "Later" | Withdrawn | resolved 2026-10-20: no. The human put product work first; both stay under "Later" |
 
 ## Score checkpoints
 
@@ -73,6 +75,7 @@ At each check-in (suggested: the end of each issue session, and at least weekly)
 Off-track signals:
 - A step is `doing` while a step it depends on is not `done`.
 - Work on issues listed under "Later, not scheduled" before step 14.
+- A tooling issue is worked while the next product step waits, without being that step's blocker.
 - The audited score is below the checkpoint for the steps already done.
 - An open decision blocks the next step for more than one session.
 
@@ -87,3 +90,4 @@ Off-track signals:
 | 2026-10-20 | step 6 (#3-#8) | 10 (2026-10-20 audit) | yes | Six protected spec commits `45f6fa6`..`fdc7b51`, each with an approval record; all six QA PASS. The OpenCode orchestrator stopped during QA of #5, #7 and #8; Claude Code reran those three fresh and closed out the step. The human chose to file the QA risks outside the criteria as one follow-up, #41. Step 3 (#35 QA) is still `doing`; step 7 is next. |
 | 2026-10-20 | step 3 (#35) | 10 (2026-10-20 audit) | yes | QA failed only criterion 10 (no approval record). The Claude Code orchestrator posted a record in the #18 format (6287006555), and the QA re-check passed. The human chose to file the QA risks outside the criteria as #42 (low priority). Step 4 (#33) and step 7 are next. `.scratch/` cleaned. |
 | 2026-10-20 | none (review check-in) | 10 (2026-10-20 audit) | yes | Reviewed `48cbb9d` and `b1ab1e5` against the tracker: statuses match. `make verify` PASS WITH WARNINGS at `b1ab1e5`; the 7 removed assertion lines come from earlier frontend work since `origin/main`, not these commits. Placed the unscheduled follow-ups #36-#40 and #42 under "Later"; decision 4 asks whether to promote #38 and #39. Score table updated with the 2026-10-20 audit. Next: step 4 (#33), and step 7 with #41. |
+| 2026-10-20 | none (reprioritised) | 10 (2026-10-20 audit) | yes | The human said the project was sidetracked by safeguards. Added the priority rule; deferred step 4 (#33) to "Later"; withdrew decision 4. Step 7 is next and starts with #41's spec commit, then the plan stages 8-14 lead to the Tier A build. |

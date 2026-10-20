@@ -1128,3 +1128,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (unscheduled follow-ups #36-#40 and #42 placed under "Later", #38/#36 note, decision 4, score table from the 2026-10-20 audit, check-in line), this log
 - verification (tests run, reviewer verdict): compared the roadmap with `gh issue list --state all`; `make verify` PASS WITH WARNINGS at `b1ab1e5` (35 tests; the removed-assertion warning comes from earlier frontend commits since `origin/main`)
 - human review (what I checked or corrected, or `none`): none yet. Commands that stopped for approval: none
+
+### 2026-10-20 — Roadmap reprioritised toward product work
+
+- date: 2026-10-20
+- task/issue: roadmap reshuffle after the human said the project was sidetracked by safeguards
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to weigh priorities toward VulnTriage itself, not the agent kit or dev container, and reshuffle the roadmap; no key prompt file saved
+- files changed: `_docs/roadmap.md` (priority rule, `deferred` status, step 4 (#33) deferred to "Later", #41 opens step 7, decision 4 withdrawn, new off-track signal, check-in line), this log
+- verification (tests run, reviewer verdict): none (documentation only)
+- human review (what I checked or corrected, or `none`): the human set the direction; the edited roadmap is not yet reviewed. Commands that stopped for approval: none
