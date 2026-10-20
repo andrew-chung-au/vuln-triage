@@ -16,7 +16,7 @@ Status values: `todo`, `doing`, `done`, `blocked`. A step starts only when the s
 | # | Step | Issues | Depends on | Done when | Status (2026-10-19) |
 |---|---|---|---|---|---|
 | 1 | Refresh the rubric evidence | (auditor skill) | none | `_docs/rubric-evidence.md` re-audited at current `main`; confirms or rejects Testing 1 and CI/CD 1 | todo |
-| 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | todo |
+| 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | doing (QA PASS; auditor confirmation pending step 1) |
 | 3 | Push check plan-mode fix | #35 | none | #35 closed | todo |
 | 4 | Remaining #15/#20 findings | #33 | none | #33 closed | todo |
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | todo |
@@ -75,3 +75,4 @@ Off-track signals:
 | Date | Steps done since last check-in | Audited score | On track? | Notes |
 |---|---|---|---|---|
 | 2026-10-19 | none (roadmap adopted) | 7 (2026-10-17 audit) | yes | Baseline |
+| 2026-10-20 | step 2 implementation (#13) | 7 (not re-audited) | yes | #13 QA PASS at `e46fadf`; step 2 started ahead of step 1 at the human's request and stays `doing` until the auditor confirms Problem Description 2 |
