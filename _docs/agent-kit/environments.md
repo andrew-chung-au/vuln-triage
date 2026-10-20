@@ -32,7 +32,7 @@ The agent works in a dev container with a read-only GitHub token, in its own clo
 
 | File | Installed as | Notes |
 |---|---|---|
-| `pre-push` | `~/.agent-hooks/pre-push`, copied into each clean clone's `.git/hooks/pre-push` | The push check. Monorepo-aware: it finds every project the new commits change, using git only, then runs `make -C <project> install verify` for each in a throwaway container. The container sees only a bundle of the pushed commits: no ignored files, git settings or other branches. It blocks the push if a project's `agent-kit.conf` was removed. Never run it from the repo. |
+| `pre-push` | `~/.agent-hooks/pre-push`, copied into each clean clone's `.git/hooks/pre-push` | The push check. Monorepo-aware: it finds every project the new commits change, using git only, then runs `make -C <project> install verify` for each project whose `Makefile` has an `install:` target, and `make -C <project> verify` otherwise, in a throwaway container. The container sees only a bundle of the pushed commits: no ignored files, git settings or other branches. It blocks the push if a project's `agent-kit.conf` was removed. Never run it from the repo. |
 | `devcontainer.json`, `setup.sh` | `.devcontainer/` at the repo root | The container recipe. Fill in your name and noreply email in `setup.sh`. |
 | `templates/ci-verify.yml.template` | `.github/workflows/` at the repo root | CI with `permissions: contents: read` and no secrets |
 

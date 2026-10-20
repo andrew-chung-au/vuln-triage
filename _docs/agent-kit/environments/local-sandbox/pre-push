@@ -22,7 +22,7 @@
 # Settings (environment variables, all optional):
 #   AGENT_PUSH_CHECK_IMAGE    container image (default python:3.12, which has git and make)
 #   AGENT_PUSH_CHECK_NETWORK  set to "none" to run without network access
-#   AGENT_PUSH_CHECK_PLAN     set to 1 to print what would be checked, run nothing, and pass
+#   AGENT_PUSH_CHECK_PLAN     set to 1 to print what would be checked, run nothing, and block the push
 set -euo pipefail
 
 remote="${1:-origin}"
@@ -129,7 +129,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   if [ "${AGENT_PUSH_CHECK_PLAN:-}" = "1" ]; then
     echo "push check plan for ${local_sha:0:8} (base ${base:-none}):"
-    while IFS= read -r p; do echo "  make -C $p [install] verify"; done <<< "$projects"
+    while IFS= read -r p; do
+      makefile="$(git cat-file -p "$local_sha:$p/Makefile" 2>/dev/null || true)"
+      targets="verify"
+      if grep -qE -- "^install[[:space:]]*::?" <<< "$makefile"; then targets="install verify"; fi
+      echo "  make -C $p $targets"
+    done <<< "$projects"
     continue
   fi
 
@@ -155,5 +160,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     status=1
   fi
 done
+
+# Plan mode is a dry run: every push, including the ones with no plan line
+# above, stops here with no remote ref moved.
+if [ "${AGENT_PUSH_CHECK_PLAN:-}" = "1" ]; then
+  echo "push check: plan only; push not sent (unset AGENT_PUSH_CHECK_PLAN to push)"
+  exit 1
+fi
 
 exit "$status"
