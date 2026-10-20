@@ -1184,3 +1184,14 @@ Copy this template for each new entry:
 - files changed: QA comment 6288587511; decision-point comment 6289212246; `_session-summaries/issue-041-spec-fixes-from-qa-risks.md` (`71aa176`); `_docs/roadmap.md` (step 7 doing, check-in line), this log; `make clean-scratch` ran; closed #41
 - verification (tests run, reviewer verdict): QA PASS (own script 81/82, the one miss a gap in its prefix list, cross-checked); `make verify BASE=c77a437` PASS (35 tests); `make assert-clean` PASS at `6a33ba0`, HEAD unchanged
 - human review (what I checked or corrected, or `none`): at the decision point the human chose to send QA risks 1-3 to the step 7 issue. Commands that stopped for approval: none
+
+### 2026-10-20 — Plan for Claude Code cloud sessions
+
+- date: 2026-10-20
+- task/issue: none (human request: plan how to use Claude Code cloud sessions for this project)
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code), with a `web-fetch` subagent reading the Claude Code on the web and cloud environments docs
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for the most efficient method, the repo adjustments and step-by-step instructions in `_docs`; no key prompt file saved
+- files changed: `_docs/cloud-sessions.md` (new; proposal, protected-file changes listed but not made), this log
+- verification (tests run, reviewer verdict): none; the doc marks undocumented details `VERIFY:` for a trial session. Repo facts checked: `.claude/settings.json` denies `git push *`, `guard_git.py` blocks push, `make issue-dump` uses `gh issue view`, CI uses the runner's default Node
+- human review (what I checked or corrected, or `none`): none yet. Commands that stopped for approval: none
