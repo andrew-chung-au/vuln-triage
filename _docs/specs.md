@@ -56,9 +56,13 @@ As a security lead, dependencies are picked up from the asset's lockfiles
 ### US-3: Match vulnerabilities with fixed versions
 As an asset owner, each dependency version is matched against known
 vulnerabilities, showing the fixed version for this dependency when one exists.
+Each finding records the vulnerability's primary id and all its alias ids (for
+example GHSA, PYSEC and CVE), including aliases when the primary id is not a
+CVE. (`VERIFY:` OSV advisories carry a primary id and an `aliases` list; the
+primary id may not be a CVE.)
 - Acceptance: a dependency with a known vulnerability shows a finding with the
-  vulnerability id and the fixed version for this dependency when one exists;
-  a clean dependency shows no finding.
+  vulnerability's primary id, all its alias ids, and the fixed version for this
+  dependency when one exists; a clean dependency shows no finding.
 
 ### US-4: Enrich with real-world exploit signals
 As an asset owner, each finding shows CISA KEV status, FIRST EPSS score, and
@@ -126,10 +130,17 @@ authentication mechanism is defined in Stage 2.
 ### US-12: Read-only assistant answers exposure questions
 As a developer using an AI assistant, I can ask "which assets are affected by
 this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
-`which_assets_affected`, `get_finding`, `get_asset`).
-- Acceptance: asking for a known CVE returns the affected assets; asking for
-  an unknown CVE returns an empty result, not an error; the MCP server offers
-  no write operations.
+`which_assets_affected`, `get_finding`, `get_asset`). A lookup by any alias id
+returns the same finding(s) as a lookup by the primary id.
+- Acceptance: asking for a known CVE returns the affected assets.
+- Acceptance: a finding stored under a GHSA id with a CVE alias is returned
+  when asked by that CVE.
+- Acceptance: a CVE known to the system but affecting no registered asset
+  returns an empty asset list, not an error, and states that the CVE is known;
+  a CVE not known to the system returns an empty asset list, not an error, and
+  states that the CVE is unknown. The two results are distinguishable; the
+  exact wire shape is fixed in Stage 3.
+- Acceptance: the MCP server offers no write operations.
 
 ### US-13: The notification journey is instrumented
 As a security lead, I can see whether a top-priority finding reached its owner,
@@ -190,6 +201,7 @@ A finding has exactly one status. This is the complete list:
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
 | E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
 | E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet |
+| E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
 
 ## Open questions
 
