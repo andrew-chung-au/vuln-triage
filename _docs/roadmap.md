@@ -34,7 +34,7 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 | 13 | Stage 6: `_docs/plan-summary.md` | new issue | 11 | Stage 6 checklist PASS (all 12 criteria mapped) | todo |
 | 14 | Plan review and phase change | new issue | 12, 13 | Review passed; human-approved `AGENTS.md` phase line committed | todo |
 | 15 | Tier A build | #24 → #25 → #26, then step 12 issues | 14 | Auditor: Application 2, Testing 2 | blocked (phase line) |
-| 16 | Docker-capable environment | #31 | 7 | Compose runs Postgres in the dev environment | blocked (see decision 2) |
+| 16 | Docker-capable environment | #31 | 7 | Compose runs Postgres in the dev environment | todo (decision 2 resolved; human performs the change) |
 | 17 | Tier B and C build | step 12 issues | 15, 16 | Auditor: all 12 criteria MET | todo |
 
 Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19, #29, #30, #33, #36, #37, #38, #39, #40, #42. #38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does. #19 (ai-usage-report) is graded evidence; pick it up with the Tier C work.
@@ -46,7 +46,7 @@ Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19
 | # | Decision | Recommendation | Status |
 |---|---|---|---|
 | 1 | Groom #3-#8 together and answer one batched decision message, instead of one issue at a time | Yes | resolved 2026-10-20: groomed and answered as one batch |
-| 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | open |
+| 2 | Drop #31's "blocked by #26" dependency, since the environment does not need persistence code | Yes; move before Tier B work starts, decide which environment in step 7 | resolved 2026-10-20: dropped; #31 starts once step 7 names the environment (recorded on #31) |
 | 3 | Promote #17/#18 ahead of the spec commits | Yes, unless the human prefers to defer | resolved 2026-10-20: both landed before the spec commits |
 | 4 | Schedule #39 (quoted filenames bypass the protected-path check) and #38 (remove the stale `agent-kit/` copy) before step 14, instead of leaving them under "Later" | Withdrawn | resolved 2026-10-20: no. The human put product work first; both stay under "Later" |
 
@@ -91,3 +91,4 @@ Off-track signals:
 | 2026-10-20 | step 3 (#35) | 10 (2026-10-20 audit) | yes | QA failed only criterion 10 (no approval record). The Claude Code orchestrator posted a record in the #18 format (6287006555), and the QA re-check passed. The human chose to file the QA risks outside the criteria as #42 (low priority). Step 4 (#33) and step 7 are next. `.scratch/` cleaned. |
 | 2026-10-20 | none (review check-in) | 10 (2026-10-20 audit) | yes | Reviewed `48cbb9d` and `b1ab1e5` against the tracker: statuses match. `make verify` PASS WITH WARNINGS at `b1ab1e5`; the 7 removed assertion lines come from earlier frontend work since `origin/main`, not these commits. Placed the unscheduled follow-ups #36-#40 and #42 under "Later"; decision 4 asks whether to promote #38 and #39. Score table updated with the 2026-10-20 audit. Next: step 4 (#33), and step 7 with #41. |
 | 2026-10-20 | none (reprioritised) | 10 (2026-10-20 audit) | yes | The human said the project was sidetracked by safeguards. Added the priority rule; deferred step 4 (#33) to "Later"; withdrew decision 4. Step 7 is next and starts with #41's spec commit, then the plan stages 8-14 lead to the Tier A build. |
+| 2026-10-20 | none (decisions) | 10 (2026-10-20 audit) | yes | The human answered #41 D1-D3 (all option 1; comment 6287579005); D4 unanswered, so the status line stays unless answered before the spec diff. Decision 2 resolved: #31 no longer waits on #26 (comment 6287579525). #41 is unblocked; step 7 can start. |

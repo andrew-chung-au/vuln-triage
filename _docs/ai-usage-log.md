@@ -1139,3 +1139,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (priority rule, `deferred` status, step 4 (#33) deferred to "Later", #41 opens step 7, decision 4 withdrawn, new off-track signal, check-in line), this log
 - verification (tests run, reviewer verdict): none (documentation only)
 - human review (what I checked or corrected, or `none`): the human set the direction; the edited roadmap is not yet reviewed. Commands that stopped for approval: none
+
+### 2026-10-20 — Decisions for #41 and roadmap decision 2
+
+- date: 2026-10-20
+- task/issue: #41 D1-D4 and roadmap decision 2 (#31)
+- agent role: Orchestrator
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for more context to make the decisions; no key prompt file saved
+- files changed: comments 6287579005 (#41) and 6287579525 (#31); `_docs/roadmap.md` (decision 2 resolved, step 16 unblocked, check-in line), this log
+- verification (tests run, reviewer verdict): none (decisions recorded only)
+- human review (what I checked or corrected, or `none`): the human chose option 1 for D1, D2, D3 and decision 2 in a multiple-choice question; D4 unanswered. Commands that stopped for approval: none
