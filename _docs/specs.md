@@ -1,6 +1,6 @@
 # VulnTriage product spec (Stage 1)
 
-Status: draft, pending the 2026-10-16 review issues
+Status: reviewed; the 2026-10-16 review issues (#3-#8) and follow-up #41 are resolved
 
 Source: `_docs/project-brief.md`. Criteria: `_docs/rubric.md`.
 Deferred to later stages: prioritisation formula (Stage 2), LLM guardrails
@@ -122,11 +122,17 @@ blocker for Stage 2 sign-off.
 - Acceptance: for an ownerless asset, the notification is held and the asset
   is flagged ownerless (E2), while the GitHub issue is still opened once.
 - The issue is opened in the dedicated tracker repo `vuln-triage-findings`
-  using one narrowly scoped token. The token may create and comment on issues
-  in the dedicated tracker repo only; it cannot push code to any branch or
-  change repository settings, and a push attempt with it is refused. Closing
-  the issue does not change the finding's status; n8n may comment on or close
-  the issue after a re-scan marks the finding `fixed`.
+  using one narrowly scoped token. The token may create, comment on and close
+  issues in the dedicated tracker repo `vuln-triage-findings` only; the n8n
+  workflow, not the token, limits which of those actions it takes. (`VERIFY:`
+  the narrowest GitHub permission that gives these actions on one repository
+  is issues read/write on that repository, and it also allows editing issues
+  and anything else the check finds.) It cannot push code to any branch or
+  change repository settings, and a push attempt with it is refused.
+  (`VERIFY:` an issues-only permission excludes contents write and
+  administration.) Closing the issue does not change the finding's status;
+  n8n may comment on or close the issue after a re-scan marks the finding
+  `fixed`.
 
 ### US-9: Overdue reminders, escalation, weekly digest
 As a security lead, overdue findings trigger reminders and escalation, and I
@@ -233,17 +239,44 @@ A finding has exactly one status. This is the complete list:
 | `open` | Scan or re-scan | Created when a scanned dependency is vulnerable; set again when a `fixed` finding reappears (E7). | Creation and each status change record the previous value, actor and timestamp. |
 | `risk accepted` | Asset owner or security lead, in the dashboard | A human accepts the risk; requires a non-empty reason. | Records the signed-in user, timestamp, previous value and the non-empty reason. |
 | `fixed` | Re-scan | The installed version no longer falls in any affected range (US-10). | Records the previous value, actor and timestamp. |
-| `withdrawn` | Scheduled refresh | `ASSUMPTION:` an addition to the brief's three statuses. The vulnerability is removed from a feed (E4); the finding is not deleted. | Records the previous value, the feed and the timestamp. |
+| `withdrawn` | Re-scan | `ASSUMPTION:` an addition to the brief's three statuses. A re-scan sets it when OSV has withdrawn the advisory (E4; `VERIFY:` how OSV marks a withdrawn advisory); the finding is not deleted. | Records the previous value, the actor (re-scan), the timestamp and OSV as the source. |
 
 `stale` (E3) is a feed marker, not a finding status. The asset scan status
 (E3, E5) is not a finding status either.
 
 ## Asset scan status
 
-Each asset has exactly one scan status, with exactly these values: `not yet
-scanned`, `scan failed`, `scanned, clean`. A `scan failed` status also records
-one failure reason: `feed unavailable` or `lockfile parse error`. Findings are
-listed separately. `scanned, clean` means a successful scan matched nothing.
+Each asset has exactly one scan status, with exactly these values:
+`not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`,
+`scanned, clean`. Only an OSV outage, or a repository or lockfile failure,
+gives `scan failed`. A `scan failed` status also records one failure reason,
+with exactly these values: `feed unavailable` (OSV unavailable),
+`lockfile parse error`, or `repository unavailable` (the GitHub repository is
+unreachable or missing, or the read-only token is rejected or expired).
+For a successful scan the precedence is
+`scanned, findings` > `scanned, incomplete` > `scanned, clean`.
+"Version unknown" warnings (E10) still show under every value. Findings are
+listed separately.
+
+Each case gets exactly one value:
+
+- A successful scan matched at least one vulnerability (including when some
+  entries are "version unknown"): `scanned, findings`.
+- A successful scan matched nothing and at least one entry is "version
+  unknown" (E10): `scanned, incomplete`.
+- A successful scan matched nothing and every version is known:
+  `scanned, clean`.
+- OSV unavailable on an asset's first scan (E3): `scan failed`, reason
+  `feed unavailable`; no findings are created.
+- OSV unavailable on a later scan (E3): `scan failed`, reason
+  `feed unavailable`; last-known findings are kept and marked stale.
+- KEV or EPSS unavailable while OSV succeeded (E3): the value the OSV result
+  gives (`scanned, findings`, `scanned, incomplete` or `scanned, clean`); the
+  KEV or EPSS signals are marked stale.
+- Lockfile parse error (E5): `scan failed`, reason `lockfile parse error`.
+- GitHub repository unreachable or the read-only token rejected:
+  `scan failed`, reason `repository unavailable`.
+
 The scan status is not a finding status, and the `stale` feed marker is not a
 finding status.
 
@@ -279,14 +312,14 @@ reference link in the brief.
 |---|---|---|
 | E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
-| E3 | A feed (OSV / KEV / EPSS) is unavailable | OSV unavailable on a new asset's first scan: the asset shows `scan failed` with reason `feed unavailable`, no findings are created, and it is not shown as `scanned, clean`. On a later scan with a feed unavailable, last-known data and findings are kept and marked stale, not deleted, and the asset shows `scan failed` with reason `feed unavailable`; the scheduled run retries |
-| E4 | A vulnerability is later removed from a feed | Finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not deleted, with an audit entry recording the previous value and the feed |
+| E3 | A feed (OSV / KEV / EPSS) is unavailable | OSV unavailable on a new asset's first scan: the asset shows `scan failed` with reason `feed unavailable`, no findings are created, and it is not shown as `scanned, clean`. OSV unavailable on a later scan: last-known data and findings are kept and marked stale, not deleted, and the asset shows `scan failed` with reason `feed unavailable`. KEV or EPSS unavailable while OSV succeeded: the asset's scan status is the value the OSV result gives (`scanned, findings`, `scanned, incomplete` or `scanned, clean`), and the last-known KEV or EPSS signals are kept and marked stale. In every case the scheduled run retries |
+| E4 | OSV later withdraws an advisory, or a CVE drops out of KEV or EPSS | When a re-scan finds that OSV has withdrawn the advisory (`VERIFY:` how OSV marks or returns a withdrawn advisory), the finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not `fixed`, even if the advisory no longer matches the installed version; the finding is not deleted, and the audit entry records the previous value, the actor (re-scan), the timestamp and OSV as the source. The scheduled KEV/EPSS refresh never changes a finding's status: a CVE dropping out of KEV or EPSS changes that finding's signals and rank (US-7), not its status |
 | E5 | Lockfile fails to parse | The asset's scan status is `scan failed` with reason `lockfile parse error`; previous findings are kept; the error is visible in the dashboard |
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
 | E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
 | E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet |
 | E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
-| E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; an unknown version does not make the asset `scanned, clean`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched |
+| E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; a scan where nothing matched and at least one entry is "version unknown" is `scanned, incomplete`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched |
 | E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows "not listed", EPSS shows "n/a", and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
 | E12 | Advisory text contains instructions or links | The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields and no URLs other than the advisory's own reference link; any other URL in advisory text is shown as inert text |
 
