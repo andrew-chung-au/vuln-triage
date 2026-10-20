@@ -963,3 +963,36 @@ Copy this template for each new entry:
 - files changed: protected `_docs/agent-kit/environments/local-sandbox/pre-push` and `_docs/agent-kit/environments.md`, left uncommitted pending the human's approval of the exact diff; this entry in `_docs/ai-usage-log.md`. Git-ignored `.scratch/test-push-check-plan.sh` (evidence harness), `.scratch/pre-push-original` (pre-change hook for the non-plan comparison) and `.scratch/push-check-plan-results.txt` (harness output)
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS: 2 test files / 35 tests passed, whitespace PASS, weakened tests 7 removed assertion lines that predate this issue (earlier unpushed frontend test changes; this issue changed no test files). `.scratch/test-push-check-plan.sh`: 10 cases, 0 failures (plan line per project, install/install::/none/comment/reinstall detection, working tree versus pushed commit, root fallback, no-new-commits, deletion-only, no-project, removed config, and non-plan byte-for-byte comparison against the original hook for unset/0/other and a failing gate). The sandbox denies `git push`, so the harness invoked the hook directly with git's pre-push stdin and recorded the local bare remote's refs before and after
 - human review (what I checked or corrected, or `none`): none yet; the protected diff and its commit await the human's approval, and the human still needs to reinstall the hook in the clean clone and confirm with `cmp`. Commands that stopped for approval: none
+
+### 2026-10-20 — Engineer proposal for issue #17 committed-alone check
+
+- date: 2026-10-20
+- task/issue: issue #17, "Pre-commit check: HUMAN_APPROVED=1 does not enforce \"committed alone\" for protected changes"; propose-only because `_docs/agent-kit/scripts/check-staged.sh` is protected
+- agent role: Software Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to read `AGENTS.md`, `_docs/agent-kit/team/software-engineer.md`, `_docs/agent-kit/procedures/verify.md` and #17, write the exact diff without editing protected files, test a copy in `.scratch/`, and post an Engineer comment; no key prompt file saved
+- files changed: no tracked file; the proposed diff was returned to the orchestrator and is posted in Engineer comment 6280738052. Git-ignored `.scratch/test-check-staged.sh` and `.scratch/issue-17-repo` held the harness. This entry was appended by the orchestrator
+- verification (tests run, reviewer verdict): throwaway-repo matrix 9/9 PASS (six required cases, both rename directions, forbidden `.env`, whitespace); `make verify BASE=1d31aac` PASS (35 tests, whitespace PASS) on the unmodified tree. The proposal was not applied by this role
+- human review (what I checked or corrected, or `none`): the human approved the exact diff in this session; the orchestrator applied it and committed `64308d7`. Commands that stopped for approval: none
+
+### 2026-10-20 — QA for issue #17
+
+- date: 2026-10-20
+- task/issue: issue #17, committed state
+- agent role: QA Engineer
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): Orchestrator instruction to check #17 against its criteria at the committed state, run Verify and the throwaway matrix, and post a QA verdict; a re-check was requested after a concurrent session moved HEAD; no key prompt file saved
+- files changed: none. QA comments 6281018092 (at `64308d7`) and 6281387668 (re-check at `df72298`). This entry was appended by the orchestrator
+- verification (tests run, reviewer verdict): PASS at both commits. `make verify BASE=1d31aac` PASS (35 tests, whitespace PASS, no weakened tests); matrix 12/12 in `.scratch/qa-17-recheck.sh`; `make assert-clean` PASS at `df72298`; script blob unchanged `3712882`
+- human review (what I checked or corrected, or `none`): the human chose to file follow-ups #39 (quoted filenames) and #40 (repo-root paths). Commands that stopped for approval: none
+
+### 2026-10-20 — Orchestrator close-out for issue #17
+
+- date: 2026-10-20
+- task/issue: issue #17, protected change commit and close-out
+- agent role: Orchestrator
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human chose roadmap step 6, answered the batched #3-#8 decisions, chose script-only enforcement for #17, and approved the exact protected diff; no key prompt file saved
+- files changed: `_docs/agent-kit/scripts/check-staged.sh` (commit `64308d7`, protected, committed alone with `HUMAN_APPROVED=1` after approval); approval record comment 6280810952; `_session-summaries/issue-017-committed-alone.md` (commit `199f4b7`); this entry; issues #38, #39 and #40 filed by PM. No other repository change
+- verification (tests run, reviewer verdict): QA PASS at `df72298`; `make verify BASE=1d31aac` PASS; `make assert-clean` PASS; approval record matches `git show` and blob `3712882`. The first QA run overlapped with the concurrent #35 session and was re-run at the stable HEAD after the human paused that session
+- human review (what I checked or corrected, or `none`): the human approved the exact diff, chose script-only enforcement, chose to leave the duplicate folder for #38, approved filing #39/#40, and paused the concurrent orchestration. Commands that stopped for approval: none
