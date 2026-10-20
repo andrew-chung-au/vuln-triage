@@ -74,7 +74,7 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
 5. After QA, the orchestrator runs **Assert clean** and confirms HEAD hasn't moved. If either fails, QA changed something: discard QA's verdict and run QA again.
 6. On FAIL, go back to step 3 with the QA comment as input.
 7. On PASS, the **decision point**: gather everything waiting for the human into one message and ask once. That's proposed AGENTS.md changes, spec notes from any role, other protected-file changes, choices the Engineer made that the issue doesn't cover, and risks QA reported outside the criteria. Show each as a diff or a short description, using the layouts in `_docs/agent-kit/procedures/asking-the-human.md`, with your recommendation. Then:
-   - Apply approved AGENTS.md, spec and other protected-file changes in their own commits, with `HUMAN_APPROVED=1`.
+   - Apply approved AGENTS.md, spec and other protected-file changes in their own commits, with `HUMAN_APPROVED=1`. After each commit, post its approval record on the issue, following `_docs/agent-kit/procedures/asking-the-human.md`.
    - If an approved change needs Engineer work, go back to step 3; QA re-checks only what changed.
    - For each risk the human wants handled later, the PM files a follow-up issue.
 8. Clean up, then write the session summary following `_docs/agent-kit/procedures/session-summary.md`:
@@ -82,6 +82,7 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
    - Confirm temporary system changes are undone, or that the human chose to keep them.
    - If a `.scratch/` script is worth keeping, propose it as a test or a make target at the decision point (step 7). Nothing in `.scratch/` survives cleanup.
    - Run `make clean-scratch`. It empties `.scratch/`, including session logs and test tokens, and refuses while a started process is still running. Record in the summary that it ran.
+   - Name in the summary each approval record comment posted in step 7.
    - Fill in the summary's Permission review section from every role comment's "Commands that stopped for approval" line, plus your own.
 9. Close the issue, but only once the session summary is committed with its Permission review section. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
 10. The human reviews the diff and pushes (see Commits).

@@ -67,6 +67,38 @@ Approval needed: add a temporary firewall rule so the containers can reach each 
 - Recommendation: 1. It's narrow, has a one-line undo, and keeps sudo with you.
 ```
 
+## Approval record
+
+After a protected-file commit, the role that committed it posts a new comment on the issue where the human approved the change, before the issue is closed. The record is documentation-only: no hook can inspect issue comments, so the role posting it and QA checking it are the control. It proves what was committed and whether it matches the text the role attests the human approved; it does not independently prove the approval, so where that approval is in an issue comment, link it. The format and field rules below are the human-approved rule (2026-10-20).
+
+````
+Protected-change approval record
+- Issue: #<issue number>
+- Commit: <full 40-character SHA>
+- Parent: <full 40-character SHA of the first parent>
+- Paths: <path1>, <path2>
+- Approved: human, <YYYY-MM-DD>[, <link to the approval comment if one exists>]
+- Diff command: git show --format= --no-renames --patch <commit> -- <paths>
+- Diff:
+```diff
+<verbatim output of the Diff command>
+```
+- Blob IDs:
+  - <path>: <git rev-parse <commit>:<path>>
+  - <deleted path>: deleted
+````
+
+Field rules:
+
+- **Paths** lists every path in the commit, and every one matches `PROTECTED` in `agent-kit.conf`; replace `<paths>` in the command with that space-separated list.
+- **Commit** and **Parent** are full 40-character SHAs. **Parent** is the first parent; a merge commit has more than one parent and is refused.
+- `--no-renames` matches the protected-commit check, so a rename is recorded as a delete and an add.
+- A non-deleted path's **Blob IDs** value is `git rev-parse <commit>:<path>`; a deleted path is `deleted`. A mode-only or binary change still gets a record: the diff is whatever `git show` prints, and the blob ID pins the content.
+- The **Diff** is copied from the approval request, not regenerated from the commit. Check the two are identical before posting; if they differ, don't post the record: fix the commit or get a new approval for the changed text.
+- A protected change committed with any non-protected path isn't eligible for a record; redo it alone (see #17).
+
+A record that is missing a field, uses an abbreviated SHA, names a path outside `PROTECTED`, has a diff or blob ID that doesn't match the commit, or points to a merge commit is rejected: QA posts FAIL and the issue stays open.
+
 ## Decision question
 
 For choices rather than permissions: a design choice, a criterion that can't be met as written, a risk QA found.
