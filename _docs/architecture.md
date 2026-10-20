@@ -1,6 +1,6 @@
 # VulnTriage architecture (Stage 2)
 
-Status: draft for review (#43). Spec: `_docs/specs.md` at `faea412`. Brief: `_docs/project-brief.md`. Rubric: `_docs/rubric.md`.
+Status: draft for review (#43). Spec: `_docs/specs.md` at `3ecd54b`. Brief: `_docs/project-brief.md`. Rubric: `_docs/rubric.md`.
 
 Conventions: `VERIFY:` marks an external detail not yet confirmed. The ASSUMPTION label, with a numbered tag such as (A1), marks a judgement; every one is listed under Assumptions. "dependency, ask before adding" marks a library or service the build will need; none is added in planning. Status names, scan statuses, failure reasons, KEV values and tier names are exactly those in `specs.md`. Where this document and the spec differ, the spec wins and the difference is a defect here.
 
@@ -133,19 +133,37 @@ ASSUMPTION: (A15) when a newly fetched advisory's aliases join two stored vulner
 
 Differences from `frontend/src/services/types.ts` (for #23):
 
-| Mock | Data model |
+Field names in the right-hand column are the Data model's; the wire spelling is #23's.
+
+| Mock (`types.ts`) | Data model |
 |---|---|
-| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | The five asset scan status values, plus `failureReason` (nullable, one of the four failure reasons) |
-| `kev: boolean` | One KEV value of three, plus `kevStale` |
-| `repositoryUrl: string` | Required, `https://github.com/<owner>/<repo>` only, validated at registration |
+| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the four failure reasons) |
 | `FindingStatus` value `risk_accepted` | `risk accepted` (exact spec string) |
-| `briefStatus: "available" \| "rejected"` | `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
-| `Brief.advisoryReference` | `referenceLink`, built by VulnTriage from the primary id; plus `fixVersion` (nullable) |
-| No finding-level fixed version (`AffectedRange.fixedVersion` per range; `range` as a string) | `fixedVersion` (nullable) on the finding; ranges as structured events |
-| `firstSeen` only | `firstDetectedAt`, plus `lifecycleStartedAt` and `dueAt` (US-9) |
-| `AuditEntry.previousValue: string` | Nullable (none on creation, I7); plus `source` and `restoresEntryId` |
-| `epss: number \| null` | Same, plus `epssStale` |
-| Missing | `stale` and `staleSince` on findings, `signalsChanged` (E8), scan warnings on assets, `lastScanAt`, `User.role` |
+| `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed; the credential table's refused cases need one (403: n8n or MCP token writes, owner accepting risk on another owner's asset) |
+| `User { id, name, email }` | `User.username`, `display_name`, `email`, `role` (`security lead` or `asset owner`); `password_hash` and Sessions stay server-side |
+| `Asset` fields | Same fields, plus `scan_failure_reason`, `last_scan_at`, `last_commit_sha`, and scan warnings (on `Scan.warnings`) |
+| `repositoryUrl: string` (on `Asset` and `NewAssetInput`) | Required, `https://github.com/<owner>/<repo>` only, validated at registration |
+| `Finding.vulnerabilityId`: the primary id as a string | `Finding.vulnerability_id` is a foreign key to Vulnerability; the primary id is `Advisory.osv_id`, and the identity key is the CVE when present (E9) |
+| `Finding.aliases: string[]` | VulnerabilityAlias rows, lookup by any id (US-12) |
+| No CVE field | `Vulnerability.cve_id` (nullable); it decides `KEV: n/a (no CVE)` and EPSS `n/a` (E11) |
+| `Finding.packageName`, no ecosystem | `Finding.ecosystem` + `package`; the finding is unique on (asset, ecosystem, package, vulnerability) |
+| `Finding.installedVersion`: one string | No installed version on Finding: a finding links to one or more Dependency entries, each with its own `version` (A6) |
+| `AffectedRange { range: string, fixedVersion }`; no finding-level fixed version | `Advisory.affected` as structured ranges and events; `Finding.fixed_version` (nullable = "no fixed version") |
+| `kev: boolean` | One KEV value of three, derived from Signal; plus `Signal.kev_stale` |
+| `epss: number \| null` | Same, from `Signal.epss_score`; plus `Signal.epss_stale` |
+| `tier`, but no rank reason | `Finding.tier`, `rank_inputs`, `rank_reason` (US-5) |
+| `firstSeen` only | `Finding.first_detected_at`, plus `Lifecycle.started_at` and `Lifecycle.due_at` (US-9) |
+| `fixedAt` | `Finding.fixed_at` (same) |
+| No lifecycle or notification state | Lifecycle (`highest_tier`, `entered_p1_at`, `tracker_issue_number`, `owner_notified_at`) and NotificationJob state |
+| No stale, signals-changed or withdrawal fields | `Finding.stale`, `stale_since`, `signals_changed` (E8), `status_before_withdrawal` (E4) |
+| `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
+| `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
+| `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent with the "brief unavailable" marker; no stored summary text |
+| No advisory text | `Advisory.summary`, `details`, `references`, sent only as labelled untrusted data |
+| `AuditEntry.who`, `when` | `AuditEntry.actor` (user id, `re-scan` or `system`) and `created_at` |
+| `AuditEntry.previousValue: string` | Nullable (none on creation, I7) |
+| `AuditEntry.reason?` (optional) | Required and non-empty for `risk accepted` (US-11); plus `source` and `restores_entry_id` (E4) |
+| `Finding.auditTrail` embedded in the finding | AuditEntry rows linked to a Finding or an Asset |
 
 Owner name and email stay nullable fields that are always present, as in the mock.
 
@@ -334,7 +352,7 @@ Telemetry exclusions (US-13: advisory text, owner contact details, repository UR
 
 US-14 alert rule:
 - The backend sets `vt_top_tier_notification_overdue{finding_id,tier}` to 1 while a `top tier` owner job is `failed`, or still `pending` or `claimed` after the window W from its creation; 0 once it is `sent`. The value is computed from stored job state, so it survives restarts.
-- Grafana rule: `max by (finding_id) (vt_top_tier_notification_overdue) == 1`, evaluated every minute. Each finding is one alert instance; the notification policy groups by `finding_id` and has a 24-hour repeat interval, so one finding gives exactly one alert, and it resolves when the job is `sent` (VERIFY: Grafana alert instances per label set, notification policy grouping and repeat interval). A successful notification never sets the metric.
+- Grafana rule: `max by (finding_id, tier) (vt_top_tier_notification_overdue) == 1`, evaluated every minute, so the alert carries the finding id and tier labels. Each finding is one alert instance, because the `tier` label is the tier recorded when the job was created and never changes for that job; the notification policy groups by `finding_id` and has a 24-hour repeat interval, so one finding gives exactly one alert, and it resolves when the job is `sent` (VERIFY: Grafana alert instances per label set, notification policy grouping and repeat interval). A successful notification never sets the metric.
 - Window W = 30 minutes (spec Open question 4).
 - Exactly one alert naming the finding without excluded data: the only identifying label is the opaque finding id; tier is the only other label.
 - Destination: a Grafana webhook contact point to the responder (Responder agent), and an email to the human.
