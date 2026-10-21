@@ -27,8 +27,9 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 | 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
 | 7 | Stage 2: `_docs/architecture.md` (next) | #41, then #43 | 6 | #41's spec commit landed; Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | done (#41 `1445ca5`; #43: spec `faea412` and `3ecd54b`, `architecture.md` `072c17e`..`4180fe3`, QA PASS, closed 2026-10-20) |
 | 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | done (#23 and #27 closed 2026-10-21; US-15's responder contract split out as #50) |
-| 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
-| 10 | Stage 4: `_docs/testing.md` | new issue | 8 | Stage 4 checklist PASS; #9's testing rows ticked | todo |
+| 8b | Stage 3 completion: responder read-only contract | #50 | 8 | #50 closed; the human approved the contract diff; `make openapi-validate` exits 0 | todo (groomed 2026-10-21, D1-D3 option 1; runs after #45) |
+| 9 | Frontend SPA shell | #34 | 8 (#23), #45 | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
+| 10 | Stage 4: `_docs/testing.md` | new issue | 8, 8b | Stage 4 checklist PASS; #9's testing rows ticked | todo |
 | 11 | Stage 5: `_docs/tasks.md` | new issue | 10 | Stage 5 checklist PASS (no cycles; every story and criterion covered) | todo |
 | 12 | Backlog issues from `tasks.md` | new issues | 11 | PM proposal approved by the human; each issue carries its story's acceptance criteria | todo |
 | 13 | Stage 6: `_docs/plan-summary.md` | new issue | 11 | Stage 6 checklist PASS (all 12 criteria mapped) | todo |
@@ -43,9 +44,9 @@ Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19
 
 #48 (cloud `docker-start`/`docker-stop` targets, filed 2026-10-21 from the cloud trial) waits for the human's D1 (is the cloud an acceptable Docker route, given the agent controls the daemon there) and D2 (step 16's row, or "Later"). Until then it is not scheduled.
 
-#50 (the US-15 responder's read-only API contract, split out of #27 by the human on 2026-10-21) is not groomed and not yet placed in the step sequence; it depends on #27, which is closed.
+#50 (the US-15 responder's read-only API contract, split out of #27 by the human on 2026-10-21) is step 8b, groomed with the human's D1-D3 answers; it runs after #45.
 
-#45 (the D4 `types.ts`/mock/UI alignment, filed from #23) is not in the step sequence: it starts after #23 and before step 9 (#34), and #34/#25 wait for it.
+#45 (the D4 `types.ts`/mock/UI alignment, filed from #23) is not in the step sequence: it starts after #23 and before step 9 (#34), and #34/#25 wait for it. Groomed 2026-10-21 (D1-D4 option 1); D4 adds a protected `make frontend-typecheck` target that needs the human's approval at commit time.
 
 #41 and #43 completed step 7. Leftovers from #43 (human's choice: recorded here and on #23, no new issue):
 - **Step 8 (#23):** comment 6301758496 covers which brief the API returns, a "no brief yet" state, status codes, wire values and the types.ts differences table.
