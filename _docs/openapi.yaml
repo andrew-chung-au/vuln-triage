@@ -16,14 +16,20 @@ info:
     missing, expired or was logged out.
 
     Every non-GET operation except login and logout also requires the header
-    `X-Requested-With: XMLHttpRequest` (CSRF). A missing or different value
-    returns `403 forbidden` and changes no state. Logout is exempt so that it
-    stays idempotent, and it clears only the caller's own cookie.
+    `X-Requested-With: XMLHttpRequest` (CSRF). It is a required parameter; a
+    missing or different value returns `403 forbidden` and changes no state.
+    Logout is exempt so that it stays idempotent, and it clears only the
+    caller's own cookie. `VERIFY:` FastAPI returns `422` for a missing required
+    `Header()` on the version #24 pins, so #24 maps that missing-header
+    validation error to `403 forbidden` in its exception handler.
 
     The check order is fixed and uses only the steps an operation has: `401`
-    first, then `404` for an unknown id, then `403` for an authenticated caller
-    who is not allowed, then `422` for body validation, then `409` for state.
-    Each operation's description states its order.
+    first, then `403` for a missing or wrong `X-Requested-With` header (CSRF),
+    then `404` for an unknown id, then `403` for an authenticated caller who is
+    not allowed (owner mismatch), then `422` for body validation, then `409`
+    for state. Each operation's description states its order. Because the CSRF
+    check comes before the existence check, an unknown finding id with no
+    `X-Requested-With` header returns `403`, not `404`.
 
     Status mapping: `401` only for no/expired session or bad login; `403` only
     for an authenticated caller who is not allowed (owner mismatch or missing
@@ -62,7 +68,12 @@ paths:
         `401 unauthenticated` as wrong credentials, so the response does not
         reveal whether the username exists.
 
-        Checks: `401` for bad credentials or a locked username.
+        The body is strict (`additionalProperties: false`). A malformed or
+        missing-field body returns `422 validation`; that response does not
+        reveal whether the username exists either.
+
+        Checks: `401` for bad credentials or a locked username; `422` for a
+        malformed or missing-field body.
       security: []
       requestBody:
         required: true
@@ -84,6 +95,8 @@ paths:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /auth/logout:
     post:
@@ -163,13 +176,7 @@ paths:
       security:
         - cookieAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: The finding id.
-          schema:
-            type: string
-            minLength: 1
+        - $ref: '#/components/parameters/FindingId'
       responses:
         '200':
           description: The finding joined with its asset.
@@ -192,25 +199,20 @@ paths:
         exactly `{reason}`; `who`, `actor` and `status` are not accepted.
 
         A `security lead` may accept risk on any finding. An `asset owner` may
-        accept risk only when the finding's asset `ownerEmail` equals the
-        signed-in user's `email`. Otherwise the response is `403 forbidden` and
+        accept risk only when the finding's asset `ownerEmail` matches the
+        signed-in user's `email` after trimming both values and comparing them
+        case-insensitively. Otherwise the response is `403 forbidden` and
         nothing changes. The status changes to `risk accepted` and a new audit
         entry records the user, the time, the previous value and the reason.
 
-        Checks, in order: `401` no session, `404` unknown finding, `403` owner
-        mismatch (or a missing/incorrect `X-Requested-With` header), `422`
-        empty or whitespace-only `reason` or a body with extra fields, `409`
-        finding not `open`.
+        Checks, in order: `401` no session, `403` missing or wrong
+        `X-Requested-With` header (CSRF), `404` unknown finding, `403` owner
+        mismatch, `422` empty or whitespace-only `reason` or a body with extra
+        fields, `409` finding not `open`.
       security:
         - cookieAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: The finding id.
-          schema:
-            type: string
-            minLength: 1
+        - $ref: '#/components/parameters/FindingId'
         - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
@@ -273,7 +275,8 @@ paths:
         attempted. The schema pattern and description, not only the backend,
         enforce the shape.
 
-        Checks, in order: `401`, then `422`.
+        Checks, in order: `401`, then `403` for a missing or wrong
+        `X-Requested-With` header (CSRF), then `422` for body validation.
       security:
         - cookieAuth: []
       parameters:
@@ -293,6 +296,8 @@ paths:
                 $ref: '#/components/schemas/Asset'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -309,13 +314,7 @@ paths:
       security:
         - cookieAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: The asset id.
-          schema:
-            type: string
-            minLength: 1
+        - $ref: '#/components/parameters/AssetId'
       responses:
         '200':
           description: The asset.
@@ -338,23 +337,20 @@ paths:
         The asset's current scan status does not change until that scan
         finishes; a later `GET /assets/{id}` reports the new status.
 
-        Checks, in order: `401`, then `404`.
+        Checks, in order: `401`, then `403` for a missing or wrong
+        `X-Requested-With` header (CSRF), then `404` for an unknown id.
       security:
         - cookieAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: The asset id.
-          schema:
-            type: string
-            minLength: 1
+        - $ref: '#/components/parameters/AssetId'
         - $ref: '#/components/parameters/CsrfHeader'
       responses:
         '202':
           description: The scan has started. The response has no body.
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -393,7 +389,10 @@ components:
       description: |
         Custom CSRF header required on every non-GET operation except login and
         logout. A missing or different value returns `403 forbidden` and
-        changes no state.
+        changes no state. `VERIFY:` FastAPI returns `422` for a missing
+        required `Header()` on the version #24 pins, so #24 maps that
+        missing-header validation error to `403 forbidden` in its exception
+        handler.
       schema:
         type: string
         enum:
@@ -435,9 +434,11 @@ components:
             $ref: '#/components/schemas/Error'
     ValidationError:
       description: |
-        The request body is invalid. Examples: an empty or whitespace-only
-        `reason` or `name`, a body with extra fields where the contract forbids
-        them, or a `repositoryUrl` that is not `https://github.com/<owner>/<repo>`.
+        The request body is invalid. Examples: a malformed or missing-field
+        login body, an empty or whitespace-only `reason` or `name`, a body with
+        extra fields where the contract forbids them, or a `repositoryUrl` that
+        is not a valid `https://github.com/<owner>/<repo>` URL. The response
+        does not say whether a login username exists.
       content:
         application/json:
           schema:
@@ -566,6 +567,10 @@ components:
 
     LoginRequest:
       type: object
+      description: |
+        Exactly `{username, password}`. Strict: an extra field returns
+        `422 validation` and changes nothing.
+      additionalProperties: false
       required:
         - username
         - password
@@ -649,10 +654,14 @@ components:
           type: boolean
         repositoryUrl:
           type: string
-          pattern: '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+          pattern: '^https://github\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/(?!\.{1,2}$)(?!.*\.git$)[A-Za-z0-9_.-]{1,100}$'
           description: |
             `https://github.com/<owner>/<repo>` only. No other host, scheme,
-            user info or extra path is accepted.
+            user info or extra path is accepted. The owner matches
+            `[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})` and the repo matches
+            `[A-Za-z0-9_.-]{1,100}`, is not `.` or `..`, and does not end in
+            `.git`. `VERIFY:` these are GitHub's owner and repository naming
+            rules.
         scanStatus:
           $ref: '#/components/schemas/ScanStatus'
         scanFailureReason:
@@ -741,6 +750,7 @@ components:
       required:
         - id
         - actor
+        - actorDisplayName
         - createdAt
         - field
         - previousValue
@@ -754,6 +764,13 @@ components:
         actor:
           type: string
           description: A user id, `re-scan`, or `system`.
+        actorDisplayName:
+          type:
+            - string
+            - 'null'
+          description: |
+            The actor's display name at the time of the action; `null` for
+            `re-scan` and `system`.
         createdAt:
           type: string
           format: date-time
@@ -863,6 +880,9 @@ components:
           type:
             - number
             - 'null'
+          minimum: 0
+          maximum: 1
+          description: EPSS probability between 0 and 1, or `null` when unavailable.
         epssStale:
           type: boolean
         status:
@@ -922,6 +942,7 @@ components:
 
     NewAssetInput:
       type: object
+      additionalProperties: false
       required:
         - name
         - ownerName
@@ -944,15 +965,22 @@ components:
           type:
             - string
             - 'null'
-          description: Always present; `null` when unset.
+          format: email
+          description: |
+            Always present; `null` when unset. When present, an email address.
+            `format` is an annotation by default, so #24 also validates it.
         criticality:
           $ref: '#/components/schemas/Criticality'
         internetFacing:
           type: boolean
         repositoryUrl:
           type: string
-          pattern: '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+          pattern: '^https://github\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/(?!\.{1,2}$)(?!.*\.git$)[A-Za-z0-9_.-]{1,100}$'
           description: |
-            `https://github.com/<owner>/<repo>` only. `http://`, a
-            `git@github.com:` form, a non-GitHub host or an extra path returns
-            `422 validation` and starts no scan.
+            `https://github.com/<owner>/<repo>` only. The owner matches
+            `[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})` and the repo matches
+            `[A-Za-z0-9_.-]{1,100}`, is not `.` or `..`, and does not end in
+            `.git`. `VERIFY:` these are GitHub's owner and repository naming
+            rules. `http://`, a `git@github.com:` form, a non-GitHub host, an
+            extra path, a `.` or `..` repo segment, or a repo ending in `.git`
+            returns `422 validation` and starts no scan.
