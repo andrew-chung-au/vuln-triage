@@ -1391,3 +1391,14 @@ Copy this template for each new entry:
 - files changed: `_docs/cloud-sessions.md` (§ 5.1 results; resolved `VERIFY:` items for Node 22, `jq`, branch prefix, commit author and Docker Hub hosts; Docker and Postgres not running at start) and this log. Cloud session: empty commit `1c6286a` pushed to `claude/keen-allen-185yyr` (not merged); `.scratch/` files only in the cloud VM
 - verification (tests run, reviewer verdict): reported by the cloud session and pasted by the human: banner printed; `make verify` PASS 35/35 on Node 22.22.0; `make issue-dump N=41` wrote both files; `core.hooksPath` = `.githooks`; author `Claude <noreply@anthropic.com>`, no `Claude-Session` trailer; branch push worked; `git push origin main` and `HEAD:main` refused by `guard_git.py` (GitHub ruleset not reached); Docker daemon not running, `service docker start` failed on `ulimit`, `sudo dockerd` worked and `hello-world` ran, then the daemon was stopped; Postgres service down. The local session read `.githooks/pre-push` to confirm an empty commit has nothing to verify
 - human review (what I checked or corrected, or `none`): the human ran the trial and sent each prompt. Commands that required approval: none in the cloud session (it reported none, including its `sudo dockerd` start and stop, which the human's prompt named); none locally beyond the allow rules
+
+### 2026-10-21 — Cloud-trial follow-ups (#48, #47 comment)
+
+- date: 2026-10-21
+- task/issue: #48 (new), #47 (comment)
+- agent role: main session (orchestrator), no subagents
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved filing one Docker-start issue and a #47 comment, after changing the ruleset bypass to `For pull requests only`; no key prompt file saved
+- files changed: GitHub: #48 created (draft criteria, D1/D2 for the human; not groomed), #47 comment 6315677576. Repo: `_docs/cloud-sessions.md` (§ 4.2 and § 5.1 follow-ups), `_docs/roadmap.md` (#48 note, check-in line) and this log
+- verification (tests run, reviewer verdict): read-only `gh api` check: ruleset 25525417 `enforcement: active`, admin bypass `pull_request`. No tests run (docs and issues only)
+- human review (what I checked or corrected, or `none`): the human approved filing #48 and the #47 comment, and changed the bypass themselves; D1/D2 on #48 not answered yet. Commands that required approval: `gh issue create` for #48 (GitHub write to the record); `make issue-comment N=47` (GitHub write to the record, under the `make *` allow rule)
