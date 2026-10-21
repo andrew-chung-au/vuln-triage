@@ -100,6 +100,8 @@ move to). (Guardrail design in Stage 2; brief content tests in Stage 4.)
   with a visible "brief unavailable" marker; never a brief with a mismatched
   version.
 
+A finding whose brief has not been generated yet shows the structured finding with a 'brief pending' marker; 'brief unavailable' is only for a brief that was rejected, timed out or errored.
+
 ### US-7: Daily refresh and re-score
 As a security lead, KEV/EPSS data is refreshed daily and findings are
 re-scored through the API.
@@ -166,6 +168,8 @@ installed version no longer falls in any affected range.
   finding stays `open`. A finding whose advisory has been withdrawn becomes
   `withdrawn`, not `fixed` (E4).
 
+A signed-in user may request a re-scan of an asset from the dashboard, in addition to the scheduled re-scan.
+
 ### US-11: Dashboard with status and audit trail
 As a security lead, I see findings per asset with status (`open` /
 `risk accepted` / `fixed` / `withdrawn`) and an audit trail; risk acceptance happens only
@@ -173,6 +177,8 @@ by a human in the dashboard. Dashboard users sign in, and the signed-in user is
 recorded as "who" in every audit entry. Both the asset owner and the security
 lead may set `risk accepted`. No automated component may set it. The
 authentication mechanism is defined in Stage 2.
+
+An asset owner may accept risk only on an asset whose owner email matches their signed-in email; the security lead may accept on any asset.
 - Acceptance: the dashboard lists findings per asset with current status;
   changing status records who, when, and the previous value; no automated
   component sets `risk accepted`.
