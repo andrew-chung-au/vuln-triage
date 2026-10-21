@@ -1,6 +1,6 @@
 # Running VulnTriage work in Claude Code cloud sessions
 
-How to use Claude Code on the web (cloud sessions) for this project: what differs from the local sandbox, the settings to enter, and the steps to follow. Status: the repo changes are done (#44, `8eeaf53`); the GitHub and claude.ai setup (section 4) and the trial (section 5) are still to do. Cloud credit is limited, so the project must not depend on it. The default Docker setup is option A in the local sandbox (`_docs/docker-runbook.md`).
+How to use Claude Code on the web (cloud sessions) for this project: what differs from the local sandbox, the settings to enter, and the steps to follow. Status: the repo changes are done (#44, `8eeaf53`), the GitHub and claude.ai setup (section 4) is done, and the trial ran on 2026-10-21 (results in section 5.1). Before Docker work, the daemon start needs a make target (section 5.1). Cloud credit is limited, so the project must not depend on it. The default Docker setup is option A in the local sandbox (`_docs/docker-runbook.md`).
 
 Sources: <https://code.claude.com/docs/en/claude-code-on-the-web>, <https://code.claude.com/docs/en/cloud-environments> and <https://code.claude.com/docs/en/web-quickstart>, read 2026-10-20 and 2026-10-21. Details the docs don't state, or that may change, are marked `VERIFY:`. Check them in the trial session (section 5).
 
@@ -8,8 +8,8 @@ Sources: <https://code.claude.com/docs/en/claude-code-on-the-web>, <https://code
 
 What a cloud session gives this project:
 
-- **Docker, Docker Compose and PostgreSQL 16 are preinstalled** in the cloud VM. The local sandbox has no Docker. That is what blocks #31.
-- Python with uv, Node 22 (on `PATH` by default), npm, git and `gh` are preinstalled. The VM has about 4 vCPUs, 16 GB of RAM and 30 GB of disk.
+- **Docker, Docker Compose and PostgreSQL 16 are preinstalled** in the cloud VM, but none of them is running when a session starts (section 5.1). The local sandbox has no Docker. That is what blocks #31.
+- Node 22, npm, Python 3.13 with uv, git and `gh` are preinstalled (trial: Node 22.22.0, uv 0.11.32, older than the sandbox's 24.22.0 and 0.13.1). Sessions run as `root`. The VM has about 4 vCPUs, 16 GB of RAM and 30 GB of disk.
 - Sessions can run subagents, so one session can run the whole PM → Engineer → QA lifecycle for an issue.
 - Usage counts toward the plan's usage limits like any other Claude Code usage; there's no separate charge for the VM. Parallel sessions use limits proportionately. `VERIFY:` how any promotional cloud credits on the account are applied.
 
@@ -35,19 +35,19 @@ What the agents see:
 | GitHub write access | Read-only code token | The GitHub proxy allows pushes to **any** branch (it blocks only branch deletion and non-branch pushes), using the human's GitHub credential | The ruleset on `main` is the real control (section 4.2) |
 | Pushes from the agent | Refused | Only `git push -u origin <current claude/* branch>` | `.claude/settings.json` denies pushes to `main`, force and delete; `guard_git.py` blocks every other push, except that cloud one |
 | `gh issue ...` / `gh pr ...` | Work | **403**: the proxy rejects GraphQL; only `gh api` (REST) works | `make issue-dump`, `issue-comment` and `issue-close` use REST in both |
-| Node | 24.22.0 (dev container) | 22 by default | CI already uses the runner's default Node; `VERIFY:` `npm ci` and the 35 tests pass on 22 |
-| Docker / Postgres | Not available | Available | Unblocks #31 |
-| Git hooks and dependencies | Installed by `setup.sh` | Not installed | The `SessionStart` hook `cloud_session_start.sh` runs `make install` (when needed) and `make hooks` |
-| Commit author | `setup.sh` name and noreply email | Not documented | `VERIFY:` in the trial (section 5) |
+| Node | 24.22.0 (dev container) | 22.22.0 | `make install` and the 35 tests pass on 22 (trial) |
+| Docker / Postgres | Not available | Installed, not running; `service docker start` fails, `sudo dockerd` works | Unblocks #31 once a make target starts the daemon (section 5.1) |
+| Git hooks and dependencies | Installed by `setup.sh` | Not installed | The `SessionStart` hook `cloud_session_start.sh` runs `make install` (when needed) and `make hooks` (trial: `core.hooksPath` is `.githooks`) |
+| Commit author | `setup.sh` name and noreply email | `Claude <noreply@anthropic.com>` | Pushes still go out under the human's GitHub account |
 
 ## 3. Repo changes (done in #44, `8eeaf53`)
 
-- **`Makefile`:** `issue-dump` (two flat JSON files in `.scratch/`), `issue-comment N= FILE=` and `issue-close N=`, all through `gh api`. `issue-dump` pipes `gh api --paginate --slurp` into `jq`, so `jq` must exist in the cloud image (`VERIFY:`).
+- **`Makefile`:** `issue-dump` (two flat JSON files in `.scratch/`), `issue-comment N= FILE=` and `issue-close N=`, all through `gh api`. `issue-dump` pipes `gh api --paginate --slurp` into `jq`, which the cloud image has (trial).
 - **`.claude/settings.json`:** allows `gh api repos/*`; asks before `make issue-close`; denies `git push * main*`, `--force`, `-f` and `--delete`; adds the `SessionStart` hook.
-- **`guard_git.py`:** allows `git push -u origin <current branch>` only when `CLAUDE_CODE_REMOTE` is `true` and the current branch starts with `claude/` (`VERIFY:` the prefix cloud sessions use).
+- **`guard_git.py`:** allows `git push -u origin <current branch>` only when `CLAUDE_CODE_REMOTE` is `true` and the current branch starts with `claude/` (the trial branch was `claude/keen-allen-185yyr`).
 - **`cloud_session_start.sh`:** does nothing locally; in the cloud, prepares the session and prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. Agents use the banner instead of reading environment variables.
 - **`AGENTS.md`:** the cloud profile in Environment and Branching.
-- **Known gaps:** #47 (ways around the guard, such as `git -c alias.p=push`, and `FILE` checks); under "Later".
+- **Known gaps:** #47 (ways around the guard, such as `git -c alias.p=push`, and `FILE` checks); under "Later". The trial found two more (section 5.1): the banner says "Docker available" although the daemon isn't running, and the guard blocks the read `git config core.hooksPath` (`git config --get core.hooksPath` works).
 
 ## 4. GitHub and claude.ai setup (the human does these)
 
@@ -60,7 +60,7 @@ A cloud session clones the GitHub remote, not the sandbox folder. From the clean
 The ruleset already targets the default branch and requires a pull request (merge commits only), the `verify` status check, no force pushes and no deletion. Set:
 
 - **Enforcement status:** `Active`. While it is `Disabled`, only `guard_git.py` stands between a session and `main`, and #47 lists ways around it.
-- **Bypass list:** change the admin role's bypass mode from `Always` to `For pull requests only` (or remove it). Cloud pushes go out under the human's GitHub account; with `Always`, a session could probably push straight to `main` (`VERIFY:` in the trial). The cost: the human also stops pushing to `main` directly and merges PRs instead, which is the same flow as cloud work.
+- **Bypass list:** change the admin role's bypass mode from `Always` to `For pull requests only` (or remove it). Cloud pushes go out under the human's GitHub account; with `Always`, a session could probably push straight to `main` (`VERIFY:` the trial couldn't test it, because `guard_git.py` refused both pushes to `main` before they reached GitHub). The cost: the human also stops pushing to `main` directly and merges PRs instead, which is the same flow as cloud work.
 
 ### 4.3 Pull request settings (Settings → General → Pull Requests)
 
@@ -78,7 +78,7 @@ The GitHub account is linked by authorizing it on GitHub, not by email: the Clau
 
 Pushes, PRs and Claude's replies to review comments appear under that GitHub username. If the wrong account was linked, disconnect it at <https://claude.ai/customize/connectors>, sign in to the right one on GitHub, and connect again.
 
-Email privacy: if GitHub's **Block command line pushes that expose my email** is on and a cloud commit uses a private email, the push is refused. The trial shows which author email cloud commits use.
+Email privacy: cloud commits are authored as `Claude <noreply@anthropic.com>` (trial), so GitHub's **Block command line pushes that expose my email** doesn't affect them.
 
 ### 4.5 Create the environment (claude.ai/code)
 
@@ -87,7 +87,7 @@ Email privacy: if GitHub's **Block command line pushes that expose my email** is
 | Name | `vuln-triage` | |
 | Network access | `Limited` | Blocks arbitrary sites, so a session that reads a malicious issue or page can't send data out. Avoid `Full`. |
 | Allow package managers | Checked | `make install` (npm) and `make openapi-validate` (uv and PyPI) |
-| Allowed domains | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` (one per line) | Docker Hub, for `docker run hello-world` in the trial and Postgres images for #31. `VERIFY:` whether these are enough; a failed pull names the blocked host. GitHub needs no entry: the GitHub proxy works whatever the network setting. |
+| Allowed domains | `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` (one per line) | Docker Hub, for Postgres images for #31. The trial pulled `hello-world` with these; the docs' Trusted list also has `index.docker.io` and `production.cloudfront.docker.com`, if a pull is ever blocked. GitHub needs no entry: the GitHub proxy works whatever the network setting. |
 | Network secrets | None | Nothing needs a key yet. A secret stored here stays outside the VM. |
 | Setup script | None | The repo's `SessionStart` hook does project setup, so it is versioned and reviewed. (If one is ever added: it runs as root, a non-zero exit stops the session from starting, and it should finish within 5 minutes.) |
 | Environment variables | None | Anyone using the environment can read them; never put a token or secret here. |
@@ -111,6 +111,25 @@ A short, low-cost run that checks every `VERIFY:` above, on a throwaway branch w
    - `git push origin main` and `git push origin HEAD:main` are both refused. The deny rule `git push * main*` doesn't match `HEAD:main`, so that one tests `guard_git.py`.
 4. Close the trial PR without merging; the branch is deleted on GitHub (automatically, or by hand).
 5. Record the results in `_docs/ai-usage-log.md` and fix any `VERIFY:` here that turned out different.
+
+### 5.1 Trial results (2026-10-21, branch `claude/keen-allen-185yyr`)
+
+| Check | Result |
+|---|---|
+| Banner | Printed; the hook also ran `make install` (npm reported "1 high severity vulnerability" in the locked frontend dependencies) |
+| `make verify` | PASS, 35/35 tests, on Node 22.22.0 |
+| `make issue-dump N=41` | Both files written through `gh api` |
+| Git hooks | `core.hooksPath` is `.githooks`, with all five hooks. The pre-push hook printed nothing because the empty commit changes no project files, so it had nothing to verify |
+| Commit author | `Claude <noreply@anthropic.com>`; no `Claude-Session` trailer |
+| Push the session branch | Worked |
+| `git push origin main`, `git push origin HEAD:main` | Both refused by `guard_git.py`; GitHub's ruleset was not reached |
+| Docker | Not running at session start. `sudo service docker start` fails (`ulimit: error setting limit (Operation not permitted)`). `sudo dockerd` in the background works: the socket appears in about 2 s, `hello-world` pulled from Docker Hub, Compose v5.6.0 |
+| Postgres | Installed (16/main, port 5432), service down. The docs say `service postgresql start` starts it (not tried) |
+
+Follow-ups:
+- **Docker start:** a `docker-start`/`docker-stop` make target that starts `sudo dockerd` in the background, records its PID, waits for the socket, and stops only that PID. The `Makefile` and the banner in `cloud_session_start.sh` are protected, so this needs an issue and the human's approval.
+- **Guard:** `guard_git.py` treats `git config core.hooksPath` (a read) as a change. Add it to #47.
+- **Ruleset bypass:** still `Always`; see section 4.2.
 
 ## 6. Running an issue in the cloud (routine)
 
