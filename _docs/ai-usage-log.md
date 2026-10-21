@@ -1413,3 +1413,14 @@ Copy this template for each new entry:
 - files changed: `_docs/openapi.yaml` (commit `7355d8e616ef03fb7b9f8cc7b02e9c798c88ce53`: nine n8n/MCP operations, `n8nAuth`/`mcpAuth`, `getAsset` shared with MCP, new schemas, untrusted-text marks, `FindingFields` split), `_docs/api.md` (commit `d89597aa1285d9a5eceb155cb638c91c856a3361`: 19-row table, auth/authorization, check order, schemas, pagination, `types.ts` note, Stage 3 checklist linking #50, #27 wire decisions) and this log. GitHub: Engineer comment https://github.com/andrew-chung-au/vuln-triage/issues/27#issuecomment-6316040760
 - verification (tests run, reviewer verdict): `make openapi-validate` exit 0; the same target on `.scratch/openapi-broken-ref.yaml` (one broken response `$ref`) exit 2; `.scratch/check_27.py` ALL PASS (operation set, allowlists by scheme, error codes, untrusted-field list, fixture absent, api.md table equals contract); `make verify BASE=950dcbe` PASS (35/35 tests, whitespace PASS, no test files changed). Runtime refused cases are #24's. No reviewer verdict yet
 - human review (what I checked or corrected, or `none`): none yet; the human's review of `_docs/openapi.yaml` at `7355d8e616ef03fb7b9f8cc7b02e9c798c88ce53` is pending (orchestrator). Commands that required approval: none (no `ask` rule matched; no merits request)
+
+### 2026-10-21 — #27 Engineer: cveId untrusted mark and MCP overview fix
+
+- date: 2026-10-21
+- task/issue: #27 (two gaps from QA comment 6316919374, fixed by the human's choice after QA PASS)
+- agent role: Software Engineer subagent, launched by the orchestrator in a Claude Code cloud session on branch `claude/compassionate-hamilton-k90q3r`
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task to mark `cveId` untrusted and fix the overview text on MCP untrusted fields; no new key prompt saved
+- files changed: `_docs/openapi.yaml` (commit `e74b2d18366016d0c6e018766e7e65c20d454a96`: `FindingFields.cveId` description marked untrusted; overview names `vulnerabilityId`, `aliases`, `cveId` and `AffectedRange.range` as individually marked fields outside `untrustedAdvisoryData`; label unchanged), `_docs/api.md` (commit `07e6d40de6f33afd2a00b9ce8566ed29cc3011d2`: `cveId` added to the untrusted list) and this log. GitHub: Engineer comment https://github.com/andrew-chung-au/vuln-triage/issues/27#issuecomment-6316974086
+- verification (tests run, reviewer verdict): `.scratch/compare_openapi_no_desc.py` against `97893c1`: parsed schemas identical with `description` keys removed; `make openapi-validate` OK; `make verify BASE=97893c1` PASS (35/35 tests, whitespace PASS, no test files changed). No reviewer verdict on this change
+- human review (what I checked or corrected, or `none`): none yet. Commands that required approval: none (no `ask` rule matched; no merits request)
