@@ -1,6 +1,6 @@
-import { validateAssetName, validateRiskReason } from "@/lib/validation";
-import { DEMO_CREDENTIALS, DEMO_USER, seedAssets, seedFindings } from "./mockData";
-import { ServiceError } from "./types";
+import { validateAssetName, validateOwnerEmail, validateRepositoryUrl, validateRiskReason } from "@/lib/validation";
+import { DEMO_CREDENTIALS, DEMO_OWNER_CREDENTIALS, DEMO_OWNER_USER, DEMO_USER, seedAssets, seedFindings } from "./mockData";
+import { AUDIT_SOURCE_DASHBOARD, ServiceError, isUser } from "./types";
 import type { Asset, AuditEntry, Criticality, Finding, FindingWithAsset, Services, Tier, User } from "./types";
 
 let assets: Asset[] = seedAssets();
@@ -12,13 +12,18 @@ const SESSION_KEY = "vulntriage-services-user";
 let sessionUser: User | null = null;
 let sessionLoaded = false;
 
+/** A session stored by an older build (no role or displayName) counts as no session. */
+function parseStoredUser(value: unknown): User | null {
+  return isUser(value) ? value : null;
+}
+
 function loadSession() {
   if (sessionLoaded) return;
   sessionLoaded = true;
   if (typeof window === "undefined") return;
   try {
     const raw = window.sessionStorage.getItem(SESSION_KEY);
-    sessionUser = raw ? (JSON.parse(raw) as User) : null;
+    sessionUser = raw ? parseStoredUser(JSON.parse(raw)) : null;
   } catch {
     sessionUser = null;
   }
@@ -73,7 +78,7 @@ export function rankFindings(list: FindingWithAsset[]): FindingWithAsset[] {
     }
     const c = CRIT_ORDER[b.asset.criticality] - CRIT_ORDER[a.asset.criticality];
     if (c) return c;
-    return a.firstSeen.localeCompare(b.firstSeen);
+    return a.firstDetectedAt.localeCompare(b.firstDetectedAt);
   });
 }
 
@@ -101,10 +106,14 @@ export const mockServices: Services = {
   async login(username, password) {
     await delay();
     const name = username.trim().toLowerCase();
-    if (name !== DEMO_CREDENTIALS.username || password !== DEMO_CREDENTIALS.password) {
+    const match = [
+      { credentials: DEMO_CREDENTIALS, user: DEMO_USER },
+      { credentials: DEMO_OWNER_CREDENTIALS, user: DEMO_OWNER_USER },
+    ].find((c) => c.credentials.username === name && c.credentials.password === password);
+    if (!match) {
       throw new ServiceError("unauthenticated", "Incorrect username or password.");
     }
-    const user = clone(DEMO_USER);
+    const user = clone(match.user);
     setSessionUser(user);
     return clone(user);
   },
@@ -136,22 +145,32 @@ export const mockServices: Services = {
   async acceptRisk(id, reason) {
     await delay();
     const user = requireSession();
-    const err = validateRiskReason(reason);
-    if (err) throw new ServiceError("validation", err);
+    // Contract order: 401, 404, 403 (owner mismatch), 422, 409.
     const f = findings.find((x) => x.id === id);
     if (!f) throw new ServiceError("not_found", "Finding not found.");
+    if (user.role === "asset owner") {
+      const owner = assets.find((a) => a.id === f.assetId)?.ownerEmail ?? null;
+      if (owner === null || owner.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+        throw new ServiceError("forbidden", "You can only accept risk on findings for assets you own.");
+      }
+    }
+    const err = validateRiskReason(reason);
+    if (err) throw new ServiceError("validation", err);
     if (f.status !== "open") throw new ServiceError("conflict", "Only open findings can be risk accepted.");
     const entry: AuditEntry = {
       id: nextAuditId(f),
-      who: user.name,
-      when: new Date().toISOString(),
+      actor: user.id,
+      actorDisplayName: user.displayName,
+      createdAt: new Date().toISOString(),
       field: "status",
       previousValue: f.status,
-      newValue: "risk_accepted",
+      newValue: "risk accepted",
       reason: reason.trim(),
+      source: AUDIT_SOURCE_DASHBOARD,
+      restoresEntryId: null,
     };
     f.auditTrail.push(entry);
-    f.status = "risk_accepted";
+    f.status = "risk accepted";
     return join(f);
   },
 
@@ -174,6 +193,10 @@ export const mockServices: Services = {
     requireSession();
     const err = validateAssetName(input.name);
     if (err) throw new ServiceError("validation", err);
+    const emailErr = validateOwnerEmail(input.ownerEmail);
+    if (emailErr) throw new ServiceError("validation", emailErr);
+    const urlErr = validateRepositoryUrl(input.repositoryUrl);
+    if (urlErr) throw new ServiceError("validation", urlErr);
     const asset: Asset = {
       id: `a${Date.now()}-${assets.length + 1}`,
       name: input.name.trim(),
@@ -182,9 +205,20 @@ export const mockServices: Services = {
       criticality: input.criticality,
       internetFacing: input.internetFacing,
       repositoryUrl: input.repositoryUrl.trim(),
-      scanStatus: "not_scanned",
+      scanStatus: "not yet scanned",
+      scanFailureReason: null,
+      lastScanAt: null,
+      lastCommitSha: null,
+      scanWarnings: [],
     };
     assets.push(asset);
     return clone(asset);
+  },
+
+  async reScan(assetId) {
+    await delay();
+    requireSession();
+    if (!assets.some((a) => a.id === assetId)) throw new ServiceError("not_found", "Asset not found.");
+    // The scan runs asynchronously: scanStatus changes only when it finishes, so the mock leaves it alone.
   },
 };

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { User } from "@/services/types";
+import { isUser, type User } from "@/services/types";
 
 const KEY = "vulntriage-user";
 let current: User | null = null;
@@ -11,7 +11,9 @@ function load() {
   loaded = true;
   try {
     const raw = window.sessionStorage.getItem(KEY);
-    current = raw ? (JSON.parse(raw) as User) : null;
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    // A user stored by an older build (no role or displayName) counts as signed out.
+    current = isUser(parsed) ? parsed : null;
   } catch {
     current = null;
   }

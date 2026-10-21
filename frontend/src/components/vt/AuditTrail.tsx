@@ -4,7 +4,8 @@ import { formatDate } from "./Badges";
 const isStatus = (value: string): value is FindingStatus => value in STATUS_LABEL;
 
 /** Stored audit values are wire values; the screen shows the human label. */
-export function formatAuditValue(field: string, value: string): string {
+export function formatAuditValue(field: string, value: string | null): string {
+  if (value === null) return "—";
   return field === "status" && isStatus(value) ? STATUS_LABEL[value] : value;
 }
 
@@ -20,8 +21,8 @@ export function AuditTrail({ entries }: { entries: AuditEntry[] }) {
         <tbody className="divide-y divide-border">
           {entries.map((a) => (
             <tr key={a.id}>
-              <td className="px-3 py-2">{a.who}</td>
-              <td className="px-3 py-2 font-mono text-xs">{formatDate(a.when)}</td>
+              <td className="px-3 py-2">{a.actorDisplayName ?? a.actor}</td>
+              <td className="px-3 py-2 font-mono text-xs">{formatDate(a.createdAt)}</td>
               <td className="px-3 py-2">{formatAuditValue(a.field, a.previousValue)}</td>
               <td className="px-3 py-2">{formatAuditValue(a.field, a.newValue)}</td>
               <td className="px-3 py-2">{a.reason ?? "—"}</td>

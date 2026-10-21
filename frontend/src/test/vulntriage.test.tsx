@@ -9,7 +9,7 @@ import { getUser, setUser } from "@/lib/auth";
 import { validateRiskReason } from "@/lib/validation";
 import { routeTree } from "@/routeTree.gen";
 import { ServiceError, demoCredentials, isOwnerless } from "@/services";
-import { DEMO_CREDENTIALS, DEMO_USER, seedFindings } from "@/services/mockData";
+import { DEMO_CREDENTIALS, DEMO_OWNER_CREDENTIALS, DEMO_OWNER_USER, DEMO_USER, seedFindings } from "@/services/mockData";
 import { mockServices, resetMockData, resetMockSession } from "@/services/mockService";
 import type { FindingWithAsset, NewAssetInput } from "@/services/types";
 
@@ -20,7 +20,7 @@ function newAsset(overrides: Partial<NewAssetInput> = {}): NewAssetInput {
     ownerEmail: null,
     criticality: "medium",
     internetFacing: false,
-    repositoryUrl: "https://git.example.com/acme/new-asset",
+    repositoryUrl: "https://github.com/acme/new-asset",
     ...overrides,
   };
 }
@@ -117,16 +117,54 @@ describe("mock services", () => {
   it("returns mock assets including ownerless, scan error and not-yet-scanned", async () => {
     const assets = await mockServices.listAssets();
     expect(assets.some((a) => isOwnerless(a))).toBe(true);
-    expect(assets.some((a) => a.scanStatus === "scan_error")).toBe(true);
-    expect(assets.some((a) => a.scanStatus === "not_scanned")).toBe(true);
+    expect(assets.some((a) => a.scanStatus === "scan failed")).toBe(true);
+    expect(assets.some((a) => a.scanStatus === "not yet scanned")).toBe(true);
+  });
+
+  it("covers all five scan statuses and sets scanFailureReason only for a failed scan", async () => {
+    const assets = await mockServices.listAssets();
+    expect(new Set(assets.map((a) => a.scanStatus))).toEqual(
+      new Set(["not yet scanned", "scan failed", "scanned, findings", "scanned, incomplete", "scanned, clean"]),
+    );
+    for (const a of assets) {
+      expect(a.scanFailureReason !== null, a.id).toBe(a.scanStatus === "scan failed");
+    }
+    expect(assets.find((a) => a.scanStatus === "scan failed")!.scanFailureReason).toBe("lockfile parse error");
+    expect(assets.find((a) => a.scanStatus === "scanned, incomplete")!.scanWarnings.length).toBeGreaterThan(0);
+  });
+
+  it("seeds findings with every contract key and the required edge cases", async () => {
+    const list = await mockServices.listFindings();
+    const keys = [
+      "id", "vulnerabilityId", "aliases", "cveId", "tier", "assetId", "package", "ecosystem", "dependencies", "fixedVersion",
+      "affectedRanges", "kev", "kevStale", "epss", "epssStale", "status", "firstDetectedAt", "fixedAt", "stale", "staleSince",
+      "signalsChanged", "statusBeforeWithdrawal", "rankReason", "briefStatus", "brief", "auditTrail", "asset",
+    ];
+    for (const f of list) {
+      expect(Object.keys(f).sort(), f.id).toEqual([...keys].sort());
+      expect(f.rankReason.length, f.id).toBeGreaterThan(0);
+    }
+    expect(list.some((f) => f.dependencies.some((d) => d.version === null))).toBe(true);
+    expect(list.some((f) => f.kev === "KEV: n/a (no CVE)" && f.cveId === null)).toBe(true);
+    expect(list.some((f) => f.status === "withdrawn" && f.statusBeforeWithdrawal !== null)).toBe(true);
+    expect(list.some((f) => f.stale)).toBe(true);
+    expect(new Set(list.map((f) => f.briefStatus))).toEqual(new Set(["available", "pending", "unavailable"]));
   });
 
   it("accepting risk sets the status and records an audit entry with the reason", async () => {
     const updated = await mockServices.acceptRisk("f1", "  Mitigated by WAF rule 42  ");
-    expect(updated.status).toBe("risk_accepted");
+    expect(updated.status).toBe("risk accepted");
     const entry = updated.auditTrail.at(-1)!;
-    expect(entry).toMatchObject({ who: DEMO_USER.name, previousValue: "open", newValue: "risk_accepted", reason: "Mitigated by WAF rule 42" });
-    expect((await mockServices.getFinding("f1")).status).toBe("risk_accepted");
+    expect(entry).toMatchObject({
+      actor: DEMO_USER.id,
+      actorDisplayName: DEMO_USER.displayName,
+      previousValue: "open",
+      newValue: "risk accepted",
+      reason: "Mitigated by WAF rule 42",
+      source: "dashboard",
+      restoresEntryId: null,
+    });
+    expect((await mockServices.getFinding("f1")).status).toBe("risk accepted");
   });
 
   it("rejects wrong credentials with a typed error", async () => {
@@ -190,6 +228,7 @@ describe("service session", () => {
       ["listAssets", () => mockServices.listAssets()],
       ["getAsset", () => mockServices.getAsset("a1")],
       ["registerAsset", () => mockServices.registerAsset(newAsset())],
+      ["reScan", () => mockServices.reScan("a1")],
     ];
     for (const [name, call] of calls) {
       const err = await getRejection(call());
@@ -346,25 +385,39 @@ describe("audit trail", () => {
 
   it("stores wire values in seeded and newly written audit entries", async () => {
     const accepted = await mockServices.getFinding("f4");
-    expect(accepted.auditTrail[0]).toMatchObject({ previousValue: "open", newValue: "risk_accepted" });
+    expect(accepted.auditTrail[0]).toMatchObject({ previousValue: "open", newValue: "risk accepted" });
     expect((await mockServices.getFinding("f6")).auditTrail[0]).toMatchObject({ previousValue: "open", newValue: "fixed" });
     expect((await mockServices.getFinding("f7")).auditTrail[0]).toMatchObject({ previousValue: "open", newValue: "withdrawn" });
 
     const updated = await mockServices.acceptRisk("f1", "Mitigated");
-    expect(updated.auditTrail.at(-1)).toMatchObject({ who: DEMO_USER.name, previousValue: "open", newValue: "risk_accepted" });
+    expect(updated.auditTrail.at(-1)).toMatchObject({ actor: DEMO_USER.id, previousValue: "open", newValue: "risk accepted" });
   });
 
   it("renders status wire values through STATUS_LABEL and leaves other fields unchanged", () => {
+    const base = { actor: "u1", actorDisplayName: "Jordan Vale", createdAt: "2026-09-01T14:32:00Z", reason: null, source: "dashboard", restoresEntryId: null };
     render(
       <AuditTrail entries={[
-        { id: "e1", who: "Jordan Vale", when: "2026-09-01T14:32:00Z", field: "status", previousValue: "open", newValue: "risk_accepted" },
-        { id: "e2", who: "Jordan Vale", when: "2026-09-01T14:32:00Z", field: "reason", previousValue: "old text", newValue: "new text" },
+        { ...base, id: "e1", field: "status", previousValue: "open", newValue: "risk accepted" },
+        { ...base, id: "e2", field: "reason", previousValue: "old text", newValue: "new text" },
       ]} />,
     );
     expect(screen.getByText("risk accepted")).toBeInTheDocument();
     expect(screen.queryByText("risk_accepted")).not.toBeInTheDocument();
     expect(screen.getByText("old text")).toBeInTheDocument();
     expect(screen.getByText("new text")).toBeInTheDocument();
+  });
+
+  it("shows actorDisplayName, falling back to actor, and a dash for a null previous value", () => {
+    const base = { createdAt: "2026-09-01T14:32:00Z", reason: null, source: "OSV", restoresEntryId: null, field: "status", newValue: "fixed" };
+    render(
+      <AuditTrail entries={[
+        { ...base, id: "e1", actor: "u1", actorDisplayName: "Jordan Vale", previousValue: "open" },
+        { ...base, id: "e2", actor: "re-scan", actorDisplayName: null, previousValue: null },
+      ]} />,
+    );
+    expect(screen.getByText("Jordan Vale")).toBeInTheDocument();
+    expect(screen.getByText("re-scan")).toBeInTheDocument();
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -431,5 +484,235 @@ describe("screens", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     await waitFor(() => expect(getUser()).toBeNull());
     await expect(mockServices.currentUser()).rejects.toMatchObject({ code: "unauthenticated" });
+  });
+});
+
+async function signInAsOwner() {
+  return mockServices.login(DEMO_OWNER_CREDENTIALS.username, DEMO_OWNER_CREDENTIALS.password);
+}
+
+describe("reScan", () => {
+  it("rejects unauthenticated without a session", async () => {
+    const err = await getRejection(mockServices.reScan("a1"));
+    expect(err.code).toBe("unauthenticated");
+  });
+
+  it("rejects not_found for an unknown asset", async () => {
+    await signIn();
+    const err = await getRejection(mockServices.reScan("missing"));
+    expect(err).toBeInstanceOf(ServiceError);
+    expect(err.code).toBe("not_found");
+  });
+
+  it("resolves undefined and leaves the asset's scanStatus unchanged, for any signed-in role", async () => {
+    await signIn();
+    for (const id of ["a1", "a5", "a6"]) {
+      const before = await mockServices.getAsset(id);
+      await expect(mockServices.reScan(id)).resolves.toBeUndefined();
+      expect(await mockServices.getAsset(id)).toEqual(before);
+    }
+    await signInAsOwner();
+    await expect(mockServices.reScan("a2")).resolves.toBeUndefined();
+  });
+});
+
+describe("forbidden and acceptRisk check order", () => {
+  it("signs in the asset owner demo user with the asset owner role", async () => {
+    const user = await signInAsOwner();
+    expect(user).toEqual(DEMO_OWNER_USER);
+    expect(user.role).toBe("asset owner");
+  });
+
+  it("rejects an asset owner whose email does not match the asset owner with forbidden, changing nothing", async () => {
+    await signInAsOwner();
+    const before = await mockServices.getFinding("f2");
+    const err = await getRejection(mockServices.acceptRisk("f2", "Valid reason"));
+    expect(err).toBeInstanceOf(ServiceError);
+    expect(err.code).toBe("forbidden");
+    const after = await mockServices.getFinding("f2");
+    expect(after.status).toBe(before.status);
+    expect(after.auditTrail).toEqual(before.auditTrail);
+  });
+
+  it("rejects forbidden for an asset owner on an ownerless asset", async () => {
+    await signInAsOwner();
+    const err = await getRejection(mockServices.acceptRisk("f8", "Valid reason"));
+    expect(err.code).toBe("forbidden");
+  });
+
+  it("lets the matching asset owner accept risk on their own asset", async () => {
+    await signInAsOwner();
+    const updated = await mockServices.acceptRisk("f1", "Owner accepts");
+    expect(updated.status).toBe("risk accepted");
+    expect(updated.auditTrail.at(-1)).toMatchObject({ actor: DEMO_OWNER_USER.id, actorDisplayName: DEMO_OWNER_USER.displayName });
+  });
+
+  it("never forbids a security lead", async () => {
+    await signIn();
+    await expect(mockServices.acceptRisk("f2", "Lead accepts")).resolves.toMatchObject({ status: "risk accepted" });
+  });
+
+  it("returns not_found, not validation, for an unknown id with an empty reason", async () => {
+    await signIn();
+    const err = await getRejection(mockServices.acceptRisk("missing", ""));
+    expect(err.code).toBe("not_found");
+  });
+
+  it("returns forbidden, not validation, for an owner mismatch with an empty reason", async () => {
+    await signInAsOwner();
+    const err = await getRejection(mockServices.acceptRisk("f2", "  "));
+    expect(err.code).toBe("forbidden");
+    const after = await mockServices.getFinding("f2");
+    expect(after.status).toBe("open");
+    expect(after.auditTrail).toHaveLength(0);
+  });
+
+  it("returns forbidden, not conflict, for an owner mismatch on a non-open finding", async () => {
+    await signInAsOwner();
+    const before = await mockServices.getFinding("f4");
+    const err = await getRejection(mockServices.acceptRisk("f4", "Valid reason"));
+    expect(err.code).toBe("forbidden");
+    expect(await mockServices.getFinding("f4")).toEqual(before);
+  });
+});
+
+describe("registerAsset contract validation", () => {
+  beforeEach(async () => {
+    await signIn();
+  });
+
+  it("refuses a repository URL outside https://github.com/<owner>/<repo> and creates no asset", async () => {
+    const before = await mockServices.listAssets();
+    const bad = [
+      "http://github.com/a/b",
+      "git@github.com:a/b",
+      "https://gitlab.com/a/b",
+      "https://github.com/a/b/extra",
+      "https://github.com/a/..",
+      "https://github.com/a/b.git",
+      "",
+    ];
+    for (const repositoryUrl of bad) {
+      const err = await getRejection(mockServices.registerAsset(newAsset({ repositoryUrl })));
+      expect(err, repositoryUrl).toBeInstanceOf(ServiceError);
+      expect(err.code, repositoryUrl).toBe("validation");
+    }
+    expect(await mockServices.listAssets()).toEqual(before);
+  });
+
+  it("refuses an ownerEmail that is not an email address but stores a blank as null", async () => {
+    const err = await getRejection(mockServices.registerAsset(newAsset({ ownerEmail: "not-an-email" })));
+    expect(err.code).toBe("validation");
+    const blank = await mockServices.registerAsset(newAsset({ ownerEmail: "   " }));
+    expect(blank.ownerEmail).toBeNull();
+  });
+
+  it("registers a valid GitHub URL as a not-yet-scanned asset with empty scan detail", async () => {
+    const created = await mockServices.registerAsset(newAsset({ repositoryUrl: "https://github.com/acme/new-asset" }));
+    expect(created).toMatchObject({
+      scanStatus: "not yet scanned",
+      scanFailureReason: null,
+      scanWarnings: [],
+      lastScanAt: null,
+      lastCommitSha: null,
+    });
+  });
+});
+
+describe("stored sessions from an older build", () => {
+  it("treats a stored user without role or displayName as signed out", async () => {
+    const old = JSON.stringify({ id: "u1", name: "Jordan Vale", email: "analyst@example.com" });
+    window.sessionStorage.setItem("vulntriage-user", old);
+    window.sessionStorage.setItem("vulntriage-services-user", old);
+    vi.resetModules();
+    const auth = await import("@/lib/auth");
+    expect(auth.getUser()).toBeNull();
+    const fresh = await import("@/services/mockService");
+    await expect(fresh.mockServices.currentUser()).rejects.toMatchObject({ code: "unauthenticated" });
+  });
+});
+
+describe("contract-shaped screens", () => {
+  it("offers a per-row re-scan, confirms it and leaves the scan status as it was", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    const reScan = vi.spyOn(mockServices, "reScan");
+    renderApp("/assets");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Re-scan payments-api" }));
+    expect(await screen.findByText("Re-scan requested")).toBeInTheDocument();
+    expect(reScan).toHaveBeenCalledWith("a1");
+    expect(within(await screen.findByTestId("asset-scan-a1")).getByText("scanned, findings")).toBeInTheDocument();
+  });
+
+  it("shows the re-scan error message when reScan rejects", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    vi.spyOn(mockServices, "reScan").mockRejectedValue(new ServiceError("not_found", "Asset not found."));
+    renderApp("/assets");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Re-scan payments-api" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Asset not found.");
+  });
+
+  it("shows every scan status and the failure reason on the assets list", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/assets");
+
+    expect(await screen.findByTestId("asset-scan-a5")).toHaveTextContent("scan failed");
+    expect(screen.getByTestId("asset-scan-a5")).toHaveTextContent("lockfile parse error");
+    expect(screen.getByTestId("asset-scan-a6")).toHaveTextContent("not yet scanned");
+    expect(screen.getByTestId("asset-scan-a7")).toHaveTextContent("scanned, clean");
+    expect(screen.getByTestId("asset-scan-a8")).toHaveTextContent("scanned, incomplete");
+  });
+
+  it("shows the forbidden message on the accept screen and leaves the finding open", async () => {
+    await signInAsOwner();
+    setUser(DEMO_OWNER_USER);
+    renderApp("/findings/f2/accept");
+
+    fireEvent.change(await screen.findByLabelText(/Reason/), { target: { value: "Not my asset" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept risk" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("You can only accept risk on findings for assets you own.");
+    const finding = await mockServices.getFinding("f2");
+    expect(finding.status).toBe("open");
+    expect(finding.auditTrail).toHaveLength(0);
+  });
+
+  it("renders pending and unavailable briefs as different states", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f8");
+    expect(await screen.findByTestId("brief-pending")).toBeInTheDocument();
+    expect(screen.queryByTestId("brief-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("renders an unavailable brief and null dependency version without crashing", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f5");
+    expect(await screen.findByTestId("brief-unavailable")).toBeInTheDocument();
+    expect(screen.queryByTestId("brief-pending")).not.toBeInTheDocument();
+  });
+
+  it("renders the KEV value, stale flags, dependencies and brief link from contract fields", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f3");
+    expect(await screen.findByText("KEV: not listed")).toBeInTheDocument();
+    expect(screen.getByTestId("dependencies")).toHaveTextContent("http-relay@2.0.4");
+    expect(screen.getByTestId("rank-reason").textContent).not.toBe("");
+    expect(screen.getByRole("link", { name: "https://osv.dev/vulnerability/GHSA-hr3l-pp9k-2zt6" })).toBeInTheDocument();
+  });
+
+  it("shows a null dependency version as version unknown in the findings list", async () => {
+    await signIn();
+    const list = await mockServices.listFindings();
+    renderComponent(<FindingsTable findings={list} />);
+    const row = (await screen.findAllByTestId("finding-row")).find((r) => r.getAttribute("data-id") === "f8")!;
+    expect(row).toHaveTextContent("version unknown");
+    expect(row).toHaveTextContent("KEV: not listed");
   });
 });

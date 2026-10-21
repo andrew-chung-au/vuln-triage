@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { FindingWithAsset } from "@/services/types";
-import { Flag, StatusBadge, TierBadge, formatEpss } from "./Badges";
+import { Flag, KevFlag, StatusBadge, TierBadge, formatEpss, formatVersions } from "./Badges";
 
 function Row({ f }: { f: FindingWithAsset }) {
   const withdrawn = f.status === "withdrawn";
@@ -10,8 +10,9 @@ function Row({ f }: { f: FindingWithAsset }) {
       <td className="px-3 py-2 align-top">{f.asset.name}</td>
       <td className="px-3 py-2 align-top">
         <Link to="/findings/$findingId" params={{ findingId: f.id }} className="font-mono text-primary underline-offset-2 hover:underline">
-          {f.packageName}@{f.installedVersion}
+          {f.package}
         </Link>
+        <div className="font-mono text-xs text-muted-foreground">{f.ecosystem} · {formatVersions(f.dependencies)}</div>
         <div className="font-mono text-xs text-muted-foreground">{f.vulnerabilityId}</div>
       </td>
       <td className="px-3 py-2 align-top">
@@ -20,8 +21,10 @@ function Row({ f }: { f: FindingWithAsset }) {
       </td>
       <td className="px-3 py-2 align-top">
         <div className="flex flex-wrap gap-1">
-          <Flag tone={f.kev ? "danger" : "muted"}>KEV: {f.kev ? "yes" : "no"}</Flag>
-          <Flag>{formatEpss(f.epss)}</Flag>
+          <KevFlag kev={f.kev} stale={f.kevStale} />
+          <Flag>{formatEpss(f.epss)}{f.epssStale ? " (stale)" : ""}</Flag>
+          {f.signalsChanged && <Flag tone="warning">signals changed</Flag>}
+          {f.stale && <Flag tone="warning">stale</Flag>}
           <Flag>criticality: {f.asset.criticality}</Flag>
           <Flag tone={f.asset.internetFacing ? "warning" : "muted"}>
             {f.asset.internetFacing ? "internet-facing" : "internal"}

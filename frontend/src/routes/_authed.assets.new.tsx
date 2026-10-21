@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { validateAssetName } from "@/lib/validation";
+import { validateAssetName, validateOwnerEmail, validateRepositoryUrl } from "@/lib/validation";
 import { ServiceError, services, type Criticality } from "@/services";
 
 export const Route = createFileRoute("/_authed/assets/new")({
@@ -34,6 +34,8 @@ function NewAsset() {
     e.preventDefault();
     const v = validateAssetName(name);
     if (v) return setError(v);
+    const invalid = validateOwnerEmail(ownerEmail) ?? validateRepositoryUrl(repositoryUrl);
+    if (invalid) return setError(invalid);
     try {
       await services.registerAsset({ name, ownerName, ownerEmail, criticality, internetFacing, repositoryUrl });
       await qc.invalidateQueries({ queryKey: ["assets"] });
@@ -58,7 +60,7 @@ function NewAsset() {
           </select>
         </div>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={internetFacing} onChange={(e) => setInternetFacing(e.target.checked)} /> Internet-facing</label>
-        <div className="space-y-1.5"><Label htmlFor="repo">Repository URL</Label><Input id="repo" type="text" value={repositoryUrl} onChange={(e) => setRepositoryUrl(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="repo">Repository URL</Label><Input id="repo" type="text" placeholder="https://github.com/owner/repo" value={repositoryUrl} onChange={(e) => { setRepositoryUrl(e.target.value); setError(null); }} /></div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit">Register</Button>
       </form>
