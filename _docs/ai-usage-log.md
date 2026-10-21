@@ -1303,3 +1303,14 @@ Copy this template for each new entry:
 - files changed: `1b37fd1` (protected, HUMAN_APPROVED=1; approved in this session): `AGENTS.md` and seven `_docs/agent-kit/` files; this log and `_session-summaries/planning-2026-10-21-permission-review.md`
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (35/35 frontend tests; whitespace PASS; 7 removed assertions from the earlier unpushed #22 test rewrite, not this docs-only change); `git diff --check` clean. No QA verdict (direct docs change)
 - human review (what I checked or corrected, or `none`): approved the exact eight-file diff in this session. Commands and changes that required approval, outcomes not recorded: editing the eight protected paths (`edit` `ask` rules); the `HUMAN_APPROVED=1` commit (merits); `gh issue edit 23` by the PM (`gh issue edit*` `ask` rule)
+
+### 2026-10-21 — #23 contract follow-up: A-N review decisions
+
+- date: 2026-10-21
+- task/issue: #23 (contract follow-up from the senior review comment 6307744446 and body comment 6307825934)
+- agent role: Engineer (OpenCode `software-engineer` run)
+- model: deepseek-v4.1-flash-free (OpenCode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator relayed the A-N items, the instruction not to edit the Makefile or run the validator, and item O's revised-target requirements; no key prompt file saved
+- files changed: `_docs/openapi.yaml` in `3cb40af` (A, B, C, F, G, H, I, J, L, M, N) and `_docs/api.md` in `d9817f9` (A, B, F, G, H, I, K, and the contract-order wording); this log. The revised protected-target diff is unapplied in `.scratch/makefile-target.diff`; it applies cleanly with `git apply --check`
+- verification (tests run, reviewer verdict): `.scratch/check_api.cjs` ALL CHECKS PASS, including the ten-operation set, 403 on registerAsset/reScan, the 401 -> 403 CSRF -> 404 -> 403 owner -> 422 -> 409 order and its refused case, strict request bodies, the FindingId/AssetId parameter refs, the tightened repositoryUrl pattern and its refused cases, required nullable actorDisplayName, epss bounds, ownerEmail format, and the api.md pagination/owner-match rows. `make verify BASE=5a41e30` VERIFY: PASS (35/35 frontend tests; whitespace PASS; no test files changed). The default `make verify` gave PASS WITH WARNINGS: 35/35 tests, whitespace PASS, and 7 removed assertions from the earlier unpushed #22 commit `759735a`, not from this docs-only change. The validator was not run: the target still needs the human's approval. The proposed target pins `openapi-spec-validator==0.9.0`, checked on the PyPI project page on 2026-10-21 (release 0.9.0, uploaded 2026-05-20)
+- human review (what I checked or corrected, or `none`): none yet. Awaiting the human's approval of the revised target diff and review of `_docs/openapi.yaml` at `3cb40af`. Commands that stopped for approval: none
