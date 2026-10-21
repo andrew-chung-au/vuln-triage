@@ -37,6 +37,8 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 | 16 | Docker-capable environment | #31 | 7 | Compose runs Postgres in the dev environment | todo (decision 2 resolved; human performs the change) |
 | 17 | Tier B and C build | step 12 issues | 15, 16 | Auditor: all 12 criteria MET | todo |
 
+**#44 (cloud sessions, human direction 2026-10-21):** starts as soon as #23 closes, before #27. It is tooling, so the priority rule would leave it under "Later"; the human scheduled it here because it unblocks #31 and the Docker-dependent build steps. This is #44's option B. It still needs PM grooming before work starts.
+
 Later, not scheduled (tooling and process; see the priority rule): #10, #16, #19, #29, #30, #33, #36, #37, #38, #39, #40, #42. #38 carries out the human's 2026-10-20 remove decision for #36; #36 can close when #38 does. #19 (ai-usage-report) is graded evidence; pick it up with the Tier C work.
 
 #41 and #43 completed step 7. Leftovers from #43 (human's choice: recorded here and on #23, no new issue):
