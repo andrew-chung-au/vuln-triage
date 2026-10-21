@@ -1292,3 +1292,14 @@ Copy this template for each new entry:
 - files changed: `_docs/openapi.yaml` (new) in `7d6fe6e`, `_docs/api.md` (new) in `3bdc565`, the exact approved Stage 3 text in `_docs/planning-process.md` alone in `dc94837`, and the two README links in `49a296f`; this log. The proposed protected `Makefile` target is unapplied in `.scratch/makefile-target.diff`; it applies cleanly with `git apply --check`
 - verification (tests run, reviewer verdict): `.scratch/check_api.cjs` ALL CHECKS PASS (operation set, operationIds, path parameters, security/CSRF, response sets, enums, required keys, forbidden server-side names, api.md coverage, exact Stage 3 text, README links). `make verify` VERIFY: PASS WITH WARNINGS (35/35 frontend tests; whitespace PASS; 7 removed assertions, all from the unpushed #22 commit `759735a`, not from this docs-only issue). The OpenAPI validator was not run: its target needs the human's approval. No reviewer verdict yet
 - human review (what I checked or corrected, or `none`): none yet. Awaiting approval for the `openapi-validate` Makefile target and human review of `_docs/openapi.yaml`. Commands that stopped for approval: none
+
+### 2026-10-21 — Permission review: record actions, not outcomes
+
+- date: 2026-10-21
+- task/issue: direct human request to correct the permission-review rule; no issue
+- agent role: Orchestrator (OpenCode)
+- model: deepseek-v4.1-flash-free (OpenCode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to review how permission requests are recorded in session summaries, then directed that the agent must not record whether permission was granted, only the actions that required asking; no key prompt file saved
+- files changed: `1b37fd1` (protected, HUMAN_APPROVED=1; approved in this session): `AGENTS.md` and seven `_docs/agent-kit/` files; this log and `_session-summaries/planning-2026-10-21-permission-review.md`
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (35/35 frontend tests; whitespace PASS; 7 removed assertions from the earlier unpushed #22 test rewrite, not this docs-only change); `git diff --check` clean. No QA verdict (direct docs change)
+- human review (what I checked or corrected, or `none`): approved the exact eight-file diff in this session. Commands and changes that required approval, outcomes not recorded: editing the eight protected paths (`edit` `ask` rules); the `HUMAN_APPROVED=1` commit (merits); `gh issue edit 23` by the PM (`gh issue edit*` `ask` rule)
