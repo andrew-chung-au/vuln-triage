@@ -17,7 +17,7 @@ VulnTriage is the product; the agent kit and dev container are tooling. From 202
 
 Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts only when the steps it depends on are `done`; a `deferred` step does not block anything.
 
-| # | Step | Issues | Depends on | Done when | Status (2026-10-20) |
+| # | Step | Issues | Depends on | Done when | Status (2026-10-21) |
 |---|---|---|---|---|---|
 | 1 | Refresh the rubric evidence | (auditor skill) | none | `_docs/rubric-evidence.md` re-audited at current `main`; confirms or rejects Testing 1 and CI/CD 1 | done (2026-10-20 audit, 10/24 at `74e9cfc`) |
 | 2 | README problem description | #13 | none | Auditor marks Problem Description MET (2) | done (auditor confirmed MET 2) |
@@ -26,7 +26,7 @@ Status values: `todo`, `doing`, `done`, `blocked`, `deferred`. A step starts onl
 | 5 | Approval-record hardening | #17, #18 | none | Both closed before the step 6 protected commits, or the human defers them | done (both closed 2026-10-20) |
 | 6 | Spec review issues | #3, #4, #5, #6, #7, #8 | none | PM grooms all six together; one batched decision message to the human; each implemented as its own protected commit; all six closed | done (six protected commits `45f6fa6`..`fdc7b51`, all QA PASS, closed 2026-10-20; follow-up #41) |
 | 7 | Stage 2: `_docs/architecture.md` (next) | #41, then #43 | 6 | #41's spec commit landed; Stage 2 checklist PASS; #9's architecture rows ticked; Docker-capable environment named; #9 hosting decision closed as AWS (CloudFormation) | done (#41 `1445ca5`; #43: spec `faea412` and `3ecd54b`, `architecture.md` `072c17e`..`4180fe3`, QA PASS, closed 2026-10-20) |
-| 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | todo |
+| 8 | Stage 3: API contract | #23, then #27 | 7 | Both closed | doing (2026-10-21: #23 groomed; contract, `api.md`, Stage 3 text and README links committed; validator target, validator run and human review left) |
 | 9 | Frontend SPA shell | #34 | 8 (#23) | #34 closed (test count in its criteria updated to 35 at grooming) | todo |
 | 10 | Stage 4: `_docs/testing.md` | new issue | 8 | Stage 4 checklist PASS; #9's testing rows ticked | todo |
 | 11 | Stage 5: `_docs/tasks.md` | new issue | 10 | Stage 5 checklist PASS (no cycles; every story and criterion covered) | todo |
@@ -98,3 +98,4 @@ Off-track signals:
 | 2026-10-20 | #41 (first part of step 7) | 10 (2026-10-20 audit) | yes | Spec commit `1445ca5` (D1-D5 option 1), approval record 6288541138, QA PASS, assert clean PASS, closed. QA's status-model risks go to the architecture issue (human's choice). Next: the PM proposes the Stage 2 architecture issue. |
 | 2026-10-20 | none (step 7 issue filed) | 10 (2026-10-20 audit) | yes | The human chose option A for Docker: Compose service containers in the sandbox, with `_docs/docker-runbook.md` for the human's part. Cloud sessions are optional only (`_docs/cloud-sessions.md`), because credit is limited. #43 (architecture) created with D1 (Compose recipe), D2 (responder: PRs only, human merges) and D3-D8 (PM recommendations) answered in 6289876616. Next: the Engineer drafts #43 Part 1 (spec diff). |
 | 2026-10-20 | step 7 (#43) | 10 (2026-10-20 audit) | yes | Two human-approved spec commits (`faea412`, `3ecd54b`, records 6290689973 and 6291380101); `architecture.md` written and fixed through two QA FAILs (types.ts differences table) to PASS; the alert set to fire once with no repeat (human), re-checked PASS. #9's architecture boxes ticked; #31 told the environment (Compose dev container), so step 16 can start. Next: step 8 (#23 API contract), and #31 when the human has time for the setup. |
+| 2026-10-21 | step 8 started (#23) | 10 (2026-10-20 audit) | yes | PM groomed #23; the human chose D1-D5 all option 1 (session cookie + CSRF, `forbidden`/403, current-lifecycle brief + `pending`, types/mock follow-up, manual re-scan). Engineer committed `7d6fe6e` (`openapi.yaml`), `3bdc565` (`api.md`), `dc94837` (Stage 3 text) and `49a296f` (README links). Left: fix the response-set bullet's missing 403 for `POST /assets` and rescan, approve/apply `make openapi-validate`, run the validator and broken-`$ref` case, human review of `openapi.yaml`, QA, then #27. Also corrected the permission-review rule (`1b37fd1`) at the human's direction. |
