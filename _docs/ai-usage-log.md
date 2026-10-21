@@ -1281,3 +1281,14 @@ Copy this template for each new entry:
 - files changed: QA comments 6291494669 (FAIL), 6291613521 (FAIL), 6291706212 (PASS), 6301808583 (PASS, alert change); decision-point comment 6301818549; #23 comment 6301758496; #9 body (five boxes ticked) and comment 6301823825; #31 comment 6301824334; `_docs/roadmap.md` (step 7 done, leftovers, check-in line), this log, and the session summary; `make clean-scratch` ran; closed #43
 - verification (tests run, reviewer verdict): QA PASS; `make verify BASE=16b445b` PASS (35 tests) in every QA run; `make assert-clean` PASS after each QA run (`e8ce1be`, `741489a`, `4b90629`, `6dd32e6`); the #9 body edit was checked by `.scratch/tick_9.py` to change exactly five lines
 - human review (what I checked or corrected, or `none`): the human accepted the Engineer's design choices as assumptions, chose no alert repeat, and chose to record the leftovers on #23 and the roadmap. Two tool calls failed with a transient permission-check error and were retried after the human said to continue. Commands that stopped for approval: none
+
+### 2026-10-21 — #23 OpenAPI contract and Stage 3 API table
+
+- date: 2026-10-21
+- task/issue: #23 (contract, Stage 3 table, approved Stage 3 text, README links)
+- agent role: Engineer (OpenCode `software-engineer` run)
+- model: deepseek-v4.1-flash-free (OpenCode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for issue #23 against its groomed body and comment 6305987033 (D1-D5 all option 1), with the validator left unrun and its Makefile target supplied as a diff; no key prompt file saved
+- files changed: `_docs/openapi.yaml` (new) in `7d6fe6e`, `_docs/api.md` (new) in `3bdc565`, the exact approved Stage 3 text in `_docs/planning-process.md` alone in `dc94837`, and the two README links in `49a296f`; this log. The proposed protected `Makefile` target is unapplied in `.scratch/makefile-target.diff`; it applies cleanly with `git apply --check`
+- verification (tests run, reviewer verdict): `.scratch/check_api.cjs` ALL CHECKS PASS (operation set, operationIds, path parameters, security/CSRF, response sets, enums, required keys, forbidden server-side names, api.md coverage, exact Stage 3 text, README links). `make verify` VERIFY: PASS WITH WARNINGS (35/35 frontend tests; whitespace PASS; 7 removed assertions, all from the unpushed #22 commit `759735a`, not from this docs-only issue). The OpenAPI validator was not run: its target needs the human's approval. No reviewer verdict yet
+- human review (what I checked or corrected, or `none`): none yet. Awaiting approval for the `openapi-validate` Makefile target and human review of `_docs/openapi.yaml`. Commands that stopped for approval: none
