@@ -25,11 +25,11 @@ Every row is consumed by the frontend. "Session cookie" means the `vt_session` c
 
 ## Authentication, session and CSRF
 
-- `POST /auth/login` takes `{username, password}` and returns `User`. It sets a `vt_session` cookie (`HttpOnly`, `Secure`, `SameSite=Strict`) and returns no bearer token. The contract has no `bearerAuth` scheme.
+- `POST /auth/login` takes `{username, password}` (`LoginRequest`, strict: `additionalProperties: false`) and returns `User`. It sets a `vt_session` cookie (`HttpOnly`, `Secure`, `SameSite=Strict`) and returns no bearer token. The contract has no `bearerAuth` scheme. A malformed or missing-field body returns `422 validation`, and that response does not reveal whether the username exists.
 - `POST /auth/logout` clears the cookie and returns `204`; it is idempotent and does not require a session.
 - `GET /auth/me` returns the signed-in `User`, or `401` when there is no session.
 - Every operation except login and logout requires `cookieAuth` and returns `401 unauthenticated` when the session is missing, expired or was logged out.
-- Every non-GET operation except login and logout requires `X-Requested-With: XMLHttpRequest`. A missing or different value returns `403 forbidden` and changes no state. This is custom CSRF header A30 requires. Logout is exempt so it stays idempotent and only clears the caller's own cookie.
+- Every non-GET operation except login and logout requires `X-Requested-With: XMLHttpRequest`, declared `required: true`. A missing or different value returns `403 forbidden` and changes no state. This is custom CSRF header A30 requires. Logout is exempt so it stays idempotent and only clears the caller's own cookie. VERIFY: FastAPI returns `422` for a missing required `Header()` on the version #24 pins, so #24 maps that missing-header validation error to `403 forbidden` in its exception handler.
 - A locked username (five failed logins in 15 minutes) returns `401 unauthenticated`, the same status and code as wrong credentials; the contract does not reveal whether the username exists.
 - `User` is `{id, username, displayName, email, role}`, with `role` one of `security lead` or `asset owner`. Server-side identity data is not in the schema.
 
@@ -37,7 +37,7 @@ Every row is consumed by the frontend. "Session cookie" means the `vt_session` c
 
 `POST /findings/{id}/risk-acceptance` takes exactly `{reason}`; `additionalProperties: false` means `who`, `actor` and `status` are not accepted, so a body containing one returns `422 validation` and changes nothing.
 
-A `security lead` may accept risk on any finding. An `asset owner` may accept risk only when the finding's asset `ownerEmail` equals the signed-in user's `email`. Otherwise the response is `403 forbidden` and nothing changes.
+A `security lead` may accept risk on any finding. An `asset owner` may accept risk only when the finding's asset `ownerEmail` matches the signed-in user's `email` after trimming both values and comparing them case-insensitively. Otherwise the response is `403 forbidden` and nothing changes.
 
 ## Errors, check order and responses
 
@@ -53,11 +53,11 @@ The `Error.code` enum is exactly:
 | `unauthenticated` | `401` | No/expired/logged-out session, bad login, or a locked username. |
 | `forbidden` | `403` | The caller is signed in but not allowed (owner mismatch or missing CSRF). |
 
-The check order is fixed and uses only the steps an operation has: `401` first, then `404` for an unknown id, then `403` for an authenticated caller who is not allowed, then `422` for body validation, then `409` for state.
+The check order is fixed and uses only the steps an operation has: `401` first, then `403` for a missing or wrong `X-Requested-With` header (CSRF), then `404` for an unknown id, then `403` for an authenticated caller who is not allowed (owner mismatch), then `422` for body validation, then `409` for state.
 
 | Operation | Responses |
 |---|---|
-| `login` | `200`, `401` |
+| `login` | `200`, `401`, `422` |
 | `logout` | `204` |
 | `currentUser` | `200`, `401` |
 | `listFindings` | `200`, `401` |
@@ -65,17 +65,18 @@ The check order is fixed and uses only the steps an operation has: `401` first, 
 | `acceptRisk` | `200`, `401`, `403`, `404`, `409`, `422` |
 | `listAssets` | `200`, `401` |
 | `getAsset` | `200`, `401`, `404` |
-| `registerAsset` | `201`, `401`, `422` |
-| `reScan` | `202`, `401`, `404` |
+| `registerAsset` | `201`, `401`, `403`, `422` |
+| `reScan` | `202`, `401`, `403`, `404` |
 
 Per-operation order:
 
-- `acceptRisk`: `401` no session, `404` unknown finding, `403` owner mismatch (or missing/incorrect CSRF header), `422` empty/whitespace-only `reason` or extra fields, `409` finding not `open`.
-- `registerAsset`: `401`, then `422`.
+- `acceptRisk`: `401` no session, `403` missing or wrong CSRF header, `404` unknown finding, `403` owner mismatch, `422` empty/whitespace-only `reason` or extra fields, `409` finding not `open`.
+- `registerAsset`: `401`, `403` missing or wrong CSRF header, then `422`.
+- `reScan`: `401`, `403` missing or wrong CSRF header, then `404`.
 - `getFinding` and `getAsset`: `401`, then `404`.
-- Every other operation has only its `401` check (login has only its `401`).
+- Every other operation has only its `401` check (login has only its `401` and `422` checks).
 
-Refused cases the contract fixes: an unknown finding with an empty reason returns `404`, not `422`; an owner mismatch with an empty reason returns `403`, not `422`; a non-open finding with a valid reason returns `409`.
+Refused cases the contract fixes: an unknown finding with an empty reason returns `404`, not `422`; an unknown finding id with no `X-Requested-With` header returns `403`, not `404`; an owner mismatch with an empty reason returns `403`, not `422`; a non-open finding with a valid reason returns `409`.
 
 ## Wire schemas
 
@@ -97,14 +98,19 @@ No wire value is `risk_accepted`, `not_scanned`, `scan_error`, or a boolean `kev
 Schemas match the architecture Data model and the spec:
 
 - `Asset` always carries `ownerName` and `ownerEmail` as required keys that are `string` or `null`. `scanFailureReason` is `null` unless `scanStatus` is `scan failed`. `scanWarnings` is an array of `{kind, file, line, message}` from the latest scan. `lastScanAt` and `lastCommitSha` are nullable.
-- `Finding` uses `vulnerabilityId` (the primary advisory id), `aliases`, `cveId`, `package` and `ecosystem`. `dependencies` is an array of `{version, sourceFile, direct}` with a nullable `version`; there is no single installed-version field. `fixedVersion` is nullable. `affectedRanges` is a read-only display projection of the merged advisories' ranges, each `{range, fixedVersion}`, and does not say which range contains the installed version. `kev` is a `KevValue`; `kevStale` and `epssStale` are booleans; `rankReason` is a non-empty string. `statusBeforeWithdrawal` is `null` except while a withdrawn finding can be restored.
+- `Finding` uses `vulnerabilityId` (the primary advisory id), `aliases`, `cveId`, `package` and `ecosystem`. `dependencies` is an array of `{version, sourceFile, direct}` with a nullable `version`; there is no single installed-version field. `fixedVersion` is nullable. `affectedRanges` is a read-only display projection of the merged advisories' ranges, each `{range, fixedVersion}`, and does not say which range contains the installed version. `kev` is a `KevValue`; `kevStale` and `epssStale` are booleans; `epss` is a number from 0 to 1, or `null`; `rankReason` is a non-empty string. `statusBeforeWithdrawal` is `null` except while a withdrawn finding can be restored.
 - `Brief` is `{summary, impact, remediation, fixVersion, referenceLink}`. `fixVersion` is nullable. `referenceLink` is built by VulnTriage from the primary id, never from advisory text. `brief` is `null` unless `briefStatus` is `available`; the internal rejection reason is never sent. `briefStatus` is `pending` when the current lifecycle has no brief row yet.
-- `AuditEntry` is `{id, actor, createdAt, field, previousValue, newValue, reason, source, restoresEntryId}`. `previousValue` is nullable (`null` on creation); `reason` is required and non-empty for an entry whose `newValue` is `risk accepted`, otherwise nullable; `actor` is a user id, `re-scan` or `system`; `restoresEntryId` is nullable.
-- `NewAssetInput` is `{name, ownerName, ownerEmail, criticality, internetFacing, repositoryUrl}`. The owner fields are nullable; `name` is non-empty after trimming; `repositoryUrl` must match `https://github.com/<owner>/<repo>` by schema pattern and description. `http://`, `git@github.com:...`, a non-GitHub host or an extra path returns `422 validation` and starts no scan.
+- `AuditEntry` is `{id, actor, actorDisplayName, createdAt, field, previousValue, newValue, reason, source, restoresEntryId}`. `actorDisplayName` is required and nullable: the actor's display name at the time of the action, `null` for `re-scan` and `system`. `previousValue` is nullable (`null` on creation); `reason` is required and non-empty for an entry whose `newValue` is `risk accepted`, otherwise nullable; `actor` is a user id, `re-scan` or `system`; `restoresEntryId` is nullable.
+- `NewAssetInput` is `{name, ownerName, ownerEmail, criticality, internetFacing, repositoryUrl}` and is strict (`additionalProperties: false`). The owner fields are nullable; `ownerEmail` is an email address when present, and #24 also validates its format. `name` is non-empty after trimming. `repositoryUrl` matches `https://github.com/<owner>/<repo>` with owner `[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})` and repo `[A-Za-z0-9_.-]{1,100}`, where the repo is not `.` or `..` and does not end in `.git`; `http://`, `git@github.com:...`, a non-GitHub host, an extra path, a `.` or `..` repo segment, or a repo ending in `.git` returns `422 validation` and starts no scan. VERIFY: these are GitHub's owner and repository naming rules.
+- Every request body is strict (`additionalProperties: false`), including `LoginRequest`, `RiskAcceptanceRequest` and `NewAssetInput`; a body with an extra field returns `422 validation` and changes nothing.
 - `FindingWithAsset` is `Finding` plus `asset: Asset`. Both `GET /findings` and `GET /findings/{id}` return it, including `auditTrail`, `rankReason` and `brief`/`briefStatus`.
 - `GET /findings` states that the response order is the server's ranking and the client must not re-sort.
 
 No endpoint exposes server-side-only data. No response schema contains a password hash, a session row, raw signal fetch timestamps or percentiles, advisory details or references, notification-job internals, or lifecycle internals.
+
+## Pagination
+
+`GET /findings` is deliberately unpaginated at pilot scale. The contract has no paging parameters and returns every finding in the server's rank order. Paging is a later contract change.
 
 ## Differences from `frontend/src/services/types.ts` (D4)
 
@@ -117,7 +123,7 @@ The contract follows the spec and architecture, not the mock. The D4 follow-up a
 | `ScanStatus` is `scanned \| scan_error \| not_scanned` | Five values: `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`, `scanned, clean` | Yes: replace the enum. |
 | `Asset` has no scan detail | Adds `scanFailureReason`, `scanWarnings`, `lastScanAt`, `lastCommitSha` | Yes: add the fields and the mock values. |
 | `Asset.ownerName` / `ownerEmail` | Required nullable keys, always present | No: the current type already requires them. |
-| `repositoryUrl: string` on `Asset` and `NewAssetInput` | Schema pattern allows only `https://github.com/<owner>/<repo>` | No type change; the mock's validation and fixtures change in D4. |
+| `repositoryUrl: string` on `Asset` and `NewAssetInput` | Schema pattern allows only `https://github.com/<owner>/<repo>`; owner `[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})`, repo `[A-Za-z0-9_.-]{1,100}`, no `.`/`..` repo and no `.git` suffix | No type change; the mock's validation and fixtures change in D4. |
 | `FindingStatus` value `risk_accepted` | `risk accepted` | Yes: change the enum value and `STATUS_LABEL`. |
 | `Finding.packageName` | `package` plus `ecosystem` | Yes: rename and add the field. |
 | `Finding.installedVersion: string` | `dependencies: {version, sourceFile, direct}[]` with nullable `version` | Yes: replace the string with the array. |
@@ -130,6 +136,7 @@ The contract follows the spec and architecture, not the mock. The D4 follow-up a
 | `briefStatus: "available" \| "rejected"` | `available`, `unavailable`, `pending` | Yes: replace `rejected`; add `pending`. |
 | `Brief.advisoryReference` | `referenceLink` plus nullable `fixVersion` | Yes: rename and add the field. |
 | `AuditEntry.who`, `when` | `actor`, `createdAt` | Yes: rename. |
+| `AuditEntry` has no display name | Adds required nullable `actorDisplayName` (the actor's display name at the time of the action; `null` for `re-scan` and `system`) | Yes: add the field and the mock values. |
 | `AuditEntry.previousValue: string` | Nullable string | Yes: allow `null`. |
 | `AuditEntry.reason?` optional | Required key; non-empty for `risk accepted`, otherwise nullable | Yes: change the type and the mock's audit writes. |
 | `AuditEntry` has no source or restore link | Adds `source` and `restoresEntryId` | Yes: add the fields. |
