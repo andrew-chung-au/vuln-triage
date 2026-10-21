@@ -40,7 +40,7 @@ function AuthedLayout() {
             <Link to="/assets" className={nav} activeProps={active} activeOptions={{ exact: true }}>Assets</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground">{user.name}</span>
+            <span className="text-muted-foreground">{user.displayName}</span>
             <Button variant="outline" size="sm" onClick={signOut}>Sign out</Button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { STATUS_LABEL, type FindingStatus, type Tier } from "@/services";
+import { STATUS_LABEL, type Dependency, type FindingStatus, type KevValue, type Tier } from "@/services";
 
 const tierClass: Record<Tier, string> = {
   P1: "bg-tier-p1 text-tier-foreground",
@@ -18,7 +18,7 @@ export function TierBadge({ tier }: { tier: Tier }) {
 
 const statusClass: Record<FindingStatus, string> = {
   open: "border-foreground/30",
-  risk_accepted: "border-warning bg-warning/15",
+  "risk accepted": "border-warning bg-warning/15",
   fixed: "border-success bg-success/15",
   withdrawn: "border-dashed border-muted-foreground text-muted-foreground line-through",
 };
@@ -41,5 +41,18 @@ export function Flag({ children, tone = "default" }: { children: React.ReactNode
   return <span className={cn("inline-flex rounded px-1.5 py-0.5 text-xs font-medium", tones[tone])}>{children}</span>;
 }
 
-export const formatEpss = (epss: number | null) => (epss === null ? "EPSS: n/a" : `EPSS: ${epss.toFixed(2)}`);
+/** KEV renders straight from the contract's KevValue; only "KEV: listed" is a danger. */
+export function KevFlag({ kev, stale }: { kev: KevValue; stale?: boolean }) {
+  return (
+    <Flag tone={kev === "KEV: listed" ? "danger" : "muted"}>
+      {kev}{stale ? " (stale)" : ""}
+    </Flag>
+  );
+}
+
+/** The installed versions of a finding's dependency entries; null means "version unknown". */
+export const formatVersions = (dependencies: Dependency[]) =>
+  dependencies.length === 0 ? "version unknown" : dependencies.map((d) => d.version ?? "version unknown").join(", ");
+
+export const formatEpss =(epss: number | null) => (epss === null ? "EPSS: n/a" : `EPSS: ${epss.toFixed(2)}`);
 export const formatDate = (iso: string) => new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC";

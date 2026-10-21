@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatVersions } from "@/components/vt/Badges";
 import { validateRiskReason } from "@/lib/validation";
 import { ServiceError, services } from "@/services";
 
@@ -57,7 +58,7 @@ function Accept() {
           <p className="text-sm text-muted-foreground">Only open findings can be risk accepted.</p>
         ) : (
           <form onSubmit={submit} className="space-y-3 rounded-md border bg-card p-4">
-            <p className="text-sm"><span className="font-mono">{f.packageName}@{f.installedVersion}</span> on {f.asset.name} · {f.vulnerabilityId}</p>
+            <p className="text-sm"><span className="font-mono">{f.package}@{formatVersions(f.dependencies)}</span> on {f.asset.name} · {f.vulnerabilityId}</p>
             <div className="space-y-1.5">
               <Label htmlFor="reason">Reason (required)</Label>
               <Textarea id="reason" rows={4} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} />
