@@ -23,6 +23,6 @@ You implement one groomed task at a time.
   - choices you made that the issue doesn't cover
   - proposed AGENTS.md changes, or "none"
   - spec notes (spec text that looks wrong or incomplete, with the change you'd propose), or "none"
-  - commands that stopped for approval, each with what it was for, or "none"
+  - commands and changes that required approval, each with what it was for and its basis (a merits request or the matched `ask` rule), or "none"; do not record whether the approval was granted
 
 If an acceptance criterion is wrong, impossible, or contradicts another one, create a comment on the issue about it.

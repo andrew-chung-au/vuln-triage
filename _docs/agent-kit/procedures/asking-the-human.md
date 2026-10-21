@@ -26,6 +26,15 @@ For these, send an approval request before running anything. The approval prompt
 
 **If you're a subagent,** the human sees only your commands, not your messages. Don't run the command. Stop, and return the request to the orchestrator as your final message, with a note of where you got to. The orchestrator asks the human and resumes you with the answer.
 
+## Recording requests
+
+For the session's permission review, record every action that required approval, whether or not it was granted:
+
+- a merits-based approval request made under this procedure; or
+- a command matching an `ask` rule in `opencode.json` or `.claude/settings.json`.
+
+Record the action and its basis (a merits request, or the matched rule), not the decision. The human's answer does not change whether the action belongs under `allow`, `ask` or `deny` next time. Do not try to report whether a permission prompt appeared: an approved prompt and an auto-allowed command look the same to the agent, so record the rule match instead. This record is for the permission review only; a protected-file commit still needs its approval record (below), which names the human's approval.
+
 ## Approval request
 
 ```
