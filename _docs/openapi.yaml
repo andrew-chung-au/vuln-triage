@@ -1,0 +1,958 @@
+openapi: 3.1.0
+
+info:
+  title: VulnTriage API
+  version: 0.1.0
+  description: |
+    The single wire contract between the frontend and the backend for every
+    operation the frontend uses. It follows `_docs/specs.md` and
+    `_docs/architecture.md`; `_docs/api.md` maps the operations to user stories
+    and lists the differences from `frontend/src/services/types.ts`.
+
+    Authentication is a server-side session in the `vt_session` cookie
+    (`HttpOnly`, `Secure`, `SameSite=Strict`). Login sets it and returns no
+    bearer token; logout clears it. Every operation except login and logout
+    requires `cookieAuth` and returns `401 unauthenticated` when the session is
+    missing, expired or was logged out.
+
+    Every non-GET operation except login and logout also requires the header
+    `X-Requested-With: XMLHttpRequest` (CSRF). A missing or different value
+    returns `403 forbidden` and changes no state. Logout is exempt so that it
+    stays idempotent, and it clears only the caller's own cookie.
+
+    The check order is fixed and uses only the steps an operation has: `401`
+    first, then `404` for an unknown id, then `403` for an authenticated caller
+    who is not allowed, then `422` for body validation, then `409` for state.
+    Each operation's description states its order.
+
+    Status mapping: `401` only for no/expired session or bad login; `403` only
+    for an authenticated caller who is not allowed (owner mismatch or missing
+    CSRF); `404` only for an unknown id; `422` only for body validation; `409`
+    only for accepting risk on a finding that is not `open`.
+
+    `VERIFY:` the FastAPI version pinned in issue #24 generates OpenAPI 3.1.0,
+    so #24's conformance test compares like with like. `VERIFY:`
+    `uvx openapi-spec-validator` (the `openapi-spec-validator` package)
+    validates OpenAPI 3.1.
+
+servers:
+  - url: /
+    description: Same origin as the dashboard
+
+tags:
+  - name: auth
+    description: Sign-in, sign-out and the current user.
+  - name: findings
+    description: Ranked findings, their assets and risk acceptance.
+  - name: assets
+    description: Asset registration, listing and manual re-scan.
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Sign in
+      description: |
+        Checks a username and password. On success it sets the `vt_session`
+        cookie (`HttpOnly`, `Secure`, `SameSite=Strict`) and returns the
+        signed-in user. No bearer token is issued.
+
+        A locked username (five failed logins in 15 minutes) returns the same
+        `401 unauthenticated` as wrong credentials, so the response does not
+        reveal whether the username exists.
+
+        Checks: `401` for bad credentials or a locked username.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Signed in. The response sets the `vt_session` cookie.
+          headers:
+            Set-Cookie:
+              description: The `vt_session` session cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Sign out
+      description: |
+        Clears the caller's `vt_session` cookie and returns `204`. It is
+        idempotent and succeeds even when there is no session. It does not
+        require the CSRF header, and it clears only the caller's own cookie.
+      security: []
+      responses:
+        '204':
+          description: Signed out. The response clears the `vt_session` cookie.
+          headers:
+            Set-Cookie:
+              description: A `vt_session` cookie with an expired value.
+              schema:
+                type: string
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: currentUser
+      summary: Read the signed-in user
+      description: |
+        Returns the signed-in user. Checks: `401` when there is no session.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The signed-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /findings:
+    get:
+      tags: [findings]
+      operationId: listFindings
+      summary: List findings in server rank order
+      description: |
+        Returns every finding joined with its asset. The response order is the
+        server's deterministic ranking: tier, then EPSS (higher first, `null`
+        last), then asset criticality, then first detection, then finding id.
+        The client must not re-sort the response. Every finding carries its
+        `rankReason`, `auditTrail`, `briefStatus` and `brief`.
+
+        Checks: `401` when there is no session.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Findings in the server's ranking order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FindingWithAsset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /findings/{id}:
+    get:
+      tags: [findings]
+      operationId: getFinding
+      summary: Read one finding with its asset
+      description: |
+        Returns one finding joined with its asset, including `rankReason`,
+        `auditTrail`, `briefStatus` and `brief`.
+
+        Checks, in order: `401`, then `404`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The finding id.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: The finding joined with its asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingWithAsset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /findings/{id}/risk-acceptance:
+    post:
+      tags: [findings]
+      operationId: acceptRisk
+      summary: Accept risk on a finding
+      description: |
+        Accepts risk on a finding on behalf of the signed-in user. The body is
+        exactly `{reason}`; `who`, `actor` and `status` are not accepted.
+
+        A `security lead` may accept risk on any finding. An `asset owner` may
+        accept risk only when the finding's asset `ownerEmail` equals the
+        signed-in user's `email`. Otherwise the response is `403 forbidden` and
+        nothing changes. The status changes to `risk accepted` and a new audit
+        entry records the user, the time, the previous value and the reason.
+
+        Checks, in order: `401` no session, `404` unknown finding, `403` owner
+        mismatch (or a missing/incorrect `X-Requested-With` header), `422`
+        empty or whitespace-only `reason` or a body with extra fields, `409`
+        finding not `open`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The finding id.
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskAcceptanceRequest'
+      responses:
+        '200':
+          description: The finding with status `risk accepted` and its new audit entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingWithAsset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /assets:
+    get:
+      tags: [assets]
+      operationId: listAssets
+      summary: List assets
+      description: |
+        Lists every asset, always including `ownerName` and `ownerEmail` as keys
+        (each `string` or `null`) and the latest scan status and warnings.
+
+        Checks: `401` when there is no session.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Every asset.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [assets]
+      operationId: registerAsset
+      summary: Register an asset
+      description: |
+        Registers an asset and starts its first scan asynchronously. The response
+        is the new asset with `scanStatus: "not yet scanned"`. The current scan
+        status does not change until that first scan finishes.
+
+        Only `https://github.com/<owner>/<repo>` is accepted. Any other form
+        returns `422 validation` and starts no scan; no repository read is
+        attempted. The schema pattern and description, not only the backend,
+        enforce the shape.
+
+        Checks, in order: `401`, then `422`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAssetInput'
+      responses:
+        '201':
+          description: The new asset, with `scanStatus` set to `not yet scanned`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /assets/{id}:
+    get:
+      tags: [assets]
+      operationId: getAsset
+      summary: Read one asset
+      description: |
+        Returns one asset, including its scan status, failure reason, warnings
+        and last scan metadata.
+
+        Checks, in order: `401`, then `404`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The asset id.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: The asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assets/{id}/rescan:
+    post:
+      tags: [assets]
+      operationId: reScan
+      summary: Start a manual re-scan
+      description: |
+        Starts a scan of an asset asynchronously and returns `202` with no body.
+        The asset's current scan status does not change until that scan
+        finishes; a later `GET /assets/{id}` reports the new status.
+
+        Checks, in order: `401`, then `404`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The asset id.
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '202':
+          description: The scan has started. The response has no body.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: vt_session
+      description: |
+        Server-side session id in the `vt_session` cookie. The cookie is
+        `HttpOnly`, `Secure` and `SameSite=Strict`, with a 30-minute idle and
+        8-hour absolute lifetime. There is no bearer-token scheme.
+
+  parameters:
+    FindingId:
+      name: id
+      in: path
+      required: true
+      description: The finding id.
+      schema:
+        type: string
+        minLength: 1
+    AssetId:
+      name: id
+      in: path
+      required: true
+      description: The asset id.
+      schema:
+        type: string
+        minLength: 1
+    CsrfHeader:
+      name: X-Requested-With
+      in: header
+      required: true
+      description: |
+        Custom CSRF header required on every non-GET operation except login and
+        logout. A missing or different value returns `403 forbidden` and
+        changes no state.
+      schema:
+        type: string
+        enum:
+          - XMLHttpRequest
+
+  responses:
+    Unauthenticated:
+      description: |
+        No session, an expired session, a logged-out session, wrong credentials,
+        or a locked username. This check runs first.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: |
+        The caller is signed in but is not allowed: an asset owner accepting
+        risk on another owner's asset, or a missing/incorrect `X-Requested-With`
+        header. Nothing changes.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: |
+        No finding or asset has that id. This check runs after authentication
+        and before body validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: |
+        The requested state change conflicts with the current state. The only
+        case on this contract is accepting risk on a finding that is not `open`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: |
+        The request body is invalid. Examples: an empty or whitespace-only
+        `reason` or `name`, a body with extra fields where the contract forbids
+        them, or a `repositoryUrl` that is not `https://github.com/<owner>/<repo>`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      description: |
+        A refusal. No error body contains a stack trace, SQL, a token, a
+        repository URL or owner contact details.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: The only error codes used on the wire.
+          enum:
+            - validation
+            - not_found
+            - conflict
+            - unauthenticated
+            - forbidden
+        message:
+          type: string
+          minLength: 1
+          description: Non-empty, human-readable text.
+
+    Tier:
+      type: string
+      enum:
+        - P1
+        - P2
+        - P3
+        - P4
+
+    Criticality:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+
+    FindingStatus:
+      type: string
+      enum:
+        - open
+        - risk accepted
+        - fixed
+        - withdrawn
+
+    ScanStatus:
+      type: string
+      enum:
+        - not yet scanned
+        - scan failed
+        - scanned, findings
+        - scanned, incomplete
+        - scanned, clean
+
+    ScanFailureReason:
+      type: string
+      enum:
+        - feed unavailable
+        - lockfile parse error
+        - repository unavailable
+        - no dependency files
+
+    KevValue:
+      type: string
+      enum:
+        - 'KEV: listed'
+        - 'KEV: not listed'
+        - 'KEV: n/a (no CVE)'
+
+    UserRole:
+      type: string
+      enum:
+        - security lead
+        - asset owner
+
+    BriefStatus:
+      type: string
+      description: |
+        The brief state for the finding's current lifecycle. `pending` when the
+        current lifecycle has no brief row yet, so a new finding is not shown as
+        "brief unavailable". `unavailable` when the latest row for that
+        lifecycle is unavailable. `available` when a brief is returned. An
+        earlier lifecycle's brief is never used.
+      enum:
+        - available
+        - unavailable
+        - pending
+
+    Ecosystem:
+      type: string
+      enum:
+        - PyPI
+        - npm
+
+    User:
+      type: object
+      description: |
+        The signed-in user. Server-side identity data is not part of this
+        schema.
+      required:
+        - id
+        - username
+        - displayName
+        - email
+        - role
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+          writeOnly: true
+
+    RiskAcceptanceRequest:
+      type: object
+      description: |
+        Exactly `{reason}`. `who`, `actor` and `status` are not accepted, so a
+        body containing one returns `422 validation` and changes nothing.
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: |
+            The human's non-empty reason. Whitespace-only text is rejected.
+
+    ScanWarning:
+      type: object
+      required:
+        - kind
+        - file
+        - line
+        - message
+      properties:
+        kind:
+          type: string
+        file:
+          type: string
+        line:
+          type:
+            - integer
+            - 'null'
+          description: A 1-based line number, or `null` when no line applies.
+        message:
+          type: string
+
+    Asset:
+      type: object
+      required:
+        - id
+        - name
+        - ownerName
+        - ownerEmail
+        - criticality
+        - internetFacing
+        - repositoryUrl
+        - scanStatus
+        - scanFailureReason
+        - lastScanAt
+        - lastCommitSha
+        - scanWarnings
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        ownerName:
+          type:
+            - string
+            - 'null'
+          description: Always present; `null` when unset.
+        ownerEmail:
+          type:
+            - string
+            - 'null'
+          description: Always present; `null` when unset.
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        internetFacing:
+          type: boolean
+        repositoryUrl:
+          type: string
+          pattern: '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+          description: |
+            `https://github.com/<owner>/<repo>` only. No other host, scheme,
+            user info or extra path is accepted.
+        scanStatus:
+          $ref: '#/components/schemas/ScanStatus'
+        scanFailureReason:
+          anyOf:
+            - $ref: '#/components/schemas/ScanFailureReason'
+            - type: 'null'
+          description: |
+            `null` unless `scanStatus` is `scan failed`; one of the four reasons
+            when it is.
+        lastScanAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        lastCommitSha:
+          type:
+            - string
+            - 'null'
+        scanWarnings:
+          type: array
+          description: Warnings from the latest scan; empty when there are none.
+          items:
+            $ref: '#/components/schemas/ScanWarning'
+
+    Dependency:
+      type: object
+      required:
+        - version
+        - sourceFile
+        - direct
+      properties:
+        version:
+          type:
+            - string
+            - 'null'
+          description: |
+            The installed version, or `null` when the version is unknown.
+        sourceFile:
+          type: string
+        direct:
+          type: boolean
+
+    AffectedRange:
+      type: object
+      required:
+        - range
+        - fixedVersion
+      properties:
+        range:
+          type: string
+        fixedVersion:
+          type:
+            - string
+            - 'null'
+
+    Brief:
+      type: object
+      required:
+        - summary
+        - impact
+        - remediation
+        - fixVersion
+        - referenceLink
+      properties:
+        summary:
+          type: string
+        impact:
+          type: string
+        remediation:
+          type: string
+        fixVersion:
+          type:
+            - string
+            - 'null'
+          description: "`null` when the finding has no fixed version for this dependency."
+        referenceLink:
+          type: string
+          format: uri
+          description: |
+            Built by VulnTriage from the primary id, never from advisory text.
+            `VERIFY:` the OSV page pattern is the one `_docs/architecture.md`
+            marks `VERIFY:`.
+
+    AuditEntry:
+      type: object
+      required:
+        - id
+        - actor
+        - createdAt
+        - field
+        - previousValue
+        - newValue
+        - reason
+        - source
+        - restoresEntryId
+      properties:
+        id:
+          type: string
+        actor:
+          type: string
+          description: A user id, `re-scan`, or `system`.
+        createdAt:
+          type: string
+          format: date-time
+        field:
+          type: string
+        previousValue:
+          type:
+            - string
+            - 'null'
+          description: "`null` on creation."
+        newValue:
+          type: string
+        reason:
+          type:
+            - string
+            - 'null'
+          description: |
+            Required and non-empty for an entry whose `newValue` is
+            `risk accepted`; otherwise `null` is allowed.
+        source:
+          type: string
+        restoresEntryId:
+          type:
+            - string
+            - 'null'
+          description: The restored entry for a reinstated withdrawal; otherwise `null`.
+
+    Finding:
+      type: object
+      required:
+        - id
+        - vulnerabilityId
+        - aliases
+        - cveId
+        - tier
+        - assetId
+        - package
+        - ecosystem
+        - dependencies
+        - fixedVersion
+        - affectedRanges
+        - kev
+        - kevStale
+        - epss
+        - epssStale
+        - status
+        - firstDetectedAt
+        - fixedAt
+        - stale
+        - staleSince
+        - signalsChanged
+        - statusBeforeWithdrawal
+        - rankReason
+        - briefStatus
+        - brief
+        - auditTrail
+      properties:
+        id:
+          type: string
+        vulnerabilityId:
+          type: string
+          description: The primary advisory id.
+        aliases:
+          type: array
+          description: A flat array of every advisory id for the vulnerability.
+          items:
+            type: string
+        cveId:
+          type:
+            - string
+            - 'null'
+          description: "`null` when the vulnerability has no CVE."
+        tier:
+          $ref: '#/components/schemas/Tier'
+        assetId:
+          type: string
+        package:
+          type: string
+        ecosystem:
+          $ref: '#/components/schemas/Ecosystem'
+        dependencies:
+          type: array
+          description: |
+            Every dependency entry for this finding. `version` is `null` when
+            the version is unknown. There is no single installed-version field.
+          items:
+            $ref: '#/components/schemas/Dependency'
+        fixedVersion:
+          type:
+            - string
+            - 'null'
+          description: |
+            The fixed version for this dependency, or `null` when there is no
+            fixed version for this dependency.
+        affectedRanges:
+          type: array
+          description: |
+            A read-only display projection of the merged advisories' ranges. It
+            does not say which range contains the installed version.
+          items:
+            $ref: '#/components/schemas/AffectedRange'
+        kev:
+          $ref: '#/components/schemas/KevValue'
+        kevStale:
+          type: boolean
+        epss:
+          type:
+            - number
+            - 'null'
+        epssStale:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/FindingStatus'
+        firstDetectedAt:
+          type: string
+          format: date-time
+        fixedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        stale:
+          type: boolean
+        staleSince:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        signalsChanged:
+          type: boolean
+        statusBeforeWithdrawal:
+          anyOf:
+            - $ref: '#/components/schemas/FindingStatus'
+            - type: 'null'
+          description: |
+            `null` except while a withdrawn finding can be restored.
+        rankReason:
+          type: string
+          minLength: 1
+          description: The matched tier rule and tie-break inputs.
+        briefStatus:
+          $ref: '#/components/schemas/BriefStatus'
+        brief:
+          anyOf:
+            - $ref: '#/components/schemas/Brief'
+            - type: 'null'
+          description: |
+            `null` unless `briefStatus` is `available`. The latest brief row for
+            the finding's current lifecycle is returned; an earlier lifecycle's
+            brief is never returned. The internal rejection reason is never
+            sent.
+        auditTrail:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+
+    FindingWithAsset:
+      allOf:
+        - $ref: '#/components/schemas/Finding'
+        - type: object
+          required:
+            - asset
+          properties:
+            asset:
+              $ref: '#/components/schemas/Asset'
+
+    NewAssetInput:
+      type: object
+      required:
+        - name
+        - ownerName
+        - ownerEmail
+        - criticality
+        - internetFacing
+        - repositoryUrl
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Non-empty after trimming.
+        ownerName:
+          type:
+            - string
+            - 'null'
+          description: Always present; `null` when unset.
+        ownerEmail:
+          type:
+            - string
+            - 'null'
+          description: Always present; `null` when unset.
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        internetFacing:
+          type: boolean
+        repositoryUrl:
+          type: string
+          pattern: '^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+          description: |
+            `https://github.com/<owner>/<repo>` only. `http://`, a
+            `git@github.com:` form, a non-GitHub host or an extra path returns
+            `422 validation` and starts no scan.
