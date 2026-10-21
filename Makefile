@@ -36,6 +36,29 @@ issue-dump: ## Fetch an issue as JSON: make issue-dump N=<issue number>
 tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool>: missing")
 	@for t in node npm uv python3 docker; do if command -v "$$t" >/dev/null 2>&1; then printf '%s: ' "$$t"; "$$t" --version; else echo "$$t: missing"; fi; done
 
+# --- API contract (issue #23) --------------------------------------------
+
+# OPENAPI must stay a relative path under _docs/ or .scratch/ with only
+# letters, digits, '.', '_', '-', '/', and no '..'. These are pure make
+# functions, so a bad value stops make before any shell command runs.
+OPENAPI ?= _docs/openapi.yaml
+OPENAPI_ALLOWED_CHARS = a b c d e f g h i j k l m n o p q r s t u v w x y z \
+	A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
+	0 1 2 3 4 5 6 7 8 9 . _ - /
+
+strip_allowed = $(if $(1),$(call strip_allowed,$(wordlist 2,$(words $(1)),$(1)),$(subst $(firstword $(1)),,$(2))),$(2))
+
+OPENAPI_CHARS_LEFT = $(call strip_allowed,$(OPENAPI_ALLOWED_CHARS),$(value OPENAPI))
+OPENAPI_BAD_PREFIX = $(if $(filter _docs/% .scratch/%,$(value OPENAPI)),,$(value OPENAPI))
+OPENAPI_BAD_DOTS = $(findstring ..,$(value OPENAPI))
+OPENAPI_INVALID = $(strip $(OPENAPI_CHARS_LEFT)$(OPENAPI_BAD_PREFIX)$(OPENAPI_BAD_DOTS))
+
+.PHONY: openapi-validate
+
+openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAPI=<path>]
+	$(if $(OPENAPI_INVALID),$(error OPENAPI must stay under _docs/ or .scratch/, use only letters, digits, '.', '_', '-', '/', and contain no '..'; got '$(value OPENAPI)'))
+	@uvx openapi-spec-validator==0.9.0 "$(OPENAPI)"
+
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
 .PHONY: install test frontend-install frontend-start frontend-stop frontend-build frontend-test
