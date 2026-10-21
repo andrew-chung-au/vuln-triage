@@ -1358,3 +1358,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` in `13b0ee9` (#44 scheduling; check-in follows), `_session-summaries/issue-023-api-contract.md`, and this log. GitHub writes: comment 6308766939 (human's contract approval at `3cb40af`), comment 6309337943 (#44 scheduling) and the QA re-checks
 - verification (tests run, reviewer verdict): QA PASS at `052f53a` (6309058776); the decision-point doc changes passed a re-check at `13b0ee9` (6310520840). `make assert-clean` PASS at `13b0ee9`; `make verify` PASS WITH WARNINGS (35/35 tests; the 7 warnings are from the unpushed #22 test rewrite)
 - human review (what I checked or corrected, or `none`): the human approved the contract at `3cb40af`, the validator target and runs, the `AGENTS.md` line, all three spec sentences, the A30 note, one QA-risks follow-up (#46), filing #45, and scheduling #44 after #23. Commands that required approval: `gh issue comment` on #23 and #44 (writes to the record); the protected-file edits and `HUMAN_APPROVED=1` commits (merits requests); `make openapi-validate` (merits request)
+
+### 2026-10-21 — #44 grooming, implementation and close-out
+
+- date: 2026-10-21
+- task/issue: #44 (cloud-session repo changes from `_docs/cloud-sessions.md` § 3); PM groomed it, the Engineer implemented it, QA checked it
+- agent role: main session (orchestrator), with PM, software-engineer and QA subagents
+- model: deepseek-v4.1-flash-free (OpenCode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to groom #44, then to implement it; no key prompt file saved
+- files changed: protected commit `8eeaf53` (`Makefile`, `.claude/settings.json`, `opencode.json`, `_docs/agent-kit/claude-code/hooks/guard_git.py`, new `_docs/agent-kit/claude-code/hooks/cloud_session_start.sh`, `AGENTS.md`), with approval record 6313318576; `_session-summaries/issue-044-cloud-sessions.md`, `_docs/roadmap.md` and this log. GitHub: grooming comment 6310709588, live `make issue-comment` test 6311435040, Engineer evidence 6314178652, QA 6314003194 (FAIL) and 6314208500 (PASS), follow-up #47
+- verification (tests run, reviewer verdict): Engineer checks: guard matrix 30/30, SessionStart 7/7, settings 14/14, issue-target refusals 16/16, `make verify BASE=HEAD` PASS. QA FAILed only on two record-keeping criteria (the matrix and the live-comment URL were not in an issue comment); after the Engineer posted 6314178652, QA PASS at `8eeaf53` (6314208500). `make assert-clean` PASS
+- human review (what I checked or corrected, or `none`): the human approved the exact six-file protected diff (one commit) and filing #47 for the four outside-criteria risks; they deferred the `_docs/cloud-sessions.md` notes to the § 5 trial follow-up. Commands that required approval: the protected-file edits and the `HUMAN_APPROVED=1 git commit` (merits requests); `make issue-comment` (GitHub write to the record); `gh issue create` for #47 (GitHub write)
