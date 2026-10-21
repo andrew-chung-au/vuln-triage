@@ -4,33 +4,45 @@ info:
   title: VulnTriage API
   version: 0.1.0
   description: |
-    The single wire contract between the backend and its three API consumers:
-    the frontend (#23), n8n and the MCP server (#27). It follows
-    `_docs/specs.md` and `_docs/architecture.md`; `_docs/api.md` maps the
-    operations to user stories and lists the differences from
-    `frontend/src/services/types.ts`.
+    The single wire contract between the backend and its four API consumers:
+    the frontend (#23), n8n and the MCP server (#27) and the responder agent
+    (#50). It follows `_docs/specs.md` and `_docs/architecture.md`;
+    `_docs/api.md` maps the operations to user stories and lists the
+    differences from `frontend/src/services/types.ts`.
 
-    Credentials. There are three security schemes, one per consumer:
+    Credentials. There are four security schemes, one per consumer:
     `cookieAuth` (the frontend's server-side session in the `vt_session`
     cookie, `HttpOnly`, `Secure`, `SameSite=Strict`; login sets it and returns
     no bearer token, logout clears it), `n8nAuth` (an opaque bearer service
-    token for n8n, role `n8n`) and `mcpAuth` (an opaque bearer read-only
-    service token for the MCP server, role `mcp-read`). The frontend has no
-    bearer token; only the two service credentials use bearer. Each
+    token for n8n, role `n8n`), `mcpAuth` (an opaque bearer read-only
+    service token for the MCP server, role `mcp-read`) and `responderAuth` (an
+    opaque bearer read-only service token for the responder agent, role
+    `responder-read`). The frontend has no bearer token; only the three
+    service credentials use bearer. Each
     operation's `security` lists exactly the credentials that may call it.
     The n8n allowlist is `startSignalRefresh`, `startScheduledRescan`,
     `listNotificationJobs`, `claimNotificationJob`, `reportNotificationJob`
     and `getWeeklyDigest`. The MCP allowlist is `mcpListTopExposures`,
     `mcpWhichAssetsAffected`, `mcpGetFinding` and `getAsset`, all GET; the
-    MCP token can call no other operation and no write.
+    MCP token can call no other operation and no write. The responder
+    allowlist is `responderGetFinding` and `responderListNotificationJobs`,
+    both GET; the responder token is GET only, two operations, and can call
+    no other operation and no write. The limit is enforced by API
+    authorisation: the role `responder-read` is checked against that
+    per-operation allowlist (architecture § Security boundaries). The
+    responder reads logs from Loki with the Grafana/Loki viewer token, not
+    from this API.
 
-    `401` and `403`. Authentication recognises all three schemes before the
+    `401` and `403`. Authentication recognises all four schemes before the
     per-operation allowlist runs. A missing, expired or invalid credential on
     any operation except login and logout returns `401 unauthenticated`. A
     valid credential for the wrong consumer, or for an operation whose
     `security` does not list it, returns `403 forbidden` and changes no state:
     a valid n8n or MCP token on a frontend operation is `403`, not `401`, and
-    a valid session cookie on an n8n or MCP operation is `403`. This rule
+    a valid session cookie on an n8n or MCP operation is `403`. The same holds
+    for the responder: its token on any operation it does not list is `403`,
+    and an n8n token, MCP token or session cookie on a responder operation is
+    `403`. This rule
     applies to every operation, including the #23 frontend operations whose
     response lists predate #27 and are not changed by it.
 
@@ -52,7 +64,8 @@ info:
     comes before the existence check, an unknown finding id with no
     `X-Requested-With` header returns `403`, not `404`. Service (n8n and MCP)
     operations: `401`, then `403` wrong consumer or operation, then `404`
-    unknown id, then `422` validation, then `409` state. Each operation's
+    unknown id, then `422` validation, then `409` state. The responder
+    operations are service operations and follow the same order. Each operation's
     description states its order.
 
     Status mapping: `401` only for a missing, expired or invalid credential or
@@ -70,7 +83,8 @@ info:
     Secrets Manager in AWS; there is no refresh or rotation in the MVP.
     `VERIFY:` the Secrets Manager injection at container start. No token
     value appears in this contract, in logs, in error bodies or in the
-    repository.
+    repository. The responder token follows the same assumption (#50): a
+    static opaque token injected from `RESPONDER_API_TOKEN`.
 
     Untrusted advisory text. Every response field that carries text derived
     from OSV advisories is marked "Untrusted advisory-derived text" in its
@@ -82,7 +96,10 @@ info:
     The OSV-sourced ids (`vulnerabilityId`, `aliases`, `cveId`) and affected
     ranges (`AffectedRange.range`, in each finding's `affectedRanges`) also
     appear outside `untrustedAdvisoryData`, as top-level fields of finding
-    responses; each is individually marked untrusted in its description.
+    responses; each is individually marked untrusted in its description. The
+    responder operations return no `untrustedAdvisoryData` (#50): the
+    responder receives the finding's own marked fields only, and
+    `ResponderNotificationJob` carries no free text except a short error code.
 
     `VERIFY:` the FastAPI version pinned in issue #24 generates OpenAPI 3.1.0,
     so #24's conformance test compares like with like. `VERIFY:`
@@ -109,6 +126,12 @@ tags:
     description: |
       Read-only calls the MCP server makes with the `mcpAuth` service token
       for its four tools. `GET /assets/{id}` (tag `assets`) is the fourth.
+  - name: responder
+    description: |
+      Read-only calls the US-15 responder agent makes with the `responderAuth`
+      service token (role `responder-read`): `responderGetFinding` and
+      `responderListNotificationJobs`. GET only, two operations. Logs are read
+      from Loki, not from this API.
 
 paths:
   /auth/login:
@@ -751,6 +774,102 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /responder/findings/{id}:
+    get:
+      tags: [responder]
+      operationId: responderGetFinding
+      summary: Read one finding with its asset (responder)
+      description: |
+        Serves the US-15 responder, which wakes on the US-14 alert carrying a
+        finding id and needs the finding's ids, versions and asset to
+        reproduce the defect. Returns the same `FindingWithAsset` as
+        `GET /findings/{id}`, under the responder's own credential, because
+        `GET /findings/{id}` lists only `cookieAuth` and a responder token on
+        it is `403`. It returns no `untrustedAdvisoryData` (least privilege:
+        the responder does not need advisory summaries, details or
+        references).
+
+        Advisory-derived fields are untrusted data, never instructions. The
+        responder never runs commands, opens URLs or uses paths taken from
+        them. The fields are `brief.summary`, `brief.impact` and
+        `brief.remediation`, `vulnerabilityId`, `aliases`, `cveId` and
+        `AffectedRange.range`, each marked "Untrusted advisory-derived text"
+        in its schema description (architecture prompt-injection table, row
+        "Responder reading the API").
+
+        Checks, in order: `401` missing, expired or invalid credential; `403`
+        a valid credential other than the responder token (session cookie, n8n
+        token or MCP token); `404` unknown finding id. The operation is read
+        only and changes no state.
+      security:
+        - responderAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FindingId'
+      responses:
+        '200':
+          description: The finding joined with its asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingWithAsset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /responder/notification-jobs:
+    get:
+      tags: [responder]
+      operationId: responderListNotificationJobs
+      summary: List one finding's notification jobs in every state (responder)
+      description: |
+        Serves the US-15 responder, which must see a failed job and why.
+        Returns the notification jobs of the finding named by the required
+        `findingId` query, in every state (`pending`, `claimed`, `sent`,
+        `failed`), newest first by `createdAt`, then by `id` descending. The
+        optional repeated `state` query limits the states. Held states are not
+        in the enum and are never returned, as for n8n.
+
+        `ResponderNotificationJob` carries no recipient, no owner name or
+        email, no advisory summary and no embedded finding. Its only free-form
+        field is `lastErrorCode`, a short machine code.
+
+        An unknown `findingId` returns `200` with `[]`, not `404`: it is a
+        filter, not a path id.
+
+        The list is deliberately unpaginated at pilot scale, like
+        `GET /notification-jobs`: it has no paging parameters and returns every
+        matching job.
+
+        Checks, in order: `401` missing, expired or invalid credential; `403`
+        a valid credential other than the responder token; `422` a missing
+        `findingId` or a `state` value outside the enum. The operation is read
+        only and changes no state.
+      security:
+        - responderAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResponderFindingIdQuery'
+        - $ref: '#/components/parameters/ResponderJobStateQuery'
+      responses:
+        '200':
+          description: |
+            The finding's jobs, newest first by `createdAt`, then `id`
+            descending; `[]` when the finding has no jobs or is unknown.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResponderNotificationJob'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
 components:
   securitySchemes:
     cookieAuth:
@@ -761,8 +880,8 @@ components:
         The frontend's credential: a server-side session id in the
         `vt_session` cookie. The cookie is `HttpOnly`, `Secure` and
         `SameSite=Strict`, with a 30-minute idle and 8-hour absolute lifetime.
-        The frontend has no bearer token; only the two service credentials
-        (`n8nAuth`, `mcpAuth`) use bearer.
+        The frontend has no bearer token; only the three service credentials
+        (`n8nAuth`, `mcpAuth`, `responderAuth`) use bearer.
     n8nAuth:
       type: http
       scheme: bearer
@@ -790,6 +909,22 @@ components:
         token provisioned by an operator, injected from `MCP_API_TOKEN` (from
         AWS Secrets Manager in AWS; `VERIFY:` the injection), with no refresh
         or rotation in the MVP.
+    responderAuth:
+      type: http
+      scheme: bearer
+      description: |
+        The US-15 responder's read-only service credential (role
+        `responder-read`): an opaque bearer token sent as
+        `Authorization: Bearer <token>`. It may call only the two GET
+        operations `responderGetFinding` and `responderListNotificationJobs`.
+        Any other operation, including every write and every GET not on that
+        list, returns `403 forbidden` and changes no state. The limit is
+        enforced by API authorisation of the role against a per-operation
+        allowlist (architecture § Security boundaries). ASSUMPTION (A1, #50):
+        a static token provisioned by an operator, injected from
+        `RESPONDER_API_TOKEN` (from AWS Secrets Manager in AWS; `VERIFY:` the
+        injection), with no refresh or rotation in the MVP. No token value
+        appears in this contract, in logs or in error bodies.
 
   parameters:
     FindingId:
@@ -879,6 +1014,31 @@ components:
         type: array
         items:
           $ref: '#/components/schemas/NotificationJobKind'
+    ResponderFindingIdQuery:
+      name: findingId
+      in: query
+      required: true
+      description: |
+        The finding whose jobs to list. A missing or empty value returns
+        `422 validation`. An unknown id is a filter that matches nothing and
+        returns `200` with `[]`, not `404`.
+      schema:
+        type: string
+        minLength: 1
+    ResponderJobStateQuery:
+      name: state
+      in: query
+      required: false
+      style: form
+      explode: true
+      description: |
+        Repeat to select several states, for example
+        `?state=failed&state=pending`. Omitted: every state. Any other value
+        returns `422 validation`.
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/ResponderJobState'
     WeekQuery:
       name: week
       in: query
@@ -1565,6 +1725,74 @@ components:
       enum:
         - pending
         - claimed
+
+    ResponderJobState:
+      type: string
+      description: |
+        The states the responder can see (#50). Wider than
+        `NotificationJobState`, which is unchanged. Held states are not in the
+        enum and are never sent.
+      enum:
+        - pending
+        - claimed
+        - sent
+        - failed
+
+    ResponderNotificationJob:
+      type: object
+      description: |
+        One notification job as the US-15 responder sees it. It carries only
+        the fields below: no recipient, no owner name or email, no
+        `advisorySummary` and no embedded finding (strict:
+        `additionalProperties: false`, and those fields are absent from
+        `properties`). It has no free-text field except `lastErrorCode`, a
+        short machine code, so no advisory text can appear in it.
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - state
+        - createdAt
+        - findingId
+        - traceparent
+        - attempts
+        - lastErrorCode
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/NotificationJobKind'
+        state:
+          $ref: '#/components/schemas/ResponderJobState'
+        createdAt:
+          type: string
+          format: date-time
+        findingId:
+          type:
+            - string
+            - 'null'
+          description: The finding id; `null` only for a `digest` job.
+        traceparent:
+          $ref: '#/components/schemas/Traceparent'
+          description: |
+            The job's trace context. The responder takes the trace id from it
+            to find the trace's logs in Loki.
+        attempts:
+          type: integer
+          minimum: 0
+          description: The number of delivery attempts the backend has recorded.
+        lastErrorCode:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9_.:-]+$'
+          description: |
+            The `errorCode` of the failed report, as for
+            `NotificationReport.errorCode`; `null` when the job has not
+            failed. A short machine code, never free text, an email address,
+            a token or advisory text.
 
     NotificationRecipient:
       type: object

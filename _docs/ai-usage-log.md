@@ -1479,3 +1479,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (step 9 row, check-in), this log, `_session-summaries/issue-034-spa-shell.md`. GitHub: #34 comments 6326704884 (PM grooming), 6328636205 (human's decisions, posted by the orchestrator), 6328681771 (QA provisional FAIL), 6328697373 (QA PASS)
 - verification (tests run, reviewer verdict): QA PASS at `d8c2ffe` (6328697373); `make assert-clean` PASS and HEAD `d8c2ffe` unchanged after both QA runs; `make verify` PASS on the push (62/62). Criterion 9 passed only on the clean dev-server start plus the routeTree tests; sign-in in a real browser was not machine-verified
 - human review (what I checked or corrected, or `none`): the human chose D1 and D2 (recommended), approved QA's read-only `.scratch/` HTTP check, and chose "note only" for the QA risks and "discard" for the script. Commands that required approval: the QA `.scratch/check_dist_http.py` run (merits request: local network access); `git push -u origin` of the session branch (cloud-session exception, no merits request)
+
+### 2026-10-21 — #50 Engineer: responder read-only API contract (US-15)
+
+- date: 2026-10-21
+- task/issue: #50 (API contract: responder agent read-only endpoints, US-15)
+- agent role: Software Engineer subagent, launched by the orchestrator on branch `claude/sleepy-euler-bzyy0r`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task to implement #50 per PM grooming comment 6317612610 and the human's D1-D3 answers (option 1); no new key prompt saved
+- files changed: commit `6ff10d9` (`_docs/openapi.yaml`, `_docs/api.md`) and this log. GitHub: Engineer comment on #50
+- verification (tests run, reviewer verdict): `make openapi-validate` exit 0 on the final file; negative copy with `ResponderNotificationJob` renamed in the response `$ref` exited 2 and was deleted; `.scratch/check_responder.py` listed exactly two operations using `responderAuth`, both GET, and no recipient, owner, `advisorySummary`, finding or `untrustedAdvisoryData` property on `ResponderNotificationJob`; `make verify` PASS (62/62 tests, no whitespace errors, no test files changed). No reviewer verdict yet
+- human review (what I checked or corrected, or `none`): none yet. Commands that required approval: none
