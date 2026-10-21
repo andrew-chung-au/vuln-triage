@@ -52,6 +52,7 @@
 
 - `uvx` installed `openapi-spec-validator==0.9.0` into uv's tool cache for the validator runs; it is a cache entry, not a project dependency, and was left in place.
 - No processes were started; no system configuration changed.
+- `make clean-scratch` ran after QA: `.scratch/` is empty.
 
 ## Permission review
 
