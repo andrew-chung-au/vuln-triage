@@ -201,7 +201,7 @@ returns the same finding(s) as a lookup by the primary id.
   exact wire shape is fixed in Stage 3.
 - Acceptance: `list_top_exposures` returns ranked open findings.
 - Acceptance: `which_assets_affected` returns the affected assets for a known
-  CVE.
+  CVE, listing its findings in any status, each with its status.
 - Acceptance: `get_finding` returns one finding by id.
 - Acceptance: `get_asset` returns one asset by id.
 - Acceptance: MCP tool output marks advisory-derived text as quoted, labelled
