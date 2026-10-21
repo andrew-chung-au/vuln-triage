@@ -1468,3 +1468,14 @@ Copy this template for each new entry:
 - files changed: commit `67419b2` (`frontend/index.html`, `frontend/src/main.tsx`, `frontend/src/routes/__root.tsx`, `frontend/src/test/app-routing.test.tsx` (comment only), `frontend/src/test/document-shell.test.tsx` (new)) and this log. GitHub: Engineer comment https://github.com/andrew-chung-au/vuln-triage/issues/34#issuecomment-6328657109
 - verification (tests run, reviewer verdict): new regression test failed on the unfixed shell (1 failed, 61 passed) with the `<html> cannot be a child of <div>` warning; after the fix `make test` 62/62 pass, `make frontend-typecheck` clean, `make frontend-build` output has one stylesheet link, `make verify` PASS. Dev-server login and an HTTP 200 check of `dist/` were not run. No reviewer verdict yet
 - human review (what I checked or corrected, or `none`): none yet. Commands that required approval: none
+
+### 2026-10-21 — #34 orchestrator, PM and QA: frontend SPA shell
+
+- date: 2026-10-21
+- task/issue: #34 (lifecycle steps 1-9, except the Engineer's own entry above)
+- agent role: Orchestrator (main session), with PM and QA subagents
+- model: claude-sonnet-5-5 (Claude Code, cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): "Next product step: step 9 (#34), the frontend SPA shell, is unblocked. follow process.md"; no new key prompt saved
+- files changed: `_docs/roadmap.md` (step 9 row, check-in), this log, `_session-summaries/issue-034-spa-shell.md`. GitHub: #34 comments 6326704884 (PM grooming), 6328636205 (human's decisions, posted by the orchestrator), 6328681771 (QA provisional FAIL), 6328697373 (QA PASS)
+- verification (tests run, reviewer verdict): QA PASS at `d8c2ffe` (6328697373); `make assert-clean` PASS and HEAD `d8c2ffe` unchanged after both QA runs; `make verify` PASS on the push (62/62). Criterion 9 passed only on the clean dev-server start plus the routeTree tests; sign-in in a real browser was not machine-verified
+- human review (what I checked or corrected, or `none`): the human chose D1 and D2 (recommended), approved QA's read-only `.scratch/` HTTP check, and chose "note only" for the QA risks and "discard" for the script. Commands that required approval: the QA `.scratch/check_dist_http.py` run (merits request: local network access); `git push -u origin` of the session branch (cloud-session exception, no merits request)
