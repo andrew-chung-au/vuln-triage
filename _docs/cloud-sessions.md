@@ -60,7 +60,7 @@ A cloud session clones the GitHub remote, not the sandbox folder. From the clean
 The ruleset already targets the default branch and requires a pull request (merge commits only), the `verify` status check, no force pushes and no deletion. Set:
 
 - **Enforcement status:** `Active`. While it is `Disabled`, only `guard_git.py` stands between a session and `main`, and #47 lists ways around it.
-- **Bypass list:** change the admin role's bypass mode from `Always` to `For pull requests only` (or remove it). Cloud pushes go out under the human's GitHub account; with `Always`, a session could probably push straight to `main` (`VERIFY:` the trial couldn't test it, because `guard_git.py` refused both pushes to `main` before they reached GitHub). The cost: the human also stops pushing to `main` directly and merges PRs instead, which is the same flow as cloud work.
+- **Bypass list:** change the admin role's bypass mode from `Always` to `For pull requests only` (or remove it). Cloud pushes go out under the human's GitHub account; with `Always`, a session could probably push straight to `main` (the trial couldn't test it, because `guard_git.py` refused both pushes to `main` before they reached GitHub). Set to `For pull requests only` on 2026-10-21. The cost: the human also stops pushing to `main` directly and merges PRs instead, which is the same flow as cloud work.
 
 ### 4.3 Pull request settings (Settings → General → Pull Requests)
 
@@ -127,9 +127,9 @@ A short, low-cost run that checks every `VERIFY:` above, on a throwaway branch w
 | Postgres | Installed (16/main, port 5432), service down. The docs say `service postgresql start` starts it (not tried) |
 
 Follow-ups:
-- **Docker start:** a `docker-start`/`docker-stop` make target that starts `sudo dockerd` in the background, records its PID, waits for the socket, and stops only that PID. The `Makefile` and the banner in `cloud_session_start.sh` are protected, so this needs an issue and the human's approval.
-- **Guard:** `guard_git.py` treats `git config core.hooksPath` (a read) as a change. Add it to #47.
-- **Ruleset bypass:** still `Always`; see section 4.2.
+- **Docker start:** #48 (`docker-start`/`docker-stop` make targets and the banner wording; decisions D1 and D2 open).
+- **Guard:** `guard_git.py` treats `git config core.hooksPath` (a read) as a change: added to #47 (comment 6315677576).
+- **Ruleset bypass:** changed to `For pull requests only` after the trial (2026-10-21).
 
 ## 6. Running an issue in the cloud (routine)
 
