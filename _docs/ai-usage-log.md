@@ -1402,3 +1402,14 @@ Copy this template for each new entry:
 - files changed: GitHub: #48 created (draft criteria, D1/D2 for the human; not groomed), #47 comment 6315677576. Repo: `_docs/cloud-sessions.md` (§ 4.2 and § 5.1 follow-ups), `_docs/roadmap.md` (#48 note, check-in line) and this log
 - verification (tests run, reviewer verdict): read-only `gh api` check: ruleset 25525417 `enforcement: active`, admin bypass `pull_request`. No tests run (docs and issues only)
 - human review (what I checked or corrected, or `none`): the human approved filing #48 and the #47 comment, and changed the bypass themselves; D1/D2 on #48 not answered yet. Commands that required approval: `gh issue create` for #48 (GitHub write to the record); `make issue-comment N=47` (GitHub write to the record, under the `make *` allow rule)
+
+### 2026-10-21 — #27 Engineer: n8n and MCP server API contract
+
+- date: 2026-10-21
+- task/issue: #27 (API contract: n8n and MCP server endpoints, Stage 3 part 2)
+- agent role: Software Engineer subagent, launched by the orchestrator in a Claude Code cloud session on branch `claude/compassionate-hamilton-k90q3r`
+- model: claude-opus-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's Engineer task for #27, with the human's 2026-10-21 US-15 decision (responder moved to follow-up #50); role file `_docs/agent-kit/team/software-engineer.md`; no new key prompt saved
+- files changed: `_docs/openapi.yaml` (commit `7355d8e616ef03fb7b9f8cc7b02e9c798c88ce53`: nine n8n/MCP operations, `n8nAuth`/`mcpAuth`, `getAsset` shared with MCP, new schemas, untrusted-text marks, `FindingFields` split), `_docs/api.md` (commit `d89597aa1285d9a5eceb155cb638c91c856a3361`: 19-row table, auth/authorization, check order, schemas, pagination, `types.ts` note, Stage 3 checklist linking #50, #27 wire decisions) and this log. GitHub: Engineer comment https://github.com/andrew-chung-au/vuln-triage/issues/27#issuecomment-6316040760
+- verification (tests run, reviewer verdict): `make openapi-validate` exit 0; the same target on `.scratch/openapi-broken-ref.yaml` (one broken response `$ref`) exit 2; `.scratch/check_27.py` ALL PASS (operation set, allowlists by scheme, error codes, untrusted-field list, fixture absent, api.md table equals contract); `make verify BASE=950dcbe` PASS (35/35 tests, whitespace PASS, no test files changed). Runtime refused cases are #24's. No reviewer verdict yet
+- human review (what I checked or corrected, or `none`): none yet; the human's review of `_docs/openapi.yaml` at `7355d8e616ef03fb7b9f8cc7b02e9c798c88ce53` is pending (orchestrator). Commands that required approval: none (no `ask` rule matched; no merits request)
