@@ -26,12 +26,40 @@ clean-scratch: ## Empty .scratch/ at the end of an issue (refuses while a starte
 # value that still has non-digit characters once the digits are stripped.
 ISSUE_DIGITS_LEFT = $(subst 0,,$(subst 1,,$(subst 2,,$(subst 3,,$(subst 4,,$(subst 5,,$(subst 6,,$(subst 7,,$(subst 8,,$(subst 9,,$(N)))))))))))
 
-issue-dump: ## Fetch an issue as JSON: make issue-dump N=<issue number>
+# issue-comment's FILE must stay under .scratch/ so a typo cannot publish
+# another repo file, including .env.
+ISSUE_FILE = $(value FILE)
+ISSUE_FILE_NOT_SCRATCH = $(if $(filter .scratch/%,$(ISSUE_FILE)),,$(ISSUE_FILE))
+ISSUE_FILE_DOTS = $(findstring ..,$(ISSUE_FILE))
+ISSUE_FILE_DASH = $(filter -%,$(ISSUE_FILE))
+
+issue-dump: ## Fetch an issue and its comments as JSON: make issue-dump N=<issue number>
 	$(if $(N),,$(error Usage: make issue-dump N=<issue number>))
 	$(if $(ISSUE_DIGITS_LEFT),$(error N must be an issue number))
 	@mkdir -p .scratch
-	gh issue view $(N) --json number,title,body,state,labels,comments > .scratch/issue-$(N).json
-	@echo "Wrote .scratch/issue-$(N).json"
+	gh api repos/{owner}/{repo}/issues/$(N) > .scratch/issue-$(N).json
+	@bash -o pipefail -c "gh api --paginate --slurp repos/{owner}/{repo}/issues/$(N)/comments | jq 'add' > .scratch/issue-$(N)-comments.json"
+	@echo "Wrote .scratch/issue-$(N).json and .scratch/issue-$(N)-comments.json"
+
+issue-comment: ## Comment on an issue from a file: make issue-comment N=<issue number> FILE=<path under .scratch/>
+	$(if $(N),,$(error Usage: make issue-comment N=<issue number> FILE=<path under .scratch/>))
+	$(if $(ISSUE_DIGITS_LEFT),$(error N must be an issue number: got '$(N)'))
+	$(if $(FILE),,$(error Usage: make issue-comment N=<issue number> FILE=<path under .scratch/>))
+	$(if $(filter /%,$(ISSUE_FILE)),$(error FILE must be under .scratch/, not an absolute path: got '$(FILE)'))
+	$(if $(ISSUE_FILE_DASH),$(error FILE must not start with '-': got '$(FILE)'))
+	$(if $(ISSUE_FILE_DOTS),$(error FILE must not contain '..': got '$(FILE)'))
+	$(if $(ISSUE_FILE_NOT_SCRATCH),$(error FILE must be under .scratch/: got '$(FILE)'))
+	@test -e "$(FILE)" || { echo "FILE does not exist: $(FILE)" >&2; exit 1; }
+	@test -f "$(FILE)" || { echo "FILE is not a regular file: $(FILE)" >&2; exit 1; }
+	@test -s "$(FILE)" || { echo "FILE is empty: $(FILE)" >&2; exit 1; }
+	gh api repos/{owner}/{repo}/issues/$(N)/comments -F "body=@$(FILE)"
+
+issue-close: ## Close an issue: make issue-close N=<issue number>
+	$(if $(N),,$(error Usage: make issue-close N=<issue number>))
+	$(if $(ISSUE_DIGITS_LEFT),$(error N must be an issue number: got '$(N)'))
+	gh api -X PATCH repos/{owner}/{repo}/issues/$(N) -f state=closed
+
+.PHONY: issue-dump issue-comment issue-close
 
 tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool>: missing")
 	@for t in node npm uv python3 docker; do if command -v "$$t" >/dev/null 2>&1; then printf '%s: ' "$$t"; "$$t" --version; else echo "$$t: missing"; fi; done
