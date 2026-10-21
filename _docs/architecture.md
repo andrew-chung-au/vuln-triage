@@ -489,7 +489,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A27) US-9 windows `P1` 7, `P2` 14, `P3` 30, `P4` 90 days; reminders and escalation at due and weekly after.
 - (A28) A missing security-lead contact shows on `/health` and a dashboard banner, and holds escalation and digest jobs.
 - (A29) The MCP server runs over stdio on the developer's machine; `get_asset` includes owner contact.
-- (A30) Dashboard authentication values (Argon2id, session lifetimes, lockout, CSRF header) and the owner-match rule for risk acceptance.
+- (A30) Dashboard authentication values (Argon2id, session lifetimes, lockout, CSRF header) and the owner-match rule for risk acceptance. An asset owner may accept risk only when the finding's asset owner email matches the signed-in user's email, compared after trimming and case-folding.
 - (A31) URL defanging and `@` mention handling in emails and issue bodies.
 - (A32) The telemetry attribute allowlist.
 - (A33) US-14 window 30 minutes, 1-minute evaluation.
