@@ -220,7 +220,7 @@ Worked example (T = 0.10; all detected in the same scan, so step 3 ties):
 
 Ordering `P3`: step 1 puts `fnd-0002` (0.55) first, `fnd-0004` and `fnd-0005` (0.05) next, and `fnd-0003` (`n/a`) last. `fnd-0004` and `fnd-0005` tie at step 2 (both `high`) and step 3 (same scan); step 4 puts `fnd-0004` first. Final order: `fnd-0001`, `fnd-0002`, `fnd-0004`, `fnd-0005`, `fnd-0003`, `fnd-0006`.
 
-Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field, while the GitHub issue is still opened once (as E2).
+Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field, while the GitHub issue is still opened once (as E2). The held state is internal to the backend: a `top tier` job for such an owner reaches n8n as `pending` with `recipient.email: null`, so n8n opens the GitHub issue once and sends no email (#27).
 
 ## LLM brief
 
@@ -289,8 +289,8 @@ Transport and placement: Python, stdio, run by the developer's AI assistant on t
 
 | Tool | Input | Output | API call |
 |---|---|---|---|
-| `list_top_exposures` | `limit` (1-50, default 10), optional `asset_id` | Ranked `open` findings: finding id, rank, tier, primary id, aliases, asset id and name, package, installed version, fixed version or null, KEV value, EPSS or `n/a`, rank reason | List findings, status `open`, by rank |
-| `which_assets_affected` | `vulnerability_id`: any alias (CVE, GHSA, PYSEC, ...) | `known` (true or false), the vulnerability's primary id and aliases when known, and `assets` (asset id, name, finding id, status, tier); empty list when none. Wire shape fixed in #23 | Lookup by alias |
+| `list_top_exposures` | `limit` (1-50, default 10), optional `asset_id` | Ranked `open` findings: finding id, rank, tier, primary id, aliases, asset id and name, package, dependencies (each entry with its installed version), fixed version or null, KEV value, EPSS (`null` on the wire when there is no score; the MCP server shows it as `n/a`), rank reason | List findings, status `open`, by rank |
+| `which_assets_affected` | `vulnerability_id`: any alias (CVE, GHSA, PYSEC, ...) | `known` (true or false), the vulnerability's primary id and aliases when known, and `assets` (asset id, name, finding id, status, tier); empty list when none. Wire shape fixed in #27 | Lookup by alias |
 | `get_finding` | `finding_id` | The finding's fields, plus `untrusted_advisory_data` | Get one finding |
 | `get_asset` | `asset_id` | The asset's fields and scan status | Get one asset |
 
@@ -304,7 +304,7 @@ Secrets: none in the repository, images or telemetry; `.env.example` lists names
 
 | Secret | Development | CI | AWS |
 |---|---|---|---|
-| Repository read token, tracker token, LLM keys, SMTP credentials, service tokens (n8n, MCP, responder), database password, Grafana admin password | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
+| Repository read token, tracker token, LLM keys, SMTP credentials, service tokens (n8n `N8N_API_TOKEN`, MCP `MCP_API_TOKEN`, responder), database password, Grafana admin password | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
 
 Credentials:
 
@@ -312,8 +312,8 @@ Credentials:
 |---|---|---|---|---|
 | Repository read-only token (backend) | Read contents of the pilot repositories | Write anything; read issues or other repositories | GitHub fine-grained token: `contents: read` on selected repositories (VERIFY) | A `PUT` to the contents API with it is refused |
 | Tracker token (n8n) | Create, comment on and close issues in `vuln-triage-findings` | Push code, change settings, touch other repositories | GitHub fine-grained token: `issues: read/write` on that repository only (VERIFY, spec US-8) | A `git push` to `vuln-triage-findings` with it is refused |
-| n8n API token | List, claim and report jobs; start refresh and re-scan | Set any finding status, including `risk accepted`; edit assets; read users | API authorisation (role `n8n`, endpoint allowlist) | Risk acceptance with it gets 403 and no state change |
-| MCP API token | GET the read endpoints the four tools use | Any write | API authorisation (role `mcp-read`, GET only) | `POST` to the assets endpoint gets a 4xx and no state change (US-12) |
+| n8n API token | List, claim and report jobs; start refresh and re-scan; fetch the weekly digest | Set any finding status, including `risk accepted`; edit assets; read users | API authorisation (role `n8n`, endpoint allowlist) | Risk acceptance with it gets 403 and no state change |
+| MCP API token | GET the read endpoints the four tools use | Any write | API authorisation (role `mcp-read`, GET only) | `POST` to the assets endpoint gets 403 `forbidden` and no state change (US-12) |
 | Responder GitHub token or App (D2) | Push branches and open pull requests on the application repository | Push to `main`, merge, change settings, touch other repositories; no AWS credential at all | Fine-grained token or App: contents write and pull requests write on that repository only; branch protection on `main` requiring a pull request and the human's review, with no bypass (VERIFY: fine-grained tokens can't be limited to a branch, so branch protection is the enforcement) | `git push origin HEAD:main` with it is rejected |
 | Responder API and Grafana tokens | GET findings, jobs and logs; read Grafana and Loki | Any API write; editing dashboards or alert rules | API authorisation (role `responder-read`, GET only); Grafana Viewer role (VERIFY) | A job retry `POST` with it gets 403 |
 | LLM API keys (one for the backend, one for the responder) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY); the backend then takes the "brief unavailable" path |
