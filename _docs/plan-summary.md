@@ -222,20 +222,30 @@ No labelled items: 0 open questions, 0 `ASSUMPTION:` and 0 `VERIFY:` (read-only 
 
 ## Completeness check
 
-Counts come from the read-only `.scratch/` extraction (`count_labels.py` and `extract_labels.py`) and are consolidated only where the note says so. An unexplained difference would be a FAIL; every difference below is explained.
+Counts come from the read-only label-only `.scratch/` extraction (`count_labels.py`), which matches only the literal tags `ASSUMPTION:` and `VERIFY:`. Prose, headings, `make verify` and the unlabelled word "assumption" are not counted. An unexplained difference would be a FAIL; every difference below is explained, and the exact line locations follow the table.
 
-| Source | Open questions found | Assumptions / `VERIFY:` found | Captured in register | Difference and explanation |
-|---|---|---|---|---|
-| `_docs/project-brief.md` | 0 | 0 / 0 | 0 | None: the brief carries no labelled items |
-| `_docs/specs.md` | 5 | 4 distinct `ASSUMPTION:` items (7 occurrences) / 0 in scope | 9 | The 7 occurrences are 3 §Assumptions bullets plus the inline `withdrawn` addition, repeated in the status table and E4, and the US-9 pointer to Q2; all are consolidated into the 4 assumption rows. Spec `VERIFY:` markers are out of scope (P-A2) |
-| `_docs/architecture.md` | 11 | 38 active assumptions (41 IDs minus retired A7/A12/A14) / 58 `VERIFY:` lines out of scope | 49 | No assumption difference: every active ID has a row; the retirement note is kept in the heading. `VERIFY:` markers are tracked per §External data sources and risk R4 |
-| `_docs/api.md` | 0 | 2 `ASSUMPTION:` entries (one tag, two issue-scoped entries) / 11 distinct `VERIFY:` items (14 occurrences) | 13 | Both A1 entries are kept because they name #27 and #50 separately. Repeated Secrets Manager mentions (lines 75, 76, 340) are one row naming all locations |
-| `_docs/testing.md` | 0 | 8 `T-A` assumptions (14 occurrences) / 16 distinct `VERIFY:` items (22 occurrences) | 24 | The `T-A` repeats are inline uses of the same 8 tags. Table rows with several different external meanings are split into separate `VERIFY:` rows |
-| `_docs/tasks.md` | 0 | 1 `ASSUMPTION:` / 1 `VERIFY:` (3 occurrences, one line) | 2 | None: all occurrences are the same line |
-| `_docs/roadmap.md` | 7 live decisions (D1-D7) | 11 `VERIFY:` lines and 1 `(ASSUMPTION)` label outside the decision scope | 7 | The table has 11 rows; rows 1-4 are resolved/withdrawn and not live, so 7 D-rows are captured. Other labels belong to roadmap steps, not the Stage 1-5 register |
-| `_docs/plan-summary.md` | 0 | 2 self-assumptions | 2 | New assumptions are labelled and added here |
+| Source | Open questions / decisions | `ASSUMPTION:` labels (occurrences / lines) | `VERIFY:` labels (occurrences / lines) | Captured | Difference and explanation |
+|---|---|---|---|---|---|
+| `_docs/project-brief.md` | 0 | 0 / 0 | 0 / 0 | 0 | No labelled items |
+| `_docs/specs.md` | 5 | 6 / 6 | 14 / 13 (out of scope) | 9 | The 6 assumption labels are 5 distinct meanings: line 152 is the US-9 windows assumption and is recorded in `specs.md:Q2`; lines 256 and 345 are the same `withdrawn` addition (one row); lines 371, 373 and 375 are the three §Assumptions rows. Spec `VERIFY:` labels are external-detail checks outside the Stage 1 register scope (P-A2) |
+| `_docs/architecture.md` | 11 | 38 / 29 | 56 / 47 (out of scope) | 49 | The 38 labelled tags are exactly A1-A6, A8-A11, A13 and A15-A41; A7/A12/A14 are retired and not reused, so there is no assumption difference. `VERIFY:` labels are tracked per §External data sources and risk R4, not as separate register rows |
+| `_docs/api.md` | 0 | 2 / 2 | 13 / 12 | 13 | Both A1 labels (#27 at line 75, #50 at line 76) are separate rows. The 13 VERIFY occurrences are 11 distinct items: line 332 carries two labels (OpenAPI generation and the validator), and the Secrets Manager item occurs on lines 75, 76 and 340 and is one row listing all three |
+| `_docs/testing.md` | 0 | 15 / 15 (14 tagged; 8 distinct T-A) | 19 / 19 | 24 | Line 5 is the conventions definition, so the 14 tagged occurrences are the 8 T-A rows. The 19 VERIFY labels are 18 item mentions (line 5 is a definition) and 16 distinct rows: line 224 supplies the exemplar and Tempo-Loki rows, and the table at lines 378-385 repeats items already named inline |
+| `_docs/tasks.md` | 0 | 2 / 2 | 2 / 1 | 2 | Lines 95 and 267 are one assumption row (task 15/17 follow T-A1 and architecture §Deployment). Line 267 carries two VERIFY labels: one is a cross-reference to architecture's existing tags, the other is the Juice Shop lockfile row |
+| `_docs/roadmap.md` | 7 live decisions (D1-D7) | 0 / 0 | 3 / 3 (out of scope) | 7 | The decision table has 11 rows; rows 1-4 are resolved/withdrawn and not live, so 7 D-rows are captured. The 3 VERIFY labels (65, 66, 114) are step/check-in external details outside the decision register; the `(ASSUMPTION)` at line 207 is prose, not a label |
+| `_docs/plan-summary.md` | 0 | 2 / 2 (self) | 0 / 0 | 2 | P-A1 and P-A2 are labelled `ASSUMPTION:` and added here |
 
 Register total: 9 + 49 + 13 + 24 + 2 + 7 + 2 = **106 entries** (104 from Stages 1-5 plus 2 self-assumptions).
+
+Label locations (1-based line numbers, read at `1edc468`):
+
+- `_docs/specs.md` — `ASSUMPTION:` 152, 256, 345, 371, 373, 375. `VERIFY:` 30, 33, 72, 84, 133, 138, 256, 318, 326, 345, 350, 351, 352 (14 occurrences on 13 lines; line 345 carries two).
+- `_docs/architecture.md` — `ASSUMPTION:` 25, 29, 44, 45, 51, 53, 72, 83, 92, 115, 132, 179, 196, 223, 227, 242, 250, 269, 271, 288, 301, 336, 353, 356, 365, 379, 393, 407, 433. `VERIFY:` 5, 14, 29, 49, 59, 60, 61, 62, 63, 80, 81, 86, 87, 94, 104, 240, 242, 267, 269, 277, 278, 279, 280, 281, 282, 283, 288, 301, 317, 320, 332, 334, 348, 352, 355, 360, 371, 383, 393, 398, 403, 404, 405, 412, 415, 417, 433 (56 occurrences; lines 29, 80, 81, 87, 277, 332, 348, 355 and 360 carry two each).
+- `_docs/api.md` — `ASSUMPTION:` 75, 76. `VERIFY:` 47, 72, 75, 76, 158, 205, 332, 336, 337, 338, 339, 340 (13 occurrences; line 332 carries two).
+- `_docs/testing.md` — `ASSUMPTION:` 5, 77, 91, 139, 222, 250, 363, 370, 371, 372, 373, 374, 375, 376, 377. `VERIFY:` 5, 166, 218, 224, 226, 228, 238, 242, 256, 258, 262, 378, 379, 380, 381, 382, 383, 384, 385.
+- `_docs/tasks.md` — `ASSUMPTION:` 95, 267. `VERIFY:` 267 (two labels on the line).
+- `_docs/roadmap.md` — `ASSUMPTION:` none. `VERIFY:` 65, 66, 114.
+- `_docs/project-brief.md` — none.
 
 ## Stage 6 checklist
 
@@ -246,9 +256,9 @@ Register total: 9 + 49 + 13 + 24 + 2 + 7 + 2 = **106 entries** (104 from Stages 
 | Nothing is unmapped | PASS | Every map row has at least one `task N` and at least one resolving document link; the Gaps table is empty. The Application/task 15 difference is recorded as D1, and the row is still covered by tasks 1, 3-12 and 14 |
 | Every task number exists | PASS | `.scratch/check_map.py` matched every `task N` to a `## N.` heading in [`_docs/tasks.md`](tasks.md) and found no number outside 1-36 |
 | Every risk has a mitigation | PASS | Top risks has 9 rows (more than 8); every row has a non-empty mitigation, owner and residual risk. Human-only actions are labelled `human` |
-| All open questions and assumptions are collected | PASS | Completeness table above: 106 register entries; every source count difference is explained; the brief's zero is stated rather than omitted |
+| All open questions and assumptions are collected | PASS | Corrected label-only recount: 6 specs assumption labels (5 meanings; `specs.md:Q2` covers line 152), 38 architecture A tags, 2 api A1 entries, 14 tagged testing T-A occurrences (8 items), 2 tasks labels, 0 roadmap labels, plus 2 self-assumptions = 106 register entries; every difference is explained and the locations are listed above |
 | Links resolve | PASS | `.scratch/check_links.py` checked every relative Markdown link in this file and the new README line; all resolve |
-| File limit | PASS | `git status --short` and `git diff --name-only` show only `_docs/plan-summary.md` and `README.md` |
+| File limit | PASS | `git diff --name-only 1edc468` lists only `_docs/plan-summary.md` and `README.md`; `git diff --stat 1edc468` is 2 files with 0 deletions |
 
 ## Gaps
 
