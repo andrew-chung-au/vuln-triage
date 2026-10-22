@@ -8,13 +8,13 @@ Status: planning document for #56. It names the tests; it adds no application, t
 
 | Level | Tests | Runs on | Command |
 |---|---|---|---|
-| Backend unit | Parsers, version ordering, fixed version, tiers/tie-breaks, brief guardrail, status rules; SQLite/in-memory, stubs, `LLM_MODE=stub` | Local sandbox, no Docker | `make test` (backend unit is wired into it; no separate unit target) |
+| Backend unit | Parsers, version ordering, fixed version, tiers/tie-breaks, brief guardrail, status rules; SQLite/in-memory, stubs, `LLM_MODE=stub` | Local sandbox, no Docker | `make test` (planned to include backend unit; today it runs the frontend suite) |
 | Frontend unit/integration | The existing vitest suite in `frontend/src/test/` | Local sandbox, no Docker | `make frontend-test` |
 | SQLite integration | API and database through the app on SQLite, stubbed externals | Local sandbox, no Docker | `make test` |
 | Real-Postgres integration | API and database through the app on Postgres in Compose, committed fixtures | GitHub Actions `ubuntu-latest` Compose job; optional codespace or human host via `_docs/docker-runbook.md` | `make test-integration` (planned) |
 | Compose E2E | Full stack, API-driven journey, local mail sink | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-e2e` (planned) |
 | Compose telemetry, alert and responder | US-13, US-14 and US-15 journeys | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-compose` (planned) |
-| OpenAPI validation | Validates `_docs/openapi.yaml`; conformance runs in the backend suite | Local sandbox and CI, no Docker | `make openapi-validate`; conformance is part of `make test` |
+| OpenAPI validation | Validates `_docs/openapi.yaml`; conformance is planned in the backend suite | Local sandbox and CI, no Docker | `make openapi-validate`; conformance planned as part of `make test` |
 | LLM brief evaluation | Human-scored sample with the pinned model | A human machine or scheduled runner, not PR CI | `make test-brief-eval` (planned) |
 | Light security scan | Dependency audit of the app's own lockfiles/manifests | GitHub Actions `ubuntu-latest` PR job | `make security-scan` (planned) |
 | Gate | Tests, whitespace and weakened-test checks | Local sandbox | `make verify` |
