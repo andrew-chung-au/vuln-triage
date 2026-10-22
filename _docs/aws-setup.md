@@ -75,7 +75,7 @@ Also worth turning on, free or nearly free (VERIFY): Cost Anomaly Detection with
 
 ## 5. Hostnames and TLS (`sslip.io`)
 
-Grafana and the dashboard use session cookies marked `Secure`, so both need HTTPS. There is no load balancer or CloudFront, so no AWS Certificate Manager certificate (VERIFY). The certificate comes from Let's Encrypt, obtained by the reverse proxy on the server.
+The dashboard uses session cookies marked `Secure`, so it needs HTTPS. Grafana runs in the local stack for submission, so it needs no public hostname; a Grafana on AWS is showcase item X3 (`_docs/roadmap-showcase.md`). There is no load balancer or CloudFront, so no AWS Certificate Manager certificate (VERIFY). The certificate comes from Let's Encrypt, obtained by the reverse proxy on the server.
 
 You do not buy or configure a domain. The server has an Elastic IP, and `sslip.io` resolves a hostname containing that IP back to it, for example `dev.203-0-113-10.sslip.io` for dev and `app.203-0-113-10.sslip.io` for prod (VERIFY: the exact `sslip.io` name forms). Ports 80 and 443 are open to the internet (80 only for the certificate challenge and the redirect to 443).
 
