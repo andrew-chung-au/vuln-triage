@@ -1590,6 +1590,17 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): QA PASS (6332195958) and re-check PASS (6332346303); `make assert-clean` PASS with HEAD unchanged (`05e3e60`, then `ae6b708`) after each; `make verify` PASS both times (62 tests, no whitespace errors, no test files changed); the Engineer's read-only `.scratch/check_tasks.py` passed (36 tasks, 16 user stories, 12 criteria, lower-numbered acyclic dependencies, dependency chain matches)
 - human review (what I checked or corrected, or `none`): the human approved filing #72 and chose D1 (rubric-tier milestones A/B/C then a Committed scope section) and D2 (one planning-evidence task), both recommended; chose fix-now for the US-15 alignment and note-only for the task-sizing risks; directed the three follow-ups (agent-kit #19, and #73 for the two doc notes). Commands that required approval: `gh issue create` for #72 and #73 (issue-creation rule) and for agent-kit #19 (same rule, another repo); `gh issue edit 72` (issue-edit ask rule); `make issue-comment` (allowed target)
 
+### 2026-10-22 — #53 orchestrator, Engineer and QA: verify gate type check and BASE handling
+
+- date: 2026-10-22
+- task/issue: #53 (roadmap track T1: type check in `make verify`; BASE warning and failure)
+- agent role: Orchestrator (main session) with a Software Engineer subagent and QA subagents (two runs, the second a narrow re-check), on branch `claude/start-53-7oaxg3`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "Start #53"; role launch prompts followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: `_docs/testing.md` (`291b4bc`); `_docs/agent-kit/scripts/verify.sh` and `_docs/agent-kit/procedures/verify.md` (`bdda483`); `agent-kit.conf` (`e0cf368`); `AGENTS.md` line 35 (`1d869a5`); `_docs/agent-kit/scripts/verify.sh` again (`3d978fe`, one line); `_docs/roadmap.md` (check-in), this log and `_session-summaries/issue-053-verify-gate-gaps.md` at close-out. GitHub on #53: Engineer 6331467458; QA 6331468388; approval records 6331468586, 6331468781, 6331469012, 6331469216
+- verification (tests run, reviewer verdict): `make verify BASE=6ed87ed` PASS (62 tests, `PASS: Type check`) and the pre-push runs PASS; QA PASS at `1d869a5`, then re-check PASS at `3d978fe` after the stderr fix; QA re-ran `BASE=HEAD` (warns), `BASE=nosuchref` (fails), `BASE=72903cc^` (lists the changed test file), `BASE=3d38e34` (clean), the empty-tree base and a deliberate type error (`FAIL: Type check`, reverted); `make assert-clean` PASS and HEAD unchanged after both QA runs. Not verified: the sandbox push check was read, not run (no Docker)
+- human review (what I checked or corrected, or `none`): the human approved all three protected diffs as drafted, and chose "Fix it now" for the stray stderr line QA found (a fourth protected commit), "No, already tracked" for the other QA notes. Commands that required approval: `HUMAN_APPROVED=1 git commit` of `bdda483`, `e0cf368`, `1d869a5`, `3d978fe` (protected files); `git push -u origin claude/start-53-7oaxg3` (cloud-session exception); `make issue-comment` (allowed target)
+
 ### 2026-10-22 — Step 12 orchestration: Milestone A backlog from `_docs/tasks.md`
 
 - date: 2026-10-22
@@ -1600,3 +1611,4 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (step 12 and 15 rows, check-in), this log, `_session-summaries/planning-2026-10-22-step-12-backlog.md` at close-out. GitHub: #74-#88 created from `.scratch/` body files; #26 edited; #24/#25 closed, comments 6333191444 and 6333194914; block note 6333211529 on #74
 - verification (tests run, reviewer verdict): no code or test change; `make verify` not run. The proposal checked `_docs/tasks.md` against `_docs/specs.md` and the open tracker with a read-only `gh issue list`. The human approved the proposal before any issue was created, edited or closed
 - human review (what I checked or corrected, or `none`): the human chose Milestone A filing now, closing #24/#25 and rewriting #26, the 9/10 splits, accepting #63 notes before Milestone C, and deciding the LLM/responder runtime at milestone start with stubs. The orchestrator corrected issue 1's draft so `make test` keeps the frontend suite. Commands that required approval: `gh issue create` for #74-#88 (issue-creation rule); `gh issue edit 26` (issue-edit ask rule); `make issue-comment` (allowed target); `make issue-close` on #24/#25 (issue-close ask rule)
+
