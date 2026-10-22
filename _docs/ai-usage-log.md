@@ -1623,6 +1623,28 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
 - human review (what I checked or corrected, or `none`): none yet; seven decisions (D1-D7) are open in the new file, which maps its milestones to the `tasks.md` task numbers from PR #89. Commands that required approval: none recorded
 
+### 2026-10-22 — Orchestrator: merge the Tier B/C roadmap draft
+
+- date: 2026-10-22
+- task/issue: none (planning; the human asked to review and merge `_docs/roadmap-tiers-b-c.md` into `_docs/roadmap.md` and delete the draft)
+- agent role: Orchestrator (main session), local sandbox on `main`
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to review and merge the two roadmap files, delete the draft, then review the roadmap and start the next product issue; no new key prompt saved
+- files changed: `_docs/roadmap.md` (step 17 milestones B1-B6/C1-C8, prerequisites, task mapping, AWS-slow order, open decisions 5-11, B/C checkpoints, check-in); `_docs/roadmap-tiers-b-c.md` (deleted); this log; `_session-summaries/planning-2026-10-22-roadmap-tier-b-c-merge.md`
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (62 tests, type check pass, no whitespace errors, no test files changed; the warning is `BASE` equal to `HEAD` for a docs-only change). No QA or rubric-auditor review
+- human review (what I checked or corrected, or `none`): the human directed the merge and deletion; D1-D7 were carried over as open, not answered. Commands that required approval: none recorded
+
+### 2026-10-22 — #91 orchestrator, PM, Engineer and QA: Stage 6 plan summary
+
+- date: 2026-10-22
+- task/issue: #91 (roadmap step 13, `_docs/plan-summary.md`); follow-up #95 filed
+- agent role: Orchestrator (main session) with PM, Software Engineer and QA subagents, local sandbox on `main`
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "review the roadmap and start the next issue to progress the product"; the role launches followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: `_docs/plan-summary.md` (`731f11b`, `e8e4ddb`, `882c75d`) and `README.md` (`731f11b`); `_docs/roadmap.md` (step 13 done and check-in), this log and `_session-summaries/issue-091-stage-6-plan-summary.md` at close-out. GitHub: #91 created; comments 6334007642 (PM), 6334298084 (Engineer), 6335550333 (QA FAIL), 6336177091 (QA re-check PASS); #95 created
+- verification (tests run, reviewer verdict): QA FAIL at `e8e4ddb` on the completeness counts and a false checklist PASS; Engineer `882c75d` fixed the label-only counts and evidence; QA re-check PASS at `882c75d` (6336177091); `make verify BASE=1edc468` PASS (62 tests, type check, whitespace, no weakened tests); `make assert-clean` PASS with HEAD unchanged after both QA runs
+- human review (what I checked or corrected, or `none`): the human deferred the protected spec Q2-Q4 note to the next spec change, approved filing one follow-up (#95) for the tasks.md Application/task 15 discrepancy with README `withdrawn` left to #73, and chose note-only for the minor checklist recount wording. Commands that required approval: `gh issue create` for #91 and #95 (issue-creation rule); `make issue-comment` (allowed target)
+
 ### 2026-10-22 — Orchestrator: parallel-work analysis and AWS setup guide
 
 - date: 2026-10-22
