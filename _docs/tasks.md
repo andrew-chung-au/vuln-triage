@@ -1,0 +1,310 @@
+# VulnTriage task backlog (Stage 5)
+
+Numbered, dependency-ordered tasks for the build. Task 1 is the empty project with one passing test; the scoring path runs through Milestones A-C, then the committed scope (LLM brief, MCP server and n8n). The dependency chain is the final section.
+
+# Milestone A — Tier A (12 points)
+
+## 1. Empty project with one passing test
+Goal: A runnable skeleton with one passing test and no product behaviour.
+Description: Creates the `backend/` FastAPI package with `pyproject.toml` and `uv.lock`, the `tests/` directory and the `Makefile` test target, and keeps the existing `frontend/`; there is no endpoint, model, UI flow or business logic. The only new test is `tests/test_smoke.py`, and the exact command that runs it is `make test`; the existing frontend suite stays under `make frontend-test` and is not part of this task's pass condition. Reviewers confirm `make test` passes and the commit contains no route, table or screen.
+Depends on: none
+Covers: Application (scaffold), Testing (test harness)
+
+## 2. planning evidence and tracker hygiene
+Goal: The four documentation criteria are evidenced without changing the record.
+Description: Checks the README problem statement, the public issue tracker and the `_docs/agent-team.md` plus `AGENTS.md` links to `_docs/agent-kit/` using `_docs/project-brief.md`, `_docs/specs.md` and `_docs/agent-team.md`. It records a short evidence note under this task in `_docs/tasks.md` with the `Covers:` line; it creates, edits or closes no issue, posts no comment and rewrites no document, and a needed fix is a follow-up note. The check is that the note names one public URL or file path for each of Problem Description, Product Specification, Agent Team Specification and Context Management.
+Depends on: none
+Covers: Problem Description, Product Specification, Agent Team Specification, Context Management
+
+## 3. Backend data model and SQLite persistence
+Goal: Assets, dependencies, findings, lifecycles, jobs and audit entries persist in SQLite.
+Description: Implements the Data model and enums from `_docs/architecture.md` in SQLAlchemy over SQLite, including the `Asset`, `Dependency`, `Finding`, `Lifecycle`, `NotificationJob` and `AuditEntry` tables and their constraints. It adds no API endpoint and seeds no data. The check is the backend unit suite in `make test` showing the migration creates the schema and an audit entry records who, when and the previous value.
+Depends on: 1
+Covers: Application
+
+## 4. Asset registration and repository ingestion
+Goal: `POST /assets` registers an asset and the first scan reads its dependency files.
+Description: Implements the `POST /assets` route and the GitHub contents read with the read-only token, then the `uv.lock`, `requirements.txt` and `package-lock.json` parsers for US-1 and US-2 from `_docs/architecture.md` § Ingestion and matching. The human provides the read-only token; the session and CSRF guard is added in task 9. The check is the `U-UV`, `U-REQ`, `U-NPM` and `I-ASSET` cases in `make test`, plus a forced `repository unavailable` scan.
+Depends on: 3
+Covers: Application, US-1, US-2
+
+## 5. OSV matching and fixed version
+Goal: Findings record the primary id, all aliases and the fixed version for this dependency.
+Description: Calls OSV only through the reviewed endpoints in `_docs/architecture.md` § External data sources and derives the fixed version from every merged range, creating one finding per (asset, package, vulnerability identity) for US-3 and E9. The unit harness stubs OSV and fails on any outbound call. The check is `U-FIXED`, `U-ALIAS`, `U-WITHDRAW` and `I-FINDINGS` in `make test`.
+Depends on: 4
+Covers: Application, US-3
+
+## 6. KEV and EPSS enrichment
+Goal: Every finding shows exactly one KEV value, an EPSS score or `n/a`, and stale markers.
+Description: Implements the KEV and EPSS fetches, the `Signal` rows and the `KEV: listed`, `KEV: not listed` and `KEV: n/a (no CVE)` values with `kev_stale` and `epss_stale` for US-4, E3 and E11, following `_docs/architecture.md` § External data sources and § Data model. It uses the reviewed source URLs and stubbed feed fixtures. The check is `U-KEV`, `U-EPSS`, `U-FEED` and `I-FINDINGS` in `make test`.
+Depends on: 5
+Covers: Application, US-4
+
+## 7. Deterministic ranking and rank reason
+Goal: Findings get a deterministic tier, a total order and a rank reason.
+Description: Implements the `P1`-`P4` rules, the EPSS then criticality then age then id tie-breaks and the worked example from `_docs/architecture.md` § Prioritisation for US-5, with no AI. The check is `U-TIER`, `U-TIE` and `I-RANK` in `make test` reproducing the example order `fnd-0001`, `fnd-0002`, `fnd-0004`, `fnd-0005`, `fnd-0003`, `fnd-0006`. No threshold or enum is added beyond that section.
+Depends on: 6
+Covers: Application, US-5
+
+## 8. Finding status lifecycle, re-scan and audit trail
+Goal: Re-scans set `fixed`, `withdrawn` or reopen findings, and every change is audited.
+Description: Implements the status transitions in `_docs/specs.md` E4, E7 and E8 and the audit entries with who, when and previous value for US-10 and US-11, including the manual re-scan. The check is `U-WITHDRAW`, `I-RESCAN` and the audit part of `I-RISK` in `make test`.
+Depends on: 7
+Covers: Application, US-10, US-11
+
+## 9. Session authentication and the frontend API
+Goal: The frontend operations work with the session cookie, CSRF header and owner-match rule.
+Description: Implements `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /findings`, `GET /findings/{id}`, `GET /assets`, `GET /assets/{id}`, `POST /assets`, `POST /assets/{id}/rescan` and `POST /findings/{id}/risk-acceptance` from `_docs/api.md`, adding the session guard to task 4's route. The check is `I-AUTH-SESSION` and `I-RISK` in `make test`.
+Depends on: 8
+Covers: Application, US-1, US-11
+
+## 10. Service API and notification jobs
+Goal: The n8n, MCP and responder operations are allowlisted and the backend creates notification jobs.
+Description: Implements `POST /signals/refresh`, `POST /scans`, the three `/notification-jobs` operations, `GET /reports/weekly-digest`, the three `/mcp/` operations and the two `/responder/` operations from `_docs/api.md`, with the bearer allowlists and the `traceparent` round-trip. It also creates NotificationJobs with the lifecycle idempotency key from `_docs/architecture.md` § Routing and notifications, but ships no n8n workflow. The check is `I-JOBS`, `I-AUTH-N8N`, `I-AUTH-MCP` and `I-RESP-*` in `make test`.
+Depends on: 9
+Covers: Application, US-8, US-9, US-12, US-15
+
+## 11. Frontend dashboard read views
+Goal: The dashboard shows assets and ranked findings with status, rank reason and brief marker.
+Description: Builds the React screens over the single services layer in `frontend/src/services/` for US-1, US-4, US-5 and US-6, showing owner or ownerless, criticality, internet-facing, KEV and EPSS, dependencies, rank reason and `brief` or `briefStatus`. It adds no API field beyond `_docs/api.md`. The check is the `F-ASSET` and `F-STATUS` vitest cases under `make frontend-test` and `make frontend-typecheck`.
+Depends on: 9
+Covers: Application, US-1, US-4, US-5, US-6
+
+## 12. Risk acceptance, audit trail and manual re-scan in the dashboard
+Goal: A signed-in human can accept risk with a reason, see the audit trail and request a re-scan.
+Description: Implements the dashboard write path for `POST /findings/{id}/risk-acceptance` and `POST /assets/{id}/rescan` from `_docs/api.md` for US-10 and US-11, rejecting an empty or whitespace-only reason and showing who, when and the previous value. The check is `F-STATUS` plus `I-RISK` in `make test` and `make frontend-typecheck`.
+Depends on: 11
+Covers: Application, US-10, US-11
+
+## 13. Backend test layers and stored fixtures
+Goal: `make test` runs backend unit and SQLite integration tests with stubs and committed fixtures.
+Description: Adds the `U-*` and SQLite `I-*` suites, `tests/fixtures/` and `make record-fixtures` from `_docs/testing.md`, preserves `make test` as the single local test command and grows it to include the backend unit and SQLite integration layers without replacing `make frontend-test`; `make verify` stays the gate. The `unit` and `sqlite-integration` PR jobs are added in task 19. The check is `make test` with `U-NET` and `I-NET` failing on any outbound HTTP call and `fixtures/MANIFEST.md` recording each capture.
+Depends on: 10
+Covers: Testing
+
+## 14. OpenAPI conformance and validation
+Goal: A backend test fails when FastAPI's contract differs from `_docs/openapi.yaml`.
+Description: Adds the conformance test over every path, method, parameter, request and response schema and security requirement, and keeps `make openapi-validate` as the contract check; the `openapi-validation` PR job is added in task 19. The check is a deliberate contract mismatch failing the test while `make openapi-validate` exits 0 on the reviewed file.
+Depends on: 10
+Covers: Application, Testing
+
+# Milestone B — Tier B (19 points)
+
+## 15. One-command Compose stack
+Goal: Docker Compose starts the frontend, backend and Postgres with one command.
+Description: Adds the Dockerfiles and the project Compose file for the frontend, backend, Postgres and migrations, with the `db` service and the service names fixed by `_docs/testing.md` (`ASSUMPTION: T-A1`); n8n and the Collector arrive in later tasks. The check is `docker compose up` starting the stack with no manual per-service step and the frontend reading the API on the human's host or in CI. No image is pushed.
+Depends on: 14
+Covers: Containerization
+
+## 16. Real-Postgres integration tests
+Goal: `make test-integration` runs the integration cases on Postgres in the test-owned Compose project.
+Description: Adds the `vt-test` setup, migrations, transaction isolation and committed fixtures from `_docs/testing.md` § Integration tests, and the `postgres-integration` job target. The job is added to the pipeline in task 19; it runs in CI or on the human's Docker host. The check is `make test-integration` green and `E-GUARD` refusing a database or host that is not the test one.
+Depends on: 15
+Covers: Testing
+
+## 17. AWS infrastructure and dev deployment
+Goal: The dev environment is reachable at a public URL on AWS.
+Description: Writes the `vt-ci-iam`, `vt-ecr` and `vt-dev` CloudFormation stacks from `_docs/architecture.md` § Deployment and deploys the same image that Compose uses. The human creates the AWS account resources, the DNS record and the secrets, and performs the first `vt-dev` stack run; the agent only writes templates and the runbook. The check is the dev URL answering the frontend and the deploy log naming one image digest.
+Depends on: 15
+Covers: Deployment
+
+## 18. Production deployment and manual promotion
+Goal: The production environment runs the same image digest and is promoted only by a human.
+Description: Adds the `vt-prod` stack and the production runbook, including the rollback step from `_docs/architecture.md` § Deployment; the human creates the production secrets, approves the first production run and runs teardown. The check is the production URL or demo, the same image digest in `vt-dev` and `vt-prod`, and a rollback to the previous digest recorded in the deploy log.
+Depends on: 17
+Covers: Deployment
+
+## 19. CI test pipeline
+Goal: Every pull request runs the test jobs before any deploy.
+Description: Adds the `unit`, `sqlite-integration`, `frontend`, `openapi-validation` and `postgres-integration` jobs to the GitHub Actions workflow from `_docs/testing.md` § CI jobs, using the targets from tasks 13, 14 and 16. The check is a pull request that fails on a broken test in each job and passes on `main`; no job needs a live feed or a secret.
+Depends on: 14, 16
+Covers: CI/CD
+
+## 20. Light security scan
+Goal: `make security-scan` fails on high or critical findings in the app's own dependencies.
+Description: Adds the dependency audit target and the `security-scan` PR job from `_docs/testing.md` § Light security scan; the tools are a dependency and the human approves adding them. The check is `C-FIXTURE-VULN` failing and `C-FIXTURE-CLEAN` passing, with lower findings reported only.
+Depends on: 19
+Covers: CI/CD, Testing
+
+## 21. Deploy pipeline, automatic dev and manual production
+Goal: A merge to `main` deploys dev automatically and production only by a manual promotion of the same digest.
+Description: Adds the push-to-`main` dev deploy and the `workflow_dispatch` production promotion in the `production` environment from `_docs/architecture.md` § Deployment, with the human as the required reviewer and the previous digest in the summary. The check is a merge updating `vt-dev` without a rebuild and a manual production run reusing the dev digest; the human approves the production run.
+Depends on: 18, 19
+Covers: CI/CD
+
+## 22. Pilot seed data
+Goal: The pilot assets are registered through the API so real findings appear.
+Description: Adds the pilot seed list from `_docs/architecture.md` A38/A41 with the human's repositories and OWASP Juice Shop, using the A41 fallback if Juice Shop lacks a supported lockfile. The human supplies the exact repository URLs; the task registers each asset through `POST /assets` and never writes to the database. The check is each asset showing a scan status and at least one finding on the dev environment.
+Depends on: 4, 17
+Covers: US-1, US-2
+
+# Milestone C — Tier C (24 points)
+
+## 23. OpenTelemetry instrumentation and the exclusion helper
+Goal: The scan-to-notification journey emits one trace, metric and log with a shared trace ID, with exclusions enforced in code.
+Description: Instruments `scan.run` and its children and the `notification.enqueue`/`notification.deliver` traceparent round-trip from `_docs/architecture.md` § Observability, writing attributes and log bodies only through the allowlist helper. It is a no-op when no Collector endpoint is configured, per A40. The check is a unit test dropping `owner.email` and `authorization`; the `T-JOURNEY` and `T-REFUSE` Compose cases are added in task 25.
+Depends on: 10, 15
+Covers: Observability, US-13
+
+## 24. Observability stack and the US-13 Grafana dashboard
+Goal: Prometheus, Loki, Tempo, Grafana and the Collector show the US-13 signals side by side.
+Description: Adds the Collector processors, the Compose observability services and the AWS `vt-observability` stack from `_docs/architecture.md` § Deployment and § Observability, with Grafana behind authentication. It provisions the "US-13 journey" dashboard with a Prometheus pane, a Tempo pane and a Loki pane. The check is the manual dashboard in Compose showing the three signals side by side; the `make test-compose` cases are added in task 25.
+Depends on: 17, 23
+Covers: Observability, US-13
+
+## 25. Telemetry Compose test and CI job
+Goal: `make test-compose` proves the shared trace ID and that excluded values never leave the Collector.
+Description: Creates the `make test-compose` target and adds the `telemetry` job and the `T-JOURNEY`, `T-REFUSE` and `T-E6` cases from `_docs/testing.md` § Telemetry, querying Prometheus, Tempo and Loki. The check is `make test-compose` green in CI and `T-REFUSE` failing when `owner.email` is added to the allowlist.
+Depends on: 19, 24
+Covers: Observability, US-13
+
+## 26. US-14 alert metric and Grafana rule
+Goal: An undelivered top-tier finding fires exactly one alert naming the finding.
+Description: Implements `vt_top_tier_notification_overdue{finding_id,tier}` from stored job state and the Grafana rule from `_docs/architecture.md` § Observability, with the 30-minute window, one instance per finding and the responder webhook plus human email destinations. Held jobs never set the metric. The check is the provisioned rule showing 1 for a failed job and 0 for a sent job; the `A-*` Compose cases are added in task 27.
+Depends on: 10, 24
+Covers: Alerting on User Impact, US-14
+
+## 27. Alert Compose test and CI job
+Goal: The `alert` job proves one firing, no second alert and the held-job exemption.
+Description: Adds the `alert` job and the `A-*` cases from `_docs/testing.md` § Alerting to `make test-compose`, including the backdated job and the rule that a resolved message is not a second alert. The check is `make test-compose` green in CI and `A-FIRE` red when the alert rule is removed.
+Depends on: 19, 25, 26
+Covers: Alerting on User Impact, US-14
+
+## 28. Responder agent, webhook and demo defect
+Goal: The responder wakes on the US-14 alert, reproduces the notification defect, fixes it and opens a pull request.
+Description: Adds the responder container and Grafana webhook receiver, the `VT_DEMO_DEFECT=notify_no_fix` path and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The check is `P-DEMO`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose` with `RESPONDER_MODE=stub`.
+Depends on: 27
+Covers: On-Call Agent, US-15
+
+## 29. Responder Compose test and demo cleanup
+Goal: The `responder` job proves the undelivered finding reaches its owner and the demo defect is removed.
+Description: Adds the `responder` job and the `P-FLAG-GONE` cleanup case from `_docs/testing.md` § Responder to `make test-compose`, then removes the demo defect before production promotion; the `P-DEMO` and refused responder cases come from task 28. The human performs the merge and the manual promotion. The check is `make test-compose` green and `P-FLAG-GONE` blocking promotion until the defect path is gone.
+Depends on: 19, 27
+Covers: On-Call Agent, US-15
+
+# Committed scope (LLM brief, MCP server, n8n)
+
+## 30. LLM brief with the fix-version guardrail
+Goal: An open finding gets a matching brief or the structured finding with "brief unavailable".
+Description: Implements the structured prompt, pinned model configuration and `LLM_MODE=stub` from `_docs/architecture.md` § LLM brief, plus the ordered guardrail and the rejected-brief path in `_docs/testing.md` § Rejected-brief path. The brief is cached per lifecycle, fixed version, prompt version and model; advisory text stays in the labelled untrusted field. The check is `U-GUARD`, `R1` and `I-BRIEF` in `make test`, with a stub returning `1.2.6` against `1.2.5` rejected and the notification still carrying the structured finding.
+Depends on: 10
+Covers: US-6
+
+## 31. LLM brief evaluation with a human scorer
+Goal: `make test-brief-eval` records a human-scored sample with the pinned model.
+Description: Adds the `make test-brief-eval` target, the nine `L1`-`L9` cases and the scored results under `tests/eval/briefs/` from `_docs/testing.md` § LLM brief evaluation. The human is the scorer and runs it manually or on a schedule, because it is not a PR CI job. The check is a committed scored result for the pinned model, and a model or prompt change re-runs it.
+Depends on: 30
+Covers: US-6, Testing
+
+## 32. MCP server with four read-only tools
+Goal: `list_top_exposures`, `which_assets_affected`, `get_finding` and `get_asset` answer exposure questions with a GET-only token.
+Description: Implements the Python stdio MCP server from `_docs/architecture.md` § MCP server against the `/mcp/` and `GET /assets/{id}` operations, marking advisory text as `untrusted_advisory_data` and using `MCP_API_TOKEN`. The human provisions the token and the MCP client runs on the developer's machine. The check is `I-MCP`, `I-AUTH-MCP` and `S-MCP` in `make test`, including a write attempt refused with 403 and no state change.
+Depends on: 10
+Covers: US-12
+
+## 33. n8n service, daily refresh and scheduled re-scan
+Goal: n8n runs `daily-signal-refresh` and `scheduled-rescan` from committed JSON.
+Description: Adds the n8n Compose service, its credentials and the two workflows under `n8n/workflows/` from `_docs/architecture.md` § Routing and notifications, calling `POST /signals/refresh` and `POST /scans` with the n8n token. The human provisions the SMTP and tracker secrets. The check is a Compose run showing changed signals and a re-scan, and both exported files parsing as JSON; `make test-workflows` is added in task 36.
+Depends on: 10, 15
+Covers: US-7, US-16
+
+## 34. n8n top-tier notification and tracker issue
+Goal: A new top-priority finding notifies the owner once and opens one tracker issue.
+Description: Adds `notify-top-tier` and `close-tracker-issue` under `n8n/workflows/` using the job list, claim and report operations, the `vt-lifecycle:<id>` search guard and the dedicated `vuln-triage-findings` token from `_docs/architecture.md` § Routing and notifications. The check is the `make test-e2e` `E-DELIVER` journey in the `e2e` job, proving one notification, one issue and no duplicate on a retry, plus `S-ISSUE`. The human provides the tracker repository and token.
+Depends on: 19, 33
+Covers: US-8, US-16
+
+## 35. n8n reminders, escalation and weekly digest
+Goal: Overdue findings produce reminders and escalation, and the security lead gets one weekly digest.
+Description: Adds `overdue-reminders` and `weekly-digest` under `n8n/workflows/` using the job and `GET /reports/weekly-digest` operations and the missing security-lead contact behaviour from `_docs/architecture.md` § Routing and notifications. The human sets the security-lead contact. The check is `I-REMIND`, `I-CONFIG` and `I-DIGEST` in `make test` plus a manual Compose run showing one weekly digest.
+Depends on: 33
+Covers: US-9, US-16
+
+## 36. n8n workflow export check
+Goal: `make test-workflows` proves every exported workflow is the one Compose runs.
+Description: Adds `make test-workflows`, the `W-EXPORT` check and the `workflow-export` PR job from `_docs/testing.md`, parsing every `n8n/workflows/*.json`, matching the file name to the workflow name and comparing it with the workflow Compose imports. The check is `make test-workflows` green and a renamed export failing the job.
+Depends on: 19, 34, 35
+Covers: US-16, Testing
+
+## Coverage summary
+
+Every acceptance story US-1 to US-16 and every criterion in `_docs/rubric.md` appears in at least one task.
+
+| User story | Covering task(s) |
+|---|---|
+| US-1 | 4, 9, 11, 22 |
+| US-2 | 4, 22 |
+| US-3 | 5 |
+| US-4 | 6, 11 |
+| US-5 | 7, 11 |
+| US-6 | 11, 30, 31 |
+| US-7 | 33 |
+| US-8 | 10, 34 |
+| US-9 | 10, 35 |
+| US-10 | 8, 12 |
+| US-11 | 8, 9, 12 |
+| US-12 | 10, 32 |
+| US-13 | 23, 24, 25 |
+| US-14 | 26, 27 |
+| US-15 | 10, 28, 29 |
+| US-16 | 33, 34, 35, 36 |
+
+| Criterion | Points | Covering task(s) | Earliest milestone |
+|---|---|---|---|
+| Problem Description | 2 | 2 | A |
+| Product Specification | 2 | 2 | A |
+| Agent Team Specification | 2 | 2 | A |
+| Context Management | 2 | 2 | A |
+| Application | 2 | 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14 | A |
+| Testing | 2 | 1, 13, 14, 16, 20, 31, 36 | A |
+| Containerization | 2 | 15 | B |
+| Deployment | 2 | 17, 18 | B |
+| CI/CD | 3 | 19, 20, 21 | B |
+| Observability | 2 | 23, 24, 25 | C |
+| Alerting on User Impact | 1 | 26, 27 | C |
+| On-Call Agent | 2 | 28, 29 | C |
+
+`ASSUMPTION:` task 15's Compose file and service names follow `_docs/testing.md` T-A1; task 17's AWS resource names and region follow `_docs/architecture.md` § Deployment and carry the same `VERIFY:` tags as that document. `VERIFY:` the exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration.
+
+## Dependency chain
+
+Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task.
+
+| Task | Depends on |
+|---|---|
+| 1 | none |
+| 2 | none |
+| 3 | 1 |
+| 4 | 3 |
+| 5 | 4 |
+| 6 | 5 |
+| 7 | 6 |
+| 8 | 7 |
+| 9 | 8 |
+| 10 | 9 |
+| 11 | 9 |
+| 12 | 11 |
+| 13 | 10 |
+| 14 | 10 |
+| 15 | 14 |
+| 16 | 15 |
+| 17 | 15 |
+| 18 | 17 |
+| 19 | 14, 16 |
+| 20 | 19 |
+| 21 | 18, 19 |
+| 22 | 4, 17 |
+| 23 | 10, 15 |
+| 24 | 17, 23 |
+| 25 | 19, 24 |
+| 26 | 10, 24 |
+| 27 | 19, 25, 26 |
+| 28 | 27 |
+| 29 | 19, 27 |
+| 30 | 10 |
+| 31 | 30 |
+| 32 | 10 |
+| 33 | 10, 15 |
+| 34 | 19, 33 |
+| 35 | 33 |
+| 36 | 19, 34, 35 |
