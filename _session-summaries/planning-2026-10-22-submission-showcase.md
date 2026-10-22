@@ -4,7 +4,7 @@ Tool: Claude Code (cloud session), branch `claude/tender-volta-wiq6xv`.
 
 ## What was asked
 
-After the AWS setup guide, the human asked which deployment approach is easiest and fastest for the final project, compared the original plan with a cut-down one, and asked to structure the work as a submission track (meet the criteria by the deadline) plus a later CV showcase track. The human then chose Terraform, an on-demand demo with about $0 standing cost, and a possible portfolio "Launch demo" button.
+After the AWS setup guide, the human asked which deployment approach is easiest and fastest for the final project, compared the original plan with a cut-down one, and asked to structure the work as a submission track (meet the criteria for submission) plus a later CV showcase track. The human then chose Terraform, an on-demand demo with about $0 standing cost, and a possible portfolio "Launch demo" button.
 
 ## Decisions (human, this session)
 
@@ -24,7 +24,7 @@ H1 two tracks, showcase kept as its own file; H2 Terraform instead of CloudForma
 
 ## Open
 
-- The submission deadline (the human sets it from the course platform).
+- The submission deadline is the human's to manage, by the human's direction; the drafts record no date and tell agents not to plan against one.
 - H7's spec change needs a proposed diff and the human's approval (#93 item 9).
 
 ## Permission review

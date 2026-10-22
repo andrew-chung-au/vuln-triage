@@ -2,9 +2,9 @@
 
 Status: temporary, drafted 2026-10-22 at the human's request while another session works roadmap step 13 (`_docs/plan-summary.md`). It does not change `_docs/roadmap.md` or `_docs/roadmap-tiers-b-c.md`. The merge is a follow-up issue: fold this file and `_docs/roadmap-tiers-b-c.md` into `_docs/roadmap.md` as one main roadmap for Tiers A, B and C, then delete both drafts. The showcase work after submission lives in `_docs/roadmap-showcase.md`, which stays a separate file after the merge.
 
-Goal: every rubric point evidenced (24/24) by the first submission deadline, in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). Anything that scores nothing goes to the showcase track instead of being dropped.
+Goal: every rubric point evidenced (24/24), in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). Anything that scores nothing goes to the showcase track instead of being dropped.
 
-Deadline: set by the human from the course platform (not recorded here yet).
+Timing: the human manages the submission deadline. Agents don't plan against a date or change scope because of one; they work the phases in order.
 
 ## Decisions (human, 2026-10-22)
 
@@ -24,7 +24,7 @@ H2-H7 need document changes before plan review (step 14); see "Documents to upda
 
 ## Phases
 
-Each phase banks points. **Cutoff rule:** if the deadline is close, stop at the last finished phase and submit; S1 alone passes (12 of the 10 needed). The course's second attempt is a safety net, not part of the plan.
+Each phase banks points, so the human can submit at the end of any finished phase; S1 alone passes (12 of the 10 needed). When to submit is the human's call, not an agent's.
 
 | Phase | Main roadmap step / Tier B-C milestone | `tasks.md` tasks | Done when | Score after (estimate) |
 |---|---|---|---|---|
