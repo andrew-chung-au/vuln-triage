@@ -17,6 +17,17 @@ fi
 fail=0
 warn=0
 
+# BASE may be a commit or a tree: the pre-push hook passes the empty tree for a new
+# branch with no parent, so resolve with ^{tree} (a commit resolves to its tree too).
+# An unresolvable BASE would make every git diff below print an error and compare
+# nothing, so refuse it before any check runs.
+if ! git rev-parse --verify -q "$BASE^{tree}" >/dev/null; then
+  echo "FAIL: BASE '$BASE' does not resolve to a commit or tree"
+  echo "VERIFY: FAIL"
+  exit 1
+fi
+base_commit="$(git rev-parse --verify -q "$BASE^{commit}" || true)"
+
 run_gate() { # run_gate LABEL COMMAND
   section "$1 ($2)"
   if bash -c "$2"; then
@@ -29,6 +40,11 @@ run_gate() { # run_gate LABEL COMMAND
 
 section "Changes in this folder since $BASE"
 git diff --stat "$BASE" -- .
+# Skipped when BASE is a tree (base_commit is empty): the empty-tree case.
+if [ -n "$base_commit" ] && [ "$base_commit" = "$(git rev-parse --verify -q HEAD || true)" ]; then
+  echo "WARN: BASE ($BASE) is the same commit as HEAD, so only uncommitted changes were compared; pass BASE=<commit>"
+  warn=1
+fi
 untracked="$(git ls-files --others --exclude-standard -- .)"
 if [ -n "$untracked" ]; then
   echo "Untracked files (not in the diff, but present when tests run):"
