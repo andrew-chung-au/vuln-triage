@@ -172,7 +172,7 @@ Showcase: `E-DELIVER` is the full-stack Compose journey (not counted in the subm
 
 The E2E environment uses no live feeds, no real SMTP, no real GitHub and no production secrets: committed fixtures, MailHog as the local mail catcher (dependency, ask before adding), the test-owned `vt-e2e` project and its ephemeral volumes. It cleans up only its own resources; no human destructive step is needed. `E-GUARD` fails before starting if the target database or host is not the test one (project name or database name mismatch).
 
-US-8's submission delivery path is `I-OWNER-SEND` (backend alone, MailHog); the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-OWNER-HOLD`, so no US-8 acceptance case is unassigned. Showcase: the n8n journey `E-DELIVER` and `I-HOLD` cover the same behaviour through the n8n claim/report path.
+US-8's submission delivery path is `I-OWNER-SEND` (backend alone, in-process fake mail sink); the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-OWNER-HOLD`, so no US-8 acceptance case is unassigned. Showcase: the n8n journey `E-DELIVER` and `I-HOLD` cover the same behaviour through the n8n claim/report path.
 
 ## LLM brief evaluation (Showcase, US-6)
 

