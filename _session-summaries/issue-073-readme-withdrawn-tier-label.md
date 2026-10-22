@@ -10,7 +10,7 @@ Worked #73 following `_docs/agent-kit/process.md`, with PM, Engineer and QA run 
 - **Human decisions** (orchestrator comment 6334352037): 1 = A (the sentence says Tier A/B/C is the rubric tiers, the same as the architecture `Tier` column, never P1-P4); 2 = A (leave `_docs/project-brief.md`'s missing `withdrawn`); 3 = A (no roadmap edit on this branch; changes that would conflict with step 13 go to a follow-up issue).
 - **Engineer** (6334375597): `0aa61b1` (README line 27; one Stage 5 sentence in `_docs/planning-process.md`), `6248c29` (usage-log entry).
 - **QA: PASS** at `6248c29` (6334401494). `make assert-clean` PASS and HEAD unchanged afterwards.
-- **Decision point:** no protected-file change, no spec note. QA's four risks went into the follow-up issue #92 (section C) at the human's direction; #92 also holds the deferred README link, roadmap check-ins (including this issue's), the roadmap line 137 conflict marker, and deployment-task inputs from the human's course material (comment 6334435319).
+- **Decision point:** no protected-file change, no spec note. QA's four risks went into the follow-up issue #92 (section C) at the human's direction; #92 also holds the deferred README link, roadmap check-ins (including this issue's), the roadmap line 137 conflict marker, and one deployment-task input from the AWS guide.
 
 ## Verification
 
@@ -30,4 +30,4 @@ No processes started; no system changes. `make clean-scratch` ran before this su
 
 ## Permission review
 
-All roles reported "none". Orchestrator actions: `make issue-comment` on #73 and #92 (allowed target); creating #92 through the GitHub MCP tool (issue creation, at the human's request in this session); `git push -u origin claude/tender-volta-wiq6xv` (cloud-session exception); `make issue-close N=73` (ask rule). Grouping: issue comments and creation, push and close are writes to the record (keep asking); nothing read-only or risky to propose.
+All roles reported "none". Orchestrator actions: `make issue-comment` on #73 and #92 (allowed target); creating #92 through the GitHub MCP tool (issue creation, at the human's request in this session); `git push -u origin claude/tender-volta-wiq6xv` (cloud-session exception); `make issue-close N=73` (ask rule); deleting one #92 comment with `gh api -X DELETE` and editing the #92 body through the GitHub MCP tool (the human approved both, overriding the `AGENTS.md` no-edit/no-delete rule for this case, to remove discussion material that should not have been saved). Grouping: issue comments and creation, push and close are writes to the record (keep asking); nothing read-only or risky to propose.

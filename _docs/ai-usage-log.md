@@ -1637,11 +1637,11 @@ Copy this template for each new entry:
 ### 2026-10-22 — Orchestrator: #73 and follow-up #92
 
 - date: 2026-10-22
-- task/issue: #73 (README `withdrawn`, Stage 5 tier-label sentence); created #92 (follow-ups deferred to avoid conflicting with the step 13 session, plus deployment-task inputs from the human's course homework)
+- task/issue: #73 (README `withdrawn`, Stage 5 tier-label sentence); created #92 (follow-ups deferred to avoid conflicting with the step 13 session)
 - agent role: Orchestrator (main session) with PM, Engineer and QA subagents, on branch `claude/tender-volta-wiq6xv`
 - model: Claude Code (cloud session)
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to work #73 and save conflicting README and follow-up changes to a follow-up issue; role launches followed `_docs/agent-kit/process.md`; no new key prompt saved
-- files changed: this log and `_session-summaries/issue-073-readme-withdrawn-tier-label.md` (the Engineer's commits are in its own entry). GitHub: #73 comment 6334352037 (human answers), #92 created with comment 6334435319, #73 closed
+- files changed: this log and `_session-summaries/issue-073-readme-withdrawn-tier-label.md` (the Engineer's commits are in its own entry). GitHub: #73 comment 6334352037 (human answers), #92 created (body later trimmed and one comment deleted at the human's direction: discussion material was not to be saved), #73 closed
 - verification (tests run, reviewer verdict): QA PASS at `6248c29` (6334401494); `make assert-clean` PASS, HEAD unchanged
 - human review (what I checked or corrected, or `none`): the human answered the PM's decisions (Stage 5 sentence matches the architecture Tier column; leave the brief). The orchestrator checked the PM's architecture-tier claim against `_docs/architecture.md` before asking. Commands that required approval: none recorded
 
