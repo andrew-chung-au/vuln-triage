@@ -1776,3 +1776,14 @@ Copy this template for each new entry:
 - files changed: `_docs/reviews/2026-10-22-plan-review.md` (d31cb02, the Reviewer's only commit); this log entry (appended by the orchestrator)
 - verification (tests run, reviewer verdict): verdict `Reviewer: FAIL at 84e99fd`; 24 findings (1 High, 14 Medium, 9 Low), 5 questions for the human. `git show --stat d31cb02` lists one path. `make assert-clean` PASS at d31cb02. The Reviewer read `openapi.yaml` line by line to line 1349 and checked lines 1350-2309 by search only (stated in the review file)
 - human review (what I checked or corrected, or `none`): none yet; the High-finding disposition is pending the human. No protected file was committed. Commands that required approval: none
+
+### 2026-10-22 — Engineer: #108 stage 2 (plan review 1 fixes)
+
+- date: 2026-10-22
+- task/issue: #108 stage 2, implemented as a subagent: the Medium findings 2-15 and Low findings 16-18, 20-21, 22 (`docker-runbook.md` only), 23 and 24 of `_docs/reviews/2026-10-22-plan-review.md` (not closed; QA and the second Reviewer run not started)
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's stage 2 instruction with the human's decisions of 2026-10-22; no new key prompt saved
+- files changed: `_docs/architecture.md`, `_docs/api.md`, `_docs/openapi.yaml`, `_docs/testing.md`, `_docs/tasks.md`, `_docs/plan-summary.md`, `_docs/roadmap.md`, `_docs/aws-setup.md`, `_docs/planning-process.md`, `_docs/docker-runbook.md`, this log; commits b9e3c23 (WP2), 2a0e169 (WP3), ca470b5 (WP4), 5fcfa8f (WP5), aa9b93a (WP6), 971457b (WP8) and the log commit that follows. `specs.md`, `AGENTS.md`, `Makefile`, `_docs/agent-kit/*`, `opencode.json`, `.claude/*`, `agent-kit.conf` and `_docs/rubric-evidence.md` untouched
+- verification (tests run, reviewer verdict): `make openapi-validate` exit 0 on the edited `openapi.yaml` (22 operations); read-only `.scratch/` scripts recounted the test case IDs (56 submission, 26 Showcase), the register labels and locations, the task headings (1-39), dependencies and the dependency table (no mismatch); `make verify` result is in the issue comment. No QA or review yet
+- human review (what I checked or corrected, or `none`): none in this entry. No protected file was committed. Commands that required approval: none
