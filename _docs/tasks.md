@@ -174,13 +174,13 @@ Covers: Alerting on User Impact, US-14
 Goal: The responder wakes on the US-14 alert, reproduces the notification defect, fixes it and opens a pull request.
 Description: Adds the responder container and Grafana webhook receiver, the `VT_DEMO_DEFECT=notify_no_fix` path and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The check is `P-DEMO`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose` with `RESPONDER_MODE=stub`.
 Depends on: 27
-Covers: On-Call Agent
+Covers: On-Call Agent, US-15
 
 ## 29. Responder Compose test and demo cleanup
 Goal: The `responder` job proves the undelivered finding reaches its owner and the demo defect is removed.
 Description: Adds the `responder` job and the `P-FLAG-GONE` cleanup case from `_docs/testing.md` § Responder to `make test-compose`, then removes the demo defect before production promotion; the `P-DEMO` and refused responder cases come from task 28. The human performs the merge and the manual promotion. The check is `make test-compose` green and `P-FLAG-GONE` blocking promotion until the defect path is gone.
 Depends on: 19, 27
-Covers: On-Call Agent
+Covers: On-Call Agent, US-15
 
 # Committed scope (LLM brief, MCP server, n8n)
 
