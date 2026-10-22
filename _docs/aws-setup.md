@@ -1,10 +1,10 @@
 # AWS setup for the human
 
-The human's how-to for the AWS and GitHub steps behind the deployment work (the Deploy phase S3 in `_docs/roadmap.md`; tasks 17, 18, 21 and 37 in `_docs/tasks.md`). It is instructions to follow in order, written from experience hosting earlier apps on EC2. It is not a record of progress.
+The human's how-to for the AWS and GitHub steps behind the deployment work (the deployment tasks 17, 18, 21 and 22 and the email task 37 in `_docs/tasks.md`). It is instructions to follow in order, written from experience hosting earlier apps on EC2. It is not a record of progress.
 
 The agents write the Terraform files and the GitHub Actions workflows. You own the AWS account, its credentials, the secrets, the first `terraform apply` and teardown. Agents never hold AWS credentials, never run `terraform apply` and never see a secret value (`_docs/architecture.md`, Security boundaries). You apply Terraform from your own machine as your admin identity; CI has no AWS key and only assumes the OIDC roles, whose trust policies refuse pull-request and other-branch runs.
 
-Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip.io` (H2-H5 in `_docs/roadmap.md`), and the local Compose stack for observability, the alert and the responder during submission (H6, A34). Sources: `_docs/architecture.md` (Deployment, Security boundaries, Routing and notifications, assumptions A26, A36 and A37) and tasks 17, 18, 21 and 37. Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS, GHCR, Let's Encrypt and Terraform behaviours, prices and console paths are marked `VERIFY:`: check them in the documentation or console when you do the step.
+Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip.io` (`_docs/architecture.md`, Deployment and A36), and the local Compose stack for observability, the alert and the responder during submission (A34). Sources: `_docs/architecture.md` (Deployment, Security boundaries, Routing and notifications, assumptions A26, A36 and A37) and tasks 17, 18, 21 and 37. Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS, GHCR, Let's Encrypt and Terraform behaviours, prices and console paths are marked `VERIFY:`: check them in the documentation or console when you do the step.
 
 Everything in "Submission steps" is needed for the submission. "Showcase extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
 
@@ -29,7 +29,7 @@ Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFr
 | 1 | Account hygiene | Submission | Before anything else | 10 min |
 | 2 | Pick the region | Submission | Before the bootstrap | 5 min |
 | 3 | Budget alert | Submission | Before anything is applied | 10 min |
-| 4 | Hostnames and TLS | Submission | Before the server is applied | 10 min |
+| 4 | Hostnames and TLS | Submission | Decide the name form before the server is applied; record the hostnames after the first apply | 10 min |
 | 5 | How you reach the server | Submission | Before the server is applied | 5 min |
 | 6 | GitHub settings | Submission | Environment before task 21; variables after step 7 | 15 min |
 | 7 | Bootstrap: state bucket, deploy role, server | Submission | Start of task 17, after review | 45 min |
@@ -41,7 +41,7 @@ Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFr
 | S2 | Grafana and responder on AWS (X3) | Showcase | After the submission is in | see `roadmap-showcase.md` |
 | S3 | On-demand demo and Launch button (X1, X9) | Showcase | After the submission is in | see `roadmap-showcase.md` |
 
-Steps 1-4 need no repository code. Steps 4 and 5 are decisions; record them in the issue for task 17.
+Steps 1-4 need no repository code. Steps 4 and 5 are decisions (for step 4, the name form; the hostnames themselves exist only after the first apply creates the Elastic IP); record them in the issue for task 17. You, not an agent, perform the first deploy (task 17).
 
 # Submission steps
 
@@ -119,7 +119,7 @@ Derivation: the secrets table (Security boundaries) lists what exists; the crede
 
 Not in AWS for submission:
 - No email credential exists: SES uses the instance role (step 9). Do not create SMTP credentials.
-- The Grafana admin password, the observability stack's tokens (including the Grafana Viewer token), the responder's `RESPONDER_API_TOKEN`, and the responder's LLM key and GitHub token belong to the local Compose stack for submission (H6, A34). They go in the local git-ignored `.env`, which agents never read.
+- The Grafana admin password, the observability stack's tokens (including the Grafana Viewer token), the responder's `RESPONDER_API_TOKEN`, and the responder's LLM key and GitHub token belong to the local Compose stack for submission (A34). They go in the local git-ignored `.env`, which agents never read.
 - The backend LLM key, the n8n, MCP and tracker tokens and SMTP credentials are showcase (S1).
 
 Rules:
@@ -152,6 +152,8 @@ Human-only. Follow `_docs/architecture.md` Deployment → Teardown, in this orde
 2. Run `terraform destroy` for the server module, then the deploy role module (VERIFY: destroy order and that the Elastic IP is released).
 3. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget. Delete the GHCR images in the GitHub package settings if wanted.
 4. Last, empty and delete the state bucket (VERIFY: a versioned bucket needs all versions removed).
+
+5. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
 
 Then release any Elastic IP left, and check Cost Explorer filtered by `project=vuln-triage` a few days later.
 
