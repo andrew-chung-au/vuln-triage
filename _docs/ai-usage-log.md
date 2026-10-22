@@ -1754,3 +1754,14 @@ Copy this template for each new entry:
 - files changed: `_docs/planning-process.md`, `_docs/architecture.md`, `_docs/roadmap.md` (17fc6d9); `_docs/plan-summary.md` (061de62); this log
 - verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests), run before the commits. No QA or review yet
 - human review (what I checked or corrected, or `none`): none in this entry; the human approved the scope before the work. No protected file was committed. Commands that required approval: none
+
+### 2026-10-22 — Engineer: #108 stage 1 (pre-review edits)
+
+- date: 2026-10-22
+- task/issue: #108 stage 1 only, implemented as a subagent (not closed; QA and the Reviewer not yet run)
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement stage 1 of #108 following the PM grooming comment, with the human's answers of 2026-10-22; no new key prompt saved
+- files changed: `_docs/plan-summary.md`, `_docs/architecture.md`, `_docs/roadmap.md` (check-in line only), this log
+- verification (tests run, reviewer verdict): `make verify` run before commit (result in the issue comment). No QA or review yet
+- human review (what I checked or corrected, or `none`): none in this entry; the human decided A16-A18, Q8, Q10, Q-A and Q-B before the work. No protected file was committed. Commands that required approval: none
