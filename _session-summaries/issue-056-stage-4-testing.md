@@ -56,7 +56,7 @@
 PM, Engineer and QA each listed their approvals and ask-rule commands in their #56 comments; the orchestrator's own actions are included below.
 
 - Read-only (propose allowing): PM's read-only `gh api` loop for issue titles (matched `gh api*` ask rule); `make issue-dump N=9/50/56` reads; the Engineer's and QA's git/log/diff reads and `.scratch/` doc checks; the orchestrator's `git fetch`, `git log`, `git rebase`, `make assert-clean`.
-- Writes to the record (keep asking): PM `gh api -X PATCH` on the #56 body (ask rule; orchestrator-requested); Engineer `gh api -X PATCH` on the #9 body (ask rule); PM `gh issue create` for #63 (issue-creation rule); `make issue-comment`/`make issue-dump` issue writes (allowed targets); `git push -u origin claude/issue-056-stage-4-testing` (cloud-session branch push).
+- Writes to the record (keep asking): PM `gh api -X PATCH` on the #56 body (ask rule; orchestrator-requested); Engineer `gh api -X PATCH` on the #9 body (ask rule); PM `gh issue create` for #63 (issue-creation rule); `make issue-comment`/`make issue-dump` issue writes (allowed targets).
 - Risky (propose denying): `git push -u origin claude/issue-056-stage-4-testing` (matched the `git push*` deny rule; the agent did not pursue another way and left the push to the human).
 - Proposed `opencode.json` and `.claude/settings.json` changes: none.
 
