@@ -304,7 +304,7 @@ Secrets: none in the repository, images or telemetry; `.env.example` lists names
 
 | Secret | Development | CI | AWS |
 |---|---|---|---|
-| Repository read token, tracker token, LLM keys, SMTP credentials, service tokens (n8n `N8N_API_TOKEN`, MCP `MCP_API_TOKEN`, responder), database password, Grafana admin password | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
+| Repository read token, tracker token, LLM keys, SMTP credentials, service tokens (n8n `N8N_API_TOKEN`, MCP `MCP_API_TOKEN`, responder `RESPONDER_API_TOKEN`), database password, Grafana admin password | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
 
 Credentials:
 
