@@ -266,6 +266,8 @@ Every acceptance story US-1 to US-16 and every criterion in `_docs/rubric.md` ap
 
 `ASSUMPTION:` task 15's Compose file and service names follow `_docs/testing.md` T-A1; task 17's AWS resource names and region follow `_docs/architecture.md` § Deployment and carry the same `VERIFY:` tags as that document. `VERIFY:` the exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration.
 
+Note: the Application row above lists the tasks for the end-to-end application. Application's "runs locally with a single command" clause is supplied by task 15 (one-command Compose stack), which `_docs/roadmap.md` B2 assigns to Application for that clause; task 15's own `Covers:` line names only Containerization.
+
 ## Dependency chain
 
 Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task.
