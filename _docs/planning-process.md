@@ -133,7 +133,10 @@ enough for one session and independent enough to hand to someone who has not
 read the others. Order by dependency. Dependencies must be one-way: check for
 cycles and list the dependency chain at the end. Group tasks into milestones
 in build order: Tier A (12 points, a pass), then Tier B (19), then Tier C (24),
-as defined in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5. The scoring
+as defined in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5. Here
+"Tier A/B/C" means these rubric scope tiers, the same A/B/C as the `Tier`
+column in `_docs/architecture.md`; it never means the P1-P4 prioritisation
+tiers from Stage 2. The scoring
 path comes first (app, tests, Compose, deployment, CI/CD with dev and prod,
 observability, alert, on-call agent), then the LLM brief, MCP server and n8n,
 which are committed scope.

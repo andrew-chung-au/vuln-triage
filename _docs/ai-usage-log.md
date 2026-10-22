@@ -1644,3 +1644,47 @@ Copy this template for each new entry:
 - files changed: `_docs/plan-summary.md` (`731f11b`, `e8e4ddb`, `882c75d`) and `README.md` (`731f11b`); `_docs/roadmap.md` (step 13 done and check-in), this log and `_session-summaries/issue-091-stage-6-plan-summary.md` at close-out. GitHub: #91 created; comments 6334007642 (PM), 6334298084 (Engineer), 6335550333 (QA FAIL), 6336177091 (QA re-check PASS); #95 created
 - verification (tests run, reviewer verdict): QA FAIL at `e8e4ddb` on the completeness counts and a false checklist PASS; Engineer `882c75d` fixed the label-only counts and evidence; QA re-check PASS at `882c75d` (6336177091); `make verify BASE=1edc468` PASS (62 tests, type check, whitespace, no weakened tests); `make assert-clean` PASS with HEAD unchanged after both QA runs
 - human review (what I checked or corrected, or `none`): the human deferred the protected spec Q2-Q4 note to the next spec change, approved filing one follow-up (#95) for the tasks.md Application/task 15 discrepancy with README `withdrawn` left to #73, and chose note-only for the minor checklist recount wording. Commands that required approval: `gh issue create` for #91 and #95 (issue-creation rule); `make issue-comment` (allowed target)
+
+### 2026-10-22 — Orchestrator: parallel-work analysis and AWS setup guide
+
+- date: 2026-10-22
+- task/issue: none (planning). The human asked which work can run beside another session's roadmap step 13 (`_docs/plan-summary.md`) without conflict, without editing either roadmap; then, with #48 set aside (cloud credits), for a guide to the AWS setup the Tier B/C work needs
+- agent role: Orchestrator (main session), on branch `claude/tender-volta-wiq6xv`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's two requests in chat; no new key prompt saved
+- files changed: `_docs/aws-setup.md` (new), this log, `_session-summaries/planning-2026-10-22-aws-setup.md`. Neither roadmap and no README link (step 13 edits the README index)
+- verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); the guide was checked against `_docs/architecture.md` Deployment and Security boundaries by the author only; no QA or rubric-auditor review; nothing in it was run against AWS
+- human review (what I checked or corrected, or `none`): none yet; the guide lists seven decisions for the human. Commands that required approval: none recorded
+
+### 2026-10-22 — Orchestrator: #73 and follow-up #92
+
+- date: 2026-10-22
+- task/issue: #73 (README `withdrawn`, Stage 5 tier-label sentence); created #92 (follow-ups deferred to avoid conflicting with the step 13 session)
+- agent role: Orchestrator (main session) with PM, Engineer and QA subagents, on branch `claude/tender-volta-wiq6xv`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to work #73 and save conflicting README and follow-up changes to a follow-up issue; role launches followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: this log and `_session-summaries/issue-073-readme-withdrawn-tier-label.md` (the Engineer's commits are in its own entry). GitHub: #73 comment 6334352037 (human answers), #92 created (body later trimmed and one comment deleted at the human's direction: discussion material was not to be saved), #73 closed
+- verification (tests run, reviewer verdict): QA PASS at `6248c29` (6334401494); `make assert-clean` PASS, HEAD unchanged
+- human review (what I checked or corrected, or `none`): the human answered the PM's decisions (Stage 5 sentence matches the architecture Tier column; leave the brief). The orchestrator checked the PM's architecture-tier claim against `_docs/architecture.md` before asking. Commands that required approval: none recorded
+
+### 2026-10-22 — Orchestrator: submission and showcase tracks
+
+- date: 2026-10-22
+- task/issue: none (planning); created #93 (merge the drafts into the main roadmap; apply decisions H2-H7 before plan review)
+- agent role: Orchestrator (main session), on branch `claude/tender-volta-wiq6xv`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's questions on the deployment approach, ease and speed, and a CV showcase; the human chose two tracks, Terraform, GHCR, `sslip.io` and deferring n8n; no new key prompt saved
+- files changed: `_docs/roadmap-submission-draft.md` (new, temporary), `_docs/roadmap-showcase.md` (new, kept separate), `_docs/aws-setup.md` (status line), this log, `_session-summaries/planning-2026-10-22-submission-showcase.md`. Neither existing roadmap changed
+- verification (tests run, reviewer verdict): `make verify` before commit (result in the session summary); no QA or rubric-auditor review; the drafts were checked against `_docs/rubric.md` and the `_docs/tasks.md` task list by the author only
+- human review (what I checked or corrected, or `none`): the human made decisions H1-H7 in the session (recorded in the submission draft). Commands that required approval: none recorded
+
+### 2026-10-22 — Engineer: #73 README withdrawn status and Stage 5 tier note
+
+- date: 2026-10-22
+- task/issue: #73 (lifecycle step 3, implementation)
+- agent role: Software Engineer (subagent of the orchestrator), on branch `claude/tender-volta-wiq6xv`
+- model: claude-opus-5-5 (Claude Code, cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's step 3 task for #73, implementing PM comment 6334306395 with the human's decisions in comment 6334352037; no new key prompt saved
+- files changed: `README.md` (line 27: adds `withdrawn`), `_docs/planning-process.md` (one sentence in the Stage 5 "Rules:" paragraph), this log. Commit 0aa61b1
+- verification (tests run, reviewer verdict): `make verify BASE=25960f5` PASS (62 tests passed, type check pass, whitespace pass, no test files changed); QA not yet run
+- human review (what I checked or corrected, or `none`): none. Commands that required approval: none recorded
