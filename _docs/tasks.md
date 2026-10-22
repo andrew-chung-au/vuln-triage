@@ -1,6 +1,6 @@
 # VulnTriage task backlog (Stage 5)
 
-Numbered, dependency-ordered tasks for the build. Task 1 is the empty project with one passing test; the scoring path runs through Milestones A-C, then the committed scope (LLM brief, MCP server and n8n). The dependency chain is the final section.
+Numbered, dependency-ordered tasks for the build. Task 1 is the empty project with one passing test. The submission scope is Milestones A-C plus tasks 37 and 38 (the backend's own owner notification and scheduler); it follows the submission track of decisions H2-H7 (Terraform, one server for dev and prod, images in GHCR, `sslip.io` hostnames, observability and the responder in local Compose, the backend delivering the top-tier notification and running the schedule). Tasks 30-36 (LLM brief, MCP server, n8n) are in the final "Showcase (post-submission)" section and are built after submission. Numbers are never reused or renumbered: 37 and 38 are numbered after 36 and build earlier than the Showcase tasks. No submission task depends on a Showcase task. The dependency chain is the final section.
 
 # Milestone A — Tier A (12 points)
 
@@ -92,7 +92,7 @@ Covers: Application, Testing
 
 ## 15. One-command Compose stack
 Goal: Docker Compose starts the frontend, backend and Postgres with one command.
-Description: Adds the Dockerfiles and the project Compose file for the frontend, backend, Postgres and migrations, with the `db` service and the service names fixed by `_docs/testing.md` (`ASSUMPTION: T-A1`); n8n and the Collector arrive in later tasks. The check is `docker compose up` starting the stack with no manual per-service step and the frontend reading the API on the human's host or in CI. No image is pushed.
+Description: Adds the Dockerfiles and the project Compose file for the frontend, backend, Postgres and migrations, with the `db` service and the service names fixed by `_docs/testing.md` (`ASSUMPTION: T-A1`); the Collector, the other observability services and the MailHog mail catcher arrive in task 24, and n8n is a Showcase task (33). The check is `docker compose up` starting the stack with no manual per-service step and the frontend reading the API on the human's host or in CI. No image is pushed.
 Depends on: 14
 Covers: Containerization
 
@@ -102,17 +102,17 @@ Description: Adds the `vt-test` setup, migrations, transaction isolation and com
 Depends on: 15
 Covers: Testing
 
-## 17. AWS infrastructure and dev deployment
-Goal: The dev environment is reachable at a public URL on AWS.
-Description: Writes the `vt-ci-iam`, `vt-ecr` and `vt-dev` CloudFormation stacks from `_docs/architecture.md` § Deployment and deploys the same image that Compose uses. The human creates the AWS account resources, the DNS record and the secrets, and performs the first `vt-dev` stack run; the agent only writes templates and the runbook. The check is the dev URL answering the frontend and the deploy log naming one image digest.
+## 17. AWS infrastructure on one server and the dev environment
+Goal: The dev environment is reachable at a public HTTPS `sslip.io` URL on one AWS server.
+Description: Writes the Terraform modules (state bucket bootstrap, GitHub OIDC deploy roles, and the one server with its Elastic IP, instance role, EBS volume and bootstrap) from `_docs/architecture.md` § Deployment, adds the push-to-`main` build-once job that tags the images and pushes them to GHCR with the workflow's `GITHUB_TOKEN`, and runs the `dev` Compose project behind the reverse proxy at `dev.<elastic-ip>.sslip.io`. It deploys the same image that Compose uses; the automatic deploy on merge is task 21. Terraform is a tool the human approves before it is installed. The human creates the AWS account resources and the secrets, runs the bootstrap and the first `terraform apply`, and performs the first deploy; the agent only writes the Terraform and the runbook. The check is the dev URL answering the frontend and the deploy log naming one image digest.
 Depends on: 15
 Covers: Deployment
 
-## 18. Production deployment and manual promotion
-Goal: The production environment runs the same image digest and is promoted only by a human.
-Description: Adds the `vt-prod` stack and the production runbook, including the rollback step from `_docs/architecture.md` § Deployment; the human creates the production secrets, approves the first production run and runs teardown. The check is the production URL or demo, the same image digest in `vt-dev` and `vt-prod`, and a rollback to the previous digest recorded in the deploy log.
+## 18. Production Compose project and manual promotion
+Goal: The production environment runs the same image digest as dev on the same server and is promoted only by a human.
+Description: Adds a second Compose project (`prod`) and the hostname `app.<elastic-ip>.sslip.io` on the server from task 17, the manual production workflow (`workflow_dispatch` in the `production` environment, the human as the required reviewer, an image tag input that defaults to the one running in dev, nothing rebuilt) from `_docs/architecture.md` § Deployment, the production runbook and the rollback step. The human creates the production secrets, approves each production run and runs teardown. The check is the production URL, the same image digest in `dev` and `prod`, and a rollback to the previous tag recorded in the deploy log.
 Depends on: 17
-Covers: Deployment
+Covers: Deployment, CI/CD
 
 ## 19. CI test pipeline
 Goal: Every pull request runs the test jobs before any deploy.
@@ -126,10 +126,10 @@ Description: Adds the dependency audit target and the `security-scan` PR job fro
 Depends on: 19
 Covers: CI/CD, Testing
 
-## 21. Deploy pipeline, automatic dev and manual production
-Goal: A merge to `main` deploys dev automatically and production only by a manual promotion of the same digest.
-Description: Adds the push-to-`main` dev deploy and the `workflow_dispatch` production promotion in the `production` environment from `_docs/architecture.md` § Deployment, with the human as the required reviewer and the previous digest in the summary. The check is a merge updating `vt-dev` without a rebuild and a manual production run reusing the dev digest; the human approves the production run.
-Depends on: 18, 19
+## 21. Automatic dev deploy
+Goal: A merge to `main` deploys the `dev` project automatically when the tests pass.
+Description: Adds the deploy step that runs after the push-to-`main` build in task 17 and the test jobs in task 19: the workflow assumes the dev deploy role and runs the deploy on the server for the `dev` Compose project only, by image tag, from `_docs/architecture.md` § Deployment, and records the tag and digest in the deploy log. The manual production promotion is part of task 18 (split per roadmap D7), so this task does not wait for the production project. The check is a merge updating `dev` without a rebuild, and a red test leaving the previous version running.
+Depends on: 17, 19
 Covers: CI/CD
 
 ## 22. Pilot seed data
@@ -142,19 +142,19 @@ Covers: US-1, US-2
 
 ## 23. OpenTelemetry instrumentation and the exclusion helper
 Goal: The scan-to-notification journey emits one trace, metric and log with a shared trace ID, with exclusions enforced in code.
-Description: Instruments `scan.run` and its children and the `notification.enqueue`/`notification.deliver` traceparent round-trip from `_docs/architecture.md` § Observability, writing attributes and log bodies only through the allowlist helper. It is a no-op when no Collector endpoint is configured, per A40. The check is a unit test dropping `owner.email` and `authorization`; the `T-JOURNEY` and `T-REFUSE` Compose cases are added in task 25.
+Description: Instruments `scan.run` and its children and the `notification.enqueue` span with its stored `traceparent` from `_docs/architecture.md` § Observability (the backend's own delivery in task 37 records `notification.deliver` as the child span), writing attributes and log bodies only through the allowlist helper. It is a no-op when no Collector endpoint is configured, per A40. The check is a unit test dropping `owner.email` and `authorization`; the `T-JOURNEY` and `T-REFUSE` Compose cases are added in task 25.
 Depends on: 10, 15
 Covers: Observability, US-13
 
 ## 24. Observability stack and the US-13 Grafana dashboard
 Goal: Prometheus, Loki, Tempo, Grafana and the Collector show the US-13 signals side by side.
-Description: Adds the Collector processors, the Compose observability services and the AWS `vt-observability` stack from `_docs/architecture.md` § Deployment and § Observability, with Grafana behind authentication. It provisions the "US-13 journey" dashboard with a Prometheus pane, a Tempo pane and a Loki pane. The check is the manual dashboard in Compose showing the three signals side by side; the `make test-compose` cases are added in task 25.
-Depends on: 17, 23
+Description: Adds the Collector processors and the Compose observability services (Prometheus, Loki, Tempo, Grafana and the Collector) from `_docs/architecture.md` § Observability, with Grafana behind authentication, and the MailHog mail catcher as a Compose service (a dependency, ask before adding) that task 37 and the Grafana email contact point send to in development and tests. For submission the stack runs in local Compose only; running it on AWS is a showcase item (X3 in `_docs/roadmap-showcase.md`). It provisions the "US-13 journey" dashboard with a Prometheus pane, a Tempo pane and a Loki pane. The check is the manual dashboard in Compose showing the three signals side by side and the MailHog service answering; the `make test-compose` cases are added in task 25.
+Depends on: 23
 Covers: Observability, US-13
 
 ## 25. Telemetry Compose test and CI job
 Goal: `make test-compose` proves the shared trace ID and that excluded values never leave the Collector.
-Description: Creates the `make test-compose` target and adds the `telemetry` job and the `T-JOURNEY`, `T-REFUSE` and `T-E6` cases from `_docs/testing.md` § Telemetry, querying Prometheus, Tempo and Loki. The check is `make test-compose` green in CI and `T-REFUSE` failing when `owner.email` is added to the allowlist.
+Description: Creates the `make test-compose` target and adds the `telemetry` job and the `T-JOURNEY`, `T-REFUSE` and `T-E6` cases from `_docs/testing.md` § Telemetry, querying Prometheus, Tempo and Loki. `T-JOURNEY` needs the delivery path of task 37, which is built before this task (see Build order under Dependency chain). The check is `make test-compose` green in CI and `T-REFUSE` failing when `owner.email` is added to the allowlist.
 Depends on: 19, 24
 Covers: Observability, US-13
 
@@ -172,17 +172,35 @@ Covers: Alerting on User Impact, US-14
 
 ## 28. Responder agent, webhook and demo defect
 Goal: The responder wakes on the US-14 alert, reproduces the notification defect, fixes it and opens a pull request.
-Description: Adds the responder container and Grafana webhook receiver, the `VT_DEMO_DEFECT=notify_no_fix` path and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The check is `P-DEMO`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose` with `RESPONDER_MODE=stub`.
+Description: Adds the responder container and Grafana webhook receiver to the local Compose observability stack (decision H6; running it on AWS is showcase item X3), the `VT_DEMO_DEFECT=notify_no_fix` path in the notification formatter of task 37 and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. Task 37 is built before this task (see Build order under Dependency chain). It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The check is `P-DEMO`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose` with `RESPONDER_MODE=stub`.
 Depends on: 27
 Covers: On-Call Agent, US-15
 
 ## 29. Responder Compose test and demo cleanup
-Goal: The `responder` job proves the undelivered finding reaches its owner and the demo defect is removed.
-Description: Adds the `responder` job and the `P-FLAG-GONE` cleanup case from `_docs/testing.md` § Responder to `make test-compose`, then removes the demo defect before production promotion; the `P-DEMO` and refused responder cases come from task 28. The human performs the merge and the manual promotion. The check is `make test-compose` green and `P-FLAG-GONE` blocking promotion until the defect path is gone.
+Goal: The `responder` job proves, in the local Compose demo, that the undelivered finding reaches its owner, and the demo defect is removed.
+Description: Adds the `responder` job and the `P-FLAG-GONE` cleanup case from `_docs/testing.md` § Responder to `make test-compose`, then removes the demo defect before production promotion; the `P-DEMO` and refused responder cases come from task 28. The demo is a local run of the Compose stack with the responder, MailHog receiving the delivered notification; the deployed observability and responder on AWS are showcase item X3. The human performs the merge and the manual promotion. The check is `make test-compose` green and `P-FLAG-GONE` blocking promotion until the defect path is gone.
 Depends on: 19, 27
 Covers: On-Call Agent, US-15
 
-# Committed scope (LLM brief, MCP server, n8n)
+# Submission additions (backend notification and scheduler)
+
+Tasks 37 and 38 are submission tasks numbered after the Showcase tasks so that tasks 1-36 keep their numbers (human decision on #93, 2026-10-22). They are built inside Milestone C, as the Dependency chain's Build order says.
+
+## 37. Backend top-tier owner notification and delivery
+Goal: A new top-priority finding sends exactly one email to its owner from the backend, recorded as `notification.enqueue` and `notification.deliver` with one trace ID.
+Description: Adds the backend delivery worker for the notification jobs that task 10 creates: it claims a pending `top tier` job, formats the plain-text labelled-field owner notification from `_docs/architecture.md` § Routing and notifications and § Security boundaries, sends it once per finding lifecycle, records `sent` or `failed` (a failed job is retried on the next poll) and holds the job for an ownerless asset (E2). It records `notification.deliver` as a child span of the stored `notification.enqueue` `traceparent`, through the allowlist helper of task 23, so the scan-to-notification journey of US-13 is complete in the backend. Email route (human decision, 2026-10-22): the backend sends through the Amazon SES API using the server's instance role, with one verified sender address, because `sslip.io` hostnames cannot carry SES domain DKIM records; in development and tests it sends to the MailHog container that is part of the Compose stack (task 24 lists it). A mail-transport setting (name a build detail) selects the MailHog route or the SES route, and the sender address must be the configured verified sender. MailHog and the AWS SDK client are dependencies, ask before adding. `VERIFY:` the SES sandbox allows only verified recipient addresses, so the demo recipient must be verified too. `VERIFY:` the current SES free allowance and sending limits. `VERIFY:` the instance-role permission, the `ses:SendEmail` action and the resource form (the verified identity ARN). `VERIFY:` the SES region that holds the verified identity. The route matches `_docs/architecture.md` § Routing and notifications option (b), which #101 settles. The check is a `make test` run delivering the notification to MailHog with no AWS credentials in the environment, a retry producing no second email, and a send from an address other than the verified sender refused with nothing delivered (the case that must be refused); the Compose delivery case runs in `make test-compose` (task 25).
+Depends on: 10, 23, 24
+Covers: Application, US-8, US-13
+
+## 38. Backend scheduler for the daily refresh and the scheduled re-scan
+Goal: The backend refreshes KEV and EPSS every day and re-scans every asset after the refresh, with no manual action and no external workflow tool.
+Description: Adds a scheduler inside the backend's background worker (A4) that runs the same code as `POST /signals/refresh` and `POST /scans` once a day at 06:00 UTC (A25, as carried over from the n8n schedule), re-scores the findings and then starts a scan of every asset with trigger `schedule`. A refresh that moves a finding into the top tier creates its `top tier` job through task 10's lifecycle idempotency key, so a second run the same day makes no second job (US-8). A library scheduler would be a dependency, ask before adding; a clock-driven loop needs none. It covers spec US-7 (the daily refresh and re-score, lines 103-107, and both acceptance lines, 108-112) and the scheduled re-scan clause of US-10 (line 149). The check is a test with a fake clock and stubbed feeds showing changed signals and ranks after the scheduled run, a re-scan of every asset, no outbound call outside the stubs, and a repeated run creating no second notification job.
+Depends on: 8, 10
+Covers: Application, US-7, US-10
+
+# Showcase (post-submission)
+
+Tasks 30-36 are built after submission (spec § Showcase; items X4-X6 in `_docs/roadmap-showcase.md`). They keep their numbers, bodies and `Depends on:` lines, and nothing in the submission scope depends on them.
 
 ## 30. LLM brief with the fix-version guardrail
 Goal: An open finding gets a matching brief or the structured finding with "brief unavailable".
@@ -204,15 +222,15 @@ Covers: US-12
 
 ## 33. n8n service, daily refresh and scheduled re-scan
 Goal: n8n runs `daily-signal-refresh` and `scheduled-rescan` from committed JSON.
-Description: Adds the n8n Compose service, its credentials and the two workflows under `n8n/workflows/` from `_docs/architecture.md` § Routing and notifications, calling `POST /signals/refresh` and `POST /scans` with the n8n token. The human provisions the SMTP and tracker secrets. The check is a Compose run showing changed signals and a re-scan, and both exported files parsing as JSON; `make test-workflows` is added in task 36.
+Description: Adds the n8n Compose service, its credentials and the two workflows under `n8n/workflows/` from `_docs/architecture.md` § Routing and notifications, calling `POST /signals/refresh` and `POST /scans` with the n8n token. This is the n8n variant of the schedule that the backend runs for submission in task 38 (spec US-7, lines 103-112, and US-10, line 149); a setting turns the backend scheduler off while n8n drives the refresh and the re-scan, so the two never run together. The human provisions the SMTP and tracker secrets. The check is a Compose run showing changed signals and a re-scan, and both exported files parsing as JSON; `make test-workflows` is added in task 36.
 Depends on: 10, 15
-Covers: US-7, US-16
+Covers: US-7 (n8n variant), US-16
 
 ## 34. n8n top-tier notification and tracker issue
-Goal: A new top-priority finding notifies the owner once and opens one tracker issue.
-Description: Adds `notify-top-tier` and `close-tracker-issue` under `n8n/workflows/` using the job list, claim and report operations, the `vt-lifecycle:<id>` search guard and the dedicated `vuln-triage-findings` token from `_docs/architecture.md` § Routing and notifications. The check is the `make test-e2e` `E-DELIVER` journey in the `e2e` job, proving one notification, one issue and no duplicate on a retry, plus `S-ISSUE`. The human provides the tracker repository and token.
+Goal: A new top-priority finding opens one GitHub tracker issue through n8n (the "US-8 GitHub tracker issue" in the spec's Showcase section).
+Description: Adds `notify-top-tier` and `close-tracker-issue` under `n8n/workflows/` using the job list, claim and report operations, the `vt-lifecycle:<id>` search guard and the dedicated `vuln-triage-findings` token from `_docs/architecture.md` § Routing and notifications. The owner notification itself is sent by the backend in task 37; the workflow's email step is the original route and is used only if the showcase moves delivery back to n8n, which is decided when the showcase starts. The check is the `make test-e2e` `E-DELIVER` journey in the `e2e` job, proving one issue and no duplicate on a retry, with one notification, plus `S-ISSUE`. The human provides the tracker repository and token.
 Depends on: 19, 33
-Covers: US-8, US-16
+Covers: US-8 (GitHub tracker issue), US-16
 
 ## 35. n8n reminders, escalation and weekly digest
 Goal: Overdue findings produce reminders and escalation, and the security lead gets one weekly digest.
@@ -228,7 +246,9 @@ Covers: US-16, Testing
 
 ## Coverage summary
 
-Every acceptance story US-1 to US-16 and every criterion in `_docs/rubric.md` appears in at least one task.
+Every submission story and every criterion in `_docs/rubric.md` appears in at least one submission task (tasks 1-29, 37 and 38). The stories and clauses that the spec moved to its Showcase section are covered by Showcase tasks (30-36) and are listed separately; they are showcase coverage, not gaps.
+
+Submission stories:
 
 | User story | Covering task(s) |
 |---|---|
@@ -237,17 +257,24 @@ Every acceptance story US-1 to US-16 and every criterion in `_docs/rubric.md` ap
 | US-3 | 5 |
 | US-4 | 6, 11 |
 | US-5 | 7, 11 |
-| US-6 | 11, 30, 31 |
-| US-7 | 33 |
-| US-8 | 10, 34 |
-| US-9 | 10, 35 |
-| US-10 | 8, 12 |
+| US-7 | 38 |
+| US-8 | 10, 37 |
+| US-10 | 8, 12, 38 |
 | US-11 | 8, 9, 12 |
-| US-12 | 10, 32 |
-| US-13 | 23, 24, 25 |
+| US-13 | 23, 24, 25, 37 |
 | US-14 | 26, 27 |
 | US-15 | 10, 28, 29 |
-| US-16 | 33, 34, 35, 36 |
+
+Showcase coverage (post-submission; the story or clause is in the spec's Showcase section):
+
+| User story or clause | Covering Showcase task(s) | Submission support |
+|---|---|---|
+| US-6 plain-language fix brief | 30, 31 | 11 shows the `brief` marker |
+| US-7 n8n variant of the schedule | 33 | 38 runs the schedule in the backend |
+| US-8 GitHub tracker issue | 34 | 37 delivers the owner notification |
+| US-9 reminders, escalation, weekly digest | 35 | 10 creates the jobs and serves the digest |
+| US-12 read-only assistant | 32 | 10 serves the `/mcp/` operations |
+| US-16 n8n workflows exported | 33, 34, 35, 36 | none |
 
 | Criterion | Points | Covering task(s) | Earliest milestone |
 |---|---|---|---|
@@ -255,22 +282,24 @@ Every acceptance story US-1 to US-16 and every criterion in `_docs/rubric.md` ap
 | Product Specification | 2 | 2 | A |
 | Agent Team Specification | 2 | 2 | A |
 | Context Management | 2 | 2 | A |
-| Application | 2 | 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14 | A |
-| Testing | 2 | 1, 13, 14, 16, 20, 31, 36 | A |
+| Application | 2 | 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 37, 38 | A |
+| Testing | 2 | 1, 13, 14, 16, 20 | A |
 | Containerization | 2 | 15 | B |
 | Deployment | 2 | 17, 18 | B |
-| CI/CD | 3 | 19, 20, 21 | B |
+| CI/CD | 3 | 18, 19, 20, 21 | B |
 | Observability | 2 | 23, 24, 25 | C |
 | Alerting on User Impact | 1 | 26, 27 | C |
 | On-Call Agent | 2 | 28, 29 | C |
 
-`ASSUMPTION:` task 15's Compose file and service names follow `_docs/testing.md` T-A1; task 17's AWS resource names and region follow `_docs/architecture.md` § Deployment and carry the same `VERIFY:` tags as that document. `VERIFY:` the exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration.
+`ASSUMPTION:` task 15's Compose file and service names follow `_docs/testing.md` T-A1; task 17's Terraform resource names and the AWS region follow `_docs/architecture.md` § Deployment and carry the same `VERIFY:` tags as that document. `VERIFY:` the exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration. The Showcase tasks 31 and 36 add Testing evidence (the brief evaluation and the workflow export check) after submission; the Testing criterion does not depend on them.
 
 Note: the Application row above lists the tasks for the end-to-end application. Application's "runs locally with a single command" clause is supplied by task 15 (one-command Compose stack), which `_docs/roadmap.md` B2 assigns to Application for that clause; task 15's own `Covers:` line names only Containerization.
 
 ## Dependency chain
 
-Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task.
+Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task. No submission task (1-29, 37, 38) depends on a Showcase task (30-36); the Showcase tasks depend only on submission tasks and on each other.
+
+Build order: tasks 37 and 38 are numbered last but build earlier. Build 37 after 24 and before 25, because the `T-JOURNEY` case of task 25 and the demo defect of task 28 run through task 37's delivery path; build 38 any time after 10. Tasks 25 and 28 do not list 37 in `Depends on:` because that line may only name a lower number (human decision, no renumbering); their descriptions say so.
 
 | Task | Depends on |
 |---|---|
@@ -294,10 +323,10 @@ Every `Depends on:` resolves to a lower-numbered task; no task depends on itself
 | 18 | 17 |
 | 19 | 14, 16 |
 | 20 | 19 |
-| 21 | 18, 19 |
+| 21 | 17, 19 |
 | 22 | 4, 17 |
 | 23 | 10, 15 |
-| 24 | 17, 23 |
+| 24 | 23 |
 | 25 | 19, 24 |
 | 26 | 10, 24 |
 | 27 | 19, 25, 26 |
@@ -310,3 +339,5 @@ Every `Depends on:` resolves to a lower-numbered task; no task depends on itself
 | 34 | 19, 33 |
 | 35 | 33 |
 | 36 | 19, 34, 35 |
+| 37 | 10, 23, 24 |
+| 38 | 8, 10 |
