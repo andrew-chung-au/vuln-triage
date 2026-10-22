@@ -268,7 +268,7 @@ The backend decides what is due and creates NotificationJobs with a unique idemp
 | `weekly-digest` | Weekly | Fetch the digest; report | US-9 digest of open findings by rank to the security lead |
 | `close-tracker-issue` | Poll every 5 min | List `issue close` jobs; report | Comments on and closes the tracker issue after `fixed` |
 
-Idempotency (US-8): the basis is the finding lifecycle. The key is (lifecycle id, kind) for `top tier`, `signals changed` and `issue close`, (lifecycle id, kind, overdue week) for reminders and escalations, and the ISO week for the digest. A second claim of a claimed job is refused by the API. Before creating a tracker issue n8n reads the lifecycle's stored issue number, and if it is empty searches the tracker repo for the marker `vt-lifecycle:<id>` (VERIFY: GitHub issue search by text in a repository), so a crash between "create" and "record" can't open a second issue.
+Idempotency (US-8): the basis is the finding lifecycle. The key is (lifecycle id, kind) for `top tier`, `signals changed` and `issue close`, (lifecycle id, kind, overdue week) for reminders and escalations, and the ISO week for the digest. Showcase (n8n): a second claim of a claimed job is refused by the API. Before creating a tracker issue n8n reads the lifecycle's stored issue number, and if it is empty searches the tracker repo for the marker `vt-lifecycle:<id>` (VERIFY: GitHub issue search by text in a repository), so a crash between "create" and "record" can't open a second issue.
 
 ASSUMPTION: (A25, showcase: n8n) the poll and schedule intervals above, with the refresh at 06:00 UTC and the digest on Monday 08:00 UTC. ASSUMPTION: (A26) the pilot channel is email (spec Open question 3), sent by the backend: to a MailHog container in the Compose stack in development and tests (dependency, ask before adding), and through the Amazon SES API with the instance role from one verified sender in AWS (VERIFY: SES sandbox limits recipients to verified addresses; details in the email route paragraph above). ASSUMPTION: (A27) US-9 windows (spec Open question 2): `P1` 7 days, `P2` 14 days, `P3` 30 days, `P4` 90 days; the reminder and the escalation go at the due time and again weekly while the finding stays overdue.
 
@@ -289,6 +289,8 @@ Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` 
 
 ## MCP server
 
+Showcase (post-submission): the MCP server below (US-12) is a showcase item (X5 in `_docs/roadmap-showcase.md`) and is not built for submission.
+
 Transport and placement: Python, stdio, run by the developer's AI assistant on their machine (Python MCP SDK, dependency, ask before adding; VERIFY: SDK and transport). ASSUMPTION: (A29) stdio and not deployed to AWS; `get_asset` includes the owner's name and email.
 
 | Tool | Input | Output | API call |
@@ -308,7 +310,7 @@ Secrets: none in the repository, images or telemetry; `.env.example` lists names
 
 | Secret | Development | CI | AWS |
 |---|---|---|---|
-| Repository read token, LLM keys, service token (responder `RESPONDER_API_TOKEN`), database password, Grafana admin password; showcase only: MCP `MCP_API_TOKEN`, tracker token, SMTP credentials, n8n `N8N_API_TOKEN`. No email credential exists for submission: SES uses the instance role and development sends to MailHog | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
+| Repository read token, service token (responder `RESPONDER_API_TOKEN`), database password, Grafana admin password, the responder's LLM key (local Compose only, not deployed for submission); showcase only: the backend's LLM key (X4, the brief), MCP `MCP_API_TOKEN`, tracker token, SMTP credentials, n8n `N8N_API_TOKEN`. No email credential exists for submission: SES uses the instance role and development sends to MailHog | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
 
 Credentials:
 

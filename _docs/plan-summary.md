@@ -136,7 +136,7 @@ All entries are listed under §Assumptions. A7, A12 and A14 were retired into sp
 | `architecture.md:A34` | The responder runs as a container in the observability stack; branch `responder/<fingerprint>`; failed jobs retried each poll for up to 7 days | proposed answer | Engineer, task 28 |
 | `architecture.md:A35` | The demo defect is switched by `VT_DEMO_DEFECT` and refused in production | proposed answer | Engineer, tasks 28/29; R8 |
 | `architecture.md:A36` | One EC2 instance per environment running Compose; `t3.small`/`t3.medium`; Postgres in a container on EBS | proposed answer | `human` approves via D1; Engineer task 17 |
-| `architecture.md:A37` | Budget amount set by the human; nightly stop of dev and observability; 7-day telemetry retention | proposed answer | `human` sets the budget amount; Engineer task 17 |
+| `architecture.md:A37` | Budget amount set by the human; nightly stop of the server; 7-day telemetry retention | proposed answer | `human` sets the budget amount; Engineer task 17 |
 | `architecture.md:A38` | The pilot seed list lives in the repository as a data file, registered through the API | proposed answer | Engineer, task 22 |
 | `architecture.md:A39` | Held notification jobs never fire the US-14 alert | proposed answer | Engineer, task 26 |
 | `architecture.md:A40` | Instrumentation is a no-op without a Collector endpoint | proposed answer | Engineer, task 23 |
