@@ -26,7 +26,7 @@ if ! git rev-parse --verify -q "$BASE^{tree}" >/dev/null; then
   echo "VERIFY: FAIL"
   exit 1
 fi
-base_commit="$(git rev-parse --verify -q "$BASE^{commit}" || true)"
+base_commit="$(git rev-parse --verify -q "$BASE^{commit}" 2>/dev/null || true)"
 
 run_gate() { # run_gate LABEL COMMAND
   section "$1 ($2)"
