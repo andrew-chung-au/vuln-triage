@@ -1645,6 +1645,17 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): QA PASS at `6248c29` (6334401494); `make assert-clean` PASS, HEAD unchanged
 - human review (what I checked or corrected, or `none`): the human answered the PM's decisions (Stage 5 sentence matches the architecture Tier column; leave the brief). The orchestrator checked the PM's architecture-tier claim against `_docs/architecture.md` before asking. Commands that required approval: none recorded
 
+### 2026-10-22 — Orchestrator: submission and showcase tracks
+
+- date: 2026-10-22
+- task/issue: none (planning); created #93 (merge the drafts into the main roadmap; apply decisions H2-H7 before plan review)
+- agent role: Orchestrator (main session), on branch `claude/tender-volta-wiq6xv`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's questions on the deployment approach, ease and speed, and a CV showcase; the human chose two tracks, Terraform, GHCR, `sslip.io` and deferring n8n; no new key prompt saved
+- files changed: `_docs/roadmap-submission-draft.md` (new, temporary), `_docs/roadmap-showcase.md` (new, kept separate), `_docs/aws-setup.md` (status line), this log, `_session-summaries/planning-2026-10-22-submission-showcase.md`. Neither existing roadmap changed
+- verification (tests run, reviewer verdict): `make verify` before commit (result in the session summary); no QA or rubric-auditor review; the drafts were checked against `_docs/rubric.md` and the `_docs/tasks.md` task list by the author only
+- human review (what I checked or corrected, or `none`): the human made decisions H1-H7 in the session (recorded in the submission draft). Commands that required approval: none recorded
+
 ### 2026-10-22 — Engineer: #73 README withdrawn status and Stage 5 tier note
 
 - date: 2026-10-22
