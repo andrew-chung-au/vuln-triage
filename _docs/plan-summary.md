@@ -192,7 +192,7 @@ All entries are listed under §Assumptions. A7, A12 and A14 were retired into sp
 
 | Key | Item | Status | Owner / where resolved |
 |---|---|---|---|
-| `tasks.md:ASSUMPTION` | Task 15's Compose file and service names follow testing T-A1; task 17's AWS resource names and region follow architecture §Deployment and carry its `VERIFY:` tags | proposed answer | Engineer, tasks 15/17 |
+| `tasks.md:ASSUMPTION` | `ASSUMPTION:` Task 15's Compose file and service names follow testing T-A1; task 17's AWS resource names and region follow architecture §Deployment and carry its `VERIFY:` tags | proposed answer | Engineer, tasks 15/17 |
 | `tasks.md:VERIFY Juice Shop lockfile` | The exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration | VERIFY | `human`, task 22 |
 
 ### `_docs/roadmap.md`: live decisions D1-D7
@@ -217,8 +217,8 @@ No labelled items: 0 open questions, 0 `ASSUMPTION:` and 0 `VERIFY:` (read-only 
 
 | Key | Item | Status | Owner / where resolved |
 |---|---|---|---|
-| `plan-summary.md:P-A1` | The earliest milestone in a rubric row is the earliest milestone among the `tasks.md` tasks that §Coverage summary assigns to that criterion; the Application/task 15 caveat does not move its milestone | proposed answer | PM/orchestrator at step 14 |
-| `plan-summary.md:P-A2` | `_docs/specs.md`'s `VERIFY:` markers are external-detail checks, outside the Stage 1 register scope; they are tracked in architecture §External data sources and risk R4 | proposed answer | PM/orchestrator at step 14 |
+| `plan-summary.md:P-A1` | `ASSUMPTION:` The earliest milestone in a rubric row is the earliest milestone among the `tasks.md` tasks that §Coverage summary assigns to that criterion; the Application/task 15 caveat does not move its milestone | proposed answer | PM/orchestrator at step 14 |
+| `plan-summary.md:P-A2` | `ASSUMPTION:` `_docs/specs.md`'s `VERIFY:` markers are external-detail checks, outside the Stage 1 register scope; they are tracked in architecture §External data sources and risk R4 | proposed answer | PM/orchestrator at step 14 |
 
 ## Completeness check
 
