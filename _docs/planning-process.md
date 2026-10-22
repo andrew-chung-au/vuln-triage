@@ -75,9 +75,10 @@ has acceptance criteria; non-goals match the brief.
   alerting. Specify the US-13 journey and its shared trace ID, what must stay
   out of telemetry, the US-14 alert rule, and the US-15 responder: what wakes
   it, what it may change, and its credential scope (spec open question 5).
-- Deployment: AWS with CloudFormation (ECR images, dev and prod copies, a
-  separate observability stack with Grafana behind authentication), the
-  manual promotion of the same image from dev to production, and the rollback
+- Deployment: AWS with Terraform (one server running `dev` and `prod` as two
+  Compose projects, images in GHCR, `sslip.io` hostnames; observability, the
+  alert and the responder in local Compose for submission), the manual
+  promotion of the same image from dev to production, and the rollback
   path. Also the Docker-capable development environment, a prerequisite for
   Compose, integration tests and the observability stack; and cost controls,
   with a teardown step.
