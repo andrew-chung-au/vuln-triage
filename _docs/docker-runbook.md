@@ -2,7 +2,7 @@
 
 The local sandbox uses option A (human decision, 2026-10-20). Postgres, and later n8n and the observability services, run as Compose service containers beside the dev container. Agents reach them over the network but can't control Docker. Agents can't build images or run `docker compose` themselves. This runbook covers what the human does so that work can still happen, without letting agent-written code run outside the sandbox unreviewed.
 
-Status: proposal, 2026-10-20. The one-time setup is #31 (roadmap step 16). The routes below apply once there are Dockerfiles and Compose files (build phase).
+Status: proposal, 2026-10-20. The one-time setup is #31 (roadmap T3). The routes below apply once there are Dockerfiles and Compose files (build phase).
 
 ## Who does what
 

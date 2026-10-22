@@ -1,6 +1,6 @@
 # VulnTriage task backlog (Stage 5)
 
-Numbered, dependency-ordered tasks for the build. Task 1 is the empty project with one passing test. The submission scope is Milestones A-C plus tasks 37 and 38 (the backend's own owner notification and scheduler); it follows the submission track of decisions H2-H7 (Terraform, one server for dev and prod, images in GHCR, `sslip.io` hostnames, observability and the responder in local Compose, the backend delivering the top-tier notification and running the schedule). Tasks 30-36 (LLM brief, MCP server, n8n) are in the final "Showcase (post-submission)" section and are built after submission. Numbers are never reused or renumbered: 37 and 38 are numbered after 36 and build earlier than the Showcase tasks. No submission task depends on a Showcase task. The dependency chain is the final section.
+Numbered, dependency-ordered tasks for the build. Task 1 is the empty project with one passing test. The submission scope is Milestones A-C plus tasks 37, 38 and 39 (the backend's own owner notification, its scheduler, and the close-out); it follows the submission track of decisions H2-H7 (Terraform, one server for dev and prod, images in GHCR, `sslip.io` hostnames, observability and the responder in local Compose, the backend delivering the top-tier notification and running the schedule). Tasks 30-36 (LLM brief, MCP server, n8n) are in the final "Showcase (post-submission)" section and are built after submission. Numbers are never reused or renumbered: 37, 38 and 39 are numbered after 36 and build earlier than the Showcase tasks. No submission task depends on a Showcase task. The dependency chain is the final section.
 
 # Milestone A — Tier A (12 points)
 
@@ -154,7 +154,7 @@ Covers: Observability, US-13
 
 ## 25. Telemetry Compose test and CI job
 Goal: `make test-compose` proves the shared trace ID and that excluded values never leave the Collector.
-Description: Creates the `make test-compose` target and adds the `telemetry` job and the `T-JOURNEY-BE`, `T-REFUSE` and `T-E6` cases from `_docs/testing.md` § Telemetry, querying Prometheus, Tempo and Loki (`T-JOURNEY`, the n8n version, is Showcase). `T-JOURNEY-BE` needs the delivery path of task 37, which is built before this task (see Build order under Dependency chain). The check is `make test-compose` green in CI and `T-REFUSE` failing when `owner.email` is added to the allowlist.
+Description: Creates the `make test-compose` target with a per-job case selector (`make test-compose JOB=telemetry`, `JOB=alert` or `JOB=responder`; with no `JOB` it runs all three on the human's host; a Makefile change, protected, its own human-approved commit) so each CI job runs only its own cases, and adds the `telemetry` job and the `T-JOURNEY-BE`, `T-REFUSE` and `T-E6` cases from `_docs/testing.md` § Telemetry, querying Prometheus, Tempo and Loki (`T-JOURNEY`, the n8n version, is Showcase), plus the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER`. `T-JOURNEY-BE` needs the delivery path of task 37, which is built before this task (see Build order under Dependency chain). The check is `make test-compose JOB=telemetry` green in CI and `T-REFUSE` failing when `owner.email` is added to the allowlist.
 Depends on: 19, 24
 Covers: Observability, US-13
 
@@ -166,25 +166,25 @@ Covers: Alerting on User Impact, US-14
 
 ## 27. Alert Compose test and CI job
 Goal: The `alert` job proves one firing, no second alert and the held-job exemption.
-Description: Adds the `alert` job and the `A-*` cases from `_docs/testing.md` § Alerting to `make test-compose`, including the backdated job, the rule that a resolved message is not a second alert, `A-TIER` (the job's recorded tier) and both parts of `A-GAP` (an empty system fires nothing; a metric gap sends one email to the human sink and nothing to the responder sink). The check is `make test-compose` green in CI and `A-FIRE` red when the alert rule is removed.
+Description: Adds the `alert` job and the `A-*` cases from `_docs/testing.md` § Alerting to `make test-compose`, including the backdated job, the rule that a resolved message is not a second alert, `A-TIER` (the job's recorded tier) and both parts of `A-GAP` (an empty system fires nothing; a metric gap sends one email to the human sink and nothing to the responder sink). The check is `make test-compose JOB=alert` green in CI and `A-FIRE` red when the alert rule is removed.
 Depends on: 19, 25, 26
 Covers: Alerting on User Impact, US-14
 
 ## 28. Responder agent, webhook and demo defect
 Goal: The responder wakes on the US-14 alert, reproduces the notification defect, fixes it and opens a pull request.
-Description: Adds the responder container and Grafana webhook receiver to the local Compose observability stack (decision H6; running it on AWS is showcase item X3), the `VT_DEMO_DEFECT=notify_no_fix` path in the notification formatter of task 37 and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. Task 37 is built before this task (see Build order under Dependency chain). It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The check is `P-DEMO-BE`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose` with `RESPONDER_MODE=stub` (`P-DEMO`, the n8n version, is Showcase).
+Description: Adds the responder container and Grafana webhook receiver to the local Compose observability stack (decision H6; running it on AWS is showcase item X3), the `VT_DEMO_DEFECT=notify_no_fix` path in the notification formatter of task 37 and the production refusal from `_docs/architecture.md` § Responder agent, using the responder's read-only API and Loki tokens. Task 37 is built before this task (see Build order under Dependency chain). It writes the failing test, the fix and the pull request; the human merges and production promotion stays manual. The responder's agent runtime is chosen with the human before this task is filed (`_docs/architecture.md` § Responder agent, A34: still open); CI and `make test-compose` use `RESPONDER_MODE=stub`, which proves the wiring and not an agent fixing anything, and the recorded run of task 39 uses the real runtime. The check is `P-DEMO-BE`, `P-PROD-REFUSAL` and `I-RESP-*` in `make test-compose JOB=responder` with `RESPONDER_MODE=stub` (`P-DEMO`, the n8n version, is Showcase).
 Depends on: 27
 Covers: On-Call Agent, US-15
 
 ## 29. Responder Compose test and demo cleanup
 Goal: The `responder` job proves, in the local Compose demo, that the undelivered finding reaches its owner, and the demo defect is removed.
-Description: Adds the `responder` job and the `P-FLAG-GONE` cleanup case from `_docs/testing.md` § Responder to `make test-compose`, then removes the demo defect before production promotion; the `P-DEMO-BE` and refused responder cases come from task 28. The demo is a local run of the Compose stack with the responder, MailHog receiving the delivered notification; the deployed observability and responder on AWS are showcase item X3. The human performs the merge and the manual promotion. The check is `make test-compose` green and `P-FLAG-GONE` blocking promotion until the defect path is gone.
+Description: Adds the `responder` job (`make test-compose JOB=responder`) and the `P-FLAG-GONE` check from `_docs/testing.md` § Responder, then removes the demo defect before production promotion; the `P-DEMO-BE` and refused responder cases come from task 28. `P-FLAG-GONE` is one yes/no check that runs only in the production-promotion workflow of task 18 (it is not part of `make test-compose` or the pull-request jobs, so the pull-request gate stays green while the demo defect exists): before it deploys, the workflow fails if the `notify_no_fix` path or `VT_DEMO_DEFECT` exists anywhere in the code at the tag being promoted. This task writes that check as a script, tests it against two small fixture trees (one with the path, one without) under `make test`, and adds its step to the production workflow (in the order where AWS work is late, the step is added when task 18 is built). The demo is a local run of the Compose stack with the responder, MailHog receiving the delivered notification, and in the local run the human restarts the stack on the merged code (pull-request workflows hold no AWS role, so there is no dev deploy in the drill); the deployed observability and responder on AWS are showcase item X3. The human performs the merge and the manual promotion. The check is `make test-compose JOB=responder` green, and `P-FLAG-GONE` failing the promotion while the defect path exists and passing after the cleanup commit.
 Depends on: 19, 27
 Covers: On-Call Agent, US-15
 
-# Submission additions (backend notification and scheduler)
+# Submission additions (backend notification, scheduler and close-out)
 
-Tasks 37 and 38 are submission tasks numbered after the Showcase tasks so that tasks 1-36 keep their numbers (human decision on #93, 2026-10-22). They are built inside Milestone C, as the Dependency chain's Build order says.
+Tasks 37, 38 and 39 are submission tasks numbered after the Showcase tasks so that tasks 1-36 keep their numbers (human decision on #93, 2026-10-22; task 39 added in #108 stage 2). Tasks 37 and 38 are built inside Milestone C, as the Dependency chain's Build order says; task 39 is built last.
 
 ## 37. Backend top-tier owner notification and delivery
 Goal: A new top-priority finding sends exactly one email to its owner from the backend, recorded as `notification.enqueue` and `notification.deliver` with one trace ID.
@@ -197,6 +197,12 @@ Goal: The backend refreshes KEV and EPSS every day and re-scans every asset afte
 Description: Adds a scheduler inside the backend's background worker (A4, built in task 4) that runs the same code as `POST /signals/refresh` and `POST /scans` once a day at 06:00 UTC (A25, as carried over from the n8n schedule), re-scores the findings and then starts a scan of every asset with trigger `schedule`. A refresh that moves a finding into the top tier creates its `top tier` job through task 10's lifecycle idempotency key, so a second run the same day makes no second job (US-8). A catch-up rule covers the nightly stop of the server: at backend start, if the last completed refresh and re-scan finished more than 24 hours ago (or none has run), the scheduler runs the refresh and then the re-scan at once, then follows the 06:00 UTC schedule; the human turns the nightly stop off while graders may visit. A library scheduler would be a dependency, ask before adding; a clock-driven loop needs none. It covers spec US-7 (the daily refresh and re-score, lines 103-107, and both acceptance lines, 108-112) and the scheduled re-scan clause of US-10 (line 149). The check is a test with a fake clock and stubbed feeds showing changed signals and ranks after the scheduled run, a re-scan of every asset, no outbound call outside the stubs, and a repeated run creating no second notification job; plus the catch-up case: a start with the last run 30 hours old runs the refresh and re-scan at once, and a start with the last run 10 hours old runs nothing until 06:00 UTC.
 Depends on: 8, 10
 Covers: Application, US-7, US-10
+
+## 39. Close-out: recorded drill, README sections and final rubric re-audit
+Goal: The evidence for the highest-value criteria exists and is linked, the README lets a reviewer reach and run the project, and the whole rubric is re-audited.
+Description: Three pieces of work, each with yes/no checks. (1) The recorded drill. The human runs the local Compose demo of tasks 28 and 29 once with the real responder runtime (chosen with the human before task 28 is filed; `_docs/architecture.md` § Responder agent, A34), not `RESPONDER_MODE=stub`, and records it (screenshots or a short video) as review evidence, because a stub run does not show an agent fixing anything. The agents write the drill runbook; the human performs the run, the merge and the recording. (2) The README close-out. The README gets a public URL section (the dev and prod `sslip.io` URLs), a one-command start section (`make dev` and the Compose command), a rollback section (the previous image tag, the deploy log and the production workflow) and a link to the recording, plus the deployment, observability and responder sections that roadmap C8 names. (3) The final rubric re-audit. The rubric auditor re-audits `main` against `_docs/rubric.md` and updates `_docs/rubric-evidence.md` (the Engineer does not edit that file). The checks, each yes or no: the recording exists and the README links it; the recording shows the metric at 1, exactly one alert naming the finding, a pull request opened by the real responder runtime, the human merge, the owner notification arriving at MailHog and the alert resolving (five answers); the demo defect is gone from the code before any production promotion (`P-FLAG-GONE` passed in the production workflow); the README names the public URL, the one-command start and the rollback steps, and a reviewer following the one-command start section from a clean clone reaches the sign-in page; `_docs/rubric-evidence.md` at the final commit shows all 12 criteria MET.
+Depends on: 18, 21, 28, 29, 37, 38
+Covers: On-Call Agent, Alerting on User Impact, Observability, Deployment
 
 # Showcase (post-submission)
 
@@ -246,7 +252,7 @@ Covers: US-16, Testing
 
 ## Coverage summary
 
-Every submission story and every criterion in `_docs/rubric.md` appears in at least one submission task (tasks 1-29, 37 and 38). The stories and clauses that the spec moved to its Showcase section are covered by Showcase tasks (30-36) and are listed separately; they are showcase coverage, not gaps.
+Every submission story and every criterion in `_docs/rubric.md` appears in at least one submission task (tasks 1-29, 37, 38 and 39). The stories and clauses that the spec moved to its Showcase section are covered by Showcase tasks (30-36) and are listed separately; they are showcase coverage, not gaps.
 
 Submission stories:
 
@@ -286,11 +292,11 @@ Showcase coverage (post-submission; the story or clause is in the spec's Showcas
 | Application | 2 | 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 37, 38 | A |
 | Testing | 2 | 1, 13, 14, 16, 20 | A |
 | Containerization | 2 | 15 | B |
-| Deployment | 2 | 17, 18 | B |
+| Deployment | 2 | 17, 18, 39 | B |
 | CI/CD | 3 | 18, 19, 20, 21 | B |
-| Observability | 2 | 23, 24, 25 | C |
-| Alerting on User Impact | 1 | 26, 27 | C |
-| On-Call Agent | 2 | 28, 29 | C |
+| Observability | 2 | 23, 24, 25, 39 | C |
+| Alerting on User Impact | 1 | 26, 27, 39 | C |
+| On-Call Agent | 2 | 28, 29, 39 | C |
 
 `ASSUMPTION:` task 15's Compose file and service names follow `_docs/testing.md` T-A1; task 17's Terraform resource names and the AWS region follow `_docs/architecture.md` § Deployment and carry the same `VERIFY:` tags as that document. `VERIFY:` the exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration. The Showcase tasks 31 and 36 add Testing evidence (the brief evaluation and the workflow export check) after submission; the Testing criterion does not depend on them.
 
@@ -298,9 +304,9 @@ Note: the Application row above lists the tasks for the end-to-end application. 
 
 ## Dependency chain
 
-Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task. No submission task (1-29, 37, 38) depends on a Showcase task (30-36); the Showcase tasks depend only on submission tasks and on each other.
+Every `Depends on:` resolves to a lower-numbered task; no task depends on itself or a later task. No submission task (1-29, 37, 38, 39) depends on a Showcase task (30-36); the Showcase tasks depend only on submission tasks and on each other.
 
-Build order: tasks 37 and 38 are numbered last but build earlier. Build 37 after 24 and before 25, because the `T-JOURNEY` case of task 25 and the demo defect of task 28 run through task 37's delivery path; build 38 any time after 10. Tasks 25 and 28 do not list 37 in `Depends on:` because that line may only name a lower number (human decision, no renumbering); their descriptions say so.
+Build order: tasks 37, 38 and 39 are numbered last, and 37 and 38 build earlier; task 39 builds last, after the production deploy (task 18) and the responder demo (tasks 28 and 29). Build 37 after 24 and before 25, because the `T-JOURNEY-BE` case of task 25 and the demo defect of task 28 run through task 37's delivery path; build 38 any time after 10. Tasks 25 and 28 do not list 37 in `Depends on:` because that line may only name a lower number (human decision, no renumbering); their descriptions say so.
 
 | Task | Depends on |
 |---|---|
@@ -342,3 +348,4 @@ Build order: tasks 37 and 38 are numbered last but build earlier. Build 37 after
 | 36 | 19, 34, 35 |
 | 37 | 10, 23, 24 |
 | 38 | 8, 10 |
+| 39 | 18, 21, 28, 29, 37, 38 |

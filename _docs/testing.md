@@ -36,7 +36,7 @@ The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `
 | SQLite integration | API and database through the app on SQLite, stubbed externals | Local sandbox, no Docker | `make test` |
 | Real-Postgres integration | API and database through the app on Postgres in Compose, committed fixtures | GitHub Actions `ubuntu-latest` Compose job; optional codespace or human host via `_docs/docker-runbook.md` | `make test-integration` (planned) |
 | Showcase: Compose E2E | Full stack, API-driven journey, local mail sink | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-e2e` (planned) |
-| Compose telemetry, alert and responder | US-13, US-14 and US-15 journeys | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-compose` (planned) |
+| Compose telemetry, alert and responder | US-13, US-14 and US-15 journeys | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-compose JOB=<telemetry|alert|responder>` (planned) |
 | OpenAPI validation | Validates `_docs/openapi.yaml`; conformance is planned in the backend suite | Local sandbox and CI, no Docker | `make openapi-validate`; conformance planned as part of `make test` |
 | Showcase: LLM brief evaluation | Human-scored sample with the pinned model | A human machine or scheduled runner, not PR CI | `make test-brief-eval` (planned) |
 | Light security scan | Dependency audit of the app's own lockfiles/manifests | GitHub Actions `ubuntu-latest` PR job | `make security-scan` (planned) |
@@ -285,9 +285,9 @@ This section is final, not a placeholder: #50 is closed, its contract is `6ff10d
 
 Demo defect: `VT_DEMO_DEFECT=notify_no_fix` makes the owner-notification formatter fail only for a finding with no fixed version. It is switched on in dev by setting the variable and restarting, and off by unsetting it. The backend refuses to start in production with it set. `P-PROD-REFUSAL` starts the backend in its production configuration (`ASSUMPTION: T-A8`: `ENVIRONMENT=production`; the final name is fixed in the build) with `VT_DEMO_DEFECT=notify_no_fix`; startup must exit non-zero and log the configuration error, while dev starts normally.
 
-The defect is removed before production by a cleanup commit/PR that removes the code path and the variable. `P-FLAG-GONE` is a test or CI check proving the flag is gone or refused, and production promotion is blocked until cleanup. The defect must not remain in production code.
+The defect is removed before production by a cleanup commit/PR that removes the code path and the variable. `P-FLAG-GONE` is one yes/no check: the `notify_no_fix` path and `VT_DEMO_DEFECT` do not exist anywhere in the code at the tag being promoted. It runs only in the production-promotion workflow (task 18's `production` environment), before the deploy, and fails the promotion while the path exists; it is not in `make test-compose` and not in a pull-request job, so the pull-request gate stays green while the demo defect exists. Its own correctness is tested under `make test` against two fixture trees (one with the path, which must fail; one without, which must pass). The defect must not remain in production code.
 
-`P-DEMO-BE` is the submission version of `P-DEMO`, with the backend delivery of task 37 and no n8n: the demo defect makes the backend delivery fail for the no-fixed-version finding; metric 1 and one alert; the responder wakes (`RESPONDER_MODE=stub` in CI); a fix with a test; CI deploys to dev; the backend delivery retries on its next poll; the notification arrives at MailHog; metric 0 and the alert resolves. Production promotion stays manual; no AWS credential. It runs in the `responder` job.
+`P-DEMO-BE` is the submission version of `P-DEMO`, with the backend delivery of task 37 and no n8n: the demo defect makes the backend delivery fail for the no-fixed-version finding; metric 1 and one alert; the responder wakes (`RESPONDER_MODE=stub` in CI); a fix with a test; the local stack is restarted on the merged code (the human in the manual run, the test harness in CI; there is no dev deploy, because pull-request workflows hold no AWS role); the backend delivery retries on its next poll; the notification arrives at MailHog; metric 0 and the alert resolves. Production promotion stays manual; no AWS credential. It runs in the `responder` job. A stub run proves the wiring only; the recorded run of task 39 uses the real responder runtime.
 
 Showcase: `P-DEMO` is the US-15 demo/E2E: create the no-fixed-version finding, let its job fail, assert metric 1 and one alert, wake the responder (Grafana webhook; `RESPONDER_MODE=stub` in CI), reproduce with a failing test, open a PR (fake GitHub in CI; a real token/App only in the manual demo), have the human merge, let CI deploy to dev, let n8n retry, and assert the notification succeeds, metric 0, the alert resolves and the actions are logged. Production promotion stays manual; no AWS credential.
 
@@ -315,9 +315,11 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
-| `telemetry` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `T-*`, including `T-JOURNEY-BE` |
-| `alert` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `A-*` |
-| `responder` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `P-*`, including `P-DEMO-BE` |
+| `telemetry` | `ubuntu-latest` with Compose | `make test-compose JOB=telemetry` (planned) | `T-JOURNEY-BE`, `T-REFUSE`, `T-E6`, and the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` |
+| `alert` | `ubuntu-latest` with Compose | `make test-compose JOB=alert` (planned) | `A-FIRE`, `A-TIER`, `A-GAP`, `A-RESOLVE`, `A-HELD` |
+| `responder` | `ubuntu-latest` with Compose | `make test-compose JOB=responder` (planned) | `P-DEMO-BE`, `P-PROD-REFUSAL`, `I-RESP-*` |
+
+`make test-compose` takes a `JOB` selector (`telemetry`, `alert` or `responder`; with no `JOB` it runs all three, for the human's host), so each CI job runs only its own cases and the job table shows which job covers which case (the Makefile is protected, so the selector is part of its own human-approved commit in task 25). `P-FLAG-GONE` is in no job in this table: it runs only in the production-promotion workflow (task 18's workflow, step added in task 29).
 
 `make test` remains the single local test command for the rubric's unit + integration requirement, and `make verify` remains the gate. No test is skipped to make a check pass.
 
