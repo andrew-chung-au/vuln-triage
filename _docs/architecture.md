@@ -20,7 +20,7 @@ Conventions: `VERIFY:` marks an external detail not yet confirmed. The ASSUMPTIO
 | Tempo | Trace store. | none | US-13 | OpenTelemetry Collector (receives traces) | C |
 | Grafana | Dashboards, the US-14 alert rule and its contact point. Behind authentication. | none | US-13, US-14, US-15 | Prometheus, Loki, Tempo (read); responder webhook | C |
 | Responder agent | Wakes on the US-14 alert, reproduces and fixes the defect, opens a pull request with a test. | none | US-15 | FastAPI backend API (responder read-only token); Grafana, Loki (viewer token); GitHub application repository (branch and pull request); its LLM provider | C |
-| CI/CD pipeline (GitHub Actions) | Tests on every pull request, image builds, Compose integration tests, deploy to dev, manual promotion of the same image to production. | none | US-15 (deploys the merged fix), US-16 (checks the exported workflows) | GitHub repository (read); Amazon ECR; AWS CloudFormation (OIDC deploy roles) | B |
+| CI/CD pipeline (GitHub Actions) | Tests on every pull request, image builds, Compose integration tests, deploy to dev, manual promotion of the same image to production. | none | US-15 (deploys the merged fix), US-16 (checks the exported workflows) | GitHub repository (read); GHCR (GitHub's container registry, public images); the AWS deploy role (GitHub OIDC, created by Terraform) that runs the deploy on the server | B |
 
 ASSUMPTION: (A1) tier placement: Tier A runs on SQLite with no Docker, so Postgres and n8n (Compose services) are Tier B; the MCP server runs on the developer's machine against the API and is Tier A.
 
@@ -41,7 +41,7 @@ Data ownership:
 | 6. Route | n8n (jobs created by the backend) | n8n polls the API for jobs; schedules for reminders and digest | Owner notification, tracker issue, reminders, escalation, digest, issue close (Routing and notifications) |
 | 7. Re-scan | Backend | n8n's daily schedule after the refresh, and a person's "Re-scan" action in the dashboard | Steps 1-5 again; findings set `fixed` (US-10), `withdrawn` or restored (E4), or reopened (E7) |
 
-ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (n8n, after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan.
+ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (n8n, after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan. Showcase (n8n is a showcase item, `_docs/roadmap-showcase.md`): the n8n schedule is not built for submission. Which backend scheduler replaces it is set when the task list is reshaped (#99), not here.
 ASSUMPTION: (A4) scans and brief generation run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
 
 ## Ingestion and matching
@@ -253,6 +253,10 @@ Rejected-brief path: the brief is stored as `unavailable` with an internal rejec
 
 ## Routing and notifications
 
+Showcase (post-submission): the n8n design below (workflows, polling, tracker issue, reminders, escalation, digest) is a showcase item, described in `_docs/roadmap-showcase.md`, and is not built for submission. For submission the backend delivers the top-tier owner notification itself and records `notification.enqueue` and `notification.deliver` (decision H7, 2026-10-22; the spec change is #98, the task is in #99).
+
+Email route from the deployed backend (gap): spec Open question 3 and (A26) still apply (email, Amazon SES in AWS). The backend, not n8n, sends the email, so it needs an SMTP route from the one server. VERIFY: options are (a) Amazon SES SMTP (needs a verified sender identity, the SES sandbox allows only verified recipients, and DKIM DNS records on a domain, which `sslip.io` hostnames cannot hold, so a single verified sender address is the likely form), (b) SES through the AWS API from the server's instance role (no SMTP password, an `ses:SendEmail` permission on the role), or (c) another SMTP relay with credentials in the secret store. In development a local mail catcher is used. The choice is the human's before task 18 or the notification task starts.
+
 The backend decides what is due and creates NotificationJobs with a unique idempotency key; n8n delivers them and reports back. n8n never decides status or tier.
 
 | n8n workflow | Trigger | API calls | Effect |
@@ -266,7 +270,7 @@ The backend decides what is due and creates NotificationJobs with a unique idemp
 
 Idempotency (US-8): the basis is the finding lifecycle. The key is (lifecycle id, kind) for `top tier`, `signals changed` and `issue close`, (lifecycle id, kind, overdue week) for reminders and escalations, and the ISO week for the digest. A second claim of a claimed job is refused by the API. Before creating a tracker issue n8n reads the lifecycle's stored issue number, and if it is empty searches the tracker repo for the marker `vt-lifecycle:<id>` (VERIFY: GitHub issue search by text in a repository), so a crash between "create" and "record" can't open a second issue.
 
-ASSUMPTION: (A25) the poll and schedule intervals above, with the refresh at 06:00 UTC and the digest on Monday 08:00 UTC. ASSUMPTION: (A26) the pilot channel is email (spec Open question 3), sent over SMTP: a local mail catcher in development (for example Mailpit, dependency, ask before adding) and Amazon SES in AWS (VERIFY: SES sandbox limits recipients to verified addresses). ASSUMPTION: (A27) US-9 windows (spec Open question 2): `P1` 7 days, `P2` 14 days, `P3` 30 days, `P4` 90 days; the reminder and the escalation go at the due time and again weekly while the finding stays overdue.
+ASSUMPTION: (A25, showcase: n8n) the poll and schedule intervals above, with the refresh at 06:00 UTC and the digest on Monday 08:00 UTC. ASSUMPTION: (A26) the pilot channel is email (spec Open question 3), sent over SMTP: a local mail catcher in development (for example Mailpit, dependency, ask before adding) and Amazon SES in AWS (VERIFY: SES sandbox limits recipients to verified addresses). ASSUMPTION: (A27) US-9 windows (spec Open question 2): `P1` 7 days, `P2` 14 days, `P3` 30 days, `P4` 90 days; the reminder and the escalation go at the due time and again weekly while the finding stays overdue.
 
 Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` and `SECURITY_LEAD_EMAIL` at startup and before creating any escalation or digest job. If either is missing or invalid, the backend still starts, `/health` reports the configuration error, every dashboard page shows a configuration-error banner to signed-in users, a log event and metric record it, and escalation and digest jobs are created as `held: configuration error` and sent once the contact is set; nothing is dropped. ASSUMPTION: (A28) this handling.
 
@@ -280,8 +284,8 @@ Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` 
 | GitHub repository read | Contents API with the read-only token. VERIFY: endpoint, rate limit for fine-grained tokens. | Not cached; each scan reads the default branch head and records the commit SHA | Every scan | `scan failed`, `repository unavailable`; findings kept |
 | GitHub tracker issues | n8n, issues API on `vuln-triage-findings` with the tracker token. VERIFY: endpoints. | Issue number stored per lifecycle through the API | Per job | Job stays `pending` or `failed` and is retried; a top-tier owner notification that misses its window fires US-14 |
 | LLM provider | Backend, HTTPS API, pinned model, `LLM_MODE=stub` in tests. VERIFY: endpoint, limits, pricing, data retention. | Brief per (lifecycle, fixed version, prompt version, model) | When inputs change | "brief unavailable" path |
-| SMTP / Amazon SES | n8n sends email. VERIFY: SES SMTP endpoint and sending limits. | none | Per job | Job `failed`, retried each poll; US-14 alert if a top-tier job misses its window |
-| AWS at runtime | Secrets Manager read at container start (VERIFY), ECR image pulls at deploy, SES as above. | none | At start or deploy | Container doesn't start; the deploy fails and CloudFormation rolls back (VERIFY) |
+| SMTP / Amazon SES | The backend sends email for submission (n8n in the showcase; route options under Routing and notifications). VERIFY: SES SMTP endpoint and sending limits. | none | Per job | Job `failed`, retried each poll; US-14 alert if a top-tier job misses its window |
+| AWS at runtime | Secrets Manager read at container start (VERIFY), GHCR image pulls at deploy (public images, no pull credential; VERIFY), SES as above. | none | At start or deploy | Container doesn't start; the deploy fails and the previous containers keep running until the deploy command succeeds (VERIFY: `docker compose up -d` leaves running containers in place when a pull fails) |
 
 ## MCP server
 
@@ -317,7 +321,7 @@ Credentials:
 | Responder GitHub token or App (D2) | Push branches and open pull requests on the application repository | Push to `main`, merge, change settings, touch other repositories; no AWS credential at all | Fine-grained token or App: contents write and pull requests write on that repository only; branch protection on `main` requiring a pull request and the human's review, with no bypass (VERIFY: fine-grained tokens can't be limited to a branch, so branch protection is the enforcement) | `git push origin HEAD:main` with it is rejected |
 | Responder API and Grafana tokens | GET findings and jobs through the API; read logs and dashboards from Loki and Grafana with the Viewer token | Any API write; editing dashboards or alert rules | API authorisation (role `responder-read`, GET only); Grafana Viewer role (VERIFY) | `POST /notification-jobs/{id}/claim` with it gets 403 and the job stays `pending` |
 | LLM API keys (one for the backend, one for the responder) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY); the backend then takes the "brief unavailable" path |
-| CI deploy credentials (GitHub OIDC to two IAM roles) | Dev role: push to the VulnTriage ECR repositories and update `vt-dev`. Prod role: update `vt-prod` with an existing image digest | Run from a pull request or another branch; update `vt-prod` with the dev role; delete stacks; manage IAM | IAM role trust policy conditions on repository, branch and GitHub environment (VERIFY: OIDC `sub` claim format); IAM policies scoped to named repositories and stacks; the `production` environment's required reviewer | A pull-request workflow's assume-role call is denied; `DeleteStack` with the dev role is denied |
+| CI deploy credentials (GitHub OIDC to two IAM roles, created by Terraform) | Dev role: run the dev deploy on the server (VERIFY: SSM Run Command or equivalent) for the dev Compose project only. Prod role: run the production deploy on the server with an existing image tag. Images are pushed to GHCR with the workflow's `GITHUB_TOKEN`, not an AWS role | Run from a pull request or another branch; run the production deploy with the dev role; change IAM, Terraform state or the server's configuration; read secrets | The roles' trust policies (built in task 17) with conditions on repository, branch and GitHub environment (VERIFY: OIDC `sub` claim format); IAM policies scoped to the one server and the deploy command; the `production` environment's required reviewer | A pull-request workflow's assume-role call is denied; the dev role invoking the production deploy is denied |
 | Database credential | Read and write VulnTriage's database | Be used by any component except the backend | Only the backend's environment holds it; the database is on a network only the backend joins (Compose network, AWS security group, VERIFY) | A connection from the n8n container to the database fails |
 | Dashboard session | Act as the signed-in user's role | Work after expiry or logout; work cross-site; accept risk with an empty reason | API authorisation (session lookup and expiry, SameSite cookie, CSRF header, US-11 reason check) | A request with an expired session gets 401; risk acceptance with a whitespace reason gets 422 and no change |
 
@@ -369,52 +373,53 @@ ASSUMPTION: (A33) W and the evaluation interval (no repeat notification is the h
 | Item | Design |
 |---|---|
 | What wakes it | The US-14 alert, through Grafana's webhook contact point, authenticated with a bearer secret (VERIFY: Grafana webhook authorization header). The receiver ignores repeats of an alert fingerprint it has already handled. |
-| Where it runs | A container in the observability stack: a small webhook receiver that starts one agent run per alert in a fresh checkout. Agent runtime: for example the Claude Agent SDK, model pinned in configuration (dependency, ask before adding; VERIFY). `RESPONDER_MODE=stub` for tests. It does not depend on cloud sessions. |
+| Where it runs | For submission, a container in the local Compose observability stack (decision H6); running it on AWS is showcase item X3. A small webhook receiver that starts one agent run per alert in a fresh checkout. Agent runtime: for example the Claude Agent SDK, model pinned in configuration (dependency, ask before adding; VERIFY). `RESPONDER_MODE=stub` for tests. It does not depend on cloud sessions. |
 | What it does | Reads the finding and job state through the API and the trace's logs from Loki; writes a failing test that reproduces the defect; fixes the code; pushes the branch `responder/<alert fingerprint>`; opens a pull request with the fix, the test and the alert link. Every action is logged to Loki as a structured event, without secrets or advisory text. |
 | What it may change | Application code and tests in a pull request. Not `main`, not infrastructure stacks, not data, not the tracker repository, not live n8n workflows (only their exported JSON, in a pull request). |
 | Credential scope (D2, spec Open question 5) | Fine-grained token or GitHub App on the application repository only, with contents write and pull requests write; `main` protected (pull request and the human's review required), so a push to `main` is refused; the human merges; no AWS credential; read-only API and Grafana/Loki tokens (Security boundaries). |
-| After the merge | CI deploys to dev; n8n's next poll retries the failed job, which now succeeds; the metric returns to 0 and the alert resolves. Production promotion stays manual. |
+| After the merge | CI deploys to dev (in the local run, the human restarts the local stack on the merged code); the backend's next delivery attempt retries the failed job (n8n's poll in the showcase), which now succeeds; the metric returns to 0 and the alert resolves. Production promotion stays manual. |
 | Demo defect | The owner-notification formatter fails for a finding with no fixed version (US-15's example), so its job fails. It is switched on by the dev-only setting `VT_DEMO_DEFECT=notify_no_fix`, which routes formatting through the deliberately broken code path, and off by unsetting it; the backend refuses to start in production with it set. Detail in Stage 4. |
 
-ASSUMPTION: (A34) the responder's placement, branch name and the retry of failed jobs on each poll (up to 7 days). ASSUMPTION: (A35) the demo-defect switch.
+ASSUMPTION: (A34) the responder runs in local Compose for submission (AWS only as showcase item X3, `_docs/roadmap-showcase.md`), with a recorded alert-to-fix run as the evidence; its branch name; and the retry of failed jobs on each delivery attempt (up to 7 days). ASSUMPTION: (A35) the demo-defect switch.
 
 ## Deployment
 
-Human decision of 2026-10-17 ([#9 comment 6229681999](https://github.com/andrew-chung-au/vuln-triage/issues/9#issuecomment-6229681999)): "host on AWS with CloudFormation, following the Module 3/4 pattern (ECR images, dev and prod copies, a separate observability stack with Grafana behind authentication). Instance sizing and cost controls to be designed in Stage 2." VERIFY: the "Module 3/4 pattern" details the human referred to (Open question 6).
+Human decisions: 2026-10-17 ([#9 comment 6229681999](https://github.com/andrew-chung-au/vuln-triage/issues/9#issuecomment-6229681999)) chose AWS hosting following the Module 3/4 pattern, with sizing and cost controls designed in Stage 2. Superseded in part on 2026-10-22 by H2-H6 (recorded in `_docs/roadmap.md`): infrastructure as code with Terraform instead of the earlier CloudFormation choice, one server for dev and prod, images in GHCR instead of the earlier ECR choice, `sslip.io` hostnames, and observability, the alert and the responder in local Compose for submission. The Module 3/4 pattern is kept as adapted by H2-H4 (Open question 6).
 
-| CloudFormation stack | Contents |
+Tool: Terraform. OpenTofu runs the same files; nothing here depends on which of the two the human installs. Terraform itself is a tool the build task asks for before it is installed. VERIFY: Terraform's current licence terms and the version the AWS provider needs.
+
+| Terraform module | Contents |
 |---|---|
-| `vt-ci-iam` | GitHub OIDC provider and the dev and prod deploy roles |
-| `vt-ecr` | ECR repositories for backend, frontend and responder images, with a lifecycle rule keeping the last 10 images (VERIFY) |
-| `vt-observability` | One instance running Prometheus, Loki, Tempo, Grafana (login required, anonymous access off) and the responder |
-| `vt-dev` | One instance running the app's Compose services: frontend, backend, Postgres on an EBS volume, n8n, Collector, behind a TLS reverse proxy |
-| `vt-prod` | Same template as `vt-dev`, separate parameters and secrets |
+| State bucket | One S3 bucket for Terraform state (versioned, private, encrypted). Created by hand-run bootstrap Terraform with local state, by the human. VERIFY: S3-native state locking (no DynamoDB table) is available in the Terraform version used; if not, a lock table is added |
+| Deploy role | The GitHub OIDC provider (or a reference to the account's existing one) and the dev and prod deploy roles with their trust policies (Security boundaries). Applied by the human, never by CI |
+| Server | One EC2 instance with an Elastic IP, security group (80 and 443 open; no SSH, access through Session Manager; VERIFY), instance role, EBS data volume with daily snapshots, the nightly stop schedule, and a bootstrap that installs Docker and the Compose projects. Tagged `project=vuln-triage` |
 
-ASSUMPTION: (A36) compute shape: one EC2 instance per environment running Docker Compose, `t3.small` for dev and prod and `t3.medium` for observability, Postgres in a container on EBS with daily snapshots for prod; the public URL needs a domain name from the human (Open question 7). VERIFY: instance types, prices, the snapshot mechanism and how an instance pulls a new image digest on stack update.
+Nothing else is created: no container registry (GHCR holds the images), no load balancer, NAT gateway or managed database, and no separate observability server (local Compose for submission; `vt-observability` as an AWS server is showcase item X3 in `_docs/roadmap-showcase.md`).
+
+ASSUMPTION: (A36) one server runs both environments as two Docker Compose projects, `dev` and `prod`, behind one reverse proxy on two hostnames. The server is one `t3.medium` class instance (VERIFY: size, price and whether both projects fit in memory; `t3.small` is the fallback only if the two projects fit). Postgres runs in a container per project on the EBS volume, with daily snapshots for the prod data. Hostnames come from the server's Elastic IP through `sslip.io`, for example `dev.203-0-113-10.sslip.io` and `app.203-0-113-10.sslip.io` (VERIFY: sslip.io resolves a name with any prefix to the embedded IP), with HTTPS from Let's Encrypt, obtained by the reverse proxy (VERIFY: Let's Encrypt rate limits for certificates under the shared `sslip.io` name, which are shared with every other sslip.io user, and whether it is on the public suffix list). The Elastic IP is kept so the hostnames survive the nightly stop; if it is released, the hostnames change. No domain is bought (Open question 7).
 
 Pipeline (GitHub Actions):
-1. Every pull request and review branch: unit tests, integration tests, image builds, Compose integration tests.
-2. Push to `main`: build once, tag with the commit SHA, push to ECR, record each image digest; update `vt-dev` with those digests.
-3. Production: a manual workflow run in the `production` environment (the human is the required reviewer; VERIFY: GitHub environment protection rules on this repository's plan) takes a digest (default: the one running in dev) and updates `vt-prod` with that same digest. Nothing is rebuilt.
+1. Every pull request and review branch: unit tests, integration tests, image builds, Compose integration tests. Pull-request workflows never receive an AWS role.
+2. Push to `main`, when tests pass: build once, tag with the course image tag `YYYYMMDD-HHMMSS-shortsha` (roadmap D2), push to GHCR, record each image digest in the deploy log; then deploy by image tag on the server, for the `dev` project only. The deploy mechanism is the workflow assuming the dev role and running the deploy on the server (VERIFY: SSM Run Command or an equivalent), where it pulls the tagged images and restarts the `dev` Compose project.
+3. Production: a manual workflow run in the `production` environment (the human is the required reviewer; VERIFY: GitHub environment protection rules on this repository's plan) takes an image tag (default: the one running in dev) and runs the production deploy on the server for the `prod` project with that same tag. Nothing is rebuilt.
 
-Rollback: run the production promotion again with the previous digest, recorded in the stack's parameters and the deploy log. Database migrations (Alembic, dependency, ask before adding) are backward compatible for one release: add columns and tables first, remove them only in a later release, so the previous image runs on the new schema. A failed stack update is rolled back by CloudFormation (VERIFY).
+Rollback: run the production deploy again with the previous image tag, taken from the deploy log, which also holds the digest of every tag. A deploy that fails to pull leaves the running containers in place (VERIFY). Database migrations (Alembic, dependency, ask before adding) are backward compatible for one release: add columns and tables first, remove them only in a later release, so the previous image runs on the new schema.
 
 Cost controls:
-- Small instances (above); no load balancer, NAT gateway or managed database (VERIFY: their prices are the reason).
+- One server; no load balancer, NAT gateway, managed database or registry charge (VERIFY: their prices are the reason).
 - An AWS Budgets monthly budget with email alerts at 50 %, 80 % and 100 % (VERIFY: Budgets pricing).
-- Dev and observability instances stopped every night by a scheduled rule and started by the human for work or a demo (VERIFY: EventBridge Scheduler or Instance Scheduler).
-- ECR lifecycle rule; Prometheus, Loki and Tempo retention of 7 days.
-- ASSUMPTION: (A37) the budget amount (set by the human), the nightly stop and the retention period.
+- The server is stopped every night by a scheduled rule and started by the human for work or a demo (VERIFY: EventBridge Scheduler or Instance Scheduler). While stopped, the EBS volumes, snapshots and the Elastic IP address are still charged (VERIFY: amounts); after teardown the standing cost is about $0, apart from the state bucket's few cents (VERIFY).
+- Prometheus, Loki and Tempo retention of 7 days (local Compose).
+- ASSUMPTION: (A37) the budget amount (set by the human), the nightly stop of the server and the retention period.
 
 Teardown (deletes cloud resources, so the human runs it; in this order):
 1. Export anything to keep (a prod database dump).
-2. Delete `vt-prod`, then `vt-dev`, then `vt-observability`.
-3. Delete every image in the ECR repositories, then delete `vt-ecr` (VERIFY: a stack can't delete a non-empty repository).
-4. Delete `vt-ci-iam`.
-5. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget.
-6. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
+2. Run `terraform destroy` for the server module, then the deploy role module (VERIFY: destroy order and that the Elastic IP is released).
+3. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget. The GHCR images are deleted in the GitHub package settings if wanted.
+4. Last, empty and delete the state bucket (VERIFY: a versioned bucket needs all versions removed).
+5. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
 
-All AWS service names, behaviours and prices above carry `VERIFY:` until checked against AWS documentation at build time.
+All AWS, GHCR, Let's Encrypt and Terraform service names, behaviours and prices above carry `VERIFY:` until checked against their documentation at build time.
 
 ## Development environment
 
@@ -426,7 +431,7 @@ Environment (D1, human decision of 2026-10-20): a Compose-based dev container re
 | Backend integration tests (API and database through the app, stubbed externals) | Locally on SQLite (no Docker); against Postgres in the sandbox once #31's service container exists, and in CI |
 | Frontend tests (vitest) and MCP server tests against a stub API | Locally, no Docker |
 | Image builds, `docker compose up` of the full stack, Compose integration tests (n8n workflows end to end, Collector allowlist, alert rule) | CI only (route 1), or the human on the host (route 2) |
-| CloudFormation template checks (for example `cfn-lint`, dependency, ask before adding) and deploys | CI only |
+| Terraform checks (`terraform fmt -check` and `terraform validate`; a linter such as `tflint` would be a dependency, ask before adding) and deploys | CI only |
 
 Tier A needs only the "locally" rows, so it doesn't wait for #31.
 
@@ -439,8 +444,8 @@ Pilot assets (#9 finding 15): the pilot asset list is defined in Stage 5 (`_docs
 | Application | Components, Workflow, Data model | React frontend, FastAPI backend, SQLite (Postgres in Compose); one start command (Stage 5) | A |
 | Testing | Development environment | Unit and integration tests on SQLite with stubs, one test command | A |
 | Containerization | Development environment, Deployment | Compose file with frontend, backend, Postgres, n8n, Collector; one command | B |
-| Deployment | Deployment | `vt-dev` and `vt-prod` on AWS with a public URL | B |
-| CI/CD | Deployment | GitHub Actions: tests on every pull request, auto-deploy to dev, manual promotion of the same digest to production | B |
+| Deployment | Deployment | One Terraform-built AWS server running the dev and prod Compose projects, with public `sslip.io` HTTPS URLs | B |
+| CI/CD | Deployment | GitHub Actions: tests on every pull request, auto-deploy to dev, manual promotion of the same image tag to production | B |
 | Observability | Observability | Collector, Prometheus, Loki, Tempo, Grafana; the US-13 journey with one trace ID and the exclusions | C |
 | Alerting on User Impact | Observability (US-14 rule) | Grafana alerting on `vt_top_tier_notification_overdue` | C |
 | On-Call Agent | Responder agent | Responder container, Grafana webhook, the demo defect | C |
@@ -454,8 +459,8 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 3. Spec Open question 3 (channel): email, (A26).
 4. Spec Open question 4 (US-14 window): 30 minutes, (A33).
 5. Spec Open question 5 (responder credential and merge): answered by D2 (Responder agent).
-6. What exactly is the "Module 3/4 pattern"? It decides whether (A36)'s one-instance-per-environment shape is right or should be ECS.
-7. Which domain name and TLS approach does the public URL use?
+6. Closed: the "Module 3/4 pattern" is followed as adapted by H2-H4 (Terraform, one server for both environments, GHCR); see Deployment and (A36). VERIFY: what the pattern prescribes beyond that stays unconfirmed, as it does not change the shape.
+7. Closed: no domain; hostnames come from `sslip.io` (H5) with Let's Encrypt HTTPS (Deployment, (A36)). VERIFY: Let's Encrypt rate limits for `sslip.io` names.
 8. The EPSS threshold T = 0.10 (A18) and the "exposed asset" definition (A17): confirm.
 9. Which LLM provider and model (A23)?
 10. An exploited vulnerability with no CVE can never reach `P1` or `P2` under these rules (E11 has no KEV or EPSS). Accept, or add a rule?
@@ -465,7 +470,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 
 - (A1) Component tiers: Postgres and n8n are Tier B; the MCP server is Tier A.
 - (A2) n8n and Grafana keep their state in their default embedded stores on their own volumes.
-- (A3) Re-scans run on a daily n8n schedule after the refresh and on a person's demand; registration starts the first scan.
+- (A3) Re-scans run on a daily schedule after the refresh (n8n, showcase) and on a person's demand; registration starts the first scan.
 - (A4) Scans and briefs run as background jobs in the backend with a job table and one worker.
 - (A5) Lockfiles are looked for at the repository root only.
 - (A6) One finding per package across several files; highest per-entry fixed version; `fixed` only when every entry is clear.
@@ -484,7 +489,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A22) The brief prompt includes the advisory summary, truncated to 500 characters.
 - (A23) LLM provider chosen with the human; 20 s timeout; briefs cached per lifecycle, fixed version, prompt version and model.
 - (A24) The brief output check rejects other version tokens and any URL in text fields.
-- (A25) n8n poll every 5 minutes; refresh 06:00 UTC; digest Monday 08:00 UTC.
+- (A25, showcase: n8n) n8n poll every 5 minutes; refresh 06:00 UTC; digest Monday 08:00 UTC.
 - (A26) Email over SMTP; a mail catcher in development and Amazon SES in AWS.
 - (A27) US-9 windows `P1` 7, `P2` 14, `P3` 30, `P4` 90 days; reminders and escalation at due and weekly after.
 - (A28) A missing security-lead contact shows on `/health` and a dashboard banner, and holds escalation and digest jobs.
@@ -493,10 +498,10 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A31) URL defanging and `@` mention handling in emails and issue bodies.
 - (A32) The telemetry attribute allowlist.
 - (A33) US-14 window 30 minutes, 1-minute evaluation.
-- (A34) The responder runs as a container in the observability stack; branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
+- (A34) The responder runs as a container in local Compose for submission (AWS only as showcase item X3); branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
 - (A35) The demo defect is switched by `VT_DEMO_DEFECT`, refused in production.
-- (A36) One EC2 instance per environment running Compose; `t3.small` / `t3.medium`; Postgres in a container on EBS.
-- (A37) Budget amount set by the human; nightly stop of dev and observability; 7-day telemetry retention.
+- (A36) One EC2 server runs dev and prod as two Compose projects behind two `sslip.io` hostnames; Postgres in a container on EBS.
+- (A37) Budget amount set by the human; nightly stop of the server; 7-day telemetry retention.
 - (A38) The pilot seed list is a data file in the repository, registered through the API.
 - (A39) Held notification jobs never fire the US-14 alert.
 - (A40) Instrumentation is a no-op without a Collector endpoint.
