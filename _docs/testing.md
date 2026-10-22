@@ -17,7 +17,7 @@ Status: planning document for #56. It names the tests; it adds no application, t
 | OpenAPI validation | Validates `_docs/openapi.yaml`; conformance is planned in the backend suite | Local sandbox and CI, no Docker | `make openapi-validate`; conformance planned as part of `make test` |
 | LLM brief evaluation | Human-scored sample with the pinned model | A human machine or scheduled runner, not PR CI | `make test-brief-eval` (planned) |
 | Light security scan | Dependency audit of the app's own lockfiles/manifests | GitHub Actions `ubuntu-latest` PR job | `make security-scan` (planned) |
-| Gate | Tests, whitespace and weakened-test checks | Local sandbox | `make verify` |
+| Gate | Tests, frontend type check, whitespace and weakened-test checks | Local sandbox | `make verify` |
 
 This table is #9 finding 12. The local sandbox runs unit and SQLite integration only; it cannot run the Docker levels. The planned targets are created in Stage 5/backlog, not in this issue, and their names may change.
 
