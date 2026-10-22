@@ -1688,3 +1688,14 @@ Copy this template for each new entry:
 - files changed: `README.md` (line 27: adds `withdrawn`), `_docs/planning-process.md` (one sentence in the Stage 5 "Rules:" paragraph), this log. Commit 0aa61b1
 - verification (tests run, reviewer verdict): `make verify BASE=25960f5` PASS (62 tests passed, type check pass, whitespace pass, no test files changed); QA not yet run
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none recorded
+
+### 2026-10-22 — Engineer: #95 reconcile Application coverage with task 15
+
+- date: 2026-10-22
+- task/issue: #95 (lifecycle step 3, implementation); option B confirmed by the orchestrator
+- agent role: Software Engineer (subagent of the orchestrator), local sandbox on `main`
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's step 3 task for #95, implementing PM comment 6339083871 (option B); no new key prompt saved
+- files changed: `_docs/tasks.md` (one `Note:` paragraph after the `ASSUMPTION:` paragraph at line 267, before `## Dependency chain`), `_docs/plan-summary.md` (footnote ¹ line 35 and the D1 `Handling` line 41), this log, `_session-summaries/issue-095-application-coverage.md`. Doc commit e8a7c4d; process records in a separate commit
+- verification (tests run, reviewer verdict): `make verify BASE=a1d5dd0` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests; 2 files changed); QA not yet run
+- human review (what I checked or corrected, or `none`): none yet; the orchestrator confirmed option B and asked for the two doc edits plus the AGENTS.md process records. Commands that required approval: none recorded
