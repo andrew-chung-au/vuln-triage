@@ -8,22 +8,24 @@ Status: planning document for #56. It names the tests; it adds no application, t
 
 Following the spec's [Showcase (post-submission)](specs.md) section, the n8n workflows, the LLM brief (US-6), reminders, escalation and the weekly digest (US-9), the MCP server (US-12) and the workflow export (US-16) are built after submission. The cases for them stay in full in this document and are marked "Showcase". They are not counted in the submission test totals. The backend-delivered owner notification (US-8), the backend's daily refresh and scheduled re-scan (US-7, US-10) and the other submission cases are unchanged.
 
-Showcase cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
+Showcase cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
 
 Counts of named case IDs, recounted from this document with a script (each handle in code font counts once; the sample rows `L1`-`L9`, the reject-reason rows and the `R-*` family are not counted separately; `R-*` counts as one):
 
 | Prefix | Submission | Showcase |
 |---|---|---|
 | `U-*` unit | 12 | 1 |
-| `I-*` integration | 20 | 7 |
+| `I-*` integration | 22 | 11 |
 | `E-*`, `W-*`, `L-*`, `R-*` | 0 | 5 |
 | `S-*` security (including the `S-FIXTURE` fixture) | 5 | 5 |
-| `T-*`, `A-*`, `P-*`, `C-*`, `F-*` | 16 | 0 |
-| Total | 53 | 18 |
+| `T-*`, `A-*`, `P-*`, `C-*`, `F-*` | 16 | 2 |
+| Total | 55 | 24 |
+
+Method: `python3 .scratch/count_cases.py` reads this document; the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24).
 
 CI jobs: 9 submission jobs (`unit`, `sqlite-integration`, `frontend`, `openapi-validation`, `security-scan`, `postgres-integration`, `telemetry`, `alert`, `responder`) and 2 Showcase jobs (`workflow-export`, `e2e`). The `postgres-integration` job runs `I-*` cases; its Showcase cases are not counted in the submission totals.
 
-Some submission rows (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, the US-8 rows) describe the delivery path through the n8n job endpoints (claim and report). That n8n path is Showcase; the same assertions apply to the backend's own owner-notification delivery in submission scope. Rewriting those rows is for the tasks and architecture issues, not this one.
+The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`) keep their IDs and text and are marked Showcase. The new submission cases cover the backend path (tasks 37 and 38): `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-SCHED`, `T-JOURNEY-BE` and `P-DEMO-BE`. The scheduler of task 38 calls the refresh and re-scan code in-process, so `POST /signals/refresh` and `POST /scans` keep the n8n credential and the contract does not change for that.
 
 ## Test levels and where they run
 
@@ -123,14 +125,20 @@ Integration cases through the app and database:
 | `I-BRIEF` (Showcase) | `GET /findings/{id}` | Brief states `available`, `unavailable` and `pending`; no mismatched version. |
 | `I-RISK` | `POST /findings/{id}/risk-acceptance`, `GET /findings/{id}` | Risk acceptance, non-empty reason, owner match, audit trail (who, when, previous value) and no automated acceptance. |
 | `I-RESCAN` | `POST /assets/{id}/rescan`, `POST /scans`, `GET /findings` | `fixed`, `withdrawn`, E4 restore and E7 reopen. |
-| `I-JOBS` | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | Job creation, idempotency, claim, report and traceparent round-trip. |
-| `I-LIFECYCLE` | `GET /notification-jobs`, `POST /notification-jobs/{id}/report` | A leave/re-enter produces no second job or issue; E7 starts a new lifecycle. |
-| `I-IDEMPOTENCY` | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | A second refresh or a retry after a partial failure makes no duplicate. |
-| `I-HOLD` | `GET /notification-jobs`, `POST /assets`, `GET /assets/{id}` | Ownerless (E2) and name-only owner (A21): held notification, ownerless flag, issue still once. |
+| `I-OWNER-SEND` | Backend delivery worker (task 37), `GET /responder/notification-jobs`, MailHog | A new `P1` finding creates one `top tier` job; the backend sends exactly one plain-text labelled-field message to the owner; `notification.enqueue` and `notification.deliver` are recorded, `notification.deliver` as a child of the job's stored `traceparent`; the job state is `sent`. No call to an n8n job endpoint. |
+| `I-OWNER-NOAWS` | Backend delivery worker (mail-transport setting on the MailHog route), MailHog | With no AWS credential in the test environment, the owner message arrives at MailHog. `VERIFY:` how the test reads received mail (MailHog's HTTP API, for example `GET /api/v2/messages`). `VERIFY:` MailHog is a Compose container and the sandbox has no Docker, while task 37's check names `make test`: whether `make test` uses an in-process SMTP stand-in or the case runs in `postgres-integration` is fixed in task 37. |
+| `I-OWNER-SENDER` | Backend delivery worker, MailHog | A send from an address other than the configured verified sender is refused, the job is not `sent`, and nothing arrives at MailHog. Enforced by the sender check in the mail-transport setting (task 37). `VERIFY:` the SES sandbox allows only verified recipients; the SES route is not exercised in CI. |
+| `I-OWNER-ONCE` | Backend delivery worker, `POST /signals/refresh`, `POST /assets/{id}/rescan`, `GET /responder/notification-jobs` | A second refresh and a retry after a partial failure send no second email for the same finding lifecycle; a finding that leaves and re-enters `P1` sends no second email; a withdrawn (E4) advisory that is reinstated sends no second email; merged aliases (E9) send at most one email; an E7 reappearance starts a new lifecycle with at most one new email. |
+| `I-OWNER-HOLD` | Backend delivery worker, `POST /assets`, `GET /assets/{id}`, MailHog | Ownerless (E2) and name-only owner (A21): the notification is held, the ownerless flag is set, and nothing arrives at MailHog. |
+| `I-JOBS` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | Job creation, idempotency, claim, report and traceparent round-trip. |
+| `I-LIFECYCLE` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/report` | A leave/re-enter produces no second job or issue; E7 starts a new lifecycle. |
+| `I-IDEMPOTENCY` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | A second refresh or a retry after a partial failure makes no duplicate. |
+| `I-HOLD` (Showcase) | `GET /notification-jobs`, `POST /assets`, `GET /assets/{id}` | Ownerless (E2) and name-only owner (A21): held notification, ownerless flag, issue still once. |
 | `I-REMIND` (Showcase) | `GET /notification-jobs`, `GET /reports/weekly-digest` | US-9 reminder and escalation jobs, due date and weekly digest. |
 | `I-DIGEST` (Showcase) | `GET /reports/weekly-digest` | One digest per week, open findings by rank. |
 | `I-CONFIG` (Showcase, US-9b) | `GET /assets/{id}`, `GET /notification-jobs` | Missing security-lead contact is visible, not silent; jobs are held. |
 | `I-SIGNALS` | `POST /signals/refresh`, `GET /findings` | Changed feed data updates signals, ranks and the E8 "signals changed" notice. |
+| `I-SCHED` | Backend scheduler (task 38), `GET /findings` | With a fake clock and stubbed feeds, the daily refresh and the scheduled re-scan of every asset (trigger `schedule`) start from the backend's own scheduler: no external workflow tool, no HTTP call from outside the backend, no outbound call outside the stubs; signals and ranks change; a second run the same day creates no second notification job. |
 | `I-AUTH-N8N` (Showcase) | `POST /signals/refresh`, `POST /scans`, `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `GET /reports/weekly-digest` | The n8n allowlist; wrong consumer is `403`; no risk acceptance. |
 | `I-AUTH-MCP` (Showcase) | `GET /mcp/top-exposures`, `GET /mcp/vulnerabilities/{vulnerabilityId}/assets`, `GET /mcp/findings/{id}`, `GET /assets/{id}`, every write | The MCP token is GET-only; a write is `403` and changes no state. |
 | `I-AUTH-SESSION` | `GET /findings`, `GET /assets`, `POST /assets`, `POST /assets/{id}/rescan`, `POST /findings/{id}/risk-acceptance` | The session allowlist, CSRF, and a service token is `403`; no credential is `401`. |
@@ -162,9 +170,9 @@ Showcase: `E-DELIVER` is the full-stack Compose journey (not counted in the subm
 5. Assert exactly one owner notification at the local mail sink and exactly one tracker issue; a second scan or retry sends no second notification.
 6. Stop the test project and remove only its own ephemeral volumes.
 
-The E2E environment uses no live feeds, no real SMTP, no real GitHub and no production secrets: committed fixtures, Mailpit as the local mail catcher (dependency, ask before adding), the test-owned `vt-e2e` project and its ephemeral volumes. It cleans up only its own resources; no human destructive step is needed. `E-GUARD` fails before starting if the target database or host is not the test one (project name or database name mismatch).
+The E2E environment uses no live feeds, no real SMTP, no real GitHub and no production secrets: committed fixtures, MailHog as the local mail catcher (dependency, ask before adding), the test-owned `vt-e2e` project and its ephemeral volumes. It cleans up only its own resources; no human destructive step is needed. `E-GUARD` fails before starting if the target database or host is not the test one (project name or database name mismatch).
 
-US-8's delivery path is `E-DELIVER`; the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-HOLD`, so no US-8 acceptance case is unassigned.
+US-8's submission delivery path is `I-OWNER-SEND` (backend alone, MailHog); the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-OWNER-HOLD`, so no US-8 acceptance case is unassigned. Showcase: the n8n journey `E-DELIVER` and `I-HOLD` cover the same behaviour through the n8n claim/report path.
 
 ## LLM brief evaluation (Showcase, US-6)
 
@@ -240,9 +248,11 @@ There is at least one test per flow in the spec "Advisory-derived text" table. E
 
 ## Telemetry: US-13
 
-`T-JOURNEY` is a Compose test for one scan-to-notification journey. It queries Prometheus, Tempo and Loki and asserts that the metric, trace and log carry the same W3C trace ID. The trace-id source is the backend's `notification.enqueue` traceparent stored on the NotificationJob; n8n returns it on the report call and the backend records `notification.deliver` as a child. The metric exemplar (or equivalent) is the trace id on `vt_notifications_total{kind,outcome}`; `ASSUMPTION: T-A4` this is an OTel exemplar, per Spec note 2. The Grafana "US-13 journey" dashboard uses a Prometheus pane, a Tempo pane and a Loki pane with a Tempo-to-logs link.
+Showcase: `T-JOURNEY` is a Compose test for one scan-to-notification journey. It queries Prometheus, Tempo and Loki and asserts that the metric, trace and log carry the same W3C trace ID. The trace-id source is the backend's `notification.enqueue` traceparent stored on the NotificationJob; n8n returns it on the report call and the backend records `notification.deliver` as a child. The metric exemplar (or equivalent) is the trace id on `vt_notifications_total{kind,outcome}`; `ASSUMPTION: T-A4` this is an OTel exemplar, per Spec note 2. The Grafana "US-13 journey" dashboard uses a Prometheus pane, a Tempo pane and a Loki pane with a Tempo-to-logs link.
 
 The test asserts the spans `scan.run` and its children (`repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate`, `notification.enqueue`, `notification.deliver`), the notification job's traceparent round-trip, and structured JSON logs with event names and allowlisted attributes only. It asserts Grafana shows the three signals side by side. `VERIFY:` OTel Prometheus exemplar support and Tempo-to-Loki/Grafana linking.
+
+`T-JOURNEY-BE` is the submission version of `T-JOURNEY`: one scan-to-notification journey through the backend delivery path (task 37), with no n8n report call. It queries Prometheus, Tempo and Loki and asserts that the metric, trace and log carry one trace ID. The trace-id source is the backend's `notification.enqueue` traceparent stored on the NotificationJob, and `notification.deliver` is its child span recorded by the backend. It asserts the same span list, structured JSON logs and Grafana side-by-side view as `T-JOURNEY`, and keeps the `T-REFUSE` exclusions. It runs in the `telemetry` job.
 
 `T-REFUSE` sends a span and log with `owner.email`, `authorization`, advisory text, a repository URL, lockfile content and a credential-like value through the Collector; the exported signals contain none. It also checks that auto-instrumented `url.full`, `url.path` and `http.target` are dropped and `http.route` is kept. `VERIFY:` the Collector processor names (`transform` / `attributes`).
 
@@ -272,7 +282,9 @@ Demo defect: `VT_DEMO_DEFECT=notify_no_fix` makes the owner-notification formatt
 
 The defect is removed before production by a cleanup commit/PR that removes the code path and the variable. `P-FLAG-GONE` is a test or CI check proving the flag is gone or refused, and production promotion is blocked until cleanup. The defect must not remain in production code.
 
-`P-DEMO` is the US-15 demo/E2E: create the no-fixed-version finding, let its job fail, assert metric 1 and one alert, wake the responder (Grafana webhook; `RESPONDER_MODE=stub` in CI), reproduce with a failing test, open a PR (fake GitHub in CI; a real token/App only in the manual demo), have the human merge, let CI deploy to dev, let n8n retry, and assert the notification succeeds, metric 0, the alert resolves and the actions are logged. Production promotion stays manual; no AWS credential.
+`P-DEMO-BE` is the submission version of `P-DEMO`, with the backend delivery of task 37 and no n8n: the demo defect makes the backend delivery fail for the no-fixed-version finding; metric 1 and one alert; the responder wakes (`RESPONDER_MODE=stub` in CI); a fix with a test; CI deploys to dev; the backend delivery retries on its next poll; the notification arrives at MailHog; metric 0 and the alert resolves. Production promotion stays manual; no AWS credential. It runs in the `responder` job.
+
+Showcase: `P-DEMO` is the US-15 demo/E2E: create the no-fixed-version finding, let its job fail, assert metric 1 and one alert, wake the responder (Grafana webhook; `RESPONDER_MODE=stub` in CI), reproduce with a failing test, open a PR (fake GitHub in CI; a real token/App only in the manual demo), have the human merge, let CI deploy to dev, let n8n retry, and assert the notification succeeds, metric 0, the alert resolves and the actions are logged. Production promotion stays manual; no AWS credential.
 
 The responder refused cases from the closed #50 contract are tested in integration `I-RESP-*`: responder token GET-only; `403` on every write; n8n, MCP and session tokens `403` on the two responder operations; no credential `401`; unknown ids and unknown `findingId` behave as the contract says. The responder cannot push to `main`, merge, change settings or touch AWS; the GitHub token/App and branch protection are checked and documented. `VERIFY:` the GitHub App/token scope and branch-protection details.
 
@@ -291,16 +303,16 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | Job | Runner | Command or target | Tests |
 |---|---|---|---|
 | `unit` | `ubuntu-latest` | `make test`, `make frontend-test` | `U-*`, `F-*` |
-| `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases |
+| `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases, including `I-OWNER-SEND`, `I-OWNER-ONCE`, `I-OWNER-HOLD` and `I-SCHED` |
 | `frontend` | `ubuntu-latest` | `make frontend-test`, `make frontend-typecheck` | `F-*` |
 | `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance |
 | `security-scan` | `ubuntu-latest` | `make security-scan` (planned) | `C-*` |
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
-| `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres |
+| `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres, including `I-OWNER-NOAWS` and `I-OWNER-SENDER` (MailHog is a Compose container) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
-| `telemetry` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `T-*` |
+| `telemetry` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `T-*`, including `T-JOURNEY-BE` |
 | `alert` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `A-*` |
-| `responder` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `P-*` |
+| `responder` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `P-*`, including `P-DEMO-BE` |
 
 `make test` remains the single local test command for the rubric's unit + integration requirement, and `make verify` remains the gate. No test is skipped to make a check pass.
 
@@ -318,11 +330,11 @@ Every acceptance bullet of US-1..US-16 maps to at least one test type or named c
 | US-4 | Exactly one KEV value (listed / not listed / n/a) with stale marker, EPSS or n/a, and asset context | `U-KEV`, `U-EPSS`, `I-FINDINGS` |
 | US-5 | Re-scoring the same inputs gives the same order; each finding shows its rank reason | `U-TIER`, `U-TIE`, `I-RANK`, `E-DELIVER` |
 | US-6 (Showcase) | Brief version matches the fixed version, or structured finding with "brief unavailable"; pending marker; never a mismatched version | `U-GUARD`, `I-BRIEF`, `L-EVAL`, `R-*` |
-| US-7 | Changed feed data updates signals and ranks without manual action | `I-SIGNALS` (`POST /signals/refresh`, `GET /findings`) |
-| US-8a | A new top-priority finding produces exactly one owner notification and, Showcase, one GitHub issue | `I-JOBS`, Showcase: `E-DELIVER`, `S-ISSUE` |
-| US-8b | Leaving and re-entering the top tier gives no second issue or notification; a `fixed` and reappearing finding (E7) starts a new lifecycle with at most one new of each | `I-LIFECYCLE`, `I-RESCAN` |
-| US-8c | Exactly one notification and one issue per lifecycle even if the refresh runs twice or retries after a partial failure | `I-IDEMPOTENCY` |
-| US-8d | Ownerless asset: notification held and asset flagged ownerless, while the GitHub issue is still opened once | `I-HOLD`, `A-HELD` |
+| US-7 | Changed feed data updates signals and ranks without manual action | `I-SIGNALS` (`POST /signals/refresh`, `GET /findings`), `I-SCHED` (backend scheduler) |
+| US-8a | A new top-priority finding produces exactly one owner notification and, Showcase, one GitHub issue | `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `S-NOTIFY`; Showcase: `I-JOBS`, `E-DELIVER`, `S-ISSUE` |
+| US-8b | Leaving and re-entering the top tier gives no second issue or notification; a `fixed` and reappearing finding (E7) starts a new lifecycle with at most one new of each | `I-OWNER-ONCE`, `I-RESCAN`; Showcase: `I-LIFECYCLE` |
+| US-8c | Exactly one notification and one issue per lifecycle even if the refresh runs twice or retries after a partial failure | `I-OWNER-ONCE`; Showcase: `I-IDEMPOTENCY` |
+| US-8d | Ownerless asset: notification held and asset flagged ownerless, while the GitHub issue is still opened once | `I-OWNER-HOLD`, `A-HELD`; Showcase: `I-HOLD` |
 | US-9a (Showcase) | Open finding past due produces an owner reminder and a security-lead escalation; weekly digest delivered once per week | `I-REMIND`, `I-DIGEST`, `E-DELIVER` |
 | US-9b (Showcase) | Missing security-lead contact is a visible configuration error, not a silent drop | `I-CONFIG` |
 | US-10 | Upgrade outside every affected range gives `fixed` with timestamp; still inside stays `open`; withdrawn advisory gives `withdrawn`; manual re-scan works | `I-RESCAN`, `U-WITHDRAW` |
@@ -337,9 +349,9 @@ Every acceptance bullet of US-1..US-16 maps to at least one test type or named c
 | US-12g (Showcase) | `get_asset` returns one asset by id | `I-MCP` (`GET /assets/{id}`) |
 | US-12h (Showcase) | MCP output marks advisory-derived text as quoted, labelled untrusted data in `get_finding` and `which_assets_affected`; no instructions presented | `S-MCP` |
 | US-12i (Showcase) | A write with the MCP token is rejected 4xx and changes no state; the MCP server exposes no write tools | `I-AUTH-MCP` (every write operation) |
-| US-13 | One scan-to-notification journey emits a metric, trace and structured log with one trace ID, viewable side by side; no excluded data | `T-JOURNEY`, `T-REFUSE` |
+| US-13 | One scan-to-notification journey emits a metric, trace and structured log with one trace ID, viewable side by side; no excluded data | `T-JOURNEY-BE`, `T-REFUSE`; Showcase: `T-JOURNEY` |
 | US-14 | A top-priority finding not delivered in the window fires exactly one alert naming it; a successful notification fires none | `A-FIRE`, `A-TIER`, `A-GAP`, `A-RESOLVE` |
-| US-15 | The undelivered finding reaches its owner, the alert resolves, actions are logged, production promotion stays manual | `P-DEMO`, `I-RESP-*`, `P-PROD-REFUSAL` |
+| US-15 | The undelivered finding reaches its owner, the alert resolves, actions are logged, production promotion stays manual | `P-DEMO-BE`, `I-RESP-*`, `P-PROD-REFUSAL`; Showcase: `P-DEMO` |
 | US-16 (Showcase) | Each workflow has a committed JSON file under `n8n/workflows/`, named after the workflow, and the exported file is the workflow the repo runs | `W-EXPORT` |
 
 Every edge case E1..E12 maps to at least one test type or named case.
@@ -347,14 +359,14 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | Edge case | Expected behaviour | Test types or named cases |
 |---|---|---|
 | E1 | No fixed version: finding stays `open`, shows "no fixed version", is ranked by signals; any brief naming a version is rejected and the structured finding is delivered | `U-FIXED`, `U-GUARD`, `I-BRIEF`, `L-EVAL` |
-| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless | `I-HOLD`, `A-HELD` |
+| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless | `I-OWNER-HOLD`, `A-HELD`; Showcase: `I-HOLD` |
 | E3 | Feed unavailable: OSV first scan gives `scan failed`/`feed unavailable` with no findings; a later scan keeps last-known findings and marks them stale; KEV/EPSS failure keeps the OSV scan status and stale signals; the scheduled run retries | `U-FEED`, `I-SCAN` |
-| E4 | Advisory withdrawn or CVE drops out: `withdrawn`, not `fixed`; `risk accepted` also becomes `withdrawn`; no notification; only when every merged advisory is withdrawn; a reinstated advisory restores the previous status or `fixed`, with no second issue or notification; a CVE dropping out of KEV or EPSS changes only signals and rank, not status | `U-WITHDRAW`, `I-RESCAN`, `E-DELIVER` |
+| E4 | Advisory withdrawn or CVE drops out: `withdrawn`, not `fixed`; `risk accepted` also becomes `withdrawn`; no notification; only when every merged advisory is withdrawn; a reinstated advisory restores the previous status or `fixed`, with no second issue or notification; a CVE dropping out of KEV or EPSS changes only signals and rank, not status | `U-WITHDRAW`, `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `E-DELIVER` |
 | E5 | Lockfile parse error: `scan failed`/`lockfile parse error`, previous findings kept and marked stale, visible in the dashboard | `U-NPM`, `I-SCAN`, `F-STATUS` |
 | E6 | Telemetry backend unavailable: buffer and retry; findings, notifications and alerts unaffected; gap visible in Grafana | `T-E6` |
-| E7 | Fixed finding's vulnerable version returns: `open` with audit entry and a new notification lifecycle, at most one new issue and notification | `I-RESCAN`, `I-LIFECYCLE` |
+| E7 | Fixed finding's vulnerable version returns: `open` with audit entry and a new notification lifecycle, at most one new issue and notification | `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `I-LIFECYCLE` |
 | E8 | `risk accepted` finding's signals escalate: status stays `risk accepted`, flagged "signals changed", owner and security lead notified once; re-scan may still close it | `I-SIGNALS`, `S-SIGNALS` |
-| E9 | One vulnerability under two ids: alias sets intersect gives one finding keyed by CVE else primary id; all ids and ranges attached; fixed version derived from all; at most one US-8 notification per lifecycle | `U-FIXED`, `U-ALIAS`, `I-FINDINGS`, `L-EVAL` |
+| E9 | One vulnerability under two ids: alias sets intersect gives one finding keyed by CVE else primary id; all ids and ranges attached; fixed version derived from all; at most one US-8 notification per lifecycle | `U-FIXED`, `U-ALIAS`, `I-FINDINGS`, `I-OWNER-ONCE`, `L-EVAL` |
 | E10 | `requirements.txt` without an exact version: "version unknown", warning, no OSV match, and `scanned, incomplete` when nothing matched; `-r` inside the repo only; outside or remote refused and never fetched; lockfile entry without a version behaves the same | `U-REQ`, `I-SCAN` |
 | E11 | No CVE alias: `KEV: n/a (no CVE)`, EPSS `n/a`, finding still recorded and ranked; no advisory dropped for lacking a CVE | `U-KEV`, `U-EPSS`, `I-FINDINGS`, `L-EVAL` |
 | E12 | Advisory text contains instructions or links: never followed; no tool, command, URL, path or credential chosen; brief only has allowed fields and the VulnTriage-built link; every advisory URL is inert | `S-*`, `U-GUARD`, `L-EVAL` |
@@ -381,6 +393,7 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | No production data | Test-owned Compose projects `vt-test`/`vt-e2e` and ephemeral volumes; migrations on a test database | `E-GUARD` and the integration guard fail before start when the target database or host is not the test one |
 | Telemetry exclusions (advisory text, owner contact, repository URL, lockfile content, credentials) | One allowlist helper in code and a Collector processor before export | `T-REFUSE`: exported signals contain none of the excluded values; auto-instrumented URL attributes are dropped |
 | Responder read-only | API authorisation of role `responder-read` against the two-operation allowlist | `I-RESP-WRITE` / `I-RESP-OTHERGET`: `403` and no state change |
+| Owner notification sender | The configured verified sender in the mail-transport setting (task 37); a send from any other address is refused | `I-OWNER-SENDER`: nothing is delivered to MailHog and the job is not `sent` |
 | Demo defect refused in production | Startup check in production configuration (`ASSUMPTION: T-A8`) with `VT_DEMO_DEFECT` set | `P-PROD-REFUSAL`: startup exits non-zero and logs the error |
 | Malicious text is never instructions | Quoting, labelling and defanging per flow; the LLM guardrail | `S-*`: the instruction is not followed and no URL, secret or contact detail is emitted |
 
@@ -393,7 +406,7 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | `ASSUMPTION: T-A3` | Grafana rule uses `noDataState: Alerting` and `execErrState: Alerting` | Confirm when the rule is provisioned. |
 | `ASSUMPTION: T-A4` | The US-13 metric carries the trace id as an OTel exemplar; if the exporter cannot, a trace/log join by trace id is the fallback | Spec note 2 in #56. |
 | `ASSUMPTION: T-A5` | `make test` grows to include backend unit and SQLite integration and stays the single local command | Stage 5/backlog. |
-| `ASSUMPTION: T-A6` | Mailpit is the local mail catcher; adding it needs approval | Stage 5/backlog. |
+| `ASSUMPTION: T-A6` | MailHog is the local mail catcher (dependency, ask before adding) | Stage 5/backlog. |
 | `ASSUMPTION: T-A7` | `pip-audit` and `npm audit --omit=dev` are the light-scan tools; adding them needs approval | Stage 5/backlog. |
 | `ASSUMPTION: T-A8` | Production configuration is selected with `ENVIRONMENT=production`; the final name is a build detail | Confirm in the backend build. |
 | `VERIFY:` | OSV endpoints, batch limit, fields and fixture shape; CISA KEV URL/fields; EPSS URL/fields; GitHub contents API | Architecture § External data sources; capture the fixtures deliberately. |
@@ -404,3 +417,4 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | `VERIFY:` | GitHub App/token scope and branch-protection details; Loki viewer token scope | Architecture § Security boundaries and § Responder agent. |
 | `VERIFY:` | LLM provider, endpoint, schema-constrained output, retention and pricing | Architecture Open question 9. |
 | `VERIFY:` | `pip-audit` / `npm audit` licence and behaviour | Security-scan build task. |
+| `VERIFY:` | MailHog's HTTP API for reading received mail, and how `make test` reaches MailHog in the Docker-less sandbox; the SES sandbox allows only verified recipient addresses | Task 37 build. |

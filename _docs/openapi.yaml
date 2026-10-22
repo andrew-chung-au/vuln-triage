@@ -1868,10 +1868,11 @@ components:
           maxLength: 64
           pattern: '^[A-Za-z0-9_.:-]+$'
           description: |
-            The `errorCode` of the failed report, as for
-            `NotificationReport.errorCode`; `null` when the job has not
-            failed. A short machine code, never free text, an email address,
-            a token or advisory text.
+            The short machine code of the last failed delivery attempt,
+            recorded by the backend; `null` when the job has not failed. In
+            the Showcase n8n path it is the n8n `errorCode` of the failed
+            report, as for `NotificationReport.errorCode`. Never free text, an
+            email address, a token or advisory text.
 
     NotificationRecipient:
       type: object
