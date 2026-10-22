@@ -13,6 +13,14 @@ This is a mid-issue handoff, not a final session summary. Issue #108 is open. Wr
 - The E8 High is fixed by the protected spec commit `9b04f90` (HUMAN_APPROVED=1). Its approval record is on #108 (comment 6352754403, checked line by line against `git show`).
 - An Engineer subagent was fixing the 14 Mediums and some Lows in work packages, one commit each: WP2 `b9e3c23`, WP3 `2a0e169`, WP4 `ca470b5`, WP5 `5fcfa8f`, WP6 `aa9b93a` are committed. WP8 (findings 12 and 14, Lows 21, 22, 24) was in progress with uncommitted edits in `architecture.md`, `docker-runbook.md`, `plan-summary.md`, `planning-process.md`, `roadmap.md`, `tasks.md`, `testing.md` when this note was written. Its final report, usage-log entry and `Engineer:` comment may be missing.
 
+## Update after the first handoff commit
+
+The Engineer finished stage 2 (report: `Engineer:` comment 6353021735 on #108). WP8 is committed (`971457b`) and the log entry and roadmap check-in are in `4a512a2`; the tree should be clean. `make verify` passed, `make openapi-validate` exits 0 with 22 operations. So step 1 below reduces to checking `git status --short` is clean; go straight to step 3 (QA of stage 2). Items for the human from the Engineer's report:
+
+- Confirm these uncovered choices: `POST /assets` and `PATCH /assets/{id}` are security lead only; `POST /assets/{id}/rescan` is security lead on any asset and an owner only on an asset they own (the frontend mock may let any user register); `PATCH` re-scores findings, cannot change name or repository URL, writes no audit entry for an unchanged value, does not release a job whose lifecycle ended.
+- Protected `Makefile` commits needed, each with approval and a record: `make dev`, `make dev-start`, `make dev-stop` (task 11); `make record-fixtures` (task 4); the `JOB=` selector of `make test-compose` (task 25). `AGENTS.md` Commands will then need lines for them (also protected).
+- Still open for the human: choose the responder runtime before task 28 is filed (R3); re-estimate R6 after the fixes.
+
 ## What to do next, in order
 
 1. Run `git status --short` and `git log --oneline -8`. If the tree is dirty, do not discard anything: the Engineer subagent (id may be gone) left partial WP8 work. Read the latest `Engineer:` comment on #108 (`make issue-dump N=108`, then read `.scratch/issue-108-comments.json`). Relaunch the `software-engineer` agent with a note of what is committed (above) and what to check or redo (WP8, then `make verify`, the usage-log entry, a roadmap check-in line, an `Engineer:` comment). Do not tell it what it was "about to do".
