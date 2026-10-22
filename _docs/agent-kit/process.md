@@ -83,7 +83,7 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
    - If a `.scratch/` script is worth keeping, propose it as a test or a make target at the decision point (step 7). Nothing in `.scratch/` survives cleanup.
    - Run `make clean-scratch`. It empties `.scratch/`, including session logs and test tokens, and refuses while a started process is still running. Record in the summary that it ran.
    - Name in the summary each approval record comment posted in step 7.
-   - Fill in the summary's Permission review section from every role comment's "Commands and changes that required approval" line, plus your own. Record each action and its basis, not whether it was granted.
+   - Fill in the summary's Permission review section from every role comment's "Commands and changes that required approval" line, plus your own. Record each action and its basis, not whether it was granted. Settings changes are not proposed per session; they come from a periodic permission sweep (`_docs/agent-kit/procedures/permission-sweep.md`).
 9. Close the issue, but only once the session summary is committed with its Permission review section. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
 10. The human reviews the diff and pushes (see Commits).
 11. Repeat until the backlog is empty and every part of the spec is built.
