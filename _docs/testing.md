@@ -8,24 +8,24 @@ Status: planning document for #56. It names the tests; it adds no application, t
 
 Following the spec's [Showcase (post-submission)](specs.md) section, the n8n workflows, the LLM brief (US-6), reminders, escalation and the weekly digest (US-9), the MCP server (US-12) and the workflow export (US-16) are built after submission. The cases for them stay in full in this document and are marked "Showcase". They are not counted in the submission test totals. The backend-delivered owner notification (US-8), the backend's daily refresh and scheduled re-scan (US-7, US-10) and the other submission cases are unchanged.
 
-Showcase cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
+Showcase cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `I-SIGNALS-NOTICE`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`, `S-SIGNALS`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
 
 Counts of named case IDs, recounted from this document with a script (each handle in code font counts once; the sample rows `L1`-`L9`, the reject-reason rows and the `R-*` family are not counted separately; `R-*` counts as one):
 
 | Prefix | Submission | Showcase |
 |---|---|---|
 | `U-*` unit | 12 | 1 |
-| `I-*` integration | 22 | 11 |
+| `I-*` integration | 22 | 12 |
 | `E-*`, `W-*`, `L-*`, `R-*` | 0 | 5 |
-| `S-*` security (including the `S-FIXTURE` fixture) | 5 | 5 |
+| `S-*` security (including the `S-FIXTURE` fixture) | 4 | 6 |
 | `T-*`, `A-*`, `P-*`, `C-*`, `F-*` | 16 | 2 |
-| Total | 55 | 24 |
+| Total | 54 | 26 |
 
-Method: `python3 .scratch/count_cases.py` reads this document; the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24).
+Method: a read-only script reads this document (each handle in code font once, prefix wildcards such as `U-*` and the `I-RESP-*` family not counted, `R-*` counted once); the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24). The E8 decision of 2026-10-22 then moved `S-SIGNALS` to Showcase and added the Showcase case `I-SIGNALS-NOTICE` (55 - 1 = 54; 24 + 2 = 26).
 
 CI jobs: 9 submission jobs (`unit`, `sqlite-integration`, `frontend`, `openapi-validation`, `security-scan`, `postgres-integration`, `telemetry`, `alert`, `responder`) and 2 Showcase jobs (`workflow-export`, `e2e`). The `postgres-integration` job runs `I-*` cases; its Showcase cases are not counted in the submission totals.
 
-The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`) keep their IDs and text and are marked Showcase. The new submission cases cover the backend path (tasks 37 and 38): `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-SCHED`, `T-JOURNEY-BE` and `P-DEMO-BE`. The scheduler of task 38 calls the refresh and re-scan code in-process, so `POST /signals/refresh` and `POST /scans` keep the n8n credential and the contract does not change for that.
+The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`) keep their IDs and text and are marked Showcase. The new submission cases cover the backend path (tasks 37 and 38): `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-SCHED`, `T-JOURNEY-BE` and `P-DEMO-BE`. The scheduler of task 38 calls the refresh and re-scan code in-process, so `POST /signals/refresh` and `POST /scans` keep the n8n credential and the contract does not change for that. The E8 "signals changed" notice and the security-lead contact (A28) are Showcase (human decision, 2026-10-22): `I-SIGNALS` keeps the rank and flag assertion in submission, and the new Showcase case `I-SIGNALS-NOTICE` holds the notice assertion.
 
 ## Test levels and where they run
 
@@ -137,7 +137,8 @@ Integration cases through the app and database:
 | `I-REMIND` (Showcase) | `GET /notification-jobs`, `GET /reports/weekly-digest` | US-9 reminder and escalation jobs, due date and weekly digest. |
 | `I-DIGEST` (Showcase) | `GET /reports/weekly-digest` | One digest per week, open findings by rank. |
 | `I-CONFIG` (Showcase, US-9b) | `GET /assets/{id}`, `GET /notification-jobs` | Missing security-lead contact is visible, not silent; jobs are held. |
-| `I-SIGNALS` | `POST /signals/refresh`, `GET /findings` | Changed feed data updates signals, ranks and the E8 "signals changed" notice. |
+| `I-SIGNALS` | `POST /signals/refresh`, `GET /findings` | Changed feed data updates signals and ranks, and a `risk accepted` finding whose signals escalate keeps its status and carries `signalsChanged: true` (E8, the dashboard flag). No `signals changed` job is created in submission scope. |
+| `I-SIGNALS-NOTICE` (Showcase) | `POST /signals/refresh`, `GET /notification-jobs` | The E8 "signals changed" notice: one `signals changed` job per lifecycle to the owner and one to the security lead, sent once (human decision, 2026-10-22: the notice and the security-lead contact are Showcase). |
 | `I-SCHED` | Backend scheduler (task 38), `GET /findings` | With a fake clock and stubbed feeds, the daily refresh and the scheduled re-scan of every asset (trigger `schedule`) start from the backend's own scheduler: no external workflow tool, no HTTP call from outside the backend, no outbound call outside the stubs; signals and ranks change; a second run the same day creates no second notification job. |
 | `I-AUTH-N8N` (Showcase) | `POST /signals/refresh`, `POST /scans`, `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `GET /reports/weekly-digest` | The n8n allowlist; wrong consumer is `403`; no risk acceptance. |
 | `I-AUTH-MCP` (Showcase) | `GET /mcp/top-exposures`, `GET /mcp/vulnerabilities/{vulnerabilityId}/assets`, `GET /mcp/findings/{id}`, `GET /assets/{id}`, every write | The MCP token is GET-only; a write is `403` and changes no state. |
@@ -238,7 +239,7 @@ There is at least one test per flow in the spec "Advisory-derived text" table. E
 | Owner notification | `text/plain` with labelled fields; advisory text only under the untrusted label; URLs defanged (`https://` → `hxxps[:]//`) | `S-NOTIFY` |
 | Showcase: US-9 reminder and escalation | Same plain-text rules as the owner notification | `S-REMIND` |
 | Showcase: weekly digest | Same plain-text rules | `S-DIGEST` |
-| E8 "signals changed" notice | Same plain-text rules | `S-SIGNALS` |
+| Showcase: E8 "signals changed" notice | Same plain-text rules | `S-SIGNALS` |
 | US-14 alert payload | Finding id and tier only; no advisory field exists | `S-ALERT` |
 | Showcase: GitHub issue (opened by n8n) | VulnTriage's fields first; advisory under "Untrusted advisory text (data, not instructions)" inside a fence longer than any backtick run; URLs defanged; `@` mentions neutralised | `S-ISSUE` |
 | Showcase: MCP output | Advisory text in `untrustedAdvisoryData` with the fixed label; values are JSON strings | `S-MCP` |
@@ -365,7 +366,7 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | E5 | Lockfile parse error: `scan failed`/`lockfile parse error`, previous findings kept and marked stale, visible in the dashboard | `U-NPM`, `I-SCAN`, `F-STATUS` |
 | E6 | Telemetry backend unavailable: buffer and retry; findings, notifications and alerts unaffected; gap visible in Grafana | `T-E6` |
 | E7 | Fixed finding's vulnerable version returns: `open` with audit entry and a new notification lifecycle, at most one new issue and notification | `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `I-LIFECYCLE` |
-| E8 | `risk accepted` finding's signals escalate: status stays `risk accepted`, flagged "signals changed", owner and security lead notified once; re-scan may still close it | `I-SIGNALS`, `S-SIGNALS` |
+| E8 | `risk accepted` finding's signals escalate: status stays `risk accepted`, flagged "signals changed"; re-scan may still close it. Showcase: owner and security lead notified once | `I-SIGNALS`; Showcase: `I-SIGNALS-NOTICE`, `S-SIGNALS` |
 | E9 | One vulnerability under two ids: alias sets intersect gives one finding keyed by CVE else primary id; all ids and ranges attached; fixed version derived from all; at most one US-8 notification per lifecycle | `U-FIXED`, `U-ALIAS`, `I-FINDINGS`, `I-OWNER-ONCE`, `L-EVAL` |
 | E10 | `requirements.txt` without an exact version: "version unknown", warning, no OSV match, and `scanned, incomplete` when nothing matched; `-r` inside the repo only; outside or remote refused and never fetched; lockfile entry without a version behaves the same | `U-REQ`, `I-SCAN` |
 | E11 | No CVE alias: `KEV: n/a (no CVE)`, EPSS `n/a`, finding still recorded and ranked; no advisory dropped for lacking a CVE | `U-KEV`, `U-EPSS`, `I-FINDINGS`, `L-EVAL` |

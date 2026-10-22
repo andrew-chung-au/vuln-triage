@@ -200,7 +200,7 @@ Covers: Application, US-7, US-10
 
 # Showcase (post-submission)
 
-Tasks 30-36 are built after submission (spec § Showcase; items X4-X6 in `_docs/roadmap-showcase.md`). They keep their numbers, bodies and `Depends on:` lines, and nothing in the submission scope depends on them.
+Tasks 30-36 are built after submission (spec § Showcase; items X4-X6 in `_docs/roadmap-showcase.md`). They keep their numbers and nothing in the submission scope depends on them. Task 35 gained the E8 notice, the security-lead contact's check and a dependency on task 34 (human decision, 2026-10-22).
 
 ## 30. LLM brief with the fix-version guardrail
 Goal: An open finding gets a matching brief or the structured finding with "brief unavailable".
@@ -232,11 +232,11 @@ Description: Adds `notify-top-tier` and `close-tracker-issue` under `n8n/workflo
 Depends on: 19, 33
 Covers: US-8 (GitHub tracker issue), US-16
 
-## 35. n8n reminders, escalation and weekly digest
-Goal: Overdue findings produce reminders and escalation, and the security lead gets one weekly digest.
-Description: Adds `overdue-reminders` and `weekly-digest` under `n8n/workflows/` using the job and `GET /reports/weekly-digest` operations and the missing security-lead contact behaviour from `_docs/architecture.md` § Routing and notifications. The human sets the security-lead contact. The check is `I-REMIND`, `I-CONFIG` and `I-DIGEST` in `make test` plus a manual Compose run showing one weekly digest.
-Depends on: 33
-Covers: US-9, US-16
+## 35. n8n reminders, escalation, weekly digest and the E8 notice
+Goal: Overdue findings produce reminders and escalation, the security lead gets one weekly digest, and a `risk accepted` finding whose signals escalate notifies its owner and the security lead once.
+Description: Adds `overdue-reminders` and `weekly-digest` under `n8n/workflows/` using the job and `GET /reports/weekly-digest` operations and the missing security-lead contact behaviour (`SECURITY_LEAD_NAME`, `SECURITY_LEAD_EMAIL`, A28) from `_docs/architecture.md` § Routing and notifications. It also adds the E8 "signals changed" notice (human decision, 2026-10-22: the notice and the security-lead contact are Showcase): in the showcase build the backend creates the `signals changed` job when a `risk accepted` finding's signals escalate, and the `notify-top-tier` workflow of task 34 sends it to the owner and to the security lead, once per lifecycle. The submission build only sets the `signalsChanged` flag. The human sets the security-lead contact. The check is `I-REMIND`, `I-CONFIG`, `I-DIGEST`, `I-SIGNALS-NOTICE` and `S-SIGNALS` in `make test` plus a manual Compose run showing one weekly digest.
+Depends on: 33, 34
+Covers: US-9, US-16, E8 (notice)
 
 ## 36. n8n workflow export check
 Goal: `make test-workflows` proves every exported workflow is the one Compose runs.
@@ -273,6 +273,7 @@ Showcase coverage (post-submission; the story or clause is in the spec's Showcas
 | US-7 n8n variant of the schedule | 33 | 38 runs the schedule in the backend |
 | US-8 GitHub tracker issue | 34 | 37 delivers the owner notification |
 | US-9 reminders, escalation, weekly digest | 35 | 10 creates the jobs and serves the digest |
+| E8 "signals changed" notice and the security-lead contact | 35 | 8 sets the `signalsChanged` flag; no notice in submission |
 | US-12 read-only assistant | 32 | 10 serves the `/mcp/` operations |
 | US-16 n8n workflows exported | 33, 34, 35, 36 | none |
 
@@ -337,7 +338,7 @@ Build order: tasks 37 and 38 are numbered last but build earlier. Build 37 after
 | 32 | 10 |
 | 33 | 10, 15 |
 | 34 | 19, 33 |
-| 35 | 33 |
+| 35 | 33, 34 |
 | 36 | 19, 34, 35 |
 | 37 | 10, 23, 24 |
 | 38 | 8, 10 |

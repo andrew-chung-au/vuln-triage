@@ -19,8 +19,10 @@ info:
     showcase build has its contract. The backend itself runs the daily refresh
     and the scheduled re-scan (US-7, US-10) and delivers the owner
     notification (US-8); `startSignalRefresh` and `startScheduledRescan` are
-    not marked, and the n8n token as their caller is the showcase part. The
-    `reminder`, `escalation` and `digest` job kinds, `WeeklyDigest` and
+    not marked, and the n8n token as their caller is the showcase part: over
+    HTTP they are reachable only in the showcase build, because no
+    submission credential is provisioned for them. The `reminder`,
+    `escalation`, `digest` and `signals changed` job kinds, `WeeklyDigest` and
     `Brief` are showcase content. Every other mention of n8n or the MCP server
     in this file is showcase unless the text says otherwise.
 
@@ -476,10 +478,12 @@ paths:
       description: |
         In submission scope the backend's own scheduler starts this refresh
         (US-7); the n8n `daily-signal-refresh` workflow and the n8n token as
-        its caller are Showcase (post-submission). Starts the
+        its caller are Showcase (post-submission), so over HTTP this operation
+        is reachable only in the showcase build. Starts the
         KEV and EPSS refresh and the re-score of every finding asynchronously
-        and returns `202` with no body. The re-score may create `top tier` or
-        `signals changed` notification jobs. A repeated call, including one
+        and returns `202` with no body. The re-score may create a `top tier`
+        notification job and, as Showcase (post-submission), a
+        `signals changed` job (E8). A repeated call, including one
         made while a refresh is running, also returns `202`; there is no `409`.
 
         No request body and no `X-Requested-With` header (bearer, not cookie).
@@ -505,7 +509,8 @@ paths:
         In submission scope the backend's own scheduler starts this re-scan
         after the daily refresh (US-10, architecture A3); the n8n
         `scheduled-rescan` workflow and the n8n token as its caller are
-        Showcase (post-submission). Starts a re-scan of every registered asset
+        Showcase (post-submission), so over HTTP this operation is reachable
+        only in the showcase build. Starts a re-scan of every registered asset
         asynchronously and returns `202` with no body. It takes no asset id.
         An asset's current scan status does not change until its scan
         finishes; a later `GET /assets/{id}` reports the new status.
@@ -1784,7 +1789,10 @@ components:
       description: |
         The architecture data model's job kinds, exactly. Showcase
         (post-submission): the `reminder`, `escalation` and `digest` kinds
-        (US-9); the other kinds belong to the backend-delivered notification.
+        (US-9) and the `signals changed` kind (the E8 notice, human decision
+        of 2026-10-22); the `top tier` kind belongs to the backend-delivered
+        notification, and the `signalsChanged` field on findings stays in
+        submission scope.
       enum:
         - top tier
         - signals changed
