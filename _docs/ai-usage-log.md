@@ -1689,3 +1689,57 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify BASE=25960f5` PASS (62 tests passed, type check pass, whitespace pass, no test files changed); QA not yet run
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none recorded
 
+### 2026-10-22 — Engineer: #95 reconcile Application coverage with task 15
+
+- date: 2026-10-22
+- task/issue: #95 (lifecycle step 3, implementation); option B confirmed by the orchestrator
+- agent role: Software Engineer (subagent of the orchestrator), local sandbox on `main`
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's step 3 task for #95, implementing PM comment 6339083871 (option B); no new key prompt saved
+- files changed: `_docs/tasks.md` (one `Note:` paragraph after the `ASSUMPTION:` paragraph at line 267, before `## Dependency chain`), `_docs/plan-summary.md` (footnote ¹ line 35 and the D1 `Handling` line 41), this log, `_session-summaries/issue-095-application-coverage.md`. Doc commit e8a7c4d; process records in a separate commit
+- verification (tests run, reviewer verdict): `make verify BASE=a1d5dd0` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests; 2 files changed); QA not yet run
+- human review (what I checked or corrected, or `none`): none yet; the orchestrator confirmed option B and asked for the two doc edits plus the AGENTS.md process records. Commands that required approval: none recorded
+
+### 2026-10-22 — Orchestrator: #95 close-out, #93 split, #97 and #98
+
+- date: 2026-10-22
+- task/issue: #95 QA and close; #93 grooming and split into #97-#100; #97 and #98 implemented and QA'd (continuing a session that hit an opencode rate limit)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to continue #93 and #95, then "go with all recommendations", "start the architecture and spec issues" and "ok"; no new key prompt saved
+- files changed: `_docs/tasks.md` and `_docs/plan-summary.md` (#95, e8a7c4d); `_docs/architecture.md` and `_docs/aws-setup.md` (#97, d5f6508 and d520876); `_docs/specs.md` (#98, 4fa7a55, protected, `HUMAN_APPROVED=1`); session summaries for #95, #97 and #98; merge 243fcd6 of `origin/main`; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #95 at d4c5345, #97 at d5f6508 (follow-up d520876 rechecked PASS), #98 at 4fa7a55 after two FAILs on the approval criterion and a final PASS as a ratification. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved the #93 split, the #98 proposal on a summary, and commented "Diff approved" on #98 after the commit. The commit was made before the human saw the full diff; QA recorded this as a deviation. Commands that required approval: `HUMAN_APPROVED=1 git commit` of the protected spec; `gh issue edit 93` and `make issue-close` (ask rules)
+
+### 2026-10-22 — Orchestrator: #99-#102 (tasks, showcase marking, architecture, test split)
+
+- date: 2026-10-22
+- task/issue: #99, #100, #101, #102 implemented and QA'd; #93 updated by the PM with two clean-up edits (continuing the session above)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's replies "yes ok", "yes", "approved 3c13321, 2 ok, 3 ok, 4 ok, 5 ok", "approve" and "approve recommedations"; no new key prompt saved
+- files changed: `_docs/tasks.md` and `_docs/plan-summary.md` (#99, 70a0f82); `README.md`, `_docs/api.md`, `_docs/openapi.yaml`, `_docs/testing.md` (#100, 3c13321); `_docs/architecture.md` (#101, c098669 and fix 86d3978); `_docs/testing.md`, `_docs/api.md`, `_docs/openapi.yaml` (#102, 5573e03); session summaries for #99-#102; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests); `make openapi-validate` OK. QA PASS: #99 at 70a0f82, #100 at 3c13321, #102 at 5573e03; #101 FAIL at c098669 (submission 403 case named the MCP token), fixed in 86d3978 and PASS on recheck. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human replied "approved 3c13321" for #100's contract diff (recorded on #100) and "approve" for #102's diff before its commit (recorded on #102 before the commit). No protected file was committed in this entry. Commands that required approval: `gh issue create` and `gh issue edit 99`/`93` (PM, ask rules); `make issue-close` for #99-#102 (ask rule)
+
+### 2026-10-22 — Orchestrator: #103 and #93 (aws-setup revision, roadmap merge, milestones; #92 folded in)
+
+- date: 2026-10-22
+- task/issue: #103 implemented and QA'd; #93 implemented and QA'd; #92 handled (items folded into #93, closed with it); GitHub milestones "Submission" and "Showcase" created (continuing the session above)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's replies "approve recommendations", "ok that is fine" (milestones) and their instructions for the `aws-setup.md` revision; no new key prompt saved
+- files changed: `_docs/aws-setup.md` (#103, 7fa6de1 and fix 9890d28); `README.md`, `_docs/roadmap.md` and deleted `_docs/roadmap-submission-draft.md` (#93, 1b14412); `_docs/architecture.md`, `_docs/plan-summary.md`, `_docs/tasks.md`, `_docs/testing.md` (#93, e6ceb22); session summaries for #103 and #93; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA: #103 FAIL at 7fa6de1 (citations to `roadmap.md` items that did not resolve), fixed in 9890d28 and PASS on recheck; #93 FAIL at e6ceb22 only on the then-uncreated milestones, PASS on recheck after they were created. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved the recommendations before the work and the milestone creation after an explanation. No protected file was committed in this entry. Commands that required approval: `gh api repos/{owner}/{repo}/milestones` x2 (merits request, tracker write); `gh issue create`/`gh issue edit` (PM, ask rules); `make issue-close` for #103, #93 and #92 (ask rule)
+
+### 2026-10-22 — Orchestrator: #104 and #105 (brief showcase marks, task 15 .env.example)
+
+- date: 2026-10-22
+- task/issue: #104 and #105 filed by the PM, implemented and QA'd (continuing the session above)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's replies approving items 2 and 3 and "the bigger gap", "add a note" (Gemini candidate in Open question 9) and "option a" (`.env.example` in task 15); no new key prompt saved
+- files changed: `_docs/testing.md`, `_docs/roadmap-showcase.md`, `_docs/architecture.md` (#104, f6c0efc); `_docs/tasks.md` (#105, 98d0a7e); session summaries for #104 and #105; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #104 at f6c0efc, #105 at 98d0a7e. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved the work before each step; no protected file was committed in this entry. Commands that required approval: `gh issue create` (PM, ask rules); `make issue-close` for #104 and #105 (ask rule)

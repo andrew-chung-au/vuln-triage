@@ -1,6 +1,6 @@
 # VulnTriage roadmap: showcase track
 
-Status: adopted 2026-10-22 (human decision H1 in `_docs/roadmap-submission-draft.md`). This file stays separate from `_docs/roadmap.md` after the submission track is merged into it.
+Status: adopted 2026-10-22 (human decision H1 in `_docs/roadmap.md`). This file stays separate from `_docs/roadmap.md` after the submission track is merged into it.
 
 Purpose: VulnTriage is also a CV showcase. This track holds the work that scores no rubric points but makes the project stronger to show: the original plan's fuller deployment, the deferred product features, and an on-demand live demo. It is ongoing and has no deadline.
 

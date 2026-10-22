@@ -1,176 +1,215 @@
 # AWS setup for the human
 
-What the human does in AWS and GitHub so the Tier B and C deployment work (B4-B6 and C4 in `_docs/roadmap-tiers-b-c.md`; tasks 17, 18, 21 and 24 in `_docs/tasks.md`) can run. Agents write the CloudFormation templates and the GitHub Actions workflows. The human owns the AWS account, its credentials, money, secrets and DNS. Agents never get AWS credentials (`_docs/architecture.md`, Security boundaries).
+The human's how-to for the AWS and GitHub steps behind the deployment work (the deployment tasks 17, 18, 21 and 22 and the email task 37 in `_docs/tasks.md`). It is instructions to follow in order, written from experience hosting earlier apps on EC2. It is not a record of progress.
 
-Status: guide, 2026-10-22. Written during planning; nothing here has been run. **Being revised:** later the same day the human chose Terraform, one server for dev and prod, GHCR and `sslip.io` (decisions H2-H5 in `_docs/roadmap-submission-draft.md`). The stack table, step 5 (domain), step 8 (bootstrap), the cost table and the nightly stop below still describe the earlier CloudFormation plan; steps 1-4, 6, 7, 9 and 10 mostly still apply. Sources: `_docs/architecture.md` (Deployment, Security boundaries, Open questions 6, 7 and 9, assumptions A26, A36 and A37) and `_docs/roadmap-tiers-b-c.md` (Prerequisites, D1-D3). Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS behaviours, prices and console paths are marked `VERIFY:`: check them in the AWS documentation or console when you do the step.
+The agents write the Terraform files and the GitHub Actions workflows. You own the AWS account, its credentials, the secrets, the first `terraform apply` and teardown. Agents never hold AWS credentials, never run `terraform apply` and never see a secret value (`_docs/architecture.md`, Security boundaries). You apply Terraform from your own machine as your admin identity; CI has no AWS key and only assumes the OIDC roles, whose trust policies refuse pull-request and other-branch runs.
 
-Starting point assumed: you have an AWS account with credits and have hosted apps on EC2 before. Skip any step you have already done, but do the check in each step: older setups often miss one of them (MFA on root, a budget that ignores credits).
+Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip.io` (`_docs/architecture.md`, Deployment and A36), and the local Compose stack for observability, the alert and the responder during submission (A34). Sources: `_docs/architecture.md` (Deployment, Security boundaries, Routing and notifications, assumptions A26, A36 and A37) and tasks 17, 18, 21 and 37. Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS, GHCR, Let's Encrypt and Terraform behaviours, prices and console paths are marked `VERIFY:`: check them in the documentation or console when you do the step.
+
+Everything in "Submission steps" is needed for the submission. "Showcase extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
 
 ## What gets built, and by whom
 
-Five CloudFormation stacks, all in one region, all tagged `project=vuln-triage`:
+Three Terraform modules, all in one region, every resource tagged `project=vuln-triage`. Terraform is the tool; OpenTofu runs the same files. Installing it is a new tool the build task asks you about first.
 
-| Stack | Contents | First deployed by | Updated by |
+| Module | Contents | First applied by | Changed by |
 |---|---|---|---|
-| `vt-ci-iam` | GitHub OIDC provider; dev and prod deploy roles | You, once, from the console or your machine | You (changes to IAM are never made by CI) |
-| `vt-ecr` | ECR repositories (backend, frontend, responder), keep last 10 images | You, once | You |
-| `vt-dev` | One `t3.small` instance running the app in Docker Compose behind a TLS reverse proxy; Postgres on an EBS volume | CI (dev role), on push to `main` | CI |
-| `vt-prod` | Same template as `vt-dev`, own parameters and secrets | CI (prod role), manual workflow with your approval | CI, after your approval |
-| `vt-observability` | One `t3.medium` instance: Prometheus, Loki, Tempo, Grafana (login required), the responder | CI or you (decided in task 24) | CI or you |
+| State bucket | One S3 bucket holding Terraform state (VERIFY: S3-native state locking, so no lock table) | You, once, from your machine | You |
+| Deploy role | GitHub OIDC provider (or the account's existing one) and the dev and prod deploy roles | You, once, from your machine | You (CI never changes IAM) |
+| Server | One EC2 instance running the `dev` and `prod` Compose projects behind a TLS reverse proxy, with an Elastic IP, a data volume, snapshots and a nightly stop | You, once, from your machine | You for infrastructure; CI only deploys images onto it |
 
-Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFront. No IAM user or long-lived access key for CI: GitHub Actions assumes the roles through OIDC.
+Images live in GHCR (GitHub's container registry), public, so the server pulls them without a credential (VERIFY). Hostnames come from the server's IP through `sslip.io`, so there is no domain to buy. Dev deploys automatically on a push to `main` when tests pass; production deploys only from a manual workflow you approve.
+
+Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFront, an AWS container registry. No IAM user or long-lived access key for CI: GitHub Actions assumes the roles through OIDC.
 
 ## Checklist
 
-| # | Step | When | Time (rough) |
-|---|---|---|---|
-| 1 | Account hygiene: root MFA, admin identity, no root keys | Now | 15 min |
-| 2 | Pick the region | Now | 5 min |
-| 3 | Check the credits | Now | 10 min |
-| 4 | Budget and billing alerts that show real spend despite credits | Now, before any stack | 15 min |
-| 5 | Decide domain name and TLS (D3, Open question 7) | Before B5 | 30 min + DNS wait |
-| 6 | Decide how you reach the instances (SSM or SSH) | Before B5 | 5 min |
-| 7 | GitHub: `production` environment and repository variables | Before B4 (environment), after step 8 (variables) | 15 min |
-| 8 | Deploy `vt-ci-iam` and `vt-ecr` from the agents' templates | Start of B4, after review | 30 min |
-| 9 | Create the secrets | Before B5 (dev), before B6 (prod) | 20 min per environment |
-| 10 | Amazon SES sender identity | Before the email path runs in AWS (C1 on dev) | 15 min + DNS wait |
-| 11 | Nightly stop and cost-allocation tag | With B5 | 10 min |
-| 12 | Teardown after grading | After grading | 30 min |
+| # | Step | Track | When | Time (rough) |
+|---|---|---|---|---|
+| 1 | Account hygiene | Submission | Before anything else | 10 min |
+| 2 | Pick the region | Submission | Before the bootstrap | 5 min |
+| 3 | Budget alert | Submission | Before anything is applied | 10 min |
+| 4 | Hostnames and TLS | Submission | Decide the name form before the server is applied; record the hostnames after the first apply | 10 min |
+| 5 | How you reach the server | Submission | Before the server is applied | 5 min |
+| 6 | GitHub settings | Submission | Environment before task 21; variables after step 7 | 15 min |
+| 7 | Bootstrap: state bucket, deploy role, server | Submission | Start of task 17, after review | 45 min |
+| 8 | Submission secrets | Submission | Before the first dev deploy; prod ones before the first production deploy | 20 min |
+| 9 | Email sending route | Submission | Before task 37 runs on AWS | 15 min plus the verification wait |
+| 10 | Nightly stop and cost tag | Submission | With the server | 10 min |
+| 11 | Teardown | Submission | When you decide to end the deployment | 30 min |
+| S1 | Showcase extra secrets | Showcase | After the submission is in | 20 min |
+| S2 | Grafana and responder on AWS (X3) | Showcase | After the submission is in | see `roadmap-showcase.md` |
+| S3 | On-demand demo and Launch button (X1, X9) | Showcase | After the submission is in | see `roadmap-showcase.md` |
 
-Steps 1-4 can be done today; none needs any repository code. Steps 5 and 6 are decisions; record them in the issue for task 17.
+Steps 1-4 need no repository code. Steps 4 and 5 are decisions (for step 4, the name form; the hostnames themselves exist only after the first apply creates the Elastic IP); record them in the issue for task 17. You, not an agent, perform the first deploy (task 17).
+
+# Submission steps
 
 ## 1. Account hygiene
 
-Check, and fix what is missing:
-- The root user has MFA, and has no access keys (IAM → Security credentials). Don't use root for anything below except billing settings that need it.
-- You sign in day to day as an admin identity with MFA: an IAM Identity Center user (preferred) or an IAM user. VERIFY: Identity Center is free and available in your chosen region.
-- If you use the AWS CLI on your machine, it uses that admin identity (for example `aws configure sso`), not root keys.
-- Old resources from earlier EC2 projects: list them before starting (EC2 → Instances, Elastic IPs, Volumes, Snapshots; or Resource Explorer, VERIFY). They cost money, and a forgotten Elastic IP or volume is easy to mistake for this project's. This project creates its own VPC resources or uses the default VPC (decided in task 17); it does not reuse old security groups or key pairs.
+- Root MFA: already enabled. Confirm the root user has no access keys (IAM → Security credentials) and don't use root for anything below except billing settings that need it.
+- Sign in day to day as an admin identity with MFA: an IAM Identity Center user (preferred) or an IAM user. VERIFY: Identity Center is free and available in your chosen region.
+- If you use the AWS CLI on your machine, it uses that admin identity (for example `aws configure sso`), not root keys. Terraform uses the same identity when you run it.
+- List old resources from earlier EC2 projects before starting (EC2 → Instances, Elastic IPs, Volumes, Snapshots; or Resource Explorer, VERIFY). A forgotten Elastic IP or volume is easy to mistake for this project's. This project creates its own VPC resources or uses the default VPC (decided in task 17); it does not reuse old security groups or key pairs.
 
 ## 2. Pick the region
 
-One region for every stack, ECR repository, secret and SES identity. Options:
+One region for the state bucket, the server and the secrets. Options:
 - `ap-southeast-2` (Sydney): lowest latency if you and the reviewers are in Australia.
 - `us-east-1` (N. Virginia): usually the lowest prices and the most services; some account-wide settings live there anyway (billing alerts, VERIFY).
 
-Check that SES is available in the region (VERIFY). Record the region as the repository variable `AWS_REGION` (step 7). Recommendation: the region your earlier EC2 apps used, unless prices push you to `us-east-1`.
+Check that Amazon SES is available in the region (step 9; VERIFY) and whether the region can hold the verified sender identity if it differs from the server's. Record the region as the repository variable `AWS_REGION` (step 6).
 
-## 3. Check the credits
+## 3. Budget alert
 
-Billing and Cost Management → Credits (VERIFY: console path). Note:
-- the amount left and the **expiry date**: if it expires before grading, plan the budget as if paying in cash after that date;
-- which services the credits cover. Credits often exclude domain registration (Route 53 Domains) and AWS Marketplace (VERIFY on your credit terms). A domain bought through Route 53 may be charged to your card even with credits left.
+Create a monthly AWS Budgets cost budget with email alerts at 50 %, 80 % and 100 %, before any stack is applied (`_docs/architecture.md`, Cost controls). The amount and its upkeep are yours (A37). VERIFY: Budgets console path and pricing.
 
-## 4. Budget and alerts
+## 4. Hostnames and TLS (`sslip.io`)
 
-The architecture asks for a monthly AWS Budgets budget with email alerts at 50 %, 80 % and 100 % (Cost controls). With credits, the default view shows about $0 spend because credits cancel it out, so set the budget to show usage before credits:
-1. Billing and Cost Management → Budgets → Create budget → Cost budget, monthly.
-2. Amount: your choice (A37). For scale, see "Rough monthly cost" below; a first guess is $40-60 a month for the full stack.
-3. In the budget's advanced options, **exclude credits** (and refunds) from the cost, so the alert reflects what the resources really cost (VERIFY: option name, "Credits" under "Charge type" filters).
-4. Alerts at 50 %, 80 % and 100 % of actual cost, plus one at 100 % of forecasted cost, sent to your email.
+The dashboard uses session cookies marked `Secure`, so it needs HTTPS. There is no load balancer or CloudFront, so no AWS Certificate Manager certificate (VERIFY). The certificate comes from Let's Encrypt, obtained by the reverse proxy on the server.
 
-Also worth turning on, free or nearly free (VERIFY): Cost Anomaly Detection with an email subscription, and Free Tier usage alerts if your account is still in the free tier.
+You do not buy or configure a domain. The server has an Elastic IP, and `sslip.io` resolves a hostname containing that IP back to it, for example `dev.203-0-113-10.sslip.io` for dev and `app.203-0-113-10.sslip.io` for prod (VERIFY: the exact `sslip.io` name forms). Ports 80 and 443 are open to the internet (80 only for the certificate challenge and the redirect to 443).
 
-## 5. Domain name and TLS (decision D3)
+Points to know:
+- Keep the Elastic IP. If it is released, the hostnames change, and every URL in the README with it. It is kept across the nightly stop.
+- Let's Encrypt limits how many certificates it issues per name (VERIFY: rate limits). Every `sslip.io` user shares the `sslip.io` name, so you may hit a limit you did not cause (VERIFY: whether `sslip.io` is treated as its own registered domain). If issuance fails, the staging endpoint while testing or `nip.io` are options for the agents to propose.
+- The proxy (Caddy, Traefik or nginx with certbot) is chosen in task 17 and needs your approval as a new image.
 
-Grafana and the dashboard use session cookies marked `Secure`, so both need HTTPS. The plan has no load balancer or CloudFront, which rules out an AWS Certificate Manager certificate (ACM certificates attach to those, not to a plain EC2 instance; VERIFY). So the certificate comes from Let's Encrypt, obtained by the reverse proxy on each instance.
+Record in the task 17 issue: the two hostnames once the Elastic IP exists.
 
-| Option | What you do | Cost | Notes |
-|---|---|---|---|
-| A. Domain in Route 53 (recommended if you have none) | Register a cheap domain or point an existing one's name servers to a Route 53 hosted zone | Domain about $10-15/year (often not covered by credits); hosted zone about $0.50/month (VERIFY) | The template can create the DNS records itself, so the instance's address and the name always match |
-| B. Domain at another registrar | Add an A record per environment pointing at the instance's Elastic IP | Domain cost only | You update DNS by hand if an Elastic IP changes (it shouldn't; it's kept across stops) |
-| C. Subdomain of a domain you already own | As B or A, using `vt-dev.example.com` etc. | None extra | Easiest if you already host apps under a domain |
+## 5. How you reach the server
 
-Names needed: one for dev (for example `dev.<domain>`), one for prod (`app.<domain>`), one for Grafana (`grafana.<domain>`). Each instance gets an Elastic IP so the DNS record stays valid across the nightly stop. Ports 80 and 443 are open to the internet (80 only for the certificate challenge and the redirect to 443).
+AWS Systems Manager Session Manager only; there is no SSH port and no key pair (`_docs/architecture.md`, Deployment; VERIFY). The instance role gets the `AmazonSSMManagedInstanceCore` policy. You connect from the console or with the Session Manager plugin for the CLI (VERIFY). The deploy workflow may also use SSM Run Command to run the deploy on the server (VERIFY). Sessions are logged.
 
-Proxy choice (Caddy, Traefik or nginx with certbot) is the agents' decision in task 17 and needs your approval as a new image; you only provide the domain.
+SSH would be an architecture change (CI would need it too); propose that in the plan review first, not here.
 
-Without any domain, Let's Encrypt can't issue a normal certificate (VERIFY: short-lived IP-address certificates may now exist), and a self-signed certificate makes reviewers click through a browser warning. Not recommended for graded evidence.
+You rarely need a session: deploys run from the workflow, and logs are in the local stack's Loki.
 
-Record in the task 17 issue: the domain, where its DNS is hosted (Route 53 or elsewhere), and the three hostnames.
-
-## 6. How you reach the instances
-
-| Option | What it needs | Recommendation |
-|---|---|---|
-| AWS Systems Manager Session Manager | The instance role gets the `AmazonSSMManagedInstanceCore` policy; no inbound port; you connect from the console or with the Session Manager plugin for the CLI (VERIFY) | Recommended: no SSH port open, no key pair to lose, sessions logged |
-| SSH with a key pair | A key pair in the region; port 22 open to your IP only | Fine if you prefer it; the template takes your IP as a parameter, never `0.0.0.0/0` |
-
-You rarely need either: deploys go through CloudFormation, and logs go to Loki. They are for debugging a failed start.
-
-## 7. GitHub settings
+## 6. GitHub settings
 
 Repository Settings, in `andrew-chung-au/vuln-triage`:
-1. **Environments → New environment `production`.** Add yourself as a required reviewer, and restrict deployments to the `main` branch. VERIFY: environment protection rules are available for this repository's plan (they are for public repositories on the free plan, to be confirmed). The prod role's trust policy only accepts tokens from this environment, so no workflow can deploy to prod without your approval.
-2. **Secrets and variables → Actions → Variables** (variables, not secrets: none of these is a secret): `AWS_REGION`, and after step 8 `AWS_DEV_ROLE_ARN` and `AWS_PROD_ROLE_ARN` (the role ARNs from the `vt-ci-iam` stack's outputs). Nothing AWS goes in the repository files; the account ID only appears in these variables.
-3. **Rulesets:** the `main` ruleset from `_docs/cloud-sessions.md` section 4.2 already refuses direct pushes and needs a pull request. The responder relies on that (it may open pull requests, never push to `main`). No change needed; check it is still Active.
+1. **Environments → New environment `production`.** Add yourself as a required reviewer, and restrict deployments to the `main` branch. VERIFY: environment protection rules are available for this repository's plan. The prod role's trust policy only accepts tokens from this environment, so no workflow can deploy to prod without your approval.
+2. **Secrets and variables → Actions → Variables** (variables, not secrets: none of these is a secret): `AWS_REGION`, and after step 7 `AWS_DEV_ROLE_ARN` and `AWS_PROD_ROLE_ARN` (the role ARNs from the deploy role module's outputs). Nothing AWS goes in the repository files; the account ID only appears in these variables.
+3. **Packages:** after the first image push, set each GHCR package (backend, frontend, responder) to public so the server can pull it without a credential (VERIFY: where the visibility setting lives and that a repository workflow can keep pushing to a package).
+4. **Rulesets:** the `main` ruleset from `_docs/cloud-sessions.md` section 4.2 refuses direct pushes and needs a pull request. The responder relies on that (it may open pull requests, never push to `main`). Check it is Active.
 
-## 8. Bootstrap `vt-ci-iam` and `vt-ecr`
+## 7. Bootstrap: state bucket, deploy role, server
 
-CI can't create the roles it uses to log in, so you deploy these two stacks once by hand. An agent writes both templates in task 17; you deploy them after reviewing the diff.
+CI can't create the roles it uses to log in, and Terraform needs somewhere to keep its state, so you do this once by hand, from your machine, as your admin identity. The agent writes the Terraform in task 17; you apply it after reviewing the diff.
 
-Before deploying `vt-ci-iam`, check for an existing GitHub OIDC provider: IAM → Identity providers → `token.actions.githubusercontent.com`. An account can have only one provider per URL (VERIFY). If one exists from an earlier project, tell the agent before the template is written, so it reuses the existing provider (a template parameter) instead of failing to create a second one.
+1. Install Terraform on your machine. VERIFY: the version the files require.
+2. Create the state bucket: apply the bootstrap files with local state, then move the state into the bucket as the runbook instructs (VERIFY: the exact `init` step).
+3. Before applying the deploy role, check for an existing GitHub OIDC provider: IAM → Identity providers → `token.actions.githubusercontent.com`. An account can have only one provider per URL (VERIFY). Tell the agent whether one exists, so the files reuse it (a variable) instead of failing to create a second.
+4. Review the deploy role module before you apply it:
+   - Trust policy: audience `sts.amazonaws.com`; subject limited to this repository, with `ref:refs/heads/main` for the dev role and `environment:production` for the prod role (VERIFY: the OIDC `sub` claim format). No wildcard over other repositories or pull requests.
+   - Dev role: run the dev deploy on the server only. Prod role: run the production deploy only. Neither can change IAM, Terraform state or the server's configuration, or read secrets.
+   - Every resource tagged `project=vuln-triage`.
+5. Run `terraform plan`, read it, then `terraform apply` for the deploy role and then the server. Copy the two role ARNs from the outputs into the GitHub variables (step 6), and note the Elastic IP for step 4.
 
-Review checklist for `vt-ci-iam` (the template, before you deploy it):
-- Trust policy: audience `sts.amazonaws.com`; subject limited to this repository, with `ref:refs/heads/main` for the dev role and `environment:production` for the prod role (VERIFY: the OIDC `sub` claim format). No wildcard over other repositories or pull requests.
-- Dev role: push to the three VulnTriage ECR repositories and update `vt-dev` only. Prod role: update `vt-prod` only, with no ECR push. Neither can delete stacks or change IAM.
-- Every resource tagged `project=vuln-triage`.
+## 8. Submission secrets
 
-To deploy: CloudFormation → Create stack → Upload the template file from your clean clone (not from an agent's working folder); name it exactly `vt-ci-iam`; tick the IAM capabilities acknowledgement only after the review above. Then `vt-ecr` the same way. Copy the two role ARNs from the `vt-ci-iam` Outputs tab into the GitHub variables (step 7).
+Runtime secrets live in AWS Secrets Manager, read at container start by the instance role (`_docs/architecture.md`, Security boundaries, secrets table; VERIFY). You create the values; agents see only the secret names, which the Terraform files and `.env.example` list.
 
-## 9. Secrets
+Derivation: the secrets table (Security boundaries) lists what exists; the credentials table says who holds each; submission keeps only what the deployed backend needs. Per environment (`dev` and `prod`):
 
-The architecture keeps runtime secrets in AWS Secrets Manager, read at container start by the instance role (Security boundaries, secrets table). You create the values; agents only see the secret names, which the template and `.env.example` list. Expected per environment (`dev` and `prod`): database password, Grafana admin password (observability only), SMTP credentials (SES, step 10), LLM API key (Open question 9), the service tokens `N8N_API_TOKEN`, `MCP_API_TOKEN`, `RESPONDER_API_TOKEN`, and the repository read and tracker tokens.
+| Secret | Holder | Source row |
+|---|---|---|
+| Database password | The backend only | Credentials: "Database credential" |
+| Repository read-only token | The backend only | Credentials: "Repository read-only token (backend)". GitHub fine-grained token, `contents: read` on the pilot repositories (VERIFY) |
 
+Not in AWS for submission:
+- No email credential exists: SES uses the instance role (step 9). Do not create SMTP credentials.
+- The Grafana admin password, the observability stack's tokens (including the Grafana Viewer token), the responder's `RESPONDER_API_TOKEN`, and the responder's LLM key and GitHub token belong to the local Compose stack for submission (A34). They go in the local git-ignored `.env`, which agents never read.
+- The backend LLM key, the n8n, MCP and tracker tokens and SMTP credentials are showcase (S1).
+
+Rules:
 - Generate passwords and tokens with a password manager or `openssl rand -base64 32` on your machine. Never paste a value into an issue, a chat with an agent or a file in the repository.
-- Cost: Secrets Manager charges per secret per month (about $0.40, VERIFY). Storing each environment's values as one JSON secret keeps that under $1/month per environment. Whether one JSON secret or one secret per value is the agents' template choice; ask for one per environment if you want the lower cost.
-- Alternative: SSM Parameter Store `SecureString` parameters have no per-parameter charge at the standard tier (VERIFY). Using it instead of Secrets Manager is an `architecture.md` change: propose it at task 17 if you prefer it.
+- Cost: Secrets Manager charges per secret per month (about $0.40, VERIFY). One JSON secret per environment keeps that low.
+- Alternative: SSM Parameter Store `SecureString` parameters have no per-parameter charge at the standard tier (VERIFY). Using it instead is an `architecture.md` change: propose it at task 17.
 
-Create the dev secrets before the first `vt-dev` deploy (B5), the prod ones before B6.
+Create the dev secrets before the first dev deploy and the prod ones before the first production deploy.
 
-## 10. Amazon SES (email notifications)
+## 9. Email sending route
 
-The pilot's channel is email; in AWS it is sent through SES over SMTP (A26).
-1. SES → Identities → Create identity: your domain (adds DKIM DNS records; automatic with Route 53) or a single sender address.
-2. New accounts start in the SES sandbox: mail only goes to verified addresses (VERIFY). For the pilot and the demo, verify each recipient address (yours and any pilot owners) instead of requesting production access.
-3. SMTP credentials: SES → SMTP settings → Create SMTP credentials. Store them in the step 9 secret, not anywhere else.
+The route is settled (`_docs/architecture.md`, Routing and notifications; task 37; A26): the backend sends the top-tier owner notification by calling the Amazon SES API with the server's instance role, from one verified sender address. `sslip.io` names cannot carry the DNS records SES domain DKIM needs, so you verify an address, not a domain. No SMTP credentials are created or stored. Development and tests send to MailHog and need nothing from you.
 
-## 11. Nightly stop and cost tags
+Your actions:
+1. In the chosen region (step 2), SES → Identities → Create identity → Email address, for the sender address. Open the verification email and click the link (VERIFY: console path).
+2. New accounts start in the SES sandbox, which allows mail only to verified addresses (VERIFY). Create an identity for each demo recipient address the same way and click each verification link.
+3. Tell the agent the sender address and the recipient addresses. They are not secrets. Give it nothing else: no key, profile or credential.
 
-- **Nightly stop.** The architecture stops dev and observability instances each night (Cost controls); the schedule itself is in the agents' template (VERIFY: EventBridge Scheduler). You start an instance from the console (EC2 → Instances → Start) before working or demoing. Prod keeps running only while you need it to be reachable for grading.
-- **Cost allocation tag.** After the first stack exists, activate the `project` tag in Billing → Cost allocation tags (VERIFY), so Cost Explorer can show this project's spend alone. Tags take about a day to appear.
+The instance role's SES permission is send-only, limited to the one verified sender identity and conditioned on the sender address. A send from any other address is refused by SES. VERIFY: the IAM action (`ses:SendEmail`, and whether `ses:SendRawEmail` is also needed), the resource form (the verified identity ARN), the `ses:FromAddress` condition key, the free allowance and sending limits, and the SES region that holds the identity.
 
-## Rough monthly cost (if paid without credits)
+## 10. Nightly stop and cost tags
 
-All figures are on-demand prices in `us-east-1` at the time of writing, as orders of magnitude only (VERIFY in the AWS Pricing Calculator for your region; Sydney is typically 10-25 % higher).
+- **Nightly stop.** The server is stopped each night (Cost controls); the schedule is in the Terraform (VERIFY: EventBridge Scheduler). Start the server from the console (EC2 → Instances → Start) before working or demoing. Both environments stop together, so keep it running while graders may visit. The Elastic IP is kept, so the hostnames do not change (VERIFY: an Elastic IP stays associated with a stopped instance).
+- **Cost allocation tag.** After the first apply, activate the `project` tag in Billing → Cost allocation tags (VERIFY), so Cost Explorer can show this project's spend alone. Tags take about a day to appear.
+
+## 11. Teardown
+
+Human-only. Follow `_docs/architecture.md` Deployment → Teardown, in this order:
+1. Export anything to keep (a prod database dump).
+2. Run `terraform destroy` for the server module, then the deploy role module (VERIFY: destroy order and that the Elastic IP is released).
+3. Delete the EBS snapshots, the Secrets Manager secrets without a recovery window (VERIFY) and the budget. Delete the GHCR images in the GitHub package settings if wanted.
+4. Last, empty and delete the state bucket (VERIFY: a versioned bucket needs all versions removed).
+
+5. Check that no resource tagged `project=vuln-triage` remains (VERIFY: Tag Editor or Resource Groups search) and that the next bill shows no running charges.
+
+Then release any Elastic IP left, and check Cost Explorer filtered by `project=vuln-triage` a few days later.
+
+# Showcase extra steps
+
+Nothing in this section is needed for the submission. Start it only after the submission is in. Items are described in `_docs/roadmap-showcase.md`.
+
+## S1. Showcase extra secrets
+
+Each is showcase and `VERIFY:` for the exact name, which `architecture.md` does not fix:
+- LLM API key for the backend brief (X4), in AWS with the backend's other secrets. The architecture's secrets table lists "LLM keys" without a showcase mark; the credentials table (backend key is showcase, responder key is local) is followed here.
+- `N8N_API_TOKEN`, `MCP_API_TOKEN` and the tracker token (X5, X6).
+- SMTP credentials, only if n8n sends mail (X6).
+- For Grafana and the responder on AWS (S2): the Grafana admin password, the responder's LLM key and GitHub token, `RESPONDER_API_TOKEN` and the Grafana Viewer token, moved from the local `.env` into AWS secrets.
+
+The step 8 rules apply.
+
+## S2. Grafana and responder on AWS (X3)
+
+Observability and the responder run on AWS only as showcase item X3 (a separate observability server). Grafana would then need a public hostname and TLS as in step 4. Details and cost: `_docs/roadmap-showcase.md`.
+
+## S3. On-demand demo and Launch button (X1, X9)
+
+See X1, X9 and their design notes in `_docs/roadmap-showcase.md`. Nothing is set up from this guide.
+
+# Reference
+
+## Rough monthly cost of the submission server
+
+On-demand prices in `us-east-1`, orders of magnitude only (VERIFY in the AWS Pricing Calculator for your region; Sydney is typically 10-25 % higher).
 
 | Item | Count | Approx. per month |
 |---|---|---|
-| `t3.small` (dev, prod) running 24/7 | 2 | about $15 each |
-| `t3.medium` (observability) running 24/7 | 1 | about $30 |
-| EBS gp3 root and data volumes, 20-30 GB each | 3 | about $2-3 each |
-| Public IPv4 addresses (Elastic IPs; charged whether or not the instance runs) | 3 | about $3.60 each |
-| ECR storage (a few GB, lifecycle rule) | — | under $1 |
-| Secrets (one JSON secret per environment) | 2-3 | about $0.40 each |
-| Route 53 hosted zone (option A) | 1 | about $0.50 |
-| Snapshots, data transfer, SES, CloudWatch | — | a few dollars |
+| `t3.medium` server running 24/7 (VERIFY: size) | 1 | about $30 |
+| EBS gp3 root and data volumes, 20-30 GB | 2 | about $2-3 each |
+| Public IPv4 address (Elastic IP; charged whether or not the server runs) | 1 | about $3.60 |
+| Secrets (one JSON secret per environment) | 2 | about $0.40 each |
+| State bucket, snapshots, data transfer, email, GHCR (public images, VERIFY) | | a few dollars |
 
-Full stack running all the time: roughly $80-90 a month. With the nightly stop of dev and observability (about 12 hours a day) and prod started only near grading: roughly $35-50 a month. The Elastic IPs and volumes are charged even while instances are stopped.
+Running all the time: roughly $40 a month. With the nightly stop (about 12 hours a day): roughly $25 a month, because the volumes, snapshots and the Elastic IP are still charged while the server is stopped. After teardown (step 11) the standing cost is about $0: only the state bucket, a few cents, stays until you delete it.
 
-## 12. Teardown
-
-After grading, follow `_docs/architecture.md` Deployment → Teardown, in that order. Then release any Elastic IPs left, delete the budget last, and check Cost Explorer filtered by `project=vuln-triage` a few days later.
+Showcase additions (VERIFY: all prices):
+- A second server for X2: VERIFY its price.
+- A separate observability server for X3: VERIFY its price.
+- LLM API usage for X4: VERIFY the provider's price.
+- A Lambda and its function URL for X9: within the free tier (VERIFY).
+- X1 on-demand demo: about $0 standing cost while the demo is down (`roadmap-showcase.md`).
 
 ## Decisions for the human
 
-Record each answer in the task 17 issue (or the Tier B/C roadmap's D table, for D3) before B4 starts:
+Record each answer in the task 17 issue before it starts:
 
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | Region | The region your earlier EC2 work used, or `ap-southeast-2` if none |
-| 2 | Monthly budget amount (A37) | $50 with the 50/80/100 % alerts, credits excluded |
-| 3 | Domain and TLS (D3, Open question 7) | An existing domain's subdomains (option C), else a Route 53 domain (option A); Let's Encrypt on the instance |
-| 4 | Instance access | Session Manager, no SSH port |
-| 5 | Existing GitHub OIDC provider in the account | Tell the agent; reuse it if present |
-| 6 | Secrets store | Secrets Manager with one JSON secret per environment, as planned |
-| 7 | SES sender | Your domain if you have one in step 5, else one verified address |
+| 2 | Existing GitHub OIDC provider in the account | Tell the agent; reuse it if present |
+| 3 | Secrets store | Secrets Manager with one JSON secret per environment, as planned |
+| 4 | Verified sender address and demo recipient addresses (step 9) | One sender address you control; the route itself is settled |
+| 5 | Where to apply Terraform | Your machine, as your admin identity; never CI |
