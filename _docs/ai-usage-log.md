@@ -1732,3 +1732,14 @@ Copy this template for each new entry:
 - files changed: `_docs/aws-setup.md` (#103, 7fa6de1 and fix 9890d28); `README.md`, `_docs/roadmap.md` and deleted `_docs/roadmap-submission-draft.md` (#93, 1b14412); `_docs/architecture.md`, `_docs/plan-summary.md`, `_docs/tasks.md`, `_docs/testing.md` (#93, e6ceb22); session summaries for #103 and #93; this log
 - verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA: #103 FAIL at 7fa6de1 (citations to `roadmap.md` items that did not resolve), fixed in 9890d28 and PASS on recheck; #93 FAIL at e6ceb22 only on the then-uncreated milestones, PASS on recheck after they were created. `make assert-clean` PASS after each QA run
 - human review (what I checked or corrected, or `none`): the human approved the recommendations before the work and the milestone creation after an explanation. No protected file was committed in this entry. Commands that required approval: `gh api repos/{owner}/{repo}/milestones` x2 (merits request, tracker write); `gh issue create`/`gh issue edit` (PM, ask rules); `make issue-close` for #103, #93 and #92 (ask rule)
+
+### 2026-10-22 — Orchestrator: #104 and #105 (brief showcase marks, task 15 .env.example)
+
+- date: 2026-10-22
+- task/issue: #104 and #105 filed by the PM, implemented and QA'd (continuing the session above)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's replies approving items 2 and 3 and "the bigger gap", "add a note" (Gemini candidate in Open question 9) and "option a" (`.env.example` in task 15); no new key prompt saved
+- files changed: `_docs/testing.md`, `_docs/roadmap-showcase.md`, `_docs/architecture.md` (#104, f6c0efc); `_docs/tasks.md` (#105, 98d0a7e); session summaries for #104 and #105; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #104 at f6c0efc, #105 at 98d0a7e. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved the work before each step; no protected file was committed in this entry. Commands that required approval: `gh issue create` (PM, ask rules); `make issue-close` for #104 and #105 (ask rule)
