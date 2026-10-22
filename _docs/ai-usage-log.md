@@ -1490,3 +1490,14 @@ Copy this template for each new entry:
 - files changed: commit `6ff10d9` (`_docs/openapi.yaml`, `_docs/api.md`) and this log. GitHub: Engineer comment on #50
 - verification (tests run, reviewer verdict): `make openapi-validate` exit 0 on the final file; negative copy with `ResponderNotificationJob` renamed in the response `$ref` exited 2 and was deleted; `.scratch/check_responder.py` listed exactly two operations using `responderAuth`, both GET, and no recipient, owner, `advisorySummary`, finding or `untrustedAdvisoryData` property on `ResponderNotificationJob`; `make verify` PASS (62/62 tests, no whitespace errors, no test files changed). No reviewer verdict yet
 - human review (what I checked or corrected, or `none`): none yet. Commands that required approval: none
+
+### 2026-10-22 — #50 orchestrator and QA: responder contract close-out; #56 filed
+
+- date: 2026-10-21 to 2026-10-22
+- task/issue: #50 (lifecycle steps 4-9, except the Engineer's own entry above); also filed #56 (roadmap step 10, Stage 4 testing)
+- agent role: Orchestrator (main session), with a QA subagent
+- model: claude-sonnet-5-5 (Claude Code, cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): "add the new step 10 issue for the other agent first then start #50"; "approve all three, then close #50"; no new key prompt saved
+- files changed: `_docs/architecture.md` (protected; `cd870df`, `54bdce3`, `147bd7a`), `_docs/roadmap.md` (step 8b and 10 rows, check-in), this log, `_session-summaries/issue-050-responder-read-only-contract.md`. GitHub: #56 created; #50 comments 6329301519 (QA PASS), 6329360243, 6329361058 and 6329361312 (approval records)
+- verification (tests run, reviewer verdict): QA PASS at `9a03ba9` (6329301519); `make assert-clean` PASS and HEAD `9a03ba9` unchanged after QA; `make verify` PASS on the pre-push run for the Engineer's commits (62/62). The three `architecture.md` commits were not re-checked by QA
+- human review (what I checked or corrected, or `none`): the human merged PR #57 (the contract diff, `9a03ba9`) and approved spec notes 1-3 in chat. Commands that required approval: `HUMAN_APPROVED=1 git commit` for the three protected commits; `git push -u origin` of the session branch (cloud-session exception); a first `git push origin HEAD:<branch>` was refused by `guard_git.py`
