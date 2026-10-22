@@ -89,6 +89,17 @@ info:
     lists, which compares ids as strings by Unicode code point only to make
     the order stable and repeatable; it does not mean "newer".
 
+    Roles on the frontend writes. `registerAsset` and `updateAsset` are for a
+    `security lead` only. `reScan` is for a `security lead` on any asset and
+    for an `asset owner` only on an asset whose `ownerEmail` matches their
+    `email` (trimmed, case-insensitive). `acceptRisk` follows its own rule
+    below. A signed-in user outside the rule gets `403 forbidden`.
+
+    Not in this contract. `GET /health` is infrastructure, not an operation
+    of this contract: Compose health checks, the reverse proxy and the deploy
+    script call it, it needs no credential and returns no VulnTriage data,
+    and the conformance test excludes it by name.
+
     Status mapping: `401` only for a missing, expired or invalid credential or
     a bad login; `403` only for a caller who is authenticated but not allowed
     (wrong consumer, an operation outside the credential's allowlist, owner
@@ -137,7 +148,7 @@ tags:
   - name: findings
     description: Ranked findings, their assets and risk acceptance.
   - name: assets
-    description: Asset registration, listing and manual re-scan.
+    description: Asset registration, listing, owner and attribute update, and manual re-scan.
   - name: n8n
     x-showcase: true
     description: |
@@ -381,8 +392,12 @@ paths:
         attempted. The schema pattern and description, not only the backend,
         enforce the shape.
 
+        Only a `security lead` may register an asset (US-1); an `asset owner`
+        gets `403 forbidden` and nothing is registered or read.
+
         Checks, in order: `401`, then `403` for a missing or wrong
-        `X-Requested-With` header (CSRF), then `422` for body validation.
+        `X-Requested-With` header (CSRF), then `403` for a caller who is not a
+        `security lead`, then `422` for body validation.
       security:
         - cookieAuth: []
       parameters:
@@ -442,6 +457,61 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [assets]
+      operationId: updateAsset
+      summary: Update an asset's owner and attributes
+      description: |
+        Changes the owner name, owner email, criticality or internet-facing
+        flag of a registered asset, so a misregistered asset is corrected and
+        an ownerless asset gets an owner without a second registration. Only
+        a `security lead` may call it; an `asset owner` gets `403 forbidden`.
+        The body has any of `ownerName`, `ownerEmail`, `criticality` and
+        `internetFacing`, at least one, and nothing else (the name and the
+        repository URL cannot be changed). A field set to its current value
+        changes nothing. Every changed field writes one audit entry (the
+        user, the time, the previous value and the new value); asset audit
+        entries are stored and not part of the asset response. The response
+        is the updated `Asset`. The change also re-scores the asset's findings
+        (criticality and exposure feed the tiers).
+
+        Releasing held notifications: when the asset has an owner email after
+        the change, the backend moves the asset's jobs in the internal states
+        `held: ownerless` and `held: owner email missing` to `pending`, so
+        the delivery sends them to the new owner (a job of a lifecycle that
+        has ended is not released). Jobs held for a configuration error are
+        not touched. The wire states do not change.
+
+        Checks, in order: `401`, then `403` for a missing or wrong
+        `X-Requested-With` header (CSRF), then `404` for an unknown id, then
+        `403` for a caller who is not a `security lead`, then `422` for an
+        empty body, an extra field or an invalid value.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdateInput'
+      responses:
+        '200':
+          description: The updated asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /assets/{id}/rescan:
     post:
@@ -453,8 +523,14 @@ paths:
         The asset's current scan status does not change until that scan
         finishes; a later `GET /assets/{id}` reports the new status.
 
+        A `security lead` may re-scan any asset. An `asset owner` may re-scan
+        only an asset whose `ownerEmail` matches the signed-in user's `email`
+        after trimming both values and comparing them case-insensitively;
+        otherwise `403 forbidden` and no scan starts.
+
         Checks, in order: `401`, then `403` for a missing or wrong
-        `X-Requested-With` header (CSRF), then `404` for an unknown id.
+        `X-Requested-With` header (CSRF), then `404` for an unknown id, then
+        `403` owner mismatch.
       security:
         - cookieAuth: []
       parameters:
@@ -1770,6 +1846,34 @@ components:
             rules. `http://`, a `git@github.com:` form, a non-GitHub host, an
             extra path, a `.` or `..` repo segment, or a repo ending in `.git`
             returns `422 validation` and starts no scan.
+
+    AssetUpdateInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: |
+        Any of the four fields, at least one; every body is strict. The asset
+        name and repository URL cannot be changed. Setting `ownerEmail` to an
+        email address releases the asset's jobs held as `held: ownerless` or
+        `held: owner email missing` (see `updateAsset`).
+      properties:
+        ownerName:
+          type:
+            - string
+            - 'null'
+          description: '`null` clears the owner name.'
+        ownerEmail:
+          type:
+            - string
+            - 'null'
+          format: email
+          description: |
+            `null` clears the owner email; otherwise an email address.
+            `format` is an annotation by default, so #24 also validates it.
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        internetFacing:
+          type: boolean
 
     IsoWeek:
       type: string

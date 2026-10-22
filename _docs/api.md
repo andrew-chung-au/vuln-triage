@@ -4,7 +4,7 @@ Status: draft for review (#23 frontend rows; #27 n8n and MCP server rows; #50 re
 
 **Showcase scope.** Following the spec's [Showcase (post-submission)](specs.md) section, the n8n workflows, the LLM brief (US-6), reminders, escalation and the weekly digest (US-9), the MCP server (US-12) and the workflow export (US-16) are built after submission. In this document, "Showcase" marks them. Nothing is deleted: the operations, schemas and rules stay in full so the showcase build has its contract, and `openapi.yaml` carries `x-showcase: true` on each showcase operation and security scheme. Showcase operations: `listNotificationJobs`, `claimNotificationJob`, `reportNotificationJob`, `getWeeklyDigest`, `mcpListTopExposures`, `mcpWhichAssetsAffected`, `mcpGetFinding`. Showcase credentials: `n8nAuth` and `mcpAuth`. Showcase content: the `reminder`, `escalation`, `digest` and `signals changed` job kinds (the E8 notice is Showcase, human decision 2026-10-22; the `signalsChanged` field on findings stays in submission), `WeeklyDigest`, `Brief` and `briefStatus` (the fields stay on the frontend operations, unchanged), and every mention of n8n or the MCP server below, unless a line says otherwise. The submission scope keeps the backend-delivered owner notification (US-8), the backend's daily refresh and scheduled re-scan (US-7, US-10: `startSignalRefresh` and `startScheduledRescan` stay unmarked; in submission scope the backend scheduler starts them in-process, and the n8n token is their only HTTP credential and is Showcase, so over HTTP they are reachable only in the showcase build; the submission build still implements them and enforces their allowlist because the conformance test compares every operation), `getAsset`, the frontend operations and the responder operations (US-15).
 
-The contract is OpenAPI 3.1.0. It covers twenty-one operations: the ten the frontend uses (the nine `Services` methods in `frontend/src/services/types.ts`, plus `reScan` from architecture A3 and #23 decision D5), the six n8n calls and the three MCP-only calls from #27, and the two read-only responder calls from #50. The MCP server's fourth tool, `get_asset`, reuses the frontend's `GET /assets/{id}`.
+The contract is OpenAPI 3.1.0. It covers twenty-two operations: the eleven the frontend uses (the nine `Services` methods in `frontend/src/services/types.ts`, plus `reScan` from architecture A3 and #23 decision D5, and `updateAsset` for `PATCH /assets/{id}`, added in #108 stage 2), the six n8n calls and the three MCP-only calls from #27, and the two read-only responder calls from #50. The MCP server's fourth tool, `get_asset`, reuses the frontend's `GET /assets/{id}`.
 
 ## Endpoint table
 
@@ -20,8 +20,9 @@ The contract is OpenAPI 3.1.0. It covers twenty-one operations: the ten the fron
 | `POST` | `/findings/{id}/risk-acceptance` | path `id`; body `RiskAcceptanceRequest` `{reason}`; CSRF | `200` `FindingWithAsset` | Session cookie | frontend |
 | `GET` | `/assets` | none | `200` `Asset[]` | Session cookie | frontend |
 | `GET` | `/assets/{id}` | path `id` | `200` `Asset` (includes owner name and email, A29) | Session cookie or MCP token (Showcase credential) | frontend; Showcase: MCP server (`get_asset`) |
-| `POST` | `/assets` | body `NewAssetInput`; CSRF | `201` `Asset` with `scanStatus: "not yet scanned"` | Session cookie | frontend |
-| `POST` | `/assets/{id}/rescan` | path `id`; CSRF | `202`, no body | Session cookie | frontend |
+| `POST` | `/assets` | body `NewAssetInput`; CSRF | `201` `Asset` with `scanStatus: "not yet scanned"` | Session cookie, role `security lead` | frontend |
+| `PATCH` | `/assets/{id}` | path `id`; body `AssetUpdateInput` (any of `ownerName`, `ownerEmail`, `criticality`, `internetFacing`; at least one); CSRF | `200` `Asset` | Session cookie, role `security lead` | frontend |
+| `POST` | `/assets/{id}/rescan` | path `id`; CSRF | `202`, no body | Session cookie, role `security lead` on any asset, `asset owner` on an asset they own | frontend |
 | `POST` | `/signals/refresh` | none | `202`, no body | n8n token (Showcase credential) | backend scheduler (US-7); n8n `daily-signal-refresh` is Showcase |
 | `POST` | `/scans` | none | `202`, no body | n8n token (Showcase credential) | backend scheduler (US-10); n8n `scheduled-rescan` is Showcase |
 | `GET` | `/notification-jobs` | optional repeated query `kind` | `200` `NotificationJob[]`, pending only, `createdAt` then `id` ascending | n8n token | Showcase: n8n (US-8 tracker issue, US-9, E8) |
@@ -35,6 +36,10 @@ The contract is OpenAPI 3.1.0. It covers twenty-one operations: the ten the fron
 | `GET` | `/responder/notification-jobs` | required query `findingId`; optional repeated `state` | `200` `ResponderNotificationJob[]`, every state, `createdAt` then `id` descending | Responder token | responder (US-15) |
 
 `POST /assets` starts the first scan asynchronously. `POST /assets/{id}/rescan` starts a scan and returns immediately; the asset's current scan status does not change until the scan finishes, and a later `GET /assets/{id}` reports the new status. `POST /auth/logout` is idempotent and does not require a session.
+
+`PATCH /assets/{id}` (decision of the human, 2026-10-22) is the only way to set or change an asset's owner name, owner email, criticality or internet-facing flag after registration; the name and the repository URL cannot be changed. Only a `security lead` may call it. A field set to its current value changes nothing; every changed field writes one stored audit entry (user, time, previous value, new value), and the asset response carries no audit trail. After a change that leaves the asset with an owner email, the backend releases the asset's notification jobs held as `held: ownerless` or `held: owner email missing` (they become `pending` and the delivery sends them; a job whose lifecycle has ended is not released; jobs held for a configuration error stay held). A change to criticality or the internet-facing flag re-scores the asset's findings. The wire states of a job do not change, so there is no new job state in the contract.
+
+`GET /health` is infrastructure outside this contract. Compose health checks, the reverse proxy and the deploy script call it; it needs no credential, returns no VulnTriage data and is not an operation in `openapi.yaml`. The conformance test of task 14 excludes it by name, and a test shows that any other path missing from the contract still fails the comparison.
 
 `POST /signals/refresh` and `POST /scans` start work asynchronously and return `202` every time, including while a run is in progress; there is no `409`. `POST /scans` re-scans every asset and takes no asset id; each asset's scan status changes only when its scan finishes.
 
@@ -83,6 +88,8 @@ The contract has four credentials, one per consumer:
 
 A `security lead` may accept risk on any finding. An `asset owner` may accept risk only when the finding's asset `ownerEmail` matches the signed-in user's `email` after trimming both values and comparing them case-insensitively. Otherwise the response is `403 forbidden` and nothing changes.
 
+Role rules for the other frontend writes (US-1 says a security lead registers assets; ASSUMPTION A30 in `architecture.md` carries them): `POST /assets` and `PATCH /assets/{id}` are for a `security lead` only, so an `asset owner` gets `403 forbidden` and nothing is registered, read or changed. `POST /assets/{id}/rescan` is for a `security lead` on any asset and for an `asset owner` only on an asset whose `ownerEmail` matches the signed-in user's `email` after the same trimming and case-insensitive comparison; otherwise `403 forbidden` and no scan starts. The reason is that registration reads repositories with the backend's repository token, and a scan costs the backend's quota.
+
 Each operation's `security` lists exactly the credentials that may call it:
 
 - Showcase: n8n allowlist (six operations): `startSignalRefresh`, `startScheduledRescan`, `listNotificationJobs`, `claimNotificationJob`, `reportNotificationJob`, `getWeeklyDigest`. The n8n token cannot set a finding status (including `risk accepted`), edit an asset, read users or call any frontend operation.
@@ -92,12 +99,12 @@ Each operation's `security` lists exactly the credentials that may call it:
 
 Refused cases the contract fixes for the responder (each returns the stated response and changes no state):
 
-- The responder token on `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `POST /findings/{id}/risk-acceptance`, `POST /assets`, `POST /assets/{id}/rescan`, `POST /signals/refresh` or `POST /scans` returns `403`.
+- The responder token on `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `POST /findings/{id}/risk-acceptance`, `POST /assets`, `PATCH /assets/{id}`, `POST /assets/{id}/rescan`, `POST /signals/refresh` or `POST /scans` returns `403`.
 - The responder token on `GET /notification-jobs`, `GET /findings`, `GET /findings/{id}`, `GET /assets/{id}` or any `/mcp/` operation returns `403`: a GET that is not on its list is refused too.
 - No credential on a responder operation returns `401`.
 - The reverse: the n8n token, the MCP token or a session cookie on either responder operation returns `403`.
 
-Refused cases the contract fixes for the other consumers: `POST /findings/{id}/risk-acceptance`, `POST /assets` or `POST /assets/{id}/rescan` with either service token returns `403` and changes nothing; the MCP token on `GET /notification-jobs` or any other n8n operation returns `403`; the n8n token on `GET /assets/{id}` returns `403`; a session cookie on any n8n or MCP-only operation returns `403`; no credential on any operation except login and logout returns `401`.
+Refused cases the contract fixes for the other consumers: `POST /findings/{id}/risk-acceptance`, `POST /assets`, `PATCH /assets/{id}` or `POST /assets/{id}/rescan` with either service token returns `403` and changes nothing; the MCP token on `GET /notification-jobs` or any other n8n operation returns `403`; the n8n token on `GET /assets/{id}` returns `403`; a session cookie on any n8n or MCP-only operation returns `403`; no credential on any operation except login and logout returns `401`.
 
 The only owner contact details in any response are `NotificationJob.recipient.email`, which n8n needs to send the email, and `Asset.ownerEmail` (with `ownerName`), which #23 returns and architecture A29 gives to `get_asset`. No `Error` body, log event or telemetry payload carries a recipient email, a tracker issue number, a token or advisory text.
 
@@ -131,6 +138,7 @@ The check order is fixed and uses only the steps an operation has.
 | `listAssets` | `200`, `401` |
 | `getAsset` | `200`, `401`, `403`, `404` |
 | `registerAsset` | `201`, `401`, `403`, `422` |
+| `updateAsset` | `200`, `401`, `403`, `404`, `422` |
 | `reScan` | `202`, `401`, `403`, `404` |
 | `startSignalRefresh` | `202`, `401`, `403` |
 | `startScheduledRescan` | `202`, `401`, `403` |
@@ -149,8 +157,9 @@ The `403` for a valid credential of the wrong consumer applies to every operatio
 Per-operation order:
 
 - `acceptRisk`: `401` no session, `403` missing or wrong CSRF header, `404` unknown finding, `403` owner mismatch, `422` empty/whitespace-only `reason` or extra fields, `409` finding not `open`.
-- `registerAsset`: `401`, `403` missing or wrong CSRF header, then `422`.
-- `reScan`: `401`, `403` missing or wrong CSRF header, then `404`.
+- `registerAsset`: `401`, `403` missing or wrong CSRF header, `403` caller is not a `security lead`, then `422`.
+- `updateAsset`: `401`, `403` missing or wrong CSRF header, `404` unknown asset, `403` caller is not a `security lead`, then `422` (empty body, extra field, invalid value).
+- `reScan`: `401`, `403` missing or wrong CSRF header, `404`, then `403` owner mismatch for an `asset owner`.
 - `getFinding`: `401`, then `404`.
 - `getAsset`: `401`, `403` the n8n token (a credential this operation does not list), then `404`.
 - `startSignalRefresh`, `startScheduledRescan`, `mcpWhichAssetsAffected`: `401`, then `403`.
@@ -205,7 +214,8 @@ Schemas match the architecture Data model and the spec:
 - Showcase (US-6): `Brief` is `{summary, impact, remediation, fixVersion, referenceLink}`. `fixVersion` is nullable. `referenceLink` is built by VulnTriage from the primary id, never from advisory text. `brief` is `null` unless `briefStatus` is `available`; the internal rejection reason is never sent. `briefStatus` is `pending` when the current lifecycle has no brief row yet.
 - `AuditEntry` is `{id, actor, actorDisplayName, createdAt, field, previousValue, newValue, reason, source, restoresEntryId}`. `actorDisplayName` is required and nullable: the actor's display name at the time of the action, `null` for `re-scan` and `system`. `previousValue` is nullable (`null` on creation); `reason` is required and non-empty for an entry whose `newValue` is `risk accepted`, otherwise nullable; `actor` is a user id, `re-scan` or `system`; `restoresEntryId` is nullable.
 - `NewAssetInput` is `{name, ownerName, ownerEmail, criticality, internetFacing, repositoryUrl}` and is strict (`additionalProperties: false`). The owner fields are nullable; `ownerEmail` is an email address when present, and #24 also validates its format. `name` is non-empty after trimming. `repositoryUrl` matches `https://github.com/<owner>/<repo>` with owner `[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})` and repo `[A-Za-z0-9_.-]{1,100}`, where the repo is not `.` or `..` and does not end in `.git`; `http://`, `git@github.com:...`, a non-GitHub host, an extra path, a `.` or `..` repo segment, or a repo ending in `.git` returns `422 validation` and starts no scan. VERIFY: these are GitHub's owner and repository naming rules.
-- Every request body is strict (`additionalProperties: false`), including `LoginRequest`, `RiskAcceptanceRequest` and `NewAssetInput`; a body with an extra field returns `422 validation` and changes nothing.
+- `AssetUpdateInput` is `{ownerName?, ownerEmail?, criticality?, internetFacing?}`, strict, with at least one key (`minProperties: 1`); the two owner fields are `string` or `null` (`null` clears the field) and `ownerEmail` is an email address when present, which #24 also validates; `name` and `repositoryUrl` are not accepted. An empty body, an extra field or an invalid value returns `422 validation` and changes nothing.
+- Every request body is strict (`additionalProperties: false`), including `LoginRequest`, `RiskAcceptanceRequest`, `NewAssetInput` and `AssetUpdateInput`; a body with an extra field returns `422 validation` and changes nothing.
 - `FindingWithAsset` is `Finding` plus `asset: Asset`. Both `GET /findings` and `GET /findings/{id}` return it, including `auditTrail`, `rankReason` and `brief`/`briefStatus`.
 - `GET /findings` states that the response order is the server's ranking and the client must not re-sort.
 - `FindingFields` is every `Finding` field except `auditTrail`; `Finding` is `FindingFields` plus `auditTrail`. #27 split it out so `NotificationFinding` can reuse the fields; the `Finding` wire shape is unchanged.
@@ -260,7 +270,7 @@ The contract follows the spec and architecture, not the mock. The D4 follow-up a
 | `AuditEntry` has no source or restore link | Adds `source` and `restoresEntryId` | Yes: add the fields. |
 | `Finding.structuredSummary` | Removed; the structured finding is the finding's own fields | Yes: remove the field and its uses. |
 | `Finding` has no rank reason | Adds non-empty `rankReason` | Yes: add the field. |
-| `Services` has nine methods | Adds `reScan(assetId): Promise<void>` for `POST /assets/{id}/rescan` | Yes: add the method to the interface and the mock. |
+| `Services` has nine methods | Adds `reScan(assetId): Promise<void>` for `POST /assets/{id}/rescan`, and `updateAsset(assetId, input): Promise<Asset>` for `PATCH /assets/{id}` (#108 stage 2) | Yes: add `reScan` in D4; `updateAsset` is added to the interface, the mock and the real service in task 12. |
 
 #27 adds no frontend `Services` method and changes no frontend type. The n8n and MCP operations are not frontend data paths, the shared `GET /assets/{id}` keeps the #23 `Asset` response, and the `FindingFields` split does not change the `Finding` wire shape. D4 remains the only follow-up for the #23 rows.
 
@@ -270,7 +280,7 @@ Every story that needs data maps to at least one operation or a linked follow-up
 
 | User story | Consumer | Endpoint(s) |
 |---|---|---|
-| US-1: register an asset | frontend | `POST /assets`, `GET /assets`, `GET /assets/{id}` |
+| US-1: register an asset (and correct its owner or attributes) | frontend | `POST /assets`, `PATCH /assets/{id}`, `GET /assets`, `GET /assets/{id}` |
 | US-2: dependencies read automatically | frontend | `POST /assets` (starts the first scan), `GET /assets/{id}` (scan status and warnings), `GET /findings` (the resulting dependency entries) |
 | US-3: match vulnerabilities with fixed versions | frontend | `GET /findings`, `GET /findings/{id}` |
 | US-4: enrich with KEV, EPSS and asset context | frontend | `GET /findings`, `GET /findings/{id}` |
@@ -330,7 +340,7 @@ These are the choices #23 makes where the spec and architecture left the wire sh
 - `forbidden` (`403`) is the fifth error code, for an authenticated caller who is not allowed (D2).
 - `GET /findings` returns the server's rank order and the client does not re-sort.
 - The returned brief is the latest row for the current lifecycle; a missing row is `pending`, an unavailable row is `unavailable`, and an earlier lifecycle's brief is never returned (D3).
-- `reScan` is a tenth operation (D5).
+- `reScan` is a tenth operation (D5). `updateAsset` (`PATCH /assets/{id}`) is an eleventh, added by the human's decision of 2026-10-22 in #108 stage 2.
 - `scanWarnings.line` is nullable when a warning is not tied to a line.
 
 `VERIFY:` the FastAPI version pinned in #24 generates OpenAPI 3.1.0, so #24's conformance test compares like with like. `VERIFY:` `uvx openapi-spec-validator` (the `openapi-spec-validator` package) validates OpenAPI 3.1.

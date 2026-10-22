@@ -222,7 +222,7 @@ Worked example (T = 0.10; all detected in the same scan, so step 3 ties):
 
 Ordering `P3`: step 1 puts `fnd-0002` (0.55) first, `fnd-0004` and `fnd-0005` (0.05) next, and `fnd-0003` (`n/a`) last. `fnd-0004` and `fnd-0005` tie at step 2 (both `high`) and step 3 (same scan); step 4 puts `fnd-0004` first. Final order: `fnd-0001`, `fnd-0002`, `fnd-0004`, `fnd-0005`, `fnd-0003`, `fnd-0006`.
 
-Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field (showcase: the GitHub issue is still opened once, as E2). The held state is internal to the backend: for submission the backend delivery worker sends no email for such a job and leaves it held. Showcase (n8n): the job reaches n8n as `pending` with `recipient.email: null`, so n8n opens the GitHub issue once and sends no email (#27).
+Partial owner: ASSUMPTION: (A21) an owner with an email but no name is notified at that email; an owner with a name but no email cannot be reached, so the notification is held (`held: owner email missing`) and the dashboard shows the missing field (showcase: the GitHub issue is still opened once, as E2). The held state is internal to the backend: for submission the backend delivery worker sends no email for such a job and leaves it held. Showcase (n8n): the job reaches n8n as `pending` with `recipient.email: null`, so n8n opens the GitHub issue once and sends no email (#27). Release (human decision, 2026-10-22): a `held: ownerless` or `held: owner email missing` job is released to `pending` when `PATCH /assets/{id}` leaves the asset with an owner email; the delivery then sends it to that email (a job whose lifecycle has ended is not released, and a job held for a configuration error is not touched). The change is audited (who, when, previous value), and the asset's findings are re-scored because criticality and exposure feed the tiers. Until an owner email is set, a held job stays held, so an ownerless `P1` finding is not delivered and, under A39, fires no alert; that is accepted (human, 2026-10-22) and is visible in the dashboard as the ownerless marker.
 
 ## LLM brief
 
@@ -310,7 +310,7 @@ It calls only the API, never the database, with its own token (`MCP_API_TOKEN`, 
 
 ## Security boundaries
 
-Dashboard authentication (US-11): local accounts created by an operator command (no sign-up; the command is built in task 9 and reads the password from a prompt); username and password; passwords hashed with Argon2id (for example `argon2-cffi`, dependency, ask before adding; VERIFY: recommended parameters). Server-side sessions: a random 256-bit id in a `HttpOnly; Secure; SameSite=Strict` cookie, stored hashed, 30-minute idle and 8-hour absolute lifetime; logout deletes the session. Every write also requires a custom request header (CSRF). Five failed logins for a username in 15 minutes lock it for 15 minutes. Roles: `security lead` may accept risk on any finding; `asset owner` only on assets whose owner email matches theirs. ASSUMPTION: (A30) all of this paragraph's values and the owner-match rule.
+Dashboard authentication (US-11): local accounts created by an operator command (no sign-up; the command is built in task 9 and reads the password from a prompt); username and password; passwords hashed with Argon2id (for example `argon2-cffi`, dependency, ask before adding; VERIFY: recommended parameters). Server-side sessions: a random 256-bit id in a `HttpOnly; Secure; SameSite=Strict` cookie, stored hashed, 30-minute idle and 8-hour absolute lifetime; logout deletes the session. Every write also requires a custom request header (CSRF). Five failed logins for a username in 15 minutes lock it for 15 minutes. Roles: `security lead` may accept risk on any finding; `asset owner` only on assets whose owner email matches theirs. Registering an asset (`POST /assets`) and updating an asset's owner or attributes (`PATCH /assets/{id}`) are for the `security lead` only; a manual re-scan is for the `security lead` on any asset and for an `asset owner` on an asset whose owner email matches theirs (`_docs/api.md` § Authorization). ASSUMPTION: (A30) all of this paragraph's values, the owner-match rule and these role rules.
 
 Secrets: none in the repository, images or telemetry; `.env.example` lists names only.
 
@@ -376,7 +376,7 @@ US-14 alert rule:
 - Exactly one alert naming the finding without excluded data: the only identifying label is the opaque finding id; tier is the only other label.
 - Destination: for an alert naming a finding, a Grafana webhook contact point to the responder (Responder agent) and an email to the human; for the `NoData` alert (no `finding_id`), the email to the human only.
 
-ASSUMPTION: (A33) W and the evaluation interval (no repeat notification is the human's decision of 2026-10-20 at the #43 decision point). ASSUMPTION: (A39) held jobs (`held: ownerless`, `held: owner email missing`, `held: configuration error`) never set the metric; they are visible in the dashboard instead.
+ASSUMPTION: (A33) W and the evaluation interval (no repeat notification is the human's decision of 2026-10-20 at the #43 decision point). ASSUMPTION: (A39) held jobs (`held: ownerless`, `held: owner email missing`, `held: configuration error`) never set the metric; they are visible in the dashboard instead (accepted by the human, 2026-10-22; setting an owner email releases them).
 
 ## Responder agent
 
@@ -514,7 +514,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 - (A36) One EC2 server runs dev and prod as two Compose projects behind two `sslip.io` hostnames; Postgres in a container on EBS.
 - (A37) Budget amount set by the human; nightly stop of the server with an off switch; 24-hour catch-up at backend start; 7-day telemetry retention.
 - (A38) The pilot seed list is a data file in the repository, registered through the API.
-- (A39) Held notification jobs never fire the US-14 alert.
+- (A39) Held notification jobs never fire the US-14 alert. Accepted by the human, 2026-10-22; a held owner job is released when an owner email is set (`PATCH /assets/{id}`).
 - (A40) Only export is a no-op without a Collector endpoint; the SDK always creates real span contexts, so a job's `traceparent` is always valid.
 - (A41) If Juice Shop has no supported lockfile, an open-source repository pinned to older versions replaces it.
 

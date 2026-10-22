@@ -15,13 +15,13 @@ Counts of named case IDs, recounted from this document with a script (each handl
 | Prefix | Submission | Showcase |
 |---|---|---|
 | `U-*` unit | 12 | 1 |
-| `I-*` integration | 22 | 12 |
+| `I-*` integration | 24 | 12 |
 | `E-*`, `W-*`, `L-*`, `R-*` | 0 | 5 |
 | `S-*` security (including the `S-FIXTURE` fixture) | 4 | 6 |
 | `T-*`, `A-*`, `P-*`, `C-*`, `F-*` | 16 | 2 |
-| Total | 54 | 26 |
+| Total | 56 | 26 |
 
-Method: a read-only script reads this document (each handle in code font once, prefix wildcards such as `U-*` and the `I-RESP-*` family not counted, `R-*` counted once); the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24). The E8 decision of 2026-10-22 then moved `S-SIGNALS` to Showcase and added the Showcase case `I-SIGNALS-NOTICE` (55 - 1 = 54; 24 + 2 = 26).
+Method: a read-only script reads this document (each handle in code font once, prefix wildcards such as `U-*` and the `I-RESP-*` family not counted, `R-*` counted once); the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24). The E8 decision of 2026-10-22 then moved `S-SIGNALS` to Showcase and added the Showcase case `I-SIGNALS-NOTICE` (55 - 1 = 54; 24 + 2 = 26). The asset update and the `/health` exclusion then added two submission cases, `I-ASSET-UPDATE` and `I-CONTRACT` (54 + 2 = 56).
 
 CI jobs: 9 submission jobs (`unit`, `sqlite-integration`, `frontend`, `openapi-validation`, `security-scan`, `postgres-integration`, `telemetry`, `alert`, `responder`) and 2 Showcase jobs (`workflow-export`, `e2e`). The `postgres-integration` job runs `I-*` cases; its Showcase cases are not counted in the submission totals.
 
@@ -120,6 +120,7 @@ Integration cases through the app and database:
 | Case | `_docs/api.md` endpoint(s) | Asserts |
 |---|---|---|
 | `I-ASSET` | `POST /assets`, `GET /assets`, `GET /assets/{id}` | Registration, scan status, owner fields and warnings. |
+| `I-ASSET-UPDATE` | `PATCH /assets/{id}`, `GET /assets/{id}`, `GET /findings`, the backend delivery worker, in-process fake mail sink | Only a `security lead` may update (an `asset owner` gets `403`, an unknown id `404`, an empty body, an extra field or a bad email `422`, each with no change); a changed field writes one audit entry (user, time, previous value, new value) and an unchanged value writes none; a criticality or exposure change re-scores the findings; setting an owner email on an ownerless asset releases its `held: ownerless` job and the delivery sends exactly one email, and a name-only owner's `held: owner email missing` job is released the same way, while a `held: configuration error` job stays held. |
 | `I-FINDINGS` | `GET /findings`, `GET /findings/{id}` | Findings, aliases, fixed version, KEV/EPSS and asset context. |
 | `I-RANK` | `GET /findings` | Server rank order and rank reason. |
 | `I-BRIEF` (Showcase) | `GET /findings/{id}` | Brief states `available`, `unavailable` and `pending`; no mismatched version. |
@@ -142,9 +143,10 @@ Integration cases through the app and database:
 | `I-SCHED` | Backend scheduler (task 38), `GET /findings` | With a fake clock and stubbed feeds, the daily refresh and the scheduled re-scan of every asset (trigger `schedule`) start from the backend's own scheduler: no external workflow tool, no HTTP call from outside the backend, no outbound call outside the stubs; signals and ranks change; a second run the same day creates no second notification job. Catch-up (A37): a backend start with the last completed run more than 24 hours old (or none) runs the refresh and then the re-scan at once; a start with the last run less than 24 hours old runs nothing before 06:00 UTC. |
 | `I-AUTH-N8N` (Showcase) | `POST /signals/refresh`, `POST /scans`, `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `GET /reports/weekly-digest` | The n8n allowlist; wrong consumer is `403`; no risk acceptance. |
 | `I-AUTH-MCP` (Showcase) | `GET /mcp/top-exposures`, `GET /mcp/vulnerabilities/{vulnerabilityId}/assets`, `GET /mcp/findings/{id}`, `GET /assets/{id}`, every write | The MCP token is GET-only; a write is `403` and changes no state. |
-| `I-AUTH-SESSION` | `GET /findings`, `GET /assets`, `POST /assets`, `POST /assets/{id}/rescan`, `POST /findings/{id}/risk-acceptance` | The session allowlist, CSRF, and a service token is `403`; no credential is `401`. |
+| `I-AUTH-SESSION` | `GET /findings`, `GET /assets`, `POST /assets`, `PATCH /assets/{id}`, `POST /assets/{id}/rescan`, `POST /findings/{id}/risk-acceptance` | The session allowlist, CSRF, and a service token is `403`; no credential is `401`. Role rules: an `asset owner` gets `403` on `POST /assets` and `PATCH /assets/{id}` and on `POST /assets/{id}/rescan` for an asset they do not own, and `202` for one they own; a `security lead` may re-scan any asset. |
+| `I-CONTRACT` | The backend's generated OpenAPI document, `_docs/openapi.yaml`, `GET /health` | The conformance test compares all 22 operations. `GET /health` answers `200` without a credential and is excluded from the comparison by name; a test-only route that is not in the contract still fails the comparison, so the exclusion hides nothing else. |
 
-OpenAPI conformance is assigned to the backend suite: FastAPI's generated document is compared with `_docs/openapi.yaml` for path, method, parameter, request schema, response schema and security; `make openapi-validate` also runs. The test itself is #24's job; it runs in the `openapi-validation` PR job.
+OpenAPI conformance is assigned to the backend suite: FastAPI's generated document is compared with `_docs/openapi.yaml` for path, method, parameter, request schema, response schema and security; `make openapi-validate` also runs. `GET /health` is infrastructure outside the contract and is excluded by name; `I-CONTRACT` tests that exclusion. The test itself is #24's job (task 14); it runs in the `openapi-validation` PR job.
 
 Showcase: `W-EXPORT` is the US-16 check: every `n8n/workflows/*.json` parses, its workflow name matches the file name, and the exported file is the one the Compose n8n imports. It runs in the `workflow-export` PR job.
 
@@ -153,7 +155,7 @@ Responder credential refused cases from the closed #50 contract (`_docs/api.md` 
 | Case | Expected |
 |---|---|
 | `I-RESP-GET` | The responder token gets `200` on `GET /responder/findings/{id}` and `GET /responder/notification-jobs`; these are its only operations. |
-| `I-RESP-WRITE` | The responder token on `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `POST /findings/{id}/risk-acceptance`, `POST /assets`, `POST /assets/{id}/rescan`, `POST /signals/refresh` or `POST /scans` returns `403` and changes no state. |
+| `I-RESP-WRITE` | The responder token on `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `POST /findings/{id}/risk-acceptance`, `POST /assets`, `PATCH /assets/{id}`, `POST /assets/{id}/rescan`, `POST /signals/refresh` or `POST /scans` returns `403` and changes no state. |
 | `I-RESP-OTHERGET` | The responder token on `GET /notification-jobs`, `GET /findings`, `GET /findings/{id}`, `GET /assets/{id}` or any `/mcp/` operation returns `403`. |
 | `I-RESP-CONSUMER` | The n8n token, MCP token or a session cookie on either responder operation returns `403`. |
 | `I-RESP-NOCRED` | No credential on either responder operation returns `401`. |
@@ -308,7 +310,7 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | `unit` | `ubuntu-latest` | `make test`, `make frontend-test` | `U-*`, `F-*` |
 | `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases, including `I-OWNER-SEND`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-OWNER-NOAWS` and `I-OWNER-SENDER` (in-process sink form) and `I-SCHED` |
 | `frontend` | `ubuntu-latest` | `make frontend-test`, `make frontend-typecheck` | `F-*` |
-| `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance |
+| `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance, `I-CONTRACT` |
 | `security-scan` | `ubuntu-latest` | `make security-scan` (planned) | `C-*` |
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
@@ -325,7 +327,7 @@ Every acceptance bullet of US-1..US-16 maps to at least one test type or named c
 
 | Story / bullet | Acceptance | Test types or named cases |
 |---|---|---|
-| US-1 | Asset record shows owner name/email or ownerless marker, criticality and internet-facing; listing shows all three | `F-ASSET` (vitest); `I-ASSET` (`POST /assets`, `GET /assets`, `GET /assets/{id}`) |
+| US-1 | Asset record shows owner name/email or ownerless marker, criticality and internet-facing; listing shows all three | `F-ASSET` (vitest); `I-ASSET` (`POST /assets`, `GET /assets`, `GET /assets/{id}`); `I-ASSET-UPDATE` (`PATCH /assets/{id}`) |
 | US-2a | `uv.lock` gives an entry for every package, including transitive, with name and version | `U-UV`, `I-FINDINGS` |
 | US-2b | `requirements.txt` gives an entry for every direct requirement, or "version unknown" with a visible warning | `U-REQ`, `I-SCAN` |
 | US-2c | `package-lock.json` gives an entry for every package, including transitive, with name and version | `U-NPM`, `I-FINDINGS` |
@@ -362,7 +364,7 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | Edge case | Expected behaviour | Test types or named cases |
 |---|---|---|
 | E1 | No fixed version: finding stays `open`, shows "no fixed version", is ranked by signals; any brief naming a version is rejected and the structured finding is delivered | `U-FIXED`, `U-GUARD`, `I-BRIEF`, `L-EVAL` |
-| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless | `I-OWNER-HOLD`, `A-HELD`; Showcase: `I-HOLD` |
+| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless; setting an owner releases the held notification | `I-OWNER-HOLD`, `I-ASSET-UPDATE`, `A-HELD`; Showcase: `I-HOLD` |
 | E3 | Feed unavailable: OSV first scan gives `scan failed`/`feed unavailable` with no findings; a later scan keeps last-known findings and marks them stale; KEV/EPSS failure keeps the OSV scan status and stale signals; the scheduled run retries | `U-FEED`, `I-SCAN` |
 | E4 | Advisory withdrawn or CVE drops out: `withdrawn`, not `fixed`; `risk accepted` also becomes `withdrawn`; no notification; only when every merged advisory is withdrawn; a reinstated advisory restores the previous status or `fixed`, with no second issue or notification; a CVE dropping out of KEV or EPSS changes only signals and rank, not status | `U-WITHDRAW`, `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `E-DELIVER` |
 | E5 | Lockfile parse error: `scan failed`/`lockfile parse error`, previous findings kept and marked stale, visible in the dashboard | `U-NPM`, `I-SCAN`, `F-STATUS` |

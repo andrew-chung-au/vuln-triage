@@ -54,7 +54,7 @@ Covers: Application, US-10, US-11
 
 ## 9. Session authentication and the frontend API
 Goal: The frontend operations work with the session cookie, CSRF header and owner-match rule.
-Description: Implements `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /findings`, `GET /findings/{id}`, `GET /assets`, `GET /assets/{id}`, `POST /assets`, `POST /assets/{id}/rescan` and `POST /findings/{id}/risk-acceptance` from `_docs/api.md`, adding the session guard to task 4's route. It also builds the operator command that creates a dashboard user (username, display name, email, role and a password read from a prompt, never from the command line; there is no sign-up), which the dev, prod and local demo environments need. The check is `I-AUTH-SESSION` and `I-RISK` in `make test`, plus a user created by the command signing in while the stored password value is an Argon2id hash and not the password.
+Description: Implements `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /findings`, `GET /findings/{id}`, `GET /assets`, `GET /assets/{id}`, `POST /assets`, `PATCH /assets/{id}`, `POST /assets/{id}/rescan` and `POST /findings/{id}/risk-acceptance` from `_docs/api.md`, adding the session guard to task 4's route and the role rules of `_docs/api.md` § Authorization (registration and update for a `security lead` only; re-scan for a `security lead` or the matching `asset owner`). `PATCH /assets/{id}` changes the owner name, owner email, criticality or internet-facing flag, writes one stored audit entry per changed field, re-scores the asset's findings, and releases the asset's jobs held as `held: ownerless` or `held: owner email missing` when an owner email is set (the delivery of task 37 then sends them). It also builds the operator command that creates a dashboard user (username, display name, email, role and a password read from a prompt, never from the command line; there is no sign-up), which the dev, prod and local demo environments need. The check is `I-AUTH-SESSION` (including the role refusals: an `asset owner` registering or updating an asset gets `403`), `I-ASSET-UPDATE` and `I-RISK` in `make test`, plus a user created by the command signing in while the stored password value is an Argon2id hash and not the password.
 Depends on: 8
 Covers: Application, US-1, US-11
 
@@ -70,11 +70,11 @@ Description: The screens and the mock service already exist (roadmap steps 9, #3
 Depends on: 9
 Covers: Application, US-1, US-4, US-5, US-6
 
-## 12. Risk acceptance, audit trail and manual re-scan in the dashboard
-Goal: A signed-in human can accept risk with a reason, see the audit trail and request a re-scan.
-Description: Implements the dashboard write path for `POST /findings/{id}/risk-acceptance` and `POST /assets/{id}/rescan` from `_docs/api.md` for US-10 and US-11, rejecting an empty or whitespace-only reason and showing who, when and the previous value. The check is `F-STATUS` plus `I-RISK` in `make test` and `make frontend-typecheck`.
+## 12. Risk acceptance, audit trail, manual re-scan and asset edit in the dashboard
+Goal: A signed-in human can accept risk with a reason, see the audit trail, request a re-scan, and a security lead can correct an asset's owner and attributes.
+Description: Implements the dashboard write path for `POST /findings/{id}/risk-acceptance`, `POST /assets/{id}/rescan` and `PATCH /assets/{id}` from `_docs/api.md` for US-1, US-10 and US-11, rejecting an empty or whitespace-only reason and showing who, when and the previous value. It adds `updateAsset(assetId, input): Promise<Asset>` to the `Services` interface, the mock and the real service, an edit form for the owner name, owner email, criticality and internet-facing flag shown to a `security lead` only, and hides the register and edit controls from an `asset owner`. The check is `F-STATUS` and `F-ASSET` (edit form, owner role hidden) plus `I-RISK` in `make test` and `make frontend-typecheck`.
 Depends on: 11
-Covers: Application, US-10, US-11
+Covers: Application, US-1, US-10, US-11
 
 ## 13. Backend test layers and stored fixtures
 Goal: `make test` is confirmed as the single command that runs every backend unit and SQLite integration case, and the fixture set is complete.
@@ -84,7 +84,7 @@ Covers: Testing
 
 ## 14. OpenAPI conformance and validation
 Goal: A backend test fails when FastAPI's contract differs from `_docs/openapi.yaml`.
-Description: Adds the conformance test over every path, method, parameter, request and response schema and security requirement, and keeps `make openapi-validate` as the contract check; the `openapi-validation` PR job is added in task 19. The check is a deliberate contract mismatch failing the test while `make openapi-validate` exits 0 on the reviewed file.
+Description: Adds the conformance test over every path, method, parameter, request and response schema and security requirement (all 22 operations, Showcase stubs included), and keeps `make openapi-validate` as the contract check; the `openapi-validation` PR job is added in task 19. It also adds `GET /health`, the infrastructure endpoint outside the contract that task 15's health checks use, and the conformance test excludes it by name (`I-CONTRACT`). The check is a deliberate contract mismatch failing the test while `make openapi-validate` exits 0 on the reviewed file, and `I-CONTRACT` showing that `/health` is excluded by name while an extra path that is not in the contract still fails the test.
 Depends on: 10
 Covers: Application, Testing
 
@@ -252,7 +252,7 @@ Submission stories:
 
 | User story | Covering task(s) |
 |---|---|
-| US-1 | 4, 9, 11, 22 |
+| US-1 | 4, 9, 11, 12, 22 |
 | US-2 | 4, 22 |
 | US-3 | 5 |
 | US-4 | 6, 11 |
