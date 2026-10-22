@@ -1765,3 +1765,14 @@ Copy this template for each new entry:
 - files changed: `_docs/plan-summary.md`, `_docs/architecture.md`, `_docs/roadmap.md` (check-in line only), this log
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the issue comment). No QA or review yet
 - human review (what I checked or corrected, or `none`): none in this entry; the human decided A16-A18, Q8, Q10, Q-A and Q-B before the work. No protected file was committed. Commands that required approval: none
+
+### 2026-10-22 — Reviewer: plan review of #108 (FAIL)
+
+- date: 2026-10-22
+- task/issue: #108, Reviewer run 1 at `84e99fd` (roadmap step 14)
+- agent role: Reviewer, a fresh general-purpose subagent launched by the orchestrator, following `_docs/prompts/reviewer-plan-review.md` with run notes (the prompt's "OpenCode wrote the plan" sentence corrected; documents-reviewed list per the human's decision)
+- model: claude-sonnet-5-5 (Claude Code). Recorded exception, human decision 2026-10-22: same tool as the plan's authors, not the author's model for most of the plan (claude-opus-5-5), but the same model as the Engineer subagents of #107 and #108 stage 1 (claude-sonnet-5-5), which edited the documents just before the run
+- prompt or instruction given (or link to a file in `_docs/prompts/`): `_docs/prompts/reviewer-plan-review.md` plus the orchestrator's run notes; no new key prompt saved
+- files changed: `_docs/reviews/2026-10-22-plan-review.md` (d31cb02, the Reviewer's only commit); this log entry (appended by the orchestrator)
+- verification (tests run, reviewer verdict): verdict `Reviewer: FAIL at 84e99fd`; 24 findings (1 High, 14 Medium, 9 Low), 5 questions for the human. `git show --stat d31cb02` lists one path. `make assert-clean` PASS at d31cb02. The Reviewer read `openapi.yaml` line by line to line 1349 and checked lines 1350-2309 by search only (stated in the review file)
+- human review (what I checked or corrected, or `none`): none yet; the High-finding disposition is pending the human. No protected file was committed. Commands that required approval: none
