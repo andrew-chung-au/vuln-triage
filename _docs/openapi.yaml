@@ -50,8 +50,8 @@ info:
     also requires the header `X-Requested-With: XMLHttpRequest`. It is a
     required parameter; a missing or different value returns `403 forbidden`
     and changes no state. Logout is exempt so that it stays idempotent, and it
-    clears only the caller's own cookie. The n8n and MCP operations are
-    bearer-authenticated and do not require the header. `VERIFY:` FastAPI
+    clears only the caller's own cookie. The n8n, MCP and responder operations
+    are bearer-authenticated and do not require the header. `VERIFY:` FastAPI
     returns `422` for a missing required `Header()` on the version #24 pins, so
     #24 maps that missing-header validation error to `403 forbidden` in its
     exception handler.
@@ -62,11 +62,16 @@ info:
     for an authenticated caller who is not allowed (owner mismatch), then
     `422` for body validation, then `409` for state. Because the CSRF check
     comes before the existence check, an unknown finding id with no
-    `X-Requested-With` header returns `403`, not `404`. Service (n8n and MCP)
-    operations: `401`, then `403` wrong consumer or operation, then `404`
-    unknown id, then `422` validation, then `409` state. The responder
-    operations are service operations and follow the same order. Each operation's
+    `X-Requested-With` header returns `403`, not `404`. Service (n8n, MCP and
+    responder) operations: `401`, then `403` wrong consumer or operation, then
+    `404` unknown id, then `422` validation, then `409` state. Each operation's
     description states its order.
+
+    Ids. Every `id` in the API is an opaque string (decided in #58): clients
+    must not parse it, sort by it or assume a format. The only id comparison
+    the API defines is the server-side tie-break in the notification job
+    lists, which compares ids as strings by Unicode code point only to make
+    the order stable and repeatable; it does not mean "newer".
 
     Status mapping: `401` only for a missing, expired or invalid credential or
     a bad login; `403` only for a caller who is authenticated but not allowed
@@ -503,9 +508,15 @@ paths:
       description: |
         Called by the n8n delivery workflows (US-8, US-9, E8). Returns every
         `pending` job whose kind matches the optional repeated `kind` query,
-        ordered by `createdAt` ascending, then `id` ascending. Omitting `kind`
-        returns every pending kind. The backend decides what is due and
-        creates the jobs; n8n never decides status or tier.
+        ordered by `createdAt` ascending (oldest first), then `id` ascending
+        as a tie-break only (decided in #58). The tie-break compares the ids
+        as strings by Unicode code point, so two jobs with the same
+        `createdAt` return in ascending string order of `id` (`"10"` before
+        `"9"` is allowed, and `"a"` before `"b"`). It exists to make the order
+        stable and repeatable, not to mean "newer"; ids are opaque. An empty
+        list is `[]`. Omitting `kind` returns every pending kind. The backend
+        decides what is due and creates the jobs; n8n never decides status or
+        tier.
 
         A job the backend holds (for example an `escalation` or `digest` job
         held because the security-lead contact is missing or invalid, or a
@@ -528,7 +539,10 @@ paths:
         - $ref: '#/components/parameters/NotificationJobKindQuery'
       responses:
         '200':
-          description: Pending jobs in `createdAt`, then `id`, ascending order.
+          description: |
+            Pending jobs in `createdAt` ascending order, then `id` ascending
+            (a string comparison by Unicode code point, a stable tie-break
+            only, not "newer"); `[]` when there are none.
           content:
             application/json:
               schema:
@@ -828,9 +842,14 @@ paths:
         Serves the US-15 responder, which must see a failed job and why.
         Returns the notification jobs of the finding named by the required
         `findingId` query, in every state (`pending`, `claimed`, `sent`,
-        `failed`), newest first by `createdAt`, then by `id` descending. The
-        optional repeated `state` query limits the states. Held states are not
-        in the enum and are never returned, as for n8n.
+        `failed`), ordered by `createdAt` descending (newest first), then `id`
+        descending as a tie-break only (decided in #58). The tie-break
+        compares the ids as strings by Unicode code point, so two jobs with
+        the same `createdAt` return in descending string order of `id` (`"9"`
+        before `"10"` is allowed, and `"b"` before `"a"`). It exists to make
+        the order stable and repeatable, not to mean "newer"; ids are opaque.
+        The optional repeated `state` query limits the states. Held states are
+        not in the enum and are never returned, as for n8n.
 
         `ResponderNotificationJob` carries no recipient, no owner name or
         email, no advisory summary and no embedded finding. Its only free-form
@@ -855,8 +874,10 @@ paths:
       responses:
         '200':
           description: |
-            The finding's jobs, newest first by `createdAt`, then `id`
-            descending; `[]` when the finding has no jobs or is unknown.
+            The finding's jobs, ordered by `createdAt` descending, then `id`
+            descending (a string comparison by Unicode code point, a stable
+            tie-break only, not "newer"); `[]` when the finding has no jobs or
+            is unknown.
           content:
             application/json:
               schema:
@@ -1776,7 +1797,10 @@ components:
           $ref: '#/components/schemas/Traceparent'
           description: |
             The job's trace context. The responder takes the trace id from it
-            to find the trace's logs in Loki.
+            to find the trace's logs in Loki. It is set when the job is
+            created, from the `notification.enqueue` span, and never changes,
+            so it is present for `pending`, `claimed`, `sent` and `failed`
+            jobs; it is not null and not empty (decided in #58).
         attempts:
           type: integer
           minimum: 0
@@ -1898,6 +1922,13 @@ components:
             are positive integers.
         traceparent:
           $ref: '#/components/schemas/Traceparent'
+          description: |
+            The job's trace context. It is set when the job is created, from
+            the `notification.enqueue` span, and never changes, so it is
+            present for every job; it is not null and not empty (decided in
+            #58). n8n's report must send back an equal value
+            (`reportNotificationJob`), so a job without one could not be
+            reported.
         recipient:
           anyOf:
             - $ref: '#/components/schemas/NotificationRecipient'
