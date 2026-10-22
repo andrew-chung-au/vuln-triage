@@ -1710,3 +1710,14 @@ Copy this template for each new entry:
 - files changed: `_docs/tasks.md` and `_docs/plan-summary.md` (#95, e8a7c4d); `_docs/architecture.md` and `_docs/aws-setup.md` (#97, d5f6508 and d520876); `_docs/specs.md` (#98, 4fa7a55, protected, `HUMAN_APPROVED=1`); session summaries for #95, #97 and #98; merge 243fcd6 of `origin/main`; this log
 - verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #95 at d4c5345, #97 at d5f6508 (follow-up d520876 rechecked PASS), #98 at 4fa7a55 after two FAILs on the approval criterion and a final PASS as a ratification. `make assert-clean` PASS after each QA run
 - human review (what I checked or corrected, or `none`): the human approved the #93 split, the #98 proposal on a summary, and commented "Diff approved" on #98 after the commit. The commit was made before the human saw the full diff; QA recorded this as a deviation. Commands that required approval: `HUMAN_APPROVED=1 git commit` of the protected spec; `gh issue edit 93` and `make issue-close` (ask rules)
+
+### 2026-10-22 — Orchestrator: #99-#102 (tasks, showcase marking, architecture, test split)
+
+- date: 2026-10-22
+- task/issue: #99, #100, #101, #102 implemented and QA'd; #93 updated by the PM with two clean-up edits (continuing the session above)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's replies "yes ok", "yes", "approved 3c13321, 2 ok, 3 ok, 4 ok, 5 ok", "approve" and "approve recommedations"; no new key prompt saved
+- files changed: `_docs/tasks.md` and `_docs/plan-summary.md` (#99, 70a0f82); `README.md`, `_docs/api.md`, `_docs/openapi.yaml`, `_docs/testing.md` (#100, 3c13321); `_docs/architecture.md` (#101, c098669 and fix 86d3978); `_docs/testing.md`, `_docs/api.md`, `_docs/openapi.yaml` (#102, 5573e03); session summaries for #99-#102; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests); `make openapi-validate` OK. QA PASS: #99 at 70a0f82, #100 at 3c13321, #102 at 5573e03; #101 FAIL at c098669 (submission 403 case named the MCP token), fixed in 86d3978 and PASS on recheck. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human replied "approved 3c13321" for #100's contract diff (recorded on #100) and "approve" for #102's diff before its commit (recorded on #102 before the commit). No protected file was committed in this entry. Commands that required approval: `gh issue create` and `gh issue edit 99`/`93` (PM, ask rules); `make issue-close` for #99-#102 (ask rule)
