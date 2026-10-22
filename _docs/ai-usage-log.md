@@ -1567,3 +1567,14 @@ Copy this template for each new entry:
 - files changed: `_docs/roadmap.md` (parallel tooling track T1-T3, step 16 row, Later list, check-in), this log. GitHub: PM comments 6331077862, 6331105969 (#53), 6331091593 (#48), 6331105799 (#31); human's answers 6331014940 (#48 D1/D2) and 6331160446 and copies on #53, #48, #31; issues #67 (CI passes a real `BASE`) and #68 (run #26's persistence test against Postgres) created through the GitHub MCP `issue_write` tool
 - verification (tests run, reviewer verdict): the PM ran `make frontend-typecheck` (exit 0 at `26ac31a`) and read the verify scripts, hooks and `.devcontainer/`; no implementation, no QA. The PM's first #53 comment had two small errors, superseded by its correction comment 6331105969
 - human review (what I checked or corrected, or `none`): the human answered #48 D1/D2 and the placement question, then D1-D5 as recommended. Commands that required approval: `make issue-comment` (allowed target); issue creation through `issue_write`
+
+### 2026-10-22 — Human cheatsheet for reviewing, pushing and merging agent work
+
+- date: 2026-10-22
+- task/issue: no issue; the human's request for a cheatsheet of the current push process, then for example commands
+- agent role: single Claude Code session (no subagents), on branch `claude/human-cheatsheet`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request for a cheatsheet "for using the current process for pushing to the repo from the sandbox", their note that the method has evolved from the original agent kit, and "the cheat sheet needs example commands etc"; no key prompt saved
+- files changed: `_docs/human-cheatsheet.md` (new), `README.md` (one index line), this log
+- verification (tests run, reviewer verdict): none run on the commands; the process was read from `environments.md`, `process.md`, `cloud-sessions.md`, the roadmap, the #56 summary and `git branch -a`. Items marked `VERIFY:` in the file (the local-sandbox branch flow, `gh pr create` and `gh pr merge` from the human's machine) are unconfirmed. No QA run
+- human review (what I checked or corrected, or `none`): the human confirmed the described method "looks correct" and asked for example commands. Commands that required approval: none recorded
