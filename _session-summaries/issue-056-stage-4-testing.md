@@ -49,6 +49,7 @@
 - None to the system or installed packages. No processes were started.
 - Local `main` was moved back to `origin/main` (`9a03ba9`) after the Engineer's commits; the commits were kept on `claude/issue-056-stage-4-testing`. No work was lost.
 - `make clean-scratch` was not run: `.scratch/` is shared with the paused #50/#58 sessions and contains files this session did not create. Only the branch's own commits and `.scratch/` files for #56 were touched.
+- The branch is local only: the requested `git push -u origin claude/issue-056-stage-4-testing` was denied by the project's `git push*` rule, so the human pushes it from the clean clone.
 
 ## Permission review
 
@@ -56,7 +57,7 @@ PM, Engineer and QA each listed their approvals and ask-rule commands in their #
 
 - Read-only (propose allowing): PM's read-only `gh api` loop for issue titles (matched `gh api*` ask rule); `make issue-dump N=9/50/56` reads; the Engineer's and QA's git/log/diff reads and `.scratch/` doc checks; the orchestrator's `git fetch`, `git log`, `git rebase`, `make assert-clean`.
 - Writes to the record (keep asking): PM `gh api -X PATCH` on the #56 body (ask rule; orchestrator-requested); Engineer `gh api -X PATCH` on the #9 body (ask rule); PM `gh issue create` for #63 (issue-creation rule); `make issue-comment`/`make issue-dump` issue writes (allowed targets); `git push -u origin claude/issue-056-stage-4-testing` (cloud-session branch push).
-- Risky (propose denying): none.
+- Risky (propose denying): `git push -u origin claude/issue-056-stage-4-testing` (matched the `git push*` deny rule; the agent did not pursue another way and left the push to the human).
 - Proposed `opencode.json` and `.claude/settings.json` changes: none.
 
 ## Interruptions
@@ -77,4 +78,4 @@ PM, Engineer and QA each listed their approvals and ask-rule commands in their #
 
 - Step 11 (Stage 5 `_docs/tasks.md`) is unblocked once #56 is closed.
 - #63 (four Stage 4 spec notes) needs the human's scheduling and, for each, a protected-doc decision.
-- Review and merge `claude/issue-056-stage-4-testing`; the diff is `README.md`, `_docs/testing.md`, `_docs/roadmap.md`, `_docs/ai-usage-log.md` and this summary.
+- Push, review and merge the local `claude/issue-056-stage-4-testing` branch (the agent's `git push` is denied by the permission rule); the diff is `README.md`, `_docs/testing.md`, `_docs/roadmap.md`, `_docs/ai-usage-log.md` and this summary.
