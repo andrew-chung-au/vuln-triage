@@ -1699,3 +1699,14 @@ Copy this template for each new entry:
 - files changed: `_docs/tasks.md` (one `Note:` paragraph after the `ASSUMPTION:` paragraph at line 267, before `## Dependency chain`), `_docs/plan-summary.md` (footnote ¹ line 35 and the D1 `Handling` line 41), this log, `_session-summaries/issue-095-application-coverage.md`. Doc commit e8a7c4d; process records in a separate commit
 - verification (tests run, reviewer verdict): `make verify BASE=a1d5dd0` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests; 2 files changed); QA not yet run
 - human review (what I checked or corrected, or `none`): none yet; the orchestrator confirmed option B and asked for the two doc edits plus the AGENTS.md process records. Commands that required approval: none recorded
+
+### 2026-10-22 — Orchestrator: #95 close-out, #93 split, #97 and #98
+
+- date: 2026-10-22
+- task/issue: #95 QA and close; #93 grooming and split into #97-#100; #97 and #98 implemented and QA'd (continuing a session that hit an opencode rate limit)
+- agent role: Orchestrator (main session), with PM, Engineer and QA subagents, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code) for the orchestrator; the subagents' models were not recorded in this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to continue #93 and #95, then "go with all recommendations", "start the architecture and spec issues" and "ok"; no new key prompt saved
+- files changed: `_docs/tasks.md` and `_docs/plan-summary.md` (#95, e8a7c4d); `_docs/architecture.md` and `_docs/aws-setup.md` (#97, d5f6508 and d520876); `_docs/specs.md` (#98, 4fa7a55, protected, `HUMAN_APPROVED=1`); session summaries for #95, #97 and #98; merge 243fcd6 of `origin/main`; this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #95 at d4c5345, #97 at d5f6508 (follow-up d520876 rechecked PASS), #98 at 4fa7a55 after two FAILs on the approval criterion and a final PASS as a ratification. `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved the #93 split, the #98 proposal on a summary, and commented "Diff approved" on #98 after the commit. The commit was made before the human saw the full diff; QA recorded this as a deviation. Commands that required approval: `HUMAN_APPROVED=1 git commit` of the protected spec; `gh issue edit 93` and `make issue-close` (ask rules)
