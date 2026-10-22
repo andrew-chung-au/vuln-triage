@@ -54,6 +54,8 @@ Planning documents:
 - [_docs/plan-summary.md](_docs/plan-summary.md) — rubric map, top risks, open questions and assumptions (Stage 6)
 - [_docs/reviews/2026-10-16-final-rubric-impact.md](_docs/reviews/2026-10-16-final-rubric-impact.md) — impact of the final rubric on the plan (issue #11)
 - [_docs/roadmap.md](_docs/roadmap.md) — order of the open work, score checkpoints and progress check-ins
+- [_docs/roadmap-showcase.md](_docs/roadmap-showcase.md) — showcase track: work built after the submission
+- [_docs/aws-setup.md](_docs/aws-setup.md) — human-side AWS and GitHub setup for the Tier B/C deployment
 - [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work
 
 AI workflow evidence:
