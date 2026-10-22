@@ -1612,3 +1612,14 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): no code or test change; `make verify` not run. The proposal checked `_docs/tasks.md` against `_docs/specs.md` and the open tracker with a read-only `gh issue list`. The human approved the proposal before any issue was created, edited or closed
 - human review (what I checked or corrected, or `none`): the human chose Milestone A filing now, closing #24/#25 and rewriting #26, the 9/10 splits, accepting #63 notes before Milestone C, and deciding the LLM/responder runtime at milestone start with stubs. The orchestrator corrected issue 1's draft so `make test` keeps the frontend suite. Commands that required approval: `gh issue create` for #74-#88 (issue-creation rule); `gh issue edit 26` (issue-edit ask rule); `make issue-comment` (allowed target); `make issue-close` on #24/#25 (issue-close ask rule)
 
+### 2026-10-22 — Orchestrator: temporary Tier B/C roadmap
+
+- date: 2026-10-22
+- task/issue: none (planning; the human asked for a secondary roadmap for Tiers B and C while another session works roadmap step 11)
+- agent role: Orchestrator (main session), on branch `claude/kind-einstein-i39rmh`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request with the final-project criteria and the Module 2-4 notes and homework pasted; no new key prompt saved
+- files changed: `_docs/roadmap-tiers-b-c.md` (new, temporary), this log, `_session-summaries/planning-2026-10-22-tier-b-c-roadmap.md`. `_docs/roadmap.md` not changed
+- verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
+- human review (what I checked or corrected, or `none`): none yet; seven decisions (D1-D7) are open in the new file, which maps its milestones to the `tasks.md` task numbers from PR #89. Commands that required approval: none recorded
+
