@@ -1,6 +1,6 @@
 # VulnTriage plan summary (Stage 6)
 
-Status: Stage 6 deliverable, draft for review; the register, completeness counts and line locations were refreshed at commit `2285abc` (#107)
+Status: Stage 6 deliverable, draft for review; the register, completeness counts and line locations were refreshed at commit `8bdb0fc` (#108 stage 1)
 
 Sources: [`_docs/rubric.md`](rubric.md), [`_docs/project-brief.md`](project-brief.md), [`_docs/specs.md`](specs.md), [`_docs/architecture.md`](architecture.md), [`_docs/api.md`](api.md), [`_docs/testing.md`](testing.md), [`_docs/tasks.md`](tasks.md), [`_docs/roadmap.md`](roadmap.md) and [`_docs/reviews/2026-10-16-final-rubric-impact.md`](reviews/2026-10-16-final-rubric-impact.md).
 
@@ -12,7 +12,7 @@ Sources: [`_docs/rubric.md`](rubric.md), [`_docs/project-brief.md`](project-brie
 - Milestones A, B and C and their targets (A 12, B 19, C 24 points) are the targets in [`_docs/reviews/2026-10-16-final-rubric-impact.md`](reviews/2026-10-16-final-rubric-impact.md) §5 and [`_docs/roadmap.md`](roadmap.md) §Tier B and Tier C milestones. They are targets, not current evidence.
 - Submission and showcase: the submission scope is tasks 1-29, 37 and 38 (decisions H2-H7: Terraform, one server for dev and prod, GHCR, `sslip.io`, observability and the responder in local Compose, the backend delivering the top-tier notification and running the schedule). Tasks 30-36 (LLM brief, MCP server, n8n) are in the "Showcase (post-submission)" section of [`_docs/tasks.md`](tasks.md) and are not in the rubric map. A register entry whose owner is a task numbered 30-36 is showcase scope, and no submission task depends on one.
 - Duplicate coverage is explicit and allowed: a task may serve several criteria, and a criterion may need several tasks.
-- In the register, keys are `file:tag` because tags repeat across files (for example `architecture.md:A1` and `api.md:A1 (#27)` are different entries). Status values are `open`, `proposed answer`, `resolved`, `deferred` and `VERIFY`. Line numbers were read at commit `2285abc` and may move.
+- In the register, keys are `file:tag` because tags repeat across files (for example `architecture.md:A1` and `api.md:A1 (#27)` are different entries). Status values are `open`, `proposed answer`, `resolved`, `deferred` and `VERIFY`. Line numbers were read at commit `8bdb0fc` (with the #108 edits) and may move.
 
 ## Rubric map
 
@@ -46,6 +46,7 @@ Sources: [`_docs/rubric.md`](rubric.md), [`_docs/project-brief.md`](project-brie
 | D5 | [`_docs/roadmap.md`](roadmap.md) D1 vs [`_docs/architecture.md`](architecture.md) Open question 6 | D1 proposed closing Q6 with the Module 4 pattern; Q6 was listed as open | **Resolved (checked in #107):** roadmap D1 is resolved (H3, as adapted by H2-H4) and `architecture.md` Open question 6 is closed; the register rows match. |
 | D6 | [`README.md`](../README.md) line 27 vs [`_docs/specs.md`](specs.md) §Finding statuses | README listed dashboard statuses as `open`, `risk accepted`, `fixed`; the spec's complete list adds `withdrawn` | **Resolved by #73 (checked in #107):** `README.md` line 27 now lists `open`, `risk accepted`, `fixed`, `withdrawn`, matching the spec. |
 | D7 | [`_docs/roadmap.md`](roadmap.md) §Open decisions | The table numbers 18 rows: rows 1-4 are resolved/withdrawn, rows 5-11 carry the labels D1-D7, and rows 12-18 are the decisions H1-H7 (all resolved) | Register keys the decisions `roadmap.md:D1`-`roadmap.md:D7`; D1, D2, D3, D6 and D7 are resolved, D4 and D5 stay open. H1-H7 are not register entries; they are recorded in the roadmap and applied to the documents. |
+| D8 | [`_docs/specs.md`](specs.md) §Assumptions bullet 1 (line 436) vs [`_docs/architecture.md`](architecture.md) A16, A17 | The spec's assumption wording about asset criticality values ("small fixed set; final values in Stage 2") predates the values the human confirmed on 2026-10-22 | The spec wording is left as written (the spec is human-owned) and aligned at the next approved spec change; architecture A16 and A17 are the confirmed text. |
 
 ## Top risks
 
@@ -62,6 +63,7 @@ Every mitigation has an owner. A mitigation labelled `human` is a human-only act
 | R7 | Step 12 backlog filing is `doing`; step 14 depends on steps 11 and 13 and "Milestone A filed" (g) | [`_docs/roadmap.md`](roadmap.md) steps 12-14 and check-in 2026-10-22; human decision Q1 option 1, 2026-10-22 | The Milestone B, C and Committed issues, including the submission tasks 37 and 38, are not all filed; the plan review sees Milestone A issues only | This summary maps task numbers, not issue numbers; the Milestone B, C and Committed issues are filed at their boundaries after S1 starts and no longer gate step 14; the summary does not claim those issues exist | Orchestrator/PM; `human` approves filing | Steps 12-14 | A later-filed issue can differ from the task it maps; the map is re-checked at each filing (R9) |
 | R8 | The demo defect must be removed before production (h) | [`_docs/tasks.md`](tasks.md) task 29; [`_docs/testing.md`](testing.md) §Responder (`P-FLAG-GONE`); [`_docs/architecture.md`](architecture.md) A35 | `VT_DEMO_DEFECT=notify_no_fix` could remain in production code, leaving a deliberate failure path | Production startup refuses the flag (`P-PROD-REFUSAL`); `P-FLAG-GONE` blocks promotion until the path is gone; cleanup commit/PR; promotion stays manual | Agents write and remove the path; `human` merges and promotes | Task 29; C6-C7 | A bypass of the manual gate could still promote the flag, so the test is the guard |
 | R9 | Mapping and points drift as stage documents change (i) | [`_docs/rubric.md`](rubric.md); [`_docs/tasks.md`](tasks.md); any later stage edit | A later edit can add/remove a task or change a `Covers:` line, invalidating a row; scores could be read as current | Task numbers are canonical; re-check this map after any stage-document change; the auditor alone updates [`_docs/rubric-evidence.md`](rubric-evidence.md); this document records conflicts instead of editing sources | Orchestrator/PM; reviewer at step 14 | Steps 12-14 and after any stage change | A stale row can survive until the next check |
+| R10 | An exploited vulnerability with no CVE cannot reach `P1` or `P2` | [`_docs/architecture.md`](architecture.md) § Prioritisation, Open question 10 (closed); [`_docs/specs.md`](specs.md) E11 | The KEV and EPSS inputs both key on a CVE id, so an exploited finding with no CVE is ranked by the lower tiers only | Accepted as documented; the sentence in architecture § Prioritisation states it, and the tier tests (task 7) follow the rules as written | `human` accepted, 2026-10-22 | Task 7 | An exploited no-CVE finding can sit below `P2`; accepted, not a defect. Check: the sentence exists in architecture § Prioritisation |
 
 ## Open questions and assumptions
 
@@ -76,7 +78,7 @@ Scope per source follows the Stage 6 issue: `specs.md` open questions 1-5 and ev
 | `specs.md:Q3` | Which notification channel (email or chat) does the pilot use? | proposed answer | A26: email; route in risk R4 (SES API, one verified sender, MailHog in Compose); `human` confirms; task 37 |
 | `specs.md:Q4` | What is the US-14 notification window? | proposed answer | A33: 30 minutes; `human` confirms; task 26 |
 | `specs.md:Q5` | What credential does the responder use and how is it scoped; does a human or automation merge? | resolved | [`_docs/architecture.md`](architecture.md) §Responder agent (D2: human merges); task 28 |
-| `specs.md:Assumptions bullet 1` | "Asset criticality" is a small fixed set; final values in Stage 2 | proposed answer | A16 final values; `human` at step 14; task 3 |
+| `specs.md:Assumptions bullet 1` | "Asset criticality" is a small fixed set; final values in Stage 2 | proposed answer | A16 final values, confirmed by the human 2026-10-22 (spec wording left as written, see D8); task 3 |
 | `specs.md:Assumptions bullet 2` | Pilot repos plus OWASP Juice Shop give real findings; pilot list in a later stage | proposed answer | Task 22; `human` supplies repository URLs; A41 fallback |
 | `specs.md:Assumptions bullet 3` | An asset owner has a name and contact email; ownerless only when both are unset; partial-owner notification decided in Stage 2 | proposed answer | A21: email-only owner notified, name-only held; tasks 9, 10 |
 | `specs.md:withdrawn status ASSUMPTION` | `withdrawn` is an addition to the brief's three finding statuses (also stated in the status table and E4) | proposed answer | Tasks 8, 12; spec status table, E4 |
@@ -92,9 +94,9 @@ Scope per source follows the Stage 6 issue: `specs.md` open questions 1-5 and ev
 | `architecture.md:Q5` | Spec Q5 (responder credential and merge) | resolved | §Responder agent; D2; task 28 |
 | `architecture.md:Q6` | What exactly is the "Module 3/4 pattern" the human referred to? | resolved | Closed in `architecture.md` Open question 6: the pattern is followed as adapted by H2-H4 (Terraform, one server for both environments, GHCR); roadmap D1 |
 | `architecture.md:Q7` | Which domain name and TLS approach does the public URL use? | resolved | Closed in `architecture.md` Open question 7: no domain, `sslip.io` hostnames (H5) with Let's Encrypt HTTPS; the rate-limit `VERIFY:` stays; roadmap D3 |
-| `architecture.md:Q8` | Confirm EPSS threshold T = 0.10 and the "exposed asset" definition | open | A17/A18; `human` at step 14; task 7 |
+| `architecture.md:Q8` | Confirm EPSS threshold T = 0.10 and the "exposed asset" definition | resolved | Closed 2026-10-22 (human decision): T = 0.10 (A18, configuration) and the exposed-asset definition (A17) confirmed as written; A17/A18; task 7 |
 | `architecture.md:Q9` | Which LLM provider and model? | open | A23; `human` before task 30; risks R3 |
-| `architecture.md:Q10` | An exploited vulnerability with no CVE can never reach P1/P2: accept, or add a rule? | open | `human` at step 14; task 7 |
+| `architecture.md:Q10` | An exploited vulnerability with no CVE can never reach P1/P2: accept, or add a rule? | resolved | Closed 2026-10-22 (human decision): accepted as documented in architecture § Prioritisation (risk R10); task 7 |
 | `architecture.md:Q11` | Does Juice Shop commit a supported lockfile? | open | A41 fallback; `human` confirms before task 22 |
 
 ### `_docs/architecture.md`: assumptions
@@ -115,9 +117,9 @@ All entries are listed under §Assumptions. A7, A12 and A14 were retired into sp
 | `architecture.md:A11` | `last_affected`-only or open-ended intervals give no fixed version | proposed answer | Engineer, task 5 |
 | `architecture.md:A13` | Enum values are stored and sent exactly as the spec writes them | proposed answer | Engineer, task 3 |
 | `architecture.md:A15` | Alias-joined vulnerabilities merge; the earlier finding keeps its id and lifecycle | proposed answer | Engineer, task 5 |
-| `architecture.md:A16` | Criticality values are final as `low`, `medium`, `high`, `critical` | proposed answer | `human` at step 14; task 3 |
-| `architecture.md:A17` | Only criticality `critical` counts as "critical" in the tier rules | proposed answer | `human` at step 14; task 7 |
-| `architecture.md:A18` | The EPSS threshold T is 0.10 | proposed answer | `human` at step 14; task 7 |
+| `architecture.md:A16` | Criticality values are final as `low`, `medium`, `high`, `critical` | resolved | Confirmed by the human, 2026-10-22; task 3 |
+| `architecture.md:A17` | Only criticality `critical` counts as "critical" in the tier rules | resolved | Confirmed by the human, 2026-10-22; task 7 |
+| `architecture.md:A18` | The EPSS threshold T is 0.10 | resolved | Confirmed by the human, 2026-10-22; task 7 |
 | `architecture.md:A19` | "Oldest finding" uses first detection time; the final tie-break is finding id | proposed answer | Engineer, task 7 |
 | `architecture.md:A20` | Tiers cover `open` and `risk accepted`; the ranked list is `open` only; E8 escalation means a tier rise or becoming `KEV: listed` | proposed answer | Engineer, task 7 |
 | `architecture.md:A21` | An email-only owner is notified; a name-only owner's notification is held | proposed answer | Engineer, task 10 |
@@ -201,6 +203,7 @@ All entries are listed under §Assumptions. A7, A12 and A14 were retired into sp
 | `tasks.md:VERIFY SES role permission` | The instance-role permission, the `ses:SendEmail` action and the resource form (task 37) | VERIFY | Engineer, task 37; the role itself is Terraform in task 17 |
 | `tasks.md:VERIFY SES region` | The SES region that holds the verified sender identity (task 37) | VERIFY | `human`/Engineer, task 37 |
 | `tasks.md:VERIFY Juice Shop lockfile` | The exact Juice Shop lockfile in task 22 is confirmed by the human before the first registration | VERIFY | `human`, task 22 |
+| `tasks.md:VERIFY OIDC provider` | The deploy-role Terraform accepts an already-existing GitHub OIDC provider in the account instead of failing to create a second one; one provider per URL per account (task 17) | VERIFY | Engineer/`human`, task 17 |
 
 ### `_docs/roadmap.md`: live decisions D1-D7
 
@@ -238,21 +241,21 @@ Counts come from the read-only label-only `.scratch/` extraction (`count_labels.
 | `_docs/architecture.md` | 11 | 38 / 29 | 72 / 55 (out of scope) | 49 | The 38 labelled tags are exactly A1-A6, A8-A11, A13 and A15-A41; A7/A12/A14 are retired and not reused, so there is no assumption difference. `VERIFY:` labels are tracked per §External data sources and risk R4, not as separate register rows |
 | `_docs/api.md` | 0 | 2 / 2 | 13 / 12 | 13 | Both A1 labels (#27 at line 77, #50 at line 78) are separate rows. The 13 VERIFY occurrences are 11 distinct items: line 336 carries two labels (OpenAPI generation and the validator), and the Secrets Manager item occurs on lines 77, 78 and 344 and is one row listing all three |
 | `_docs/testing.md` | 0 | 15 / 15 (14 tagged; 8 distinct T-A) | 25 / 24 | 26 | Line 5 is the conventions definition, so the 14 tagged occurrences are the 8 T-A rows. The 25 VERIFY labels are 24 item mentions (line 5 is a definition) and 18 distinct rows: line 129 carries two labels, the fake mail sink's form (lines 128 and 132) and how the Compose test reads MailHog are two rows added in #107 (the register had not yet listed them), line 130 is the SES sandbox item already in the `tasks.md` rows, line 273 supplies the Grafana instance row, and the table at lines 412-420 repeats items already named inline |
-| `_docs/tasks.md` | 0 | 2 / 2 | 6 / 2 | 6 | Lines 95 and 294 are one assumption row (task 15/17 follow T-A1 and architecture §Deployment). Line 191 (task 37) carries four VERIFY labels, the SES sandbox recipients, the free allowance and limits, the instance-role permission and the SES region, each its own row. Line 294 carries two: one is a cross-reference to architecture's existing tags, the other is the Juice Shop lockfile row. Recounted after #99 |
+| `_docs/tasks.md` | 0 | 2 / 2 | 7 / 3 | 7 | Lines 95 and 294 are one assumption row (task 15/17 follow T-A1 and architecture §Deployment). Line 107 (task 17) carries one VERIFY label, the existing-OIDC-provider row added in #108. Line 191 (task 37) carries four VERIFY labels, the SES sandbox recipients, the free allowance and limits, the instance-role permission and the SES region, each its own row. Line 294 carries two: one is a cross-reference to architecture's existing tags, the other is the Juice Shop lockfile row. Recounted at `8bdb0fc` (#108) |
 | `_docs/roadmap.md` | 7 live decisions (D1-D7) | 0 / 0 | 6 / 6 (out of scope) | 7 | The decision table has 18 rows; rows 1-4 are resolved/withdrawn and rows 12-18 are the resolved H1-H7, so the 7 D-rows (rows 5-11) are captured. The 6 VERIFY labels (69, 70, 125, 126, 139, 217) are step and milestone external details outside the decision register; the mention of the literal tag at line 291 is prose in a check-in row, not a label |
 | `_docs/plan-summary.md` | 0 | 2 / 2 (self) | 4 / 1 (restated) | 2 | P-A1 and P-A2 are labelled `ASSUMPTION:` and added here. Risk R4 restates task 37's four SES `VERIFY:` labels once; they are the four `tasks.md` rows above and add no new row |
 
-Register total: 9 + 49 + 13 + 26 + 6 + 7 + 2 = **112 entries** (110 before #107, which included the 2 self-assumptions, plus the two `testing.md` mail VERIFY rows added in #107).
+Register total: 9 + 49 + 13 + 26 + 7 + 7 + 2 = **113 entries** (112 before #108, which included the 2 self-assumptions and the two `testing.md` mail VERIFY rows added in #107, plus the `tasks.md` OIDC provider VERIFY row added in #108).
 
-All counts and locations in this section were recounted at commit `2285abc` (#107) with a read-only `.scratch/` script that matches the literal tags `ASSUMPTION:` and `VERIFY:`. `tasks.md` and this file were last recounted after #99 and not changed in line count since, apart from this file's own edits in #107, which add no tagged label.
+All counts and locations in this section were recounted at commit `8bdb0fc` (#108) with a read-only `.scratch/` script that matches the literal tags `ASSUMPTION:` and `VERIFY:`. `tasks.md` was recounted at the same commit, and #108 adds one `tasks.md` register row for a label that was already in the file (line 107); this file's own edits add no tagged label.
 
-Label locations (1-based line numbers, read at `2285abc`, except `tasks.md` and this file, recounted after #99):
+Label locations (1-based line numbers, read at `8bdb0fc`):
 
 - `_docs/specs.md` — `ASSUMPTION:` 226, 319, 410, 436, 438, 440. `VERIFY:` 36, 39, 78, 90, 294, 299, 319, 381, 390, 410, 415, 416, 417 (14 occurrences on 13 lines; line 410 carries two).
-- `_docs/architecture.md` — `ASSUMPTION:` 25, 29, 44, 45, 51, 53, 72, 83, 92, 115, 132, 179, 196, 223, 229, 244, 252, 275, 277, 296, 309, 344, 361, 364, 373, 387, 403, 417, 442 (38 occurrences on 29 lines). `VERIFY:` 5, 14, 29, 49, 59, 60, 61, 62, 63, 80, 81, 86, 87, 94, 104, 242, 244, 260, 273, 275, 283, 284, 285, 286, 287, 288, 289, 290, 296, 309, 325, 328, 340, 342, 356, 360, 363, 368, 379, 393, 397, 403, 407, 408, 413, 414, 415, 421, 423, 424, 426, 442, 466, 467, 469 (72 occurrences on 55 lines; lines 29, 80, 81, 87, 260, 283, 328, 340, 356, 363, 368, 403 and 415 carry two or more).
+- `_docs/architecture.md` — `ASSUMPTION:` 25, 29, 44, 45, 51, 53, 72, 83, 92, 115, 132, 179, 198, 225, 231, 246, 254, 277, 279, 298, 311, 346, 363, 366, 375, 389, 405, 419, 444 (38 occurrences on 29 lines; the lines after 195 moved by 2 when #108 added the Prioritisation sentence). `VERIFY:` 5, 14, 29, 49, 59, 60, 61, 62, 63, 80, 81, 86, 87, 94, 104, 244, 246, 262, 275, 277, 285, 286, 287, 288, 289, 290, 291, 292, 298, 311, 327, 330, 342, 344, 358, 362, 365, 370, 381, 395, 399, 405, 409, 410, 415, 416, 417, 423, 425, 426, 428, 444, 468, 469, 471 (72 occurrences on 55 lines; lines 29, 80, 81, 87, 262, 285, 330, 342, 358, 365, 370, 405 and 417 carry two or more).
 - `_docs/api.md` — `ASSUMPTION:` 77, 78. `VERIFY:` 49, 74, 77, 78, 160, 207, 336, 340, 341, 342, 343, 344 (13 occurrences; line 336 carries two).
 - `_docs/testing.md` — `ASSUMPTION:` 5, 100, 114, 168, 251, 281, 397, 404, 405, 406, 407, 408, 409, 410, 411. `VERIFY:` 5, 128, 129, 130, 132, 195, 247, 253, 257, 259, 269, 273, 289, 291, 295, 412, 413, 414, 415, 416, 417, 418, 419, 420 (25 occurrences on 24 lines; line 129 carries two).
-- `_docs/tasks.md` — `ASSUMPTION:` 95, 294. `VERIFY:` 191 (four labels, task 37), 294 (two labels on the line).
+- `_docs/tasks.md` — `ASSUMPTION:` 95, 294. `VERIFY:` 107, 191 (four labels, task 37), 294 (two labels on the line).
 - `_docs/roadmap.md` — `ASSUMPTION:` none as a label (line 291 mentions the tag in prose). `VERIFY:` 69, 70, 125, 126, 139, 217.
 - `_docs/project-brief.md` — none.
 
@@ -265,7 +268,7 @@ Label locations (1-based line numbers, read at `2285abc`, except `tasks.md` and 
 | Nothing is unmapped | PASS | Every map row has at least one `task N` and at least one resolving document link; the Gaps table is empty. The Application/task 15 difference is recorded as D1, and the row is still covered by tasks 1, 3-12 and 14 (and 37, 38). Rerun after #99: 12 rows, each with at least one existing task |
 | Every task number exists | PASS | `.scratch/check_map.py` matched every `task N` to a `## N.` heading in [`_docs/tasks.md`](tasks.md) and found no number outside 1-38 (rerun after #99 with `.scratch/check_plan99.py`; the headings are 1-38) |
 | Every risk has a mitigation | PASS | Top risks has 9 rows (more than 8); every row has a non-empty mitigation, owner and residual risk. Human-only actions are labelled `human` |
-| All open questions and assumptions are collected | PASS | Corrected label-only recount: 6 specs assumption labels (5 meanings; `specs.md:Q2` covers line 152), 38 architecture A tags, 2 api A1 entries, 14 tagged testing T-A occurrences (8 items), 6 tasks entries (2 labels plus task 37's four SES `VERIFY:` rows, recounted after #99), 0 roadmap labels, plus 2 self-assumptions = 112 register entries after the #107 recount at `2285abc` (two `testing.md` mail VERIFY rows added); every difference is explained and the locations are listed above |
+| All open questions and assumptions are collected | PASS | Corrected label-only recount: 6 specs assumption labels (5 meanings; `specs.md:Q2` covers line 152), 38 architecture A tags, 2 api A1 entries, 14 tagged testing T-A occurrences (8 items), 7 tasks entries (1 assumption row from 2 labels, task 17's OIDC provider `VERIFY:` row, task 37's four SES `VERIFY:` rows and the Juice Shop lockfile row, recounted at `8bdb0fc`), 0 roadmap labels, plus 2 self-assumptions = 113 register entries after the #108 recount at `8bdb0fc` (the `tasks.md` OIDC provider VERIFY row added; the two `testing.md` mail VERIFY rows were added in #107); every difference is explained and the locations are listed above |
 | Links resolve | PASS | `.scratch/check_links.py` checked every relative Markdown link in this file and the new README line; all resolve |
 | File limit | PASS | For #99, `git status --short` before the commit lists only `_docs/tasks.md` and `_docs/plan-summary.md` as this issue's changes. (At the first Stage 6 commit the limit was `_docs/plan-summary.md` and `README.md`.) |
 
