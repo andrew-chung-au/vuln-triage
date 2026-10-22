@@ -42,7 +42,7 @@ Data ownership:
 | 7. Re-scan | Backend | The backend scheduler's daily run after the refresh (task 38; showcase: n8n's daily schedule), and a person's "Re-scan" action in the dashboard | Steps 1-5 again; findings set `fixed` (US-10), `withdrawn` or restored (E4), or reopened (E7) |
 
 ASSUMPTION: (A3) re-scans have two triggers, a daily schedule (after the KEV/EPSS refresh) and a person's on-demand action; registration starts the first scan. For submission the backend scheduler runs the schedule (a scheduler in the backend's background worker, task 38 in `_docs/tasks.md`). Showcase (n8n is a showcase item, `_docs/roadmap-showcase.md`): the n8n schedule is not built for submission.
-ASSUMPTION: (A4) scans and brief generation (showcase: the brief part; the scan part stays) run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker.
+ASSUMPTION: (A4) scans and brief generation (showcase: the brief part; the scan part stays) run as background jobs inside the backend, using a job table in VulnTriage's database and one worker; no separate broker. The worker and the job table are built in task 4 (the first scan runs asynchronously after `POST /assets`) and reused by the delivery of task 37 and the scheduler of task 38.
 
 ## Ingestion and matching
 
@@ -310,7 +310,7 @@ It calls only the API, never the database, with its own token (`MCP_API_TOKEN`, 
 
 ## Security boundaries
 
-Dashboard authentication (US-11): local accounts created by an operator command (no sign-up); username and password; passwords hashed with Argon2id (for example `argon2-cffi`, dependency, ask before adding; VERIFY: recommended parameters). Server-side sessions: a random 256-bit id in a `HttpOnly; Secure; SameSite=Strict` cookie, stored hashed, 30-minute idle and 8-hour absolute lifetime; logout deletes the session. Every write also requires a custom request header (CSRF). Five failed logins for a username in 15 minutes lock it for 15 minutes. Roles: `security lead` may accept risk on any finding; `asset owner` only on assets whose owner email matches theirs. ASSUMPTION: (A30) all of this paragraph's values and the owner-match rule.
+Dashboard authentication (US-11): local accounts created by an operator command (no sign-up; the command is built in task 9 and reads the password from a prompt); username and password; passwords hashed with Argon2id (for example `argon2-cffi`, dependency, ask before adding; VERIFY: recommended parameters). Server-side sessions: a random 256-bit id in a `HttpOnly; Secure; SameSite=Strict` cookie, stored hashed, 30-minute idle and 8-hour absolute lifetime; logout deletes the session. Every write also requires a custom request header (CSRF). Five failed logins for a username in 15 minutes lock it for 15 minutes. Roles: `security lead` may accept risk on any finding; `asset owner` only on assets whose owner email matches theirs. ASSUMPTION: (A30) all of this paragraph's values and the owner-match rule.
 
 Secrets: none in the repository, images or telemetry; `.env.example` lists names only.
 
@@ -449,7 +449,7 @@ Pilot assets (#9 finding 15): the pilot asset list is defined in Stage 5 (`_docs
 
 | Criterion | Section | Components that make the top rung reachable | Tier |
 |---|---|---|---|
-| Application | Components, Workflow, Data model | React frontend, FastAPI backend, SQLite (Postgres in Compose); one start command (Stage 5) | A |
+| Application | Components, Workflow, Data model | React frontend, FastAPI backend, SQLite (Postgres in Compose); one start command, `make dev` (backend on SQLite and frontend together, no Docker; task 11), with the Compose command as its container variant (task 15) | A |
 | Testing | Development environment | Unit and integration tests on SQLite with stubs, one test command | A |
 | Containerization | Development environment, Deployment | Compose file with frontend, backend, Postgres, Collector; one command (n8n is a showcase item) | B |
 | Deployment | Deployment | One Terraform-built AWS server running the dev and prod Compose projects, with public `sslip.io` HTTPS URLs | B |

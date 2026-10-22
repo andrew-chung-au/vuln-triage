@@ -111,9 +111,9 @@ Fixture inventory (all external calls use committed responses; paths are the pla
 | `tests/fixtures/llm/brief-*.json` (Showcase) | LLM outputs: valid, wrong version, URL, timeout, error, refusal | `LLM_MODE=stub` or pinned-model capture | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/malicious/advisory.json` | The `S-FIXTURE` malicious advisory | Project-authored fixture | 2026-10-22 planned baseline; recorder writes the actual date |
 
-`ASSUMPTION: T-A2` the first deliberate capture happens in the build task, not #56; `fixtures/MANIFEST.md` records the actual capture date and source.
+`ASSUMPTION: T-A2` the deliberate captures happen in the build tasks, not #56: the harness, the network guard and the empty `tests/fixtures/` directory come with task 1, the GitHub contents fixtures and `make record-fixtures` with task 4, the OSV fixtures with task 5, the KEV and EPSS fixtures with task 6, and task 13 completes the manifest and adds the malicious advisory fixture; `fixtures/MANIFEST.md` records the actual capture date and source.
 
-`make record-fixtures` (planned) is the documented re-capture target. It never runs in CI. CI has no live-feed credentials and a network guard; `I-NET` calls a live URL and must fail. Fixtures are refreshed only by a deliberate, recorded re-capture, not by CI.
+`make record-fixtures` (planned, task 4; the Makefile is protected, so it is its own human-approved commit) is the documented re-capture target. It never runs in CI. CI has no live-feed credentials and a network guard (task 1); `I-NET` calls a live URL and must fail. Fixtures are refreshed only by a deliberate, recorded re-capture, not by CI.
 
 Integration cases through the app and database:
 
@@ -125,11 +125,11 @@ Integration cases through the app and database:
 | `I-BRIEF` (Showcase) | `GET /findings/{id}` | Brief states `available`, `unavailable` and `pending`; no mismatched version. |
 | `I-RISK` | `POST /findings/{id}/risk-acceptance`, `GET /findings/{id}` | Risk acceptance, non-empty reason, owner match, audit trail (who, when, previous value) and no automated acceptance. |
 | `I-RESCAN` | `POST /assets/{id}/rescan`, `POST /scans`, `GET /findings` | `fixed`, `withdrawn`, E4 restore and E7 reopen. |
-| `I-OWNER-SEND` | Backend delivery worker (task 37), `GET /responder/notification-jobs`, in-process fake mail sink | A new `P1` finding creates one `top tier` job; the backend sends exactly one plain-text labelled-field message to the owner; `notification.enqueue` and `notification.deliver` are recorded, `notification.deliver` as a child of the job's stored `traceparent`; the job state is `sent`. No call to an n8n job endpoint. The case asserts through an in-process fake mail sink, not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). `VERIFY:` the sink's form (for example an in-process SMTP server or an injected transport that records messages). |
-| `I-OWNER-NOAWS` | Backend delivery worker (mail-transport setting on the MailHog route), MailHog | With no AWS credential in the test environment, the owner message arrives at MailHog. `VERIFY:` how the test reads received mail (MailHog's HTTP API, for example `GET /api/v2/messages`). `VERIFY:` MailHog is a Compose container and the sandbox has no Docker, while task 37's check names `make test`: whether `make test` uses an in-process SMTP stand-in or the case runs in `postgres-integration` is fixed in task 37. |
-| `I-OWNER-SENDER` | Backend delivery worker, MailHog | A send from an address other than the configured verified sender is refused, the job is not `sent`, and nothing arrives at MailHog. Enforced by the sender check in the mail-transport setting (task 37). `VERIFY:` the SES sandbox allows only verified recipients; the SES route is not exercised in CI. |
+| `I-OWNER-SEND` | Backend delivery worker (task 37), `GET /responder/notification-jobs`, in-process fake mail sink | A new `P1` finding creates one `top tier` job; the backend sends exactly one plain-text labelled-field message to the owner; `notification.enqueue` and `notification.deliver` are recorded, `notification.deliver` as a child of the job's stored `traceparent`; the job state is `sent`. No call to an n8n job endpoint. The case asserts through an in-process fake mail sink, not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). The sink's form is decided (task 37): an injected mail transport that implements the same interface as the SES and MailHog transports and records the messages it is given. |
+| `I-OWNER-NOAWS` | Backend delivery worker (mail-transport setting), the in-process sink under `make test` and MailHog under `make test-compose` | With no AWS credential in the test environment, the owner message arrives at the sink (`make test`) and at MailHog (`make test-compose`, the `telemetry` job). `VERIFY:` how the Compose run reads received mail (MailHog's HTTP API, for example `GET /api/v2/messages`). |
+| `I-OWNER-SENDER` | Backend delivery worker, the in-process sink under `make test` and MailHog under `make test-compose` | A send from an address other than the configured verified sender is refused, the job is not `sent`, and nothing arrives at the sink or at MailHog. Enforced by the sender check in the mail-transport setting (task 37). `VERIFY:` the SES sandbox allows only verified recipients; the SES route is not exercised in CI. |
 | `I-OWNER-ONCE` | Backend delivery worker, `POST /signals/refresh`, `POST /assets/{id}/rescan`, `GET /responder/notification-jobs` | A second refresh and a retry after a partial failure send no second email for the same finding lifecycle; a finding that leaves and re-enters `P1` sends no second email; a withdrawn (E4) advisory that is reinstated sends no second email; merged aliases (E9) send at most one email; an E7 reappearance starts a new lifecycle with at most one new email. |
-| `I-OWNER-HOLD` | Backend delivery worker, `POST /assets`, `GET /assets/{id}`, in-process fake mail sink | Ownerless (E2) and name-only owner (A21): the notification is held, the ownerless flag is set, and nothing arrives at the sink. The case asserts through an in-process fake mail sink, not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). `VERIFY:` the sink's form (for example an in-process SMTP server or an injected transport that records messages). |
+| `I-OWNER-HOLD` | Backend delivery worker, `POST /assets`, `GET /assets/{id}`, in-process fake mail sink | Ownerless (E2) and name-only owner (A21): the notification is held, the ownerless flag is set, and nothing arrives at the sink. The case asserts through the same in-process fake mail sink (an injected transport that records messages), not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). |
 | `I-JOBS` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | Job creation, idempotency, claim, report and traceparent round-trip. |
 | `I-LIFECYCLE` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/report` | A leave/re-enter produces no second job or issue; E7 starts a new lifecycle. |
 | `I-IDEMPOTENCY` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | A second refresh or a retry after a partial failure makes no duplicate. |
@@ -304,12 +304,12 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | Job | Runner | Command or target | Tests |
 |---|---|---|---|
 | `unit` | `ubuntu-latest` | `make test`, `make frontend-test` | `U-*`, `F-*` |
-| `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases, including `I-OWNER-SEND`, `I-OWNER-ONCE`, `I-OWNER-HOLD` and `I-SCHED` |
+| `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases, including `I-OWNER-SEND`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-OWNER-NOAWS` and `I-OWNER-SENDER` (in-process sink form) and `I-SCHED` |
 | `frontend` | `ubuntu-latest` | `make frontend-test`, `make frontend-typecheck` | `F-*` |
 | `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance |
 | `security-scan` | `ubuntu-latest` | `make security-scan` (planned) | `C-*` |
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
-| `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres, including `I-OWNER-NOAWS` and `I-OWNER-SENDER` (MailHog is a Compose container) |
+| `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
 | `telemetry` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `T-*`, including `T-JOURNEY-BE` |
 | `alert` | `ubuntu-latest` with Compose | `make test-compose` (planned) | `A-*` |
@@ -403,10 +403,10 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | Tag | Item | Resolution or owner |
 |---|---|---|
 | `ASSUMPTION: T-A1` | Compose service `db`; test projects `vt-test` and `vt-e2e`; fixture asset/repo names; 120 s E2E timeout | Final names fixed with the Compose work in Stage 5/#31. |
-| `ASSUMPTION: T-A2` | Fixture capture baseline is 2026-10-22; the recorder writes the actual date | First deliberate capture in the build task, not #56. |
+| `ASSUMPTION: T-A2` | Fixture capture baseline is 2026-10-22; the recorder writes the actual date | First deliberate captures in tasks 4-6 (harness in task 1, manifest completed in task 13), not #56. |
 | `ASSUMPTION: T-A3` | Grafana rule uses `noDataState: Alerting` and `execErrState: Alerting` | Confirm when the rule is provisioned. |
 | `ASSUMPTION: T-A4` | The US-13 metric carries the trace id as an OTel exemplar; if the exporter cannot, a trace/log join by trace id is the fallback | Spec note 2 in #56. |
-| `ASSUMPTION: T-A5` | `make test` grows to include backend unit and SQLite integration and stays the single local command | Stage 5/backlog. |
+| `ASSUMPTION: T-A5` | `make test` grows to include backend unit and SQLite integration and stays the single local command | Task 1 creates the harness and the target; each later task adds its cases; task 13 confirms. |
 | `ASSUMPTION: T-A6` | MailHog is the local mail catcher (dependency, ask before adding) | Stage 5/backlog. |
 | `ASSUMPTION: T-A7` | `pip-audit` and `npm audit --omit=dev` are the light-scan tools; adding them needs approval | Stage 5/backlog. |
 | `ASSUMPTION: T-A8` | Production configuration is selected with `ENVIRONMENT=production`; the final name is a build detail | Confirm in the backend build. |
