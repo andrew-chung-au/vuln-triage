@@ -1598,4 +1598,4 @@ Copy this template for each new entry:
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request with the final-project criteria and the Module 2-4 notes and homework pasted; no new key prompt saved
 - files changed: `_docs/roadmap-tiers-b-c.md` (new, temporary), this log, `_session-summaries/planning-2026-10-22-tier-b-c-roadmap.md`. `_docs/roadmap.md` not changed
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
-- human review (what I checked or corrected, or `none`): none yet; six decisions (D1-D6) are open in the new file. Commands that required approval: none recorded
+- human review (what I checked or corrected, or `none`): none yet; seven decisions (D1-D7) are open in the new file, which maps its milestones to the `tasks.md` task numbers from PR #89. Commands that required approval: none recorded

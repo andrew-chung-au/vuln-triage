@@ -20,7 +20,11 @@ No QA or rubric-auditor review; the file is a draft for the human.
 
 ## Open decisions (in the new file)
 
-D1 close architecture Open question 6 with the Module 4 pattern; D2 course image tag and `service.version` in the allowlist; D3 domain and TLS; D4 responder false-positive rule (protected spec change); D5 AWS fallback; D6 n8n into Compose at C1.
+D1 close architecture Open question 6 with the Module 4 pattern; D2 course image tag and `service.version` in the allowlist; D3 domain and TLS; D4 responder false-positive rule (protected spec change); D5 AWS fallback; D6 move n8n tasks 33 and 34 ahead of task 25; D7 split tasks 21 and 24 when filing.
+
+## Follow-up after step 11
+
+PR #89 (step 11, `_docs/tasks.md`) was still open when this file's PR was written. The draft now maps each milestone to its `tasks.md` task numbers. Found in PR #89, not changed (not this session's branch): `_docs/roadmap.md` line 137 is a leftover `=======` conflict marker. Both PRs append to `_docs/ai-usage-log.md`; whichever merges second keeps both entries.
 
 ## Process notes
 

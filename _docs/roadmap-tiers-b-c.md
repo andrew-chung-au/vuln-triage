@@ -6,7 +6,7 @@ Why it exists: the main roadmap plans Tier A in detail (steps 11-15) but gives T
 
 Sources: `_docs/rubric.md`; the course's Module 3 (containerize and deploy) and Module 4 (DevOps and observability) notes and homework the human shared on 2026-10-22; `_docs/architecture.md` (Components, Observability, Responder agent, Deployment); `_docs/testing.md` (US-13, US-14, US-15, CI jobs). Where this file and those documents differ, they win and the difference is a defect here, except for the proposals under "Decisions for the human".
 
-Conventions: milestone ids `B1`.. and `C1`.. are local to this file; `tasks.md` task numbers replace them when step 11 lands. Sizes are S, M or L, relative only (ASSUMPTION: no hour estimates until `tasks.md` exists). `VERIFY:` marks an external detail not yet confirmed.
+Conventions: milestone ids `B1`.. and `C1`.. are local to this file; "Mapping to `tasks.md`" gives the Stage 5 task numbers for each (from PR #89, step 11). Sizes are S, M or L, relative only (ASSUMPTION: no hour estimates until `tasks.md` exists). `VERIFY:` marks an external detail not yet confirmed.
 
 ## What the course pattern settles
 
@@ -70,6 +70,29 @@ C1-C3 and C5 can run on the local Compose stack before B4-B6 finish; only C4 and
 
 **Checkpoints: after C4, 21; after C5, 22; after C7, 24.**
 
+## Mapping to `tasks.md`
+
+Task numbers are from `_docs/tasks.md` as proposed in PR #89 (step 11, QA PASS). Step 12 files the Milestone B, C and Committed-scope issues at each milestone boundary; this file is input to that filing, not a second backlog.
+
+| Milestone | `tasks.md` tasks | Difference |
+|---|---|---|
+| B1 | 15 (Dockerfiles) | none |
+| B2 | 15, 16; #68 | none |
+| B3 | 19, 20 | none |
+| B4 | 17 (`vt-ci-iam`, `vt-ecr`) | Image tag format (D2) |
+| B5 | 17 (`vt-dev`), 21 (dev half), then 22 (pilot seed data) | Task 21 depends on 18, so the dev auto-deploy waits for the prod stack; D7 |
+| B6 | 18, 21 (prod half) | none |
+| C1 | 33, 34, 36 (Committed scope) | `tasks.md` puts n8n after Milestone C; D6 |
+| C2 | 23 | `service.version` in the allowlist (D2) |
+| C3 | 24 (Compose half), 25 | Task 24 depends on 17, so the local stack waits for AWS; D7 |
+| C4 | 24 (`vt-observability` half) | none |
+| C5 | 26, 27 | Annotations with dashboard link, environment, version |
+| C6 | 28 | False-positive rule (D4) |
+| C7 | 28 (live drill), 29 | none |
+| C8 | 2 (evidence note), #19 | The final re-audit has no task |
+
+Not in this file's milestones: tasks 30-32 and 35 (LLM brief, brief evaluation, MCP server, reminders and digest). They are committed scope, and none of them scores a Tier B or C criterion.
+
 ## Ordering if AWS is slow
 
 If AWS setup or the domain name holds up B4-B6, do B1 → B2 → B3 → C1 → C2 → C3 → C5 → C6 on the local Compose stack, then B4 → B5 → B6 → C4 → C7. Everything up to C6 is testable in CI with Compose, so no AWS wait blocks the observability work. The order in the tables above stays the default because it banks the 7 Tier B points first.
@@ -97,12 +120,13 @@ Estimates only; evidenced points come from `_docs/rubric-evidence.md`. Pass mark
 | D3 | Domain name and TLS approach for the public URL (Open question 7) | Human's choice; needed before B5 |
 | D4 | Add to US-15: on an alert with no reproducible defect (false positive or test alert), the responder explains and changes nothing | Yes; `specs.md` is protected, so a proposed diff and approval first |
 | D5 | Fallback if AWS is not available in time: a kind cluster or local Compose deployment with a recorded demo ("a clear demo with the deployment" scores Deployment 2, but CI/CD 3 then needs a deploy target CI can reach) | Keep AWS as the plan; name the fallback date at B4 |
-| D6 | Put n8n into Compose at C1, after Containerization is scored, instead of at B2 (architecture lists it in the app Compose file) | Yes; it moves the 2 Containerization points earlier and n8n is only needed for the US-13 journey |
+| D6 | Move n8n tasks 33 and 34 ahead of task 25, and add 34 to the `Depends on:` of tasks 25 and 28: `T-JOURNEY` asserts the `notification.deliver` span that n8n's report call creates, and `P-DEMO` needs n8n's retry, but `tasks.md` schedules n8n after Milestone C | Yes; keep n8n out of task 15's Compose file, so Containerization still scores first |
+| D7 | When filing the Milestone B and C issues, split task 21 (dev auto-deploy depends on 17 and 19 only; prod promotion on 18) and task 24 (Compose stack depends on 23 only; `vt-observability` on 17) | Yes; Deployment 2 and CI/CD 2 no longer wait for the prod stack, and the observability work no longer waits for AWS |
 
 ## Merging into the main roadmap
 
-When step 11 is `done` and it is convenient (not while another session edits `_docs/roadmap.md`):
-1. Replace step 17 with rows for B1-B6 and C1-C8, using the `tasks.md` task numbers and keeping this file's "depends on" and "done when".
+When PR #89 (step 11) has merged and it is convenient (not while another session edits `_docs/roadmap.md`):
+1. Replace step 17 with rows for B1-B6 and C1-C8, using the task numbers in "Mapping to `tasks.md`" (or the step 12 issue numbers once filed) and keeping this file's "depends on" and "done when".
 2. Add the B and C checkpoints to the main score table.
 3. Move the decisions the human has answered into the main "Open decisions" table and the relevant documents.
 4. Delete this file in the same commit and add a check-in line.
