@@ -64,6 +64,24 @@ issue-close: ## Close an issue: make issue-close N=<issue number>
 tool-versions: ## Print versions of node, npm, uv, python3 and docker (or "<tool>: missing")
 	@for t in node npm uv python3 docker; do if command -v "$$t" >/dev/null 2>&1; then printf '%s: ' "$$t"; "$$t" --version; else echo "$$t: missing"; fi; done
 
+# --- Permission report (issue #61) ---------------------------------------
+
+# SINCE must be 7 to 40 lowercase hex characters naming a commit. Make checks
+# the characters here, before any shell command runs: after every hex digit is
+# removed, "x<SINCE>x" must be exactly "xx", so a space, a newline, '$', a
+# quote, '-' or any other character is refused. $(value SINCE) keeps a typed
+# '$(...)' from being expanded. The script then checks the length and that
+# SINCE is a commit, again before running anything else.
+SINCE_HEX_DIGITS = 0 1 2 3 4 5 6 7 8 9 a b c d e f
+SINCE_CHARS_LEFT = $(call strip_allowed,$(SINCE_HEX_DIGITS),x$(value SINCE)x)
+
+.PHONY: permission-report
+
+permission-report: ## Count approvals recorded in session summaries (read-only): make permission-report SINCE=<commit>
+	$(if $(value SINCE),,$(error Usage: make permission-report SINCE=<commit>  (7 to 40 lowercase hex characters, a commit)))
+	$(if $(filter xx,$(SINCE_CHARS_LEFT)),,$(error SINCE must be 7 to 40 lowercase hex characters, a commit; got '$(value SINCE)'. Usage: make permission-report SINCE=<commit>))
+	@python3 _docs/agent-kit/scripts/permission-report.py "$(value SINCE)"
+
 # --- API contract (issue #23) --------------------------------------------
 
 # OPENAPI must stay a relative path under _docs/ or .scratch/ with only

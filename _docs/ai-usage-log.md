@@ -1513,6 +1513,39 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make openapi-validate` exit 0 and `make verify` PASS (62/62) at `2e9a4dd` (Engineer) and on both pushes; parsed-YAML diff showed description text only; QA FAIL at `b7b4d36` only because `_docs/architecture.md` is not in `PROTECTED`, then QA PASS on the re-check (6329743761), with the other verdicts carried over; `make assert-clean` PASS and HEAD `b7b4d36` unchanged after both QA runs
 - human review (what I checked or corrected, or `none`): the human chose D1 and D2 (option 1, recommended), approved spec notes 1 and 3 and the exact `architecture.md` diff, approved the contract at `2e9a4dd`, and chose option 2 (architecture.md gated by convention, `PROTECTED` unchanged) after QA's FAIL. The orchestrator wrongly posted a protected-change record for `4cebbd2` without checking `PROTECTED`; corrected in 6329737124. Commands that required approval: none (the `HUMAN_APPROVED=1` commit of `4cebbd2` was not required by `PROTECTED`; `git push -u origin` of the session branch is the cloud-session exception)
 
+### 2026-10-22 — #60, #37 and #61 Engineer step: proposed permission-settings diffs and `make permission-report`
+
+- date: 2026-10-22
+- task/issue: #60 (`gh api` allow rule), #37 (four Edit ask rules), #61 (`make permission-report` and the sweep procedure)
+- agent role: Engineer (subagent), on branch `claude/beautiful-lovelace-la54rn`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task message to implement #60, #37 and #61 from the PM grooming comments and the human's answers (Orchestrator comment 6330251791), without editing protected files or committing; no new key prompt saved
+- files changed: uncommitted: `_docs/cloud-sessions.md` (line 46), `_docs/permission-sweeps.md` (new), this log, `_session-summaries/issue-060-037-061-permission-settings.md` (new). Proposed but not applied (protected): `.claude/settings.json`, `Makefile`, `_docs/agent-kit/scripts/permission-report.py` (new), `AGENTS.md`, `_docs/agent-kit/process.md`, `_docs/agent-kit/templates/session-summary.md`, `_docs/agent-kit/procedures/session-summary.md`, `_docs/agent-kit/procedures/permission-sweep.md` (new). GitHub: Engineer comments 6330334016 (#60), 6330335550 (#37), 6330334233 (#61)
+- verification (tests run, reviewer verdict): `python3 -m json.tool` exit 0 on the proposed settings; a script modelling the rule shapes showed the four #60 commands plus two extra flag forms matching the `Bash(gh api *)` ask and no allow rule, and `make issue-dump`, `make issue-comment` and `make issue-close` matched by `make *` allow and the `make issue-close*` ask; `git apply --check` passed for all three diff files; the `.scratch/` regression script (refused `SINCE` values, allowed values, parser fixtures) passed; the report was run on the real session summaries. Not run: `make verify`, a live Claude Code prompt check, QA
+- human review (what I checked or corrected, or `none`): none yet. Commands that required approval: none known (I cannot see whether the tool prompted for an `ask`-rule command)
+
+### 2026-10-22 — #60, #37 and #61 orchestration: permission settings and the permission sweep
+
+- date: 2026-10-22
+- task/issue: #60, #37, #61; chosen from the human's request to prioritise tooling targets and to work them on a separate branch, off the roadmap, beside the product session on step 10
+- agent role: Orchestrator (main session) with PM, Engineer and QA subagents (one run each), on branch `claude/beautiful-lovelace-la54rn`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's requests to rank the tooling issues, to groom #60, #37 and #61 together and to go with the recommendations; the subagent task messages followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: `.claude/settings.json` (`a5b21c0`), `Makefile` and `_docs/agent-kit/scripts/permission-report.py` (`2520c9c`), `AGENTS.md`, `_docs/agent-kit/process.md`, `_docs/agent-kit/templates/session-summary.md`, `_docs/agent-kit/procedures/session-summary.md`, `_docs/agent-kit/procedures/permission-sweep.md` (`4c42cf3`), `_docs/cloud-sessions.md`, `_docs/permission-sweeps.md`, the Engineer log entry above and this one, `_session-summaries/issue-060-037-061-permission-settings.md` (`509215b` and this session's closing commit). The Engineer's entry above was written before the commits and says "uncommitted" and "proposed, not applied"; the commits above are the real state. GitHub: PM 6330134485, 6330134704, 6330137277; decisions 6330251791; Engineer 6330334016, 6330335550, 6330334233; approval records 6330381464, 6330381694, 6330381921, 6330382170; QA 6330439958, 6330440182, 6330440402
+- verification (tests run, reviewer verdict): `make verify` PASS (62/62) on the pre-push run and in QA's run; QA PASS on all three issues at `509215b`, including the approval records against the commits, the settings rule sets, 31 refused `SINCE` values and the report counts; `make assert-clean` PASS after QA. Not verified: a live Claude Code prompt check for the new ask rules (needs a new session)
+- human review (what I checked or corrected, or `none`): the human chose the six PM decisions as recommended, approved the three protected diffs as drafted, and kept the work off the roadmap. Commands that required approval: none known; the `HUMAN_APPROVED=1` commits and `git push -u origin` of the session branch are the protected-change and cloud-session cases
+
+### 2026-10-22 — #60, #37 and #61 follow-up: live prompt check result and two follow-up issues
+
+- date: 2026-10-22
+- task/issue: #60, #37 (live prompt check); new issues #65 (first permission sweep) and #66 (`make issue-close` ask rule bypassed by option order)
+- agent role: Orchestrator (main session), on branch `claude/beautiful-lovelace-la54rn`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's requests for a test prompt and branch instructions for a new session, then "confirmed" and "approve recommendations"; no new key prompt saved
+- files changed: `_docs/permission-sweeps.md` (points to #65; notes that cloud sessions skip `Edit` asks), this log. GitHub: comments 6330923566 (#60) and 6330923814 (#37); issues #65 and #66 created through the GitHub MCP `issue_write` tool (no REST make target for creating issues)
+- verification (tests run, reviewer verdict): the live check was run by the human in a local default-mode session on the branch, with a test agent running the commands; the human reported prompts on all six `gh api` commands and on the `.devcontainer/` write, and none on the `make issue-dump` control. Tests for `.githooks/`, `.github/` and `.vscode/` were not run. Two earlier runs gave no result (wrong branch; cloud session, which does not prompt for edits). The orchestrator did not observe any prompt itself
+- human review (what I checked or corrected, or `none`): the human ran and observed the live check, confirmed the three details, deleted the test file in their sandbox, and approved filing #65 and #66. Commands that required approval: `make issue-comment` and `make issue-close` per the ask rules; creating issues through `issue_write` is the recurring MCP item counted by `make permission-report`
+
 ### 2026-10-22 — #56 orchestrator, PM, Engineer and QA: Stage 4 test strategy
 
 - date: 2026-10-22
@@ -1523,3 +1556,14 @@ Copy this template for each new entry:
 - files changed: `_docs/testing.md` (new, 385 lines) and `README.md` (`8d9db69`, `2430912`); `_docs/roadmap.md` (step 10 row, #43 leftover line, check-in), this log and `_session-summaries/issue-056-stage-4-testing.md` at close-out. GitHub: #56 comments 6329411066 (PM grooming), 6329460170 (PM body-edit note), 6329735908 (Engineer), 6329945929 (QA PASS); #9 two Stage 4 rows ticked; #63 created
 - verification (tests run, reviewer verdict): QA PASS (6329945929) before the rebase, re-check PASS at `ae0d55d` (6330289999) after it; `make assert-clean` PASS and HEAD unchanged after each QA; `make verify` PASS (62/62, no whitespace errors, no test files changed), plus `make verify BASE=origin/main` to cover the branch's missing upstream; `make issue-dump N=9` confirmed only the two Stage 4 rows changed; `make openapi-validate` was not needed (no contract edit)
 - human review (what I checked or corrected, or `none`): the human chose D1 option 1 (a resolution is not a second alert), told me to move the work to its own branch and rebase on the merged sessions, chose one follow-up issue for the four spec notes (#63), and chose note-only for the QA risks. Commands that required approval: PM/Engineer `gh api -X PATCH` body edits (#56, #9) and the PM Git read loop (ask rules); PM `gh issue create` for #63 (issue-creation rule); `git push -u origin claude/issue-056-stage-4-testing` (denied by the `git push*` rule; the branch stays local for the human to push)
+
+### 2026-10-22 — #53, #48, #31 orchestration: grooming and scheduling on a parallel tooling track
+
+- date: 2026-10-22
+- task/issue: #53, #48, #31 (grooming and roadmap scheduling only; no implementation); new issues #67 and #68
+- agent role: Orchestrator (main session) with a PM subagent, on branch `claude/beautiful-lovelace-la54rn`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to schedule #53 and #48/#31 as parallel tooling work; the PM task message followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: `_docs/roadmap.md` (parallel tooling track T1-T3, step 16 row, Later list, check-in), this log. GitHub: PM comments 6331077862, 6331105969 (#53), 6331091593 (#48), 6331105799 (#31); human's answers 6331014940 (#48 D1/D2) and 6331160446 and copies on #53, #48, #31; issues #67 (CI passes a real `BASE`) and #68 (run #26's persistence test against Postgres) created through the GitHub MCP `issue_write` tool
+- verification (tests run, reviewer verdict): the PM ran `make frontend-typecheck` (exit 0 at `26ac31a`) and read the verify scripts, hooks and `.devcontainer/`; no implementation, no QA. The PM's first #53 comment had two small errors, superseded by its correction comment 6331105969
+- human review (what I checked or corrected, or `none`): the human answered #48 D1/D2 and the placement question, then D1-D5 as recommended. Commands that required approval: `make issue-comment` (allowed target); issue creation through `issue_write`

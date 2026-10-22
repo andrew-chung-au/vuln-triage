@@ -7,11 +7,11 @@
       "Bash(git log *)",
       "Bash(git show *)",
       "Bash(gh issue view *)",
-      "Bash(gh issue list *)",
-      "Bash(gh api repos/*)"
+      "Bash(gh issue list *)"
     ],
     "ask": [
       "Bash(make issue-close*)",
+      "Bash(gh api *)",
       "Edit(/AGENTS.md)",
       "Edit(/CLAUDE.md)",
       "Edit(/Makefile)",
@@ -21,7 +21,11 @@
       "Edit(/_docs/agent-kit/**)",
       "Edit(/opencode.json)",
       "Edit(/.opencode/**)",
-      "Edit(/.claude/**)"
+      "Edit(/.claude/**)",
+      "Edit(/.devcontainer/**)",
+      "Edit(/.githooks/**)",
+      "Edit(/.github/**)",
+      "Edit(/.vscode/**)"
     ],
     "deny": [
       "Read(.env)",
