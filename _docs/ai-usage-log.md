@@ -1578,3 +1578,14 @@ Copy this template for each new entry:
 - files changed: `_docs/human-cheatsheet.md` (new), `README.md` (one index line), this log
 - verification (tests run, reviewer verdict): none run on the commands; the process was read from `environments.md`, `process.md`, `cloud-sessions.md`, the roadmap, the #56 summary and `git branch -a`. Items marked `VERIFY:` in the file (the local-sandbox branch flow, `gh pr create` and `gh pr merge` from the human's machine) are unconfirmed. No QA run
 - human review (what I checked or corrected, or `none`): the human confirmed the described method "looks correct" and asked for example commands. Commands that required approval: none recorded
+
+### 2026-10-22 — #72 orchestrator, PM, Engineer and QA: Stage 5 task backlog
+
+- date: 2026-10-22
+- task/issue: #72 (Stage 5 `_docs/tasks.md`, roadmap step 11); follow-ups #73 (README `withdrawn` and Stage 5 tier-label note) and `andrew-chung-au/agent-kit` #19 (task-template naming)
+- agent role: Orchestrator (main session) with PM, Software Engineer and QA subagents, on `main` in the local sandbox
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "check the roadmap and issue for the next product driven issue to work on", the clarification question about Stage 4 and #24, then "ok got it then do step 11"; the role launches followed `_docs/agent-kit/process.md`; no new key prompt saved
+- files changed: `_docs/tasks.md` (new, 36 tasks) and `README.md` (one link line) at `05e3e60`; `_docs/tasks.md` (`ae6b708`, US-15 `Covers:` alignment); `_docs/roadmap.md`, this log and `_session-summaries/issue-072-stage-5-tasks.md` at close-out. GitHub: #72 created; comments 6331775484 (human D1/D2), 6331821940 (PM grooming), 6332002908 (Engineer), 6332195958 (QA PASS), 6332266585 (Engineer US-15 fix), 6332346303 (QA re-check PASS); #73 and agent-kit #19 created
+- verification (tests run, reviewer verdict): QA PASS (6332195958) and re-check PASS (6332346303); `make assert-clean` PASS with HEAD unchanged (`05e3e60`, then `ae6b708`) after each; `make verify` PASS both times (62 tests, no whitespace errors, no test files changed); the Engineer's read-only `.scratch/check_tasks.py` passed (36 tasks, 16 user stories, 12 criteria, lower-numbered acyclic dependencies, dependency chain matches)
+- human review (what I checked or corrected, or `none`): the human approved filing #72 and chose D1 (rubric-tier milestones A/B/C then a Committed scope section) and D2 (one planning-evidence task), both recommended; chose fix-now for the US-15 alignment and note-only for the task-sizing risks; directed the three follow-ups (agent-kit #19, and #73 for the two doc notes). Commands that required approval: `gh issue create` for #72 and #73 (issue-creation rule) and for agent-kit #19 (same rule, another repo); `gh issue edit 72` (issue-edit ask rule); `make issue-comment` (allowed target)
