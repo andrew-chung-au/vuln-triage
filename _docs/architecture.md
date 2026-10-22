@@ -193,6 +193,8 @@ Within a tier the order is total:
 3. Older first detection first.
 4. Finding id, ascending. Ids are unique and never change, so no two findings tie.
 
+An exploited vulnerability that has no CVE cannot reach `P1` or `P2`, because the KEV and EPSS inputs both key on a CVE id (E11 has neither), so it is ranked by the lower tiers; this is accepted by the human (2026-10-22, Open question 10), not a defect.
+
 ASSUMPTION: (A19) "oldest finding" means `first_detected_at`, not the lifecycle start. ASSUMPTION: (A20) tiers are computed for `open` and `risk accepted` findings; the ranked list (US-5, `list_top_exposures`) contains `open` findings only; `risk accepted` findings never get a US-8 notification; E8's "signals escalate" means the tier rises or KEV changes to `KEV: listed`.
 
 Special cases:
@@ -427,7 +429,7 @@ All AWS, GHCR, Let's Encrypt and Terraform service names, behaviours and prices 
 
 ## Development environment
 
-Environment (D1, human decision of 2026-10-20): a Compose-based dev container recipe. Postgres, and later the Collector, Prometheus, Loki, Tempo, Grafana and the MailHog mail catcher (showcase: and n8n), run as service containers beside the dev container; agents reach them by service name but can't control Docker, build images or run `docker compose`. Setting it up is #31 (roadmap step 16). How the human runs image builds and stack checks for the agents is `_docs/docker-runbook.md`: CI on `check/` review branches by default (route 1), reviewed host runs on request (route 2). `_docs/cloud-sessions.md` is optional; nothing here depends on it.
+Environment (D1, human decision of 2026-10-20): a Compose-based dev container recipe. Postgres, and later the Collector, Prometheus, Loki, Tempo, Grafana and the MailHog mail catcher (showcase: and n8n), run as service containers beside the dev container; agents reach them by service name but can't control Docker, build images or run `docker compose`. Setting it up is #31 (roadmap T3). How the human runs image builds and stack checks for the agents is `_docs/docker-runbook.md`: CI on `check/` review branches by default (route 1), reviewed host runs on request (route 2). `_docs/cloud-sessions.md` is optional; nothing here depends on it.
 
 | Check | Where it runs |
 |---|---|
@@ -465,9 +467,9 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 5. Spec Open question 5 (responder credential and merge): answered by D2 (Responder agent).
 6. Closed: the "Module 3/4 pattern" is followed as adapted by H2-H4 (Terraform, one server for both environments, GHCR); see Deployment and (A36). VERIFY: what the pattern prescribes beyond that stays unconfirmed, as it does not change the shape.
 7. Closed: no domain; hostnames come from `sslip.io` (H5) with Let's Encrypt HTTPS (Deployment, (A36)). VERIFY: Let's Encrypt rate limits for `sslip.io` names.
-8. The EPSS threshold T = 0.10 (A18) and the "exposed asset" definition (A17): confirm.
+8. Closed 2026-10-22: T = 0.10 (A18, configuration) and the exposed-asset definition (A17) confirmed as written.
 9. (Showcase, X4) Which LLM provider and model (A23)? Candidate provider (not decided): the Gemini free tier, which could serve the responder's local key and the future brief; VERIFY: free-tier rate limits, whether free-tier data may be used for model improvement (the responder reads application code and logs), current model names, and that its SDK is a dependency (ask before adding).
-10. An exploited vulnerability with no CVE can never reach `P1` or `P2` under these rules (E11 has no KEV or EPSS). Accept, or add a rule?
+10. Closed 2026-10-22: accepted as documented in Prioritisation. An exploited vulnerability with no CVE cannot reach `P1` or `P2` (E11 has no KEV or EPSS).
 11. Does Juice Shop commit a supported lockfile (A41)?
 
 ## Assumptions
@@ -484,9 +486,9 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 - (A11) `last_affected`-only or open-ended intervals give no fixed version.
 - (A13) Enum values are stored and sent on the wire exactly as the spec writes them.
 - (A15) Vulnerabilities whose aliases join are merged; the earlier finding keeps its id and lifecycle.
-- (A16) Criticality values are final as `low`, `medium`, `high`, `critical`.
-- (A17) Only criticality `critical` counts as "critical" in the tier rules.
-- (A18) The EPSS threshold T is 0.10.
+- (A16) Criticality values are final as `low`, `medium`, `high`, `critical`. Confirmed by the human, 2026-10-22.
+- (A17) Only criticality `critical` counts as "critical" in the tier rules. Confirmed by the human, 2026-10-22.
+- (A18) The EPSS threshold T is 0.10. Confirmed by the human, 2026-10-22.
 - (A19) "Oldest finding" uses first detection time; the final tie-break is finding id.
 - (A20) Tiers cover `open` and `risk accepted`; the ranked list is `open` only; E8 escalation means a tier rise or becoming `KEV: listed`.
 - (A21) An email-only owner is notified; a name-only owner's notification is held.
