@@ -1623,3 +1623,14 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
 - human review (what I checked or corrected, or `none`): none yet; seven decisions (D1-D7) are open in the new file, which maps its milestones to the `tasks.md` task numbers from PR #89. Commands that required approval: none recorded
 
+### 2026-10-22 — Orchestrator: merge the Tier B/C roadmap draft
+
+- date: 2026-10-22
+- task/issue: none (planning; the human asked to review and merge `_docs/roadmap-tiers-b-c.md` into `_docs/roadmap.md` and delete the draft)
+- agent role: Orchestrator (main session), local sandbox on `main`
+- model: deepseek-v4.1-flash-free (opencode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to review and merge the two roadmap files, delete the draft, then review the roadmap and start the next product issue; no new key prompt saved
+- files changed: `_docs/roadmap.md` (step 17 milestones B1-B6/C1-C8, prerequisites, task mapping, AWS-slow order, open decisions 5-11, B/C checkpoints, check-in); `_docs/roadmap-tiers-b-c.md` (deleted); this log; `_session-summaries/planning-2026-10-22-roadmap-tier-b-c-merge.md`
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (62 tests, type check pass, no whitespace errors, no test files changed; the warning is `BASE` equal to `HEAD` for a docs-only change). No QA or rubric-auditor review
+- human review (what I checked or corrected, or `none`): the human directed the merge and deletion; D1-D7 were carried over as open, not answered. Commands that required approval: none recorded
+
