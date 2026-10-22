@@ -1634,3 +1634,14 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); the guide was checked against `_docs/architecture.md` Deployment and Security boundaries by the author only; no QA or rubric-auditor review; nothing in it was run against AWS
 - human review (what I checked or corrected, or `none`): none yet; the guide lists seven decisions for the human. Commands that required approval: none recorded
 
+### 2026-10-22 — Engineer: #73 README withdrawn status and Stage 5 tier note
+
+- date: 2026-10-22
+- task/issue: #73 (lifecycle step 3, implementation)
+- agent role: Software Engineer (subagent of the orchestrator), on branch `claude/tender-volta-wiq6xv`
+- model: claude-opus-5-5 (Claude Code, cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's step 3 task for #73, implementing PM comment 6334306395 with the human's decisions in comment 6334352037; no new key prompt saved
+- files changed: `README.md` (line 27: adds `withdrawn`), `_docs/planning-process.md` (one sentence in the Stage 5 "Rules:" paragraph), this log. Commit 0aa61b1
+- verification (tests run, reviewer verdict): `make verify BASE=25960f5` PASS (62 tests passed, type check pass, whitespace pass, no test files changed); QA not yet run
+- human review (what I checked or corrected, or `none`): none. Commands that required approval: none recorded
+
