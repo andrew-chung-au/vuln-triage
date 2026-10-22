@@ -1623,3 +1623,14 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
 - human review (what I checked or corrected, or `none`): none yet; seven decisions (D1-D7) are open in the new file, which maps its milestones to the `tasks.md` task numbers from PR #89. Commands that required approval: none recorded
 
+### 2026-10-22 — Orchestrator: parallel-work analysis and AWS setup guide
+
+- date: 2026-10-22
+- task/issue: none (planning). The human asked which work can run beside another session's roadmap step 13 (`_docs/plan-summary.md`) without conflict, without editing either roadmap; then, with #48 set aside (cloud credits), for a guide to the AWS setup the Tier B/C work needs
+- agent role: Orchestrator (main session), on branch `claude/tender-volta-wiq6xv`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's two requests in chat; no new key prompt saved
+- files changed: `_docs/aws-setup.md` (new), this log, `_session-summaries/planning-2026-10-22-aws-setup.md`. Neither roadmap and no README link (step 13 edits the README index)
+- verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); the guide was checked against `_docs/architecture.md` Deployment and Security boundaries by the author only; no QA or rubric-auditor review; nothing in it was run against AWS
+- human review (what I checked or corrected, or `none`): none yet; the guide lists seven decisions for the human. Commands that required approval: none recorded
+
