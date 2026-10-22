@@ -1589,3 +1589,13 @@ Copy this template for each new entry:
 - files changed: `_docs/testing.md` (`291b4bc`); `_docs/agent-kit/scripts/verify.sh` and `_docs/agent-kit/procedures/verify.md` (`bdda483`); `agent-kit.conf` (`e0cf368`); `AGENTS.md` line 35 (`1d869a5`); `_docs/agent-kit/scripts/verify.sh` again (`3d978fe`, one line); `_docs/roadmap.md` (check-in), this log and `_session-summaries/issue-053-verify-gate-gaps.md` at close-out. GitHub on #53: Engineer 6331467458; QA 6331468388; approval records 6331468586, 6331468781, 6331469012, 6331469216
 - verification (tests run, reviewer verdict): `make verify BASE=6ed87ed` PASS (62 tests, `PASS: Type check`) and the pre-push runs PASS; QA PASS at `1d869a5`, then re-check PASS at `3d978fe` after the stderr fix; QA re-ran `BASE=HEAD` (warns), `BASE=nosuchref` (fails), `BASE=72903cc^` (lists the changed test file), `BASE=3d38e34` (clean), the empty-tree base and a deliberate type error (`FAIL: Type check`, reverted); `make assert-clean` PASS and HEAD unchanged after both QA runs. Not verified: the sandbox push check was read, not run (no Docker)
 - human review (what I checked or corrected, or `none`): the human approved all three protected diffs as drafted, and chose "Fix it now" for the stray stderr line QA found (a fourth protected commit), "No, already tracked" for the other QA notes. Commands that required approval: `HUMAN_APPROVED=1 git commit` of `bdda483`, `e0cf368`, `1d869a5`, `3d978fe` (protected files); `git push -u origin claude/start-53-7oaxg3` (cloud-session exception); `make issue-comment` (allowed target)
+### 2026-10-22 — Orchestrator: temporary Tier B/C roadmap
+
+- date: 2026-10-22
+- task/issue: none (planning; the human asked for a secondary roadmap for Tiers B and C while another session works roadmap step 11)
+- agent role: Orchestrator (main session), on branch `claude/kind-einstein-i39rmh`
+- model: Claude Code (cloud session)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request with the final-project criteria and the Module 2-4 notes and homework pasted; no new key prompt saved
+- files changed: `_docs/roadmap-tiers-b-c.md` (new, temporary), this log, `_session-summaries/planning-2026-10-22-tier-b-c-roadmap.md`. `_docs/roadmap.md` not changed
+- verification (tests run, reviewer verdict): `make verify` run before commit (result in the session summary); no QA or rubric-auditor review
+- human review (what I checked or corrected, or `none`): none yet; six decisions (D1-D6) are open in the new file. Commands that required approval: none recorded
