@@ -24,7 +24,7 @@ VulnTriage is intended to cover the whole path from inventory to a fix owned by 
 
 Alongside that workflow:
 
-- A planned web dashboard lists findings per asset with status (`open`, `risk accepted`, `fixed`) and an audit trail. Only a human can set `risk accepted`.
+- A planned web dashboard lists findings per asset with status (`open`, `risk accepted`, `fixed`, `withdrawn`) and an audit trail. Only a human can set `risk accepted`.
 - An MCP (Model Context Protocol) server offers read-only tools, `list_top_exposures`, `which_assets_affected`, `get_finding` and `get_asset`, which call the API with a read-only token. It has no write tools.
 
 VulnTriage does not actively scan networks or applications, does not patch software automatically, and does not expose write tools through MCP.
