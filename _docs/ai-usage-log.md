@@ -1743,3 +1743,14 @@ Copy this template for each new entry:
 - files changed: `_docs/testing.md`, `_docs/roadmap-showcase.md`, `_docs/architecture.md` (#104, f6c0efc); `_docs/tasks.md` (#105, 98d0a7e); session summaries for #104 and #105; this log
 - verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests). QA PASS: #104 at f6c0efc, #105 at 98d0a7e. `make assert-clean` PASS after each QA run
 - human review (what I checked or corrected, or `none`): the human approved the work before each step; no protected file was committed in this entry. Commands that required approval: `gh issue create` (PM, ask rules); `make issue-close` for #104 and #105 (ask rule)
+
+### 2026-10-22 — Engineer: #107 (pre-review clean-up)
+
+- date: 2026-10-22
+- task/issue: #107, implemented as a subagent (not closed; QA not yet run)
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: claude-sonnet-5-5 (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #107; no new key prompt saved
+- files changed: `_docs/planning-process.md`, `_docs/architecture.md`, `_docs/roadmap.md` (17fc6d9); `_docs/plan-summary.md` (061de62); this log
+- verification (tests run, reviewer verdict): `make verify` PASS (62 tests passed, type check pass, whitespace pass, no weakened tests), run before the commits. No QA or review yet
+- human review (what I checked or corrected, or `none`): none in this entry; the human approved the scope before the work. No protected file was committed. Commands that required approval: none
