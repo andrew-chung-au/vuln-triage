@@ -52,6 +52,7 @@ Planning documents:
 - [_docs/testing.md](_docs/testing.md) — test strategy (Stage 4)
 - [_docs/reviews/2026-10-16-final-rubric-impact.md](_docs/reviews/2026-10-16-final-rubric-impact.md) — impact of the final rubric on the plan (issue #11)
 - [_docs/roadmap.md](_docs/roadmap.md) — order of the open work, score checkpoints and progress check-ins
+- [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work
 
 AI workflow evidence:
 
