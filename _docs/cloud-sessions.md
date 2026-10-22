@@ -43,7 +43,7 @@ What the agents see:
 ## 3. Repo changes (done in #44, `8eeaf53`)
 
 - **`Makefile`:** `issue-dump` (two flat JSON files in `.scratch/`), `issue-comment N= FILE=` and `issue-close N=`, all through `gh api`. `issue-dump` pipes `gh api --paginate --slurp` into `jq`, which the cloud image has (trial).
-- **`.claude/settings.json`:** allows `gh api repos/*`; asks before `make issue-close`; denies `git push * main*`, `--force`, `-f` and `--delete`; adds the `SessionStart` hook.
+- **`.claude/settings.json`:** asks before any `gh api` call (since #60; #44 had allowed `gh api repos/*`) and before `make issue-close`; denies `git push * main*`, `--force`, `-f` and `--delete`; adds the `SessionStart` hook.
 - **`guard_git.py`:** allows `git push -u origin <current branch>` only when `CLAUDE_CODE_REMOTE` is `true` and the current branch starts with `claude/` (the trial branch was `claude/keen-allen-185yyr`).
 - **`cloud_session_start.sh`:** does nothing locally; in the cloud, prepares the session and prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. Agents use the banner instead of reading environment variables.
 - **`AGENTS.md`:** the cloud profile in Environment and Branching.
