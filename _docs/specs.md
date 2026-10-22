@@ -6,13 +6,19 @@ Source: `_docs/project-brief.md`. Criteria: `_docs/rubric.md`.
 Deferred to later stages: prioritisation formula (Stage 2), LLM guardrails
 (Stage 2), API contract (Stage 3), tests (Stage 4).
 
+Scope: the stories outside the "Showcase (post-submission)" section are the
+submission scope. The backend itself runs the daily refresh and the scheduled
+re-scan (US-7, US-10) and delivers the top-tier owner notification (US-8). The
+stories and clauses in the Showcase section are kept in full and are built
+after submission.
+
 ## Users and roles
 
 | Role | Who | Needs |
 |---|---|---|
 | Asset owner | Engineer owning an app/service | Know what to fix first, with a correct fix version, without triaging feeds |
-| Security lead | Person accountable for exposure | See ranked exposure across assets, get a weekly digest, track overdue fixes |
-| Developer (AI-assisted) | Developer using an AI assistant | Ask "which assets are affected by this CVE?" and get a correct answer |
+| Security lead | Person accountable for exposure | See ranked exposure across assets, get a weekly digest (showcase, US-9), track overdue fixes (showcase, US-9) |
+| Developer (AI-assisted) | Developer using an AI assistant | Ask "which assets are affected by this CVE?" and get a correct answer (showcase, US-12) |
 
 ## Defined terms
 
@@ -35,7 +41,7 @@ the finding has **no fixed version for this dependency**.
   ranges or several advisories.
 
 The fixed version for this dependency is the only value the US-6 brief
-guardrail compares against.
+guardrail compares against (US-6 is in the Showcase section).
 
 ## User stories
 
@@ -91,72 +97,44 @@ shows why it ranks where it does. (Formula in Stage 2; no AI involved.)
 - Acceptance: re-scoring the same inputs gives the same order; each finding
   shows the reason for its rank (e.g. tier and contributing signals).
 
-### US-6: Plain-language fix brief
-As an asset owner, I get a short plain-language brief per finding built from
-the structured finding (what is affected, why it matters, what version to
-move to). (Guardrail design in Stage 2; brief content tests in Stage 4.)
-- Acceptance: an open finding shows either a brief whose fix version matches
-  the finding's fixed version for this dependency, or the structured finding
-  with a visible "brief unavailable" marker; never a brief with a mismatched
-  version.
-
-A finding whose brief has not been generated yet shows the structured finding with a 'brief pending' marker; 'brief unavailable' is only for a brief that was rejected, timed out or errored.
+### US-6: Plain-language fix brief (moved to Showcase)
+Moved unchanged to the "Showcase (post-submission)" section below.
 
 ### US-7: Daily refresh and re-score
-As a security lead, KEV/EPSS data is refreshed daily and findings are
-re-scored through the API.
+As a security lead, the backend refreshes KEV/EPSS data daily with its own
+scheduler and re-scores findings through the API. The same scheduler runs the
+scheduled re-scan of every asset (US-10). No external workflow tool is
+involved.
 - Acceptance: after a scheduled refresh with changed feed data, affected
   findings show updated signals and ranks without manual action.
+- Acceptance: the scheduled refresh and the scheduled re-scan are started by
+  the backend's own scheduler, with no manual action and no external workflow
+  tool.
 
-### US-8: New top-priority finding notifies and opens an issue
-As an asset owner, a new top-priority finding notifies me and opens a GitHub
-issue automatically. "New" means the first time this finding enters the top
-tier in its current lifecycle. It covers a newly created finding and an
+### US-8: New top-priority finding notifies the owner
+As an asset owner, a new top-priority finding notifies me. The backend
+delivers the owner notification itself and records `notification.enqueue` and
+`notification.deliver` for it. "New" means the first time this finding enters
+the top tier in its current lifecycle. It covers a newly created finding and an
 existing finding promoted into the top tier by a daily KEV/EPSS refresh. The
 top tier is `P1` as defined by the Stage 2 formula, and Open question 1 is a
 blocker for Stage 2 sign-off.
 - Acceptance: a newly appearing top-priority finding produces exactly one
-  owner notification and exactly one GitHub issue referencing the finding.
+  owner notification.
 - Acceptance: a finding that leaves and re-enters the top tier without being
-  fixed produces no second GitHub issue and no second owner notification; a
-  finding that was `fixed` and reappears (E7) starts a new lifecycle and may
-  produce at most one new issue and one new notification.
-- Acceptance: exactly one owner notification and exactly one GitHub issue are
-  created per finding lifecycle, even if the daily refresh runs twice or
-  retries after a partial failure. The idempotency basis is the finding
-  lifecycle.
+  fixed produces no second owner notification; a finding that was `fixed` and
+  reappears (E7) starts a new lifecycle and may produce at most one new
+  notification.
+- Acceptance: exactly one owner notification is created per finding lifecycle,
+  even if the daily refresh runs twice or retries after a partial failure. The
+  idempotency basis is the finding lifecycle.
 - Acceptance: for an ownerless asset, the notification is held and the asset
-  is flagged ownerless (E2), while the GitHub issue is still opened once.
-- The issue is opened in the dedicated tracker repo `vuln-triage-findings`
-  using one narrowly scoped token. The token may create, comment on and close
-  issues in the dedicated tracker repo `vuln-triage-findings` only; the n8n
-  workflow, not the token, limits which of those actions it takes. (`VERIFY:`
-  the narrowest GitHub permission that gives these actions on one repository
-  is issues read/write on that repository, and it also allows editing issues
-  and anything else the check finds.) It cannot push code to any branch or
-  change repository settings, and a push attempt with it is refused.
-  (`VERIFY:` an issues-only permission excludes contents write and
-  administration.) Closing the issue does not change the finding's status;
-  n8n may comment on or close the issue after a re-scan marks the finding
-  `fixed`.
+  is flagged ownerless (E2).
+- The GitHub tracker issue that this story used to open is in the Showcase
+  section ("US-8 GitHub tracker issue"), with its original wording.
 
-### US-9: Overdue reminders, escalation, weekly digest
-As a security lead, overdue findings trigger reminders and escalation, and I
-get a weekly digest of exposure. A finding's due date is the start of its
-current lifecycle plus the window for the highest tier the finding has reached
-in that lifecycle. The first lifecycle starts at first detection; after an E7
-reopen, the new lifecycle starts at the reopen time, and the first detection
-time stays recorded in the audit trail. A tier rise
-moves the due date earlier to the new tier's window; a tier drop never moves it
-later; an already-overdue finding stays overdue. The windows are an
-`ASSUMPTION:` until Stage 2. The escalation target is one configured
-security-lead contact (name and email) in deployment configuration, not an
-asset record.
-- Acceptance: an open finding past its due date produces a reminder to the
-  owner and an escalation to the security lead; a weekly digest listing open
-  findings by rank is delivered once per week.
-- Acceptance: a missing security-lead contact is a visible configuration
-  error, not a silent drop.
+### US-9: Overdue reminders, escalation, weekly digest (moved to Showcase)
+Moved unchanged to the "Showcase (post-submission)" section below.
 
 ### US-10: Re-scan closes fixed findings
 As an asset owner, a finding closes automatically when a re-scan shows the
@@ -186,6 +164,74 @@ An asset owner may accept risk only on an asset whose owner email matches their 
   an empty or whitespace-only reason is rejected and the status does not
   change.
 
+### US-12: Read-only assistant answers exposure questions (moved to Showcase)
+Moved unchanged to the "Showcase (post-submission)" section below.
+
+### US-13: The notification journey is instrumented
+As a security lead, I can see whether a top-priority finding reached its owner,
+as metrics, traces and structured logs that share one trace ID, viewable in
+Grafana.
+- Acceptance: one scan-to-notification journey emits a metric, a trace and a
+  structured log line carrying the same trace ID; Grafana shows them side by
+  side.
+  No telemetry payload contains advisory text, owner contact details, repository
+  URLs, lockfile content or any credential.
+
+### US-14: An alert fires when a top-priority finding is not notified
+As an asset owner, if my finding is never delivered to me, an alert fires so
+someone looks at it.
+- Acceptance: a top-priority finding whose notification fails or does not
+  complete within the agreed window (based on the `notification.deliver`
+  outcome) fires exactly one alert naming the finding; a successful
+  notification fires none.
+
+### US-15: A responder agent wakes on the alert and fixes it
+A responder agent wakes on the US-14 alert, reproduces a defect in VulnTriage's
+notification path (e.g. a finding with no fixed version or several advisory IDs
+fails to format), fixes it, and opens a pull request with the fix
+and a test; once merged, CI deploys it to dev.
+- Acceptance: the undelivered finding then reaches its owner, the alert
+  resolves, and the agent's actions are logged. Production promotion stays
+  manual.
+
+### US-16: n8n workflows are exported into the repo (moved to Showcase)
+Moved unchanged to the "Showcase (post-submission)" section below.
+
+## Showcase (post-submission)
+
+The stories and clauses in this section are built after submission. Their text
+is kept in full so that no requirement is lost. A story here keeps its number
+and heading; its old place above holds a pointer to this section.
+
+### US-6: Plain-language fix brief
+As an asset owner, I get a short plain-language brief per finding built from
+the structured finding (what is affected, why it matters, what version to
+move to). (Guardrail design in Stage 2; brief content tests in Stage 4.)
+- Acceptance: an open finding shows either a brief whose fix version matches
+  the finding's fixed version for this dependency, or the structured finding
+  with a visible "brief unavailable" marker; never a brief with a mismatched
+  version.
+
+A finding whose brief has not been generated yet shows the structured finding with a 'brief pending' marker; 'brief unavailable' is only for a brief that was rejected, timed out or errored.
+
+### US-9: Overdue reminders, escalation, weekly digest
+As a security lead, overdue findings trigger reminders and escalation, and I
+get a weekly digest of exposure. A finding's due date is the start of its
+current lifecycle plus the window for the highest tier the finding has reached
+in that lifecycle. The first lifecycle starts at first detection; after an E7
+reopen, the new lifecycle starts at the reopen time, and the first detection
+time stays recorded in the audit trail. A tier rise
+moves the due date earlier to the new tier's window; a tier drop never moves it
+later; an already-overdue finding stays overdue. The windows are an
+`ASSUMPTION:` until Stage 2. The escalation target is one configured
+security-lead contact (name and email) in deployment configuration, not an
+asset record.
+- Acceptance: an open finding past its due date produces a reminder to the
+  owner and an escalation to the security lead; a weekly digest listing open
+  findings by rank is delivered once per week.
+- Acceptance: a missing security-lead contact is a visible configuration
+  error, not a silent drop.
+
 ### US-12: Read-only assistant answers exposure questions
 As a developer using an AI assistant, I can ask "which assets are affected by
 this CVE?" through the read-only MCP server (tools: `list_top_exposures`,
@@ -211,38 +257,55 @@ returns the same finding(s) as a lookup by the primary id.
   the API with a 4xx response and changes no state; the MCP server exposes no
   write tools.
 
-### US-13: The notification journey is instrumented
-As a security lead, I can see whether a top-priority finding reached its owner,
-as metrics, traces and structured logs that share one trace ID, viewable in
-Grafana.
-- Acceptance: one scan-to-notification journey emits a metric, a trace and a
-  structured log line carrying the same trace ID; Grafana shows them side by
-  side.
-  No telemetry payload contains advisory text, owner contact details, repository
-  URLs, lockfile content or any credential.
-
-### US-14: An alert fires when a top-priority finding is not notified
-As an asset owner, if my finding is never delivered to me, an alert fires so
-someone looks at it.
-- Acceptance: a top-priority finding whose notification fails or does not
-  complete within the agreed window fires exactly one alert naming the finding;
-  a successful notification fires none.
-
-### US-15: A responder agent wakes on the alert and fixes it
-A responder agent wakes on the US-14 alert, reproduces a defect in VulnTriage's
-notification path (e.g. a finding with no fixed version or several advisory IDs
-fails to format), fixes it, and opens a pull request with the fix
-and a test; once merged, CI deploys it to dev.
-- Acceptance: the undelivered finding then reaches its owner, the alert
-  resolves, and the agent's actions are logged. Production promotion stays
-  manual.
-
 ### US-16: n8n workflows are exported into the repo
 As a security lead, the n8n workflows that route findings are exported as JSON
 into the repository, so the workflow the repo runs is reviewable.
 - Acceptance: each workflow has a committed JSON file under `n8n/workflows/`,
   named after the workflow, and the exported file is the workflow the repo
   runs.
+
+### US-8 GitHub tracker issue
+
+The part of US-8 that opened a GitHub tracker issue through n8n. It left US-8
+when the backend took over the owner notification. The original wording of the
+affected lines is kept here; the owner-notification part is in US-8 above.
+
+Original opening of US-8: "As an asset owner, a new top-priority finding
+notifies me and opens a GitHub issue automatically."
+
+Original acceptance lines that mention the GitHub issue:
+- Acceptance: a newly appearing top-priority finding produces exactly one
+  owner notification and exactly one GitHub issue referencing the finding.
+- Acceptance: a finding that leaves and re-enters the top tier without being
+  fixed produces no second GitHub issue and no second owner notification; a
+  finding that was `fixed` and reappears (E7) starts a new lifecycle and may
+  produce at most one new issue and one new notification.
+- Acceptance: exactly one owner notification and exactly one GitHub issue are
+  created per finding lifecycle, even if the daily refresh runs twice or
+  retries after a partial failure. The idempotency basis is the finding
+  lifecycle.
+- Acceptance: for an ownerless asset, the notification is held and the asset
+  is flagged ownerless (E2), while the GitHub issue is still opened once.
+
+Original tracker paragraph:
+- The issue is opened in the dedicated tracker repo `vuln-triage-findings`
+  using one narrowly scoped token. The token may create, comment on and close
+  issues in the dedicated tracker repo `vuln-triage-findings` only; the n8n
+  workflow, not the token, limits which of those actions it takes. (`VERIFY:`
+  the narrowest GitHub permission that gives these actions on one repository
+  is issues read/write on that repository, and it also allows editing issues
+  and anything else the check finds.) It cannot push code to any branch or
+  change repository settings, and a push attempt with it is refused.
+  (`VERIFY:` an issues-only permission excludes contents write and
+  administration.) Closing the issue does not change the finding's status;
+  n8n may comment on or close the issue after a re-scan marks the finding
+  `fixed`.
+
+Edge-case clauses removed from E4 and E7 for the same reason:
+- E4: "no second GitHub issue or owner notification if one was already sent (n8n
+  closes the tracker issue only after `fixed`, US-8)".
+- E7: "at most one new GitHub issue and one new owner notification if it enters
+  the top tier".
 
 ## Finding statuses
 
@@ -319,38 +382,40 @@ finding status.
 Advisory text is untrusted data and never instructions.
 
 Flows carrying advisory-derived text to a person or an agent, each with its
-rule:
+rule. Rows marked "Showcase" belong to showcase stories and apply when those
+stories are built.
 
 | Flow | Rule |
 |---|---|
-| LLM brief | Contains only the allowed fields. Its only link is one VulnTriage builds itself from the finding's primary id on a fixed host, the OSV page for that id (`VERIFY:` the OSV page URL pattern for a vulnerability id); no URL from advisory text ever appears in a brief. |
+| Showcase: LLM brief (US-6) | Contains only the allowed fields. Its only link is one VulnTriage builds itself from the finding's primary id on a fixed host, the OSV page for that id (`VERIFY:` the OSV page URL pattern for a vulnerability id); no URL from advisory text ever appears in a brief. |
 | Owner notification | Plain text with labelled fields. |
-| US-9 reminder and escalation | Plain text with labelled fields, as for the owner notification. |
-| Weekly digest | Plain text with labelled fields, as for the owner notification. |
+| Showcase: US-9 reminder and escalation | Plain text with labelled fields, as for the owner notification. |
+| Showcase: Weekly digest (US-9) | Plain text with labelled fields, as for the owner notification. |
 | E8 "signals changed" notice | Plain text with labelled fields, as for the owner notification. |
 | US-14 alert payload (received by the US-15 responder) | Finding id and tier only; no advisory-derived text. Advisory text the responder later reads through the API is untrusted data, never instructions. |
-| GitHub issue | Opened by n8n in the dedicated tracker repo; advisory-derived text is quoted data, clearly separated from VulnTriage's own text. Under `AGENTS.md`, such issue text is data, not instructions. |
-| MCP output | Advisory-derived text is quoted and labelled untrusted data, including in `get_finding` and `which_assets_affected`; never presented as instructions. |
+| Showcase: GitHub issue (US-8 GitHub tracker issue) | Opened by n8n in the dedicated tracker repo; advisory-derived text is quoted data, clearly separated from VulnTriage's own text. Under `AGENTS.md`, such issue text is data, not instructions. |
+| Showcase: MCP output (US-12) | Advisory-derived text is quoted and labelled untrusted data, including in `get_finding` and `which_assets_affected`; never presented as instructions. |
 | Dashboard | Plain text with no auto-links. |
 
-Any URL in advisory text is shown as inert text, and never appears in a brief.
+Any URL in advisory text is shown as inert text, and never appears in a brief
+(showcase, US-6).
 
 ## Edge cases
 
 | # | Case | Expected behaviour |
 |---|---|---|
-| E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
+| E1 | Package with no fixed version yet | The finding has no fixed version for this dependency. It stays `open` and shows the display text "no fixed version" (display text, not a finding status); it is ranked by exploit signals (tier rule in Stage 2). Showcase (US-6): any brief that names a fix version is rejected, and the structured finding is delivered without the AI brief. |
 | E2 | Asset with no owner | Finding is still recorded and ranked; notification is held and the asset is flagged ownerless in the dashboard |
 | E3 | A feed (OSV / KEV / EPSS) is unavailable | OSV unavailable on a new asset's first scan: the asset shows `scan failed` with reason `feed unavailable`, no findings are created, and it is not shown as `scanned, clean`. OSV unavailable on a later scan: last-known data and findings are kept and marked stale, not deleted, and the asset shows `scan failed` with reason `feed unavailable`. KEV or EPSS unavailable while OSV succeeded: the asset's scan status is the value the OSV result gives (`scanned, findings`, `scanned, incomplete` or `scanned, clean`), and the last-known KEV or EPSS signals are kept and marked stale. In every case the scheduled run retries |
-| E4 | OSV later withdraws an advisory, or a CVE drops out of KEV or EPSS | When a re-scan finds that OSV has withdrawn the advisory (`VERIFY:` how OSV marks or returns a withdrawn advisory), the finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not `fixed`, even if the advisory no longer matches the installed version; the finding is not deleted, and the audit entry records the previous value, the actor (re-scan), the timestamp and OSV as the source. A `risk accepted` finding becomes `withdrawn` too: the audit entry records `risk accepted` as the previous value, and no owner notification is sent. A finding with several merged advisories (E9) becomes `withdrawn` only when every one of them is withdrawn. An advisory that is already withdrawn when a scan first sees it creates no finding; the only status a scan creates is `open`. If a later re-scan finds any of a `withdrawn` finding's advisories no longer withdrawn (`VERIFY:` how OSV shows a reinstated advisory) and the installed version is inside an affected range, the finding returns to the status it had before it was withdrawn (`open`, or `risk accepted` if a person had accepted it) and resumes its earlier lifecycle: no second GitHub issue or owner notification if one was already sent (n8n closes the tracker issue only after `fixed`, US-8). Returning to `risk accepted` restores the human's earlier acceptance as recorded in the audit trail (who, when and the reason); it is not a new acceptance, and the re-scan never sets `risk accepted` on a finding no person had accepted. If the installed version is outside every affected range, it becomes `fixed`. Each of these changes records the previous value, the actor (re-scan), the timestamp and OSV as the source; a restored acceptance also names the audit entry it restores. The scheduled KEV/EPSS refresh never changes a finding's status: a CVE dropping out of KEV or EPSS changes that finding's signals and rank (US-7), not its status |
+| E4 | OSV later withdraws an advisory, or a CVE drops out of KEV or EPSS | When a re-scan finds that OSV has withdrawn the advisory (`VERIFY:` how OSV marks or returns a withdrawn advisory), the finding status becomes `withdrawn` (`ASSUMPTION:` addition to the brief's three statuses), not `fixed`, even if the advisory no longer matches the installed version; the finding is not deleted, and the audit entry records the previous value, the actor (re-scan), the timestamp and OSV as the source. A `risk accepted` finding becomes `withdrawn` too: the audit entry records `risk accepted` as the previous value, and no owner notification is sent. A finding with several merged advisories (E9) becomes `withdrawn` only when every one of them is withdrawn. An advisory that is already withdrawn when a scan first sees it creates no finding; the only status a scan creates is `open`. If a later re-scan finds any of a `withdrawn` finding's advisories no longer withdrawn (`VERIFY:` how OSV shows a reinstated advisory) and the installed version is inside an affected range, the finding returns to the status it had before it was withdrawn (`open`, or `risk accepted` if a person had accepted it) and resumes its earlier lifecycle: no second owner notification if one was already sent (US-8). Returning to `risk accepted` restores the human's earlier acceptance as recorded in the audit trail (who, when and the reason); it is not a new acceptance, and the re-scan never sets `risk accepted` on a finding no person had accepted. If the installed version is outside every affected range, it becomes `fixed`. Each of these changes records the previous value, the actor (re-scan), the timestamp and OSV as the source; a restored acceptance also names the audit entry it restores. The scheduled KEV/EPSS refresh never changes a finding's status: a CVE dropping out of KEV or EPSS changes that finding's signals and rank (US-7), not its status |
 | E5 | Lockfile fails to parse | The asset's scan status is `scan failed` with reason `lockfile parse error`; previous findings are kept and marked stale; the error is visible in the dashboard |
 | E6 | A telemetry backend is unavailable | Buffer in-process and retry; findings, notifications and alerts are unaffected; the gap is visible in Grafana |
-| E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new GitHub issue and one new owner notification if it enters the top tier |
+| E7 | A `fixed` finding's vulnerable version comes back (downgrade or revert) | The finding returns to `open` with an audit entry giving the previous value and the reason, and starts a new notification lifecycle under the US-8 rules: at most one new owner notification if it enters the top tier |
 | E8 | A `risk accepted` finding's signals escalate (for example it becomes KEV-listed) | The status stays `risk accepted` because a human set it, but the finding is flagged "signals changed" and the owner and security lead are notified once. It does not silently reopen or silently stay quiet. A re-scan may still close it: it becomes `fixed` (US-10) or `withdrawn` (E4), with `risk accepted` recorded as the previous value and no owner notification |
 | E9 | One vulnerability is reported under two ids (for example a GHSA and a PYSEC advisory for the same CVE) | `VERIFY:` OSV records carry alias sets. Two records are the same vulnerability when their alias sets intersect; the finding is keyed by the CVE when present, otherwise by the primary advisory id. The asset gets one finding per (asset, package, vulnerability identity), with all advisory ids and affected ranges attached, not two findings. Its fixed version is derived under the "fixed version for this dependency" rule from all merged affected ranges. One finding means at most one US-8 notification per lifecycle |
 | E10 | A `requirements.txt` entry has no exact version (`requests>=2`, bare `requests`, an environment marker, or a `-r` include) | Record the entry with "version unknown", show a visible warning, and make no OSV match; a scan where nothing matched and at least one entry is "version unknown" is `scanned, incomplete`. `-r` includes are resolved only inside the repository; an include outside the repository or a remote URL is refused and reported as a scan warning, never fetched, and its entries are never read; a scan where nothing matched and at least one include was refused is `scanned, incomplete`. A `uv.lock` or `package-lock.json` entry with no version, other than the project's own package and local link or workspace entries, is also recorded as "version unknown" with a visible warning and no OSV match, and counts toward `scanned, incomplete` the same way (`VERIFY:` which lockfile entries carry no version) |
 | E11 | A vulnerability has no CVE alias | `VERIFY:` KEV and EPSS are keyed by CVE. KEV shows `KEV: n/a (no CVE)`, EPSS shows `n/a`, and the finding is still recorded and ranked. No advisory is dropped only because it has no CVE |
-| E12 | Advisory text contains instructions or links | The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields; its only link is the one VulnTriage builds from the finding's primary id (Advisory-derived text), and no URL from advisory text ever appears in it; every URL in advisory text is shown as inert text |
+| E12 | Advisory text contains instructions or links | Showcase for the brief clause (US-6); the other rules apply to every surface in submission scope. The instructions are never followed; the text never chooses a tool, command, URL, file path or credential. The brief contains only the allowed fields; its only link is the one VulnTriage builds from the finding's primary id (Advisory-derived text), and no URL from advisory text ever appears in it; every URL in advisory text is shown as inert text |
 
 ## Open questions
 
