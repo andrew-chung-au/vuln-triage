@@ -14,7 +14,7 @@
 
 - Engineer `8d9db69`, `2430912`: `_docs/testing.md` (new), `README.md`.
 - Close-out: `_docs/roadmap.md` (step 10 row, #43 leftover line, one check-in line), `_docs/ai-usage-log.md` (one entry), this summary.
-- GitHub: #56 comments 6329411066 (PM grooming), 6329460170 (PM body-edit note), 6329735908 (Engineer), 6329945929 (QA PASS); #9 body (two Stage 4 rows); #63 created.
+- GitHub: #56 comments 6329411066 (PM grooming), 6329460170 (PM body-edit note), 6329735908 (Engineer), 6329945929 (QA PASS), 6330289999 (QA re-check PASS at `ae0d55d`); #9 body (two Stage 4 rows); #63 created.
 - No application, test, fixture, Compose, CI, Makefile, OpenAPI, `api.md`, spec or architecture file changed. No protected commit.
 
 ## Decisions made by the human
@@ -36,7 +36,7 @@
 
 - **Test:** `make test`: 62 passed, 0 failed (3 vitest files; the planned backend layers do not exist yet).
 - **Verify:** `make verify`: PASS; also `make verify BASE=origin/main` on the branch (no upstream).
-- **Assert clean:** `make assert-clean`: PASS at `2430912` after QA.
+- **Assert clean:** `make assert-clean`: PASS at `2430912` after the first QA and at `ae0d55d` after the re-check.
 - **OpenAPI:** `make openapi-validate`: not needed; the contract was not edited.
 - **Document checks:** `make issue-dump N=9` plus the Engineer's read-only `.scratch/verify_issue9.py`; `grep -n "VERIFY:" _docs/testing.md`.
 
