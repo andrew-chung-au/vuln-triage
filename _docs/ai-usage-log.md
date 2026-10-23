@@ -1919,3 +1919,14 @@ Copy this template for each new entry:
 - files changed: `fb33f75` (dependencies), `95eb7bf` (`Makefile`, protected), `_session-summaries/issue-076-asset-ingestion.md`, `_docs/roadmap.md` check-in; this log entry. The Engineer's commits are recorded in its own entries
 - verification (tests run, reviewer verdict): QA FAIL once on a wrong fixture-layout line in `_docs/testing.md` (comment 6359044871), then QA PASS at `2f54435` (comment 6359063365); `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests); `make assert-clean` PASS after each QA run
 - human review (what I checked or corrected, or `none`): the human approved `httpx` and `packaging`, the exact `Makefile` diff (record 6358822028), the fixes at the decision point, and the held `AGENTS.md` line. I added the dependencies myself and ran the lock. Commands that required approval: `make backend-lock` and `make backend-install` (network, new dependencies); `HUMAN_APPROVED=1 git commit` for `Makefile` (protected file); `make issue-comment` and `make issue-close` (ask rules)
+
+### 2026-10-23 — Orchestrator: #112 close-out on the human's report
+
+- date: 2026-10-23
+- task/issue: #112 (push-check image), closing after the human's image steps
+- agent role: Orchestrator (main session), no subagent
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's message that the real push, the broken-install check and the report-back "all worked fine"; no new key prompt saved
+- files changed: `_session-summaries/issue-112-push-check-image.md`, `_docs/roadmap.md` check-in; this log entry
+- verification (tests run, reviewer verdict): none run by me. The image steps were run by the human, who gave no output, so versions, image size and the offline `uvx` result are not recorded. QA's earlier PASS covered the static criteria only (comment 6357004988)
+- human review (what I checked or corrected, or `none`): the human ran the image steps themselves. Commands that required approval: `make issue-comment` and `make issue-close` (ask rules)
