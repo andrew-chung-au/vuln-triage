@@ -1,7 +1,7 @@
 # VulnTriage
 Ranks vulnerable dependencies by real-world exploit risk and routes each fix to the owner who can make it.
 
-The project is in planning: the plan in `_docs/` has not passed review, and the application is not implemented or deployed. Everything below describes intended functionality and expected behaviour, not something that is currently available.
+The project is in the build phase (phase S1 first): the plan in `_docs/` passed review on 2026-10-22 (`_docs/reviews/2026-10-22-plan-review-2.md`), and the application is not yet implemented or deployed. Everything below describes intended functionality and expected behaviour, not something that is currently available.
 
 ## The problem
 
