@@ -13,6 +13,19 @@ import { DEMO_CREDENTIALS, DEMO_OWNER_CREDENTIALS, DEMO_OWNER_USER, DEMO_USER, s
 import { mockServices, resetMockData, resetMockSession } from "@/services/mockService";
 import type { FindingWithAsset, NewAssetInput } from "@/services/types";
 
+// Production wiring now binds `services` to the real backend-backed httpServices
+// (task 11 / #133). These component tests mount the full route tree and must not
+// hit the network, so `services` is bound to the in-memory mock singleton here.
+// Everything else from "@/services" stays real, and vi.spyOn(mockServices, ...)
+// observes the same object the route components call.
+vi.mock("@/services", async () => {
+  const actual = await vi.importActual<typeof import("@/services")>("@/services");
+  const { mockServices } = await vi.importActual<typeof import("@/services/mockService")>(
+    "@/services/mockService",
+  );
+  return { ...actual, services: mockServices };
+});
+
 function newAsset(overrides: Partial<NewAssetInput> = {}): NewAssetInput {
   return {
     name: "new-asset",
