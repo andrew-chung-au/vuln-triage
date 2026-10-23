@@ -1,0 +1,25 @@
+[project]
+name = "vulntriage"
+version = "0.1.0"
+description = "VulnTriage backend (skeleton from task 1)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+markers = [
+    "unit: pure function or in-memory/SQLite case with no network",
+    "sqlite_integration: case that exercises the SQLite integration harness",
+]
