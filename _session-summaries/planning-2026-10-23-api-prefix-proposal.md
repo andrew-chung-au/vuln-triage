@@ -12,6 +12,15 @@ D1 (`root_path="/api"`) and D2 (`/api/health`). Implemented on the
 the #137 session summary. `architecture.md`/`testing.md` needed no change
 (their `/health` references are the backend path, which did not move).
 
+**Correction (D1), after `make verify`:** `root_path="/api"` is deprecated in the
+pinned FastAPI (0.161.1) and emits a `FastAPIDeprecationWarning`. Since D1 was
+optional and cosmetic (the proxy strips `/api` regardless), `root_path` was
+**dropped** — the app sets no `root_path`. The `/api` base lives in the proxy and
+`openapi.yaml`'s `servers.url`. `make verify` also caught a stale task-4 test
+that pinned `.env.example` to the single `GITHUB_READ_TOKEN=` line; it was
+updated to assert the task-15 contract (required names present, showcase names
+absent, no committed values).
+
 ## The problem (recap)
 
 - The SPA's client-side router has pages at `/`, `/login`, `/assets`, `/findings`, `/findings/:id`.

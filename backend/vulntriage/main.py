@@ -84,11 +84,12 @@ def create_app(
             if engine is not None:
                 engine.dispose()
 
-    # The app is served behind a reverse proxy at /api (the proxy strips the
-    # prefix, so routes stay mounted at /findings, /assets, etc. and the tests
-    # are unaffected). root_path makes the self-served OpenAPI/docs advertise
-    # the /api base, matching openapi.yaml's servers.url.
-    app = FastAPI(lifespan=lifespan, root_path="/api")
+    # The app is served behind a reverse proxy at /api, which strips the prefix,
+    # so routes stay mounted at /findings, /assets, etc. and the tests are
+    # unaffected. The /api base lives in openapi.yaml's servers.url; the
+    # FastAPI(root_path=...) constructor arg is deprecated in this version, so
+    # it is not set here (it was only cosmetic for the self-served /docs).
+    app = FastAPI(lifespan=lifespan)
     app.state.session_factory = session_factory
     app.state.worker = None
     app.state.login_throttle = LoginThrottle()

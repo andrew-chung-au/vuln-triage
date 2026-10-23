@@ -21,7 +21,7 @@ prefix, the 58 backend endpoint tests and the conformance test are unchanged.
 - `frontend/src/services/httpService.ts`: `const API_BASE = "/api"`, applied once in `request()`.
 - `frontend/src/test/http-service.test.ts`: two URL assertions updated to `/api/...`.
 - `frontend/vite.config.ts`: dev proxy is a single `/api` with `rewrite` stripping the prefix.
-- `backend/vulntriage/main.py`: `FastAPI(root_path="/api")` (D1); routes stay at `/findings` etc.
+- `backend/vulntriage/main.py`: `/health` route; routes stay at `/findings` etc. (D1's `root_path="/api"` was dropped — deprecated in the pinned FastAPI and only cosmetic; the proxy strips `/api` regardless. Caught by `make verify`.)
 - `_docs/openapi.yaml`: `servers.url: /` → `/api`. `_docs/api.md`: base-path note + `/health` note (D2: reached at `/api/health` through the proxy; backend path stays `/health`).
 
 ### The Compose stack

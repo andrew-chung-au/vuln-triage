@@ -2193,3 +2193,12 @@ Copy this template for each new entry:
 - files changed: `_docs/verify-locally.md` (new §7 "Run the full Compose stack (phase S2)" with make compose-up, the /env setup, the /api one-origin note and the /findings hard-refresh acceptance; corrected the §6 Vite proxy note to the single /api prefix; renumbered Clean up to §8; added Compose troubleshooting rows and updated the status/scope notes), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): docs only; no code changed. Not run (sandbox has no Docker/PyPI).
 - human review (what I checked or corrected, or `none`): none yet; part of PR #147.
+
+- date: 2026-10-23
+- task/issue: #137 fixes from make verify (human-run on the branch)
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human ran make verify on feat/137-compose-stack; it FAILED on a stale .env.example test and warned on a deprecated root_path.
+- files changed: `backend/vulntriage/main.py` (drop the deprecated FastAPI(root_path="/api") — D1 was optional/cosmetic; proxy strips /api regardless), `tests/test_github_reader.py` (rewrite test_env_example_* to assert the task-15 contract: required names present, showcase names absent, no committed values), `_docs/api.md` (note the app sets no root_path), two session summaries, this log entry.
+- verification (tests run, reviewer verdict): byte-compiled; the new env-example test logic validated standalone against the real .env.example (passes). Full pytest not runnable here (no venv/PyPI). The human re-runs make verify on the branch.
+- human review (what I checked or corrected, or `none`): the human's make verify run found both issues; this commit addresses them. No test was weakened — the env-example test now asserts a stronger, accurate contract.
