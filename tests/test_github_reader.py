@@ -203,12 +203,25 @@ def test_default_client_fails_under_the_network_guard() -> None:
         GitHubReader(token_provider=lambda: None).resolve_commit("octocat", "hello-world")
 
 
-def test_recorder_refuses_unknown_sources_and_makes_no_request() -> None:
+def test_recorder_refuses_unknown_and_unimplemented_sources_and_makes_no_request() -> None:
     import record_fixtures
 
+    # Unknown source, and the not-yet-implemented feeds (task 6): each returns 2
+    # from argument validation before any network client is built. `osv` is now
+    # implemented (task 5), so it is covered by its own recorder test below.
     assert record_fixtures.main(["record_fixtures.py", "banana"]) == 2
-    assert record_fixtures.main(["record_fixtures.py", "osv"]) == 2
+    assert record_fixtures.main(["record_fixtures.py", "kev"]) == 2
+    assert record_fixtures.main(["record_fixtures.py", "epss"]) == 2
     assert record_fixtures.main(["record_fixtures.py"]) == 2
+
+
+def test_osv_recorder_with_no_confirmed_packages_returns_2_and_makes_no_request(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # The osv recorder is human-run (live OSV API); under the test harness it must
+    # not make a call. With no confirmed packages it returns 2 before any request.
+    import record_fixtures
+
+    monkeypatch.setattr(record_fixtures, "read_osv_packages", lambda: [])
+    assert record_fixtures.record_osv() == 2
 
 
 def test_env_example_has_only_the_empty_token_name() -> None:
