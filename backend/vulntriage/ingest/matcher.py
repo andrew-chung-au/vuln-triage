@@ -12,14 +12,15 @@ Given the asset's ``Dependency`` rows and an OSV client, this module:
 4. Computes the fixed version for this dependency across every merged advisory's
    ranges and every vulnerable installed entry of that package (A6, the five-step
    rule in :mod:`vulntriage.ingest.osv_ranges`).
-5. Creates one ``open`` ``Finding`` per ``(asset, package, vulnerability)`` with
-   its ``FindingDependency`` links. An advisory already withdrawn when the scan
-   first sees it creates no finding, and a scan only ever creates ``open``
-   findings (E4).
+5. Reconciles each ``(asset, package, vulnerability)`` with its existing finding
+   through :mod:`vulntriage.ingest.lifecycle`: a new vulnerable dependency gets an
+   ``open`` finding and its first lifecycle; a re-scan may set ``fixed``,
+   ``withdrawn``, reopen (E7) or restore (E4). An advisory already withdrawn when
+   the scan first sees it creates no finding (E4).
 
-Re-scan status transitions (``fixed``/``withdrawn``/restore, E4/E7) and the
-audit trail are task 8; ranking (tier, rank inputs/reason) is task 7, so new
-findings get placeholder rank fields (see ``_PLACEHOLDER_*``).
+Ranking (tier, rank inputs/reason) is task 7 and runs after enrichment, so a
+newly created finding starts with placeholder rank fields that ``rank_asset``
+overwrites in the same scan transaction.
 """
 
 from __future__ import annotations
@@ -29,27 +30,22 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from vulntriage.db.enums import FindingStatus, Tier
+from vulntriage.db.enums import FindingStatus
 from vulntriage.db.identity import identity_key
 from vulntriage.db.models import (
     Advisory,
     Dependency,
     Finding,
-    FindingDependency,
     Vulnerability,
     VulnerabilityAlias,
 )
+from vulntriage.ingest.lifecycle import MatchState, apply_rescan, create_finding
 from vulntriage.ingest.osv import OsvClientProtocol, Query
 from vulntriage.ingest.osv_ranges import collect_intervals, fixed_version_from_intervals
 from vulntriage.ingest.versions import compare
-
-# Ranking is task 7; findings are created with placeholder rank fields until then.
-_PLACEHOLDER_TIER = Tier.P4.value
-_PLACEHOLDER_RANK_INPUTS: dict[str, Any] = {}
-_PLACEHOLDER_RANK_REASON = ""
 
 
 @dataclass
@@ -115,77 +111,166 @@ def _distinct_queries(deps: list[Dependency]) -> list[Query]:
 
 
 def match_asset(session: Session, asset_id: int, client: OsvClientProtocol) -> bool:
-    """Create findings for ``asset_id`` from OSV. Returns whether any were created.
+    """Match ``asset_id`` against OSV and drive every finding's lifecycle (task 8).
 
-    Called inside the scan's open transaction, after the ``Dependency`` rows are
-    written and before commit. Raises :class:`vulntriage.ingest.osv.FeedUnavailable`
-    straight through so the scan maps it to ``feed unavailable`` (E3).
+    Returns whether any finding is currently ``open`` or ``risk accepted`` (so the
+    scan status is ``scanned, findings``). Called inside the scan's open
+    transaction, after the ``Dependency`` rows are written and before commit.
+    Raises :class:`vulntriage.ingest.osv.FeedUnavailable` straight through so the
+    scan maps it to ``feed unavailable`` (E3).
+
+    On a re-scan the installed versions may have changed, so this reconciles the
+    asset's existing findings with the new OSV answer: a finding whose version
+    left every live range, or whose advisories OSV no longer returns, is set
+    ``fixed``; a withdrawn advisory sets ``withdrawn``; reinstatement restores or
+    fixes; a returned vulnerable version reopens a ``fixed`` finding (E4/E7/E8).
     """
-    deps = list(
-        session.scalars(select(Dependency).where(Dependency.asset_id == asset_id))
-    )
+    deps = list(session.scalars(select(Dependency).where(Dependency.asset_id == asset_id)))
     queries = _distinct_queries(deps)
-    if not queries:
-        return False
 
-    results = client.query_batch(queries)
+    results = client.query_batch(queries) if queries else []
 
-    # Fetch each distinct advisory once, caching by id+modified.
+    # Fetch each distinct advisory once (withdrawn ones included, so withdrawal
+    # and reinstatement can be detected). Caching by id+modified is in the upsert.
     advisories: dict[str, dict[str, Any]] = {}
     for refs in results:
         for ref in refs:
-            if ref.osv_id in advisories:
-                continue
-            advisories[ref.osv_id] = client.get_vuln(ref.osv_id)
+            if ref.osv_id not in advisories:
+                advisories[ref.osv_id] = client.get_vuln(ref.osv_id)
 
-    # An advisory already withdrawn at first sight creates no finding (E4): drop
-    # it before grouping so it never contributes a range or an alias.
-    live = {oid: adv for oid, adv in advisories.items() if not _is_withdrawn(adv)}
+    groups = _group_by_alias(advisories)
 
-    groups = _group_by_alias(live)
-    vuln_by_group = {gid: _upsert_vulnerability(session, group) for gid, group in groups.items()}
-
-    # Distinct installed (ecosystem, package) pairs and their dependency rows,
-    # so A6 merges the same package read from several files into one finding.
+    # Installed (ecosystem, package) -> dependency rows (A6 merges several files).
     deps_by_package: dict[tuple[str, str], list[Dependency]] = defaultdict(list)
     for dep in deps:
         if dep.version is not None:
             deps_by_package[(dep.ecosystem, dep.name)].append(dep)
 
-    created = False
-    # The backend evaluates the ranges itself (A10), so for each vulnerability
-    # and each installed package it merges every advisory's intervals and asks
-    # whether the installed versions fall inside.
-    for gid, group in groups.items():
-        vuln = vuln_by_group[gid]
+    # The set of (vulnerability_id, ecosystem, package) reconciled this scan, so
+    # the pass over existing findings below skips those already handled.
+    seen: set[tuple[int, str, str]] = set()
+
+    for group in groups.values():
+        existing_vuln = _existing_vulnerability(session, group)
         for (ecosystem, package), entries in deps_by_package.items():
-            intervals = _group_intervals(group, ecosystem, package)
-            if not intervals:
+            if not _group_intervals_all(group, ecosystem, package):
+                continue  # this vulnerability does not name this package at all
+            state = _state_for(group, ecosystem, package, entries)
+            finding = (
+                _find_finding(session, asset_id, existing_vuln.id, ecosystem, package)
+                if existing_vuln is not None
+                else None
+            )
+            # Persist the vulnerability only when there is a finding to transition
+            # or a new in-range, live match to create: an advisory withdrawn at
+            # first sight, or an out-of-range version, records nothing (E4).
+            if finding is None and not (state.in_range and not state.all_withdrawn):
                 continue
-            matching_deps: list[Dependency] = []
-            per_entry_fixed: list[str | None] = []
-            for dep in entries:
-                assert dep.version is not None
-                matched, fixed = fixed_version_from_intervals(intervals, ecosystem, dep.version)
-                if matched:
-                    matching_deps.append(dep)
-                    per_entry_fixed.append(fixed)
-            if not matching_deps:  # step 3: nothing in range -> no finding
-                continue
-            fixed_version = _merge_fixed(ecosystem, per_entry_fixed)
-            if _create_finding(
-                session, asset_id, vuln, ecosystem, package, fixed_version, matching_deps
-            ):
-                created = True
-    return created
+            vuln = existing_vuln or _upsert_vulnerability(session, group)
+            _record_advisories(session, group, vuln.id)  # record/refresh advisories+aliases
+            _reconcile(session, asset_id, vuln.id, ecosystem, package, state, finding)
+            seen.add((vuln.id, ecosystem, package))
+
+    # Existing findings OSV did not mention this scan: the version left the range
+    # (no advisory matched), so they are reconciled with an out-of-range state.
+    existing = session.scalars(
+        select(Finding).where(
+            Finding.asset_id == asset_id,
+            Finding.status.in_([FindingStatus.OPEN.value, FindingStatus.RISK_ACCEPTED.value]),
+        )
+    )
+    for finding in existing:
+        key = (finding.vulnerability_id, finding.ecosystem, finding.package)
+        if key in seen:
+            continue
+        gone = MatchState(in_range=False, all_withdrawn=False, fixed_version=finding.fixed_version,
+                          dependency_ids=[])
+        apply_rescan(session, finding, gone)
+
+    open_count = session.scalar(
+        select(func.count())
+        .select_from(Finding)
+        .where(
+            Finding.asset_id == asset_id,
+            Finding.status.in_([FindingStatus.OPEN.value, FindingStatus.RISK_ACCEPTED.value]),
+        )
+    )
+    return bool(open_count)
 
 
-def _group_intervals(group: _VulnGroup, ecosystem: str, name: str) -> list:  # type: ignore[type-arg]
-    """Every interval for ecosystem+package across every advisory in the group (E9)."""
+def _group_intervals_all(group: _VulnGroup, ecosystem: str, name: str) -> list:  # type: ignore[type-arg]
+    """Intervals from every advisory (live or withdrawn) that names this package."""
     intervals = []
     for advisory in group.advisories:
         intervals += collect_intervals(advisory.get("affected", []) or [], ecosystem, name)
     return intervals
+
+
+def _state_for(
+    group: _VulnGroup, ecosystem: str, package: str, entries: list[Dependency]
+) -> MatchState:
+    """Compute the current match state for one (vulnerability, package)."""
+    all_withdrawn = len(group.advisories) > 0 and all(
+        _is_withdrawn(a) for a in group.advisories
+    )
+    # Range checks use only live (non-withdrawn) advisories.
+    live_intervals = _group_intervals_live(group, ecosystem, package)
+    matching_deps: list[Dependency] = []
+    per_entry_fixed: list[str | None] = []
+    for dep in entries:
+        assert dep.version is not None
+        matched, fixed = fixed_version_from_intervals(live_intervals, ecosystem, dep.version)
+        if matched:
+            matching_deps.append(dep)
+            per_entry_fixed.append(fixed)
+    in_range = bool(matching_deps)
+    fixed_version = _merge_fixed(ecosystem, per_entry_fixed) if in_range else None
+    return MatchState(
+        in_range=in_range,
+        all_withdrawn=all_withdrawn,
+        fixed_version=fixed_version,
+        dependency_ids=[d.id for d in matching_deps],
+    )
+
+
+def _group_intervals_live(group: _VulnGroup, ecosystem: str, name: str) -> list:  # type: ignore[type-arg]
+    intervals = []
+    for advisory in group.advisories:
+        if _is_withdrawn(advisory):
+            continue
+        intervals += collect_intervals(advisory.get("affected", []) or [], ecosystem, name)
+    return intervals
+
+
+def _find_finding(
+    session: Session, asset_id: int, vulnerability_id: int, ecosystem: str, package: str
+) -> Finding | None:
+    return session.scalar(
+        select(Finding).where(
+            Finding.asset_id == asset_id,
+            Finding.ecosystem == ecosystem,
+            Finding.package == package,
+            Finding.vulnerability_id == vulnerability_id,
+        )
+    )
+
+
+def _reconcile(
+    session: Session,
+    asset_id: int,
+    vulnerability_id: int,
+    ecosystem: str,
+    package: str,
+    state: MatchState,
+    finding: Finding | None,
+) -> None:
+    """Create or transition the finding for one (asset, package, vulnerability)."""
+    if finding is None:
+        # A new finding is created only when the version is actually vulnerable
+        # under a live advisory (the caller already checked this, E4).
+        create_finding(session, asset_id, vulnerability_id, ecosystem, package, state)
+        return
+    apply_rescan(session, finding, state)
 
 
 def _merge_fixed(ecosystem: str, per_entry: list[str | None]) -> str | None:
@@ -222,25 +307,36 @@ def _group_by_alias(advisories: dict[str, dict[str, Any]]) -> dict[str, _VulnGro
     return {_primary_id(group.advisories): group for group in groups}
 
 
+def _identity_key_of(group: _VulnGroup) -> str:
+    return identity_key(_cve_of(group.ids), _primary_id(group.advisories))
+
+
+def _existing_vulnerability(session: Session, group: _VulnGroup) -> Vulnerability | None:
+    """The stored Vulnerability for this group, if one already exists (no create)."""
+    return session.scalar(
+        select(Vulnerability).where(Vulnerability.identity_key == _identity_key_of(group))
+    )
+
+
 def _upsert_vulnerability(session: Session, group: _VulnGroup) -> Vulnerability:
-    """Find or create the Vulnerability for a group and record advisories and aliases."""
+    """Find or create the Vulnerability for a group (advisories recorded separately)."""
     cve = _cve_of(group.ids)
     key = identity_key(cve, _primary_id(group.advisories))
-
-    vuln = session.scalar(
-        select(Vulnerability).where(Vulnerability.identity_key == key)
-    )
+    vuln = session.scalar(select(Vulnerability).where(Vulnerability.identity_key == key))
     if vuln is None:
         vuln = Vulnerability(identity_key=key, cve_id=cve)
         session.add(vuln)
         session.flush()  # assign vuln.id for the foreign keys below
+    return vuln
 
+
+def _record_advisories(session: Session, group: _VulnGroup, vulnerability_id: int) -> None:
+    """Record (or refresh) every advisory and alias of the group for the vulnerability."""
     for advisory in group.advisories:
-        _upsert_advisory(session, advisory, vuln.id)
+        _upsert_advisory(session, advisory, vulnerability_id)
     for alias in group.ids:
         if session.get(VulnerabilityAlias, alias) is None:
-            session.add(VulnerabilityAlias(alias_id=alias, vulnerability_id=vuln.id))
-    return vuln
+            session.add(VulnerabilityAlias(alias_id=alias, vulnerability_id=vulnerability_id))
 
 
 def _upsert_advisory(session: Session, advisory: dict[str, Any], vulnerability_id: int) -> None:
@@ -276,40 +372,4 @@ def _text(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _create_finding(
-    session: Session,
-    asset_id: int,
-    vuln: Vulnerability,
-    ecosystem: str,
-    package: str,
-    fixed_version: str | None,
-    deps: list[Dependency],
-) -> bool:
-    """Create the finding and its dependency links if it does not already exist."""
-    existing = session.scalar(
-        select(Finding).where(
-            Finding.asset_id == asset_id,
-            Finding.ecosystem == ecosystem,
-            Finding.package == package,
-            Finding.vulnerability_id == vuln.id,
-        )
-    )
-    if existing is not None:
-        return False  # re-scan transitions are task 8; a scan does not duplicate
-    finding = Finding(
-        asset_id=asset_id,
-        vulnerability_id=vuln.id,
-        ecosystem=ecosystem,
-        package=package,
-        fixed_version=fixed_version,
-        status=FindingStatus.OPEN.value,
-        tier=_PLACEHOLDER_TIER,
-        rank_inputs=dict(_PLACEHOLDER_RANK_INPUTS),
-        rank_reason=_PLACEHOLDER_RANK_REASON,
-        first_detected_at=_now(),
-    )
-    session.add(finding)
-    session.flush()  # assign finding.id for the link rows
-    for dep in deps:
-        session.add(FindingDependency(finding_id=finding.id, dependency_id=dep.id))
-    return True
+

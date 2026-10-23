@@ -27,8 +27,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from vulntriage.db.enums import Criticality, KevValue, Tier, kev_value
+from vulntriage.db.enums import Criticality, FindingStatus, KevValue, Tier, kev_value
 from vulntriage.db.models import Finding, Signal, Vulnerability
+
+_TIER_SEVERITY = {Tier.P1.value: 0, Tier.P2.value: 1, Tier.P3.value: 2, Tier.P4.value: 3}
 
 EPSS_HIGH_THRESHOLD = 0.10  # A18
 
@@ -117,6 +119,13 @@ def _inputs_for(finding: Finding, vuln: Vulnerability, signal: Signal | None,
     )
 
 
+def _escalated(prev_tier: str, new_tier: str, prev_kev: str | None, new_kev: str) -> bool:
+    """E8: the tier rose (a lower severity number) or KEV changed to listed."""
+    tier_rose = _TIER_SEVERITY.get(new_tier, 9) < _TIER_SEVERITY.get(prev_tier, 9)
+    kev_newly_listed = new_kev == KevValue.LISTED.value and prev_kev != KevValue.LISTED.value
+    return tier_rose or kev_newly_listed
+
+
 def rank_asset(session: Session, asset_id: int) -> None:
     """Score every finding of ``asset_id`` (A20: ``open`` and ``risk accepted``).
 
@@ -136,9 +145,21 @@ def rank_asset(session: Session, asset_id: int) -> None:
         signal = session.get(Signal, vuln.cve_id) if vuln.cve_id else None
         inputs = _inputs_for(finding, vuln, signal, asset.internet_facing, asset.criticality)
         tier, reason = tier_for(inputs)
+        # The first ranking (empty rank_inputs) is a baseline, not an escalation.
+        previously_ranked = bool(finding.rank_inputs)
+        previous_tier = finding.tier
+        previous_kev = (finding.rank_inputs or {}).get("kev")
         finding.tier = tier.value
         finding.rank_inputs = inputs.as_dict()
         finding.rank_reason = reason
+        # E8: a risk-accepted finding whose signals escalate (the tier rises or
+        # KEV becomes listed) keeps its status but is flagged "signals changed".
+        if (
+            previously_ranked
+            and finding.status == FindingStatus.RISK_ACCEPTED.value
+            and _escalated(previous_tier, tier.value, previous_kev, inputs.kev)
+        ):
+            finding.signals_changed = True
 
 
 @dataclass(frozen=True)

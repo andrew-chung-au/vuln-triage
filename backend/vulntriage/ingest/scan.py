@@ -15,7 +15,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from vulntriage.db.enums import FailureReason, ScanStatus, ScanTrigger
-from vulntriage.db.models import Asset, Dependency, Scan
+from vulntriage.db.models import Asset, Dependency, FindingDependency, Scan
 from vulntriage.ingest.github import (
     RepositoryReader,
     RepositoryUnavailable,
@@ -230,6 +230,16 @@ def run_scan(
             return
 
         now = _now()
+        # Drop the links to the old dependency rows before replacing the set, so
+        # the delete does not trip the finding_dependencies foreign key on a
+        # re-scan; match_asset re-links the still-vulnerable entries afterward.
+        session.execute(
+            delete(FindingDependency).where(
+                FindingDependency.dependency_id.in_(
+                    select(Dependency.id).where(Dependency.asset_id == asset.id)
+                )
+            )
+        )
         session.execute(delete(Dependency).where(Dependency.asset_id == asset.id))
         for entry in entries:
             session.add(
