@@ -3,8 +3,13 @@
 **Date:** 2026-10-23
 **Author:** PM grooming pass (Kiro, Vibe session)
 **Scope:** Milestone B / phases S2-S3, `_docs/tasks.md` tasks 15-22.
-**Status:** PROPOSAL — not filed. Each issue below has a "PM → human: confirm"
-block. File the issues only after the human confirms the open points.
+**Status:** FILED 2026-10-23. The human confirmed the open points (file now; the
+AWS account + Budgets exist and human AWS steps are done when reached, so no D5
+fallback date; security-scan tools and Terraform approved). The 8 issues are
+filed: B1=#137 (task 15), B2=#138 (task 16), B3=#139 (task 19), B4=#140 (task 20),
+B5=#141 (task 17), B6=#142 (task 21), B7=#143 (task 18), B8=#144 (task 22). #137
+and #138 note #31 (T3) as a blocker. No GitHub milestone/label is set, matching
+the Milestone A convention.
 
 This is step 12 for Milestone B ("PM proposal approved by the human; each issue
 carries its story's acceptance criteria", `_docs/roadmap.md` § Sequence row 12).

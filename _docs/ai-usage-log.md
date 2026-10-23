@@ -2160,3 +2160,11 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no npm/PyPI), so the frontend suite and type check cannot run here. The human must run `make verify` (and a manual `make dev` end-to-end check) on a networked machine before merge; CI on the PR runs the frontend tests.
 - human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.
 
+- date: 2026-10-23
+- task/issue: Milestone B issues filed (#137-#144) after human confirmation of the grooming proposal
+- agent role: PM (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human confirmed the grooming proposal: file now, AWS account + Budgets ready so no D5 fallback date needed, security-scan tools and Terraform approved.
+- files changed: filed 8 GitHub issues #137-#144 (tasks 15-22); updated `_session-summaries/planning-2026-10-23-tier-b-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the Milestone A house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A convention.
+- human review (what I checked or corrected, or `none`): the human approved the grooming open points before filing.
