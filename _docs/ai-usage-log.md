@@ -2063,3 +2063,17 @@ Copy this template for each new entry:
 - new dependencies: none (used the existing services layer and types)
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY — the npm registry is blocked (registry.npmjs.org 403), so `npm ci`, `make frontend-test` and `make frontend-typecheck` could NOT be run here. The new tests use only symbols already imported in the suite and assert against the existing components' real markup (verified by reading `FindingsTable.tsx`, `Badges.tsx`, the asset/finding routes and `mockData.ts`: `formatEpss(null)` is `"EPSS: n/a"`, the status label text, the `asset-owner`/`asset-scan`/`rank-reason`/`brief-pending`/`brief-unavailable` test ids). The full frontend suite + type check need a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify` (runs the frontend suite and type check). The `Makefile` was not edited, so no protected-path approval was needed
+
+### 2026-10-23 — Agent: #86 (task 12) risk acceptance, audit trail and re-scan UI
+
+- date: 2026-10-23
+- task/issue: #86 (task 12): the dashboard write path — accept risk, audit trail, manual re-scan
+- agent role: implementation agent (Kiro Web session, local sandbox on `main`)
+- model: Auto (server-selected)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to work the next task after #85 merged; no new key prompt saved
+- files changed: `frontend/src/test/vulntriage.test.tsx` (added the `F-STATUS write path` describe block covering US-10 and US-11 through the real accept form, the assets re-scan button and the AuditTrail component); this log entry
+- what was already present: the write views were built by the #34/#45 SPA shell — the accept-risk form (`routes/_authed.findings.$findingId_.accept.tsx`), the `AuditTrail` component, the per-row re-scan button (`routes/_authed.assets.index.tsx`), `validateRiskReason`, and the mock `acceptRisk`/`reScan` with the contract error order (401, 404, owner-403, 422, 409), the who/when/previous/reason audit entry, and no automated `risk accepted`. #86 confirms US-10/US-11 and adds the named write-path coverage; no view or service code changed
+- new dependencies: none
+- CSRF note: the custom CSRF header (`X-Requested-With`) is a concern of the real API-backed `Services` implementation (built later); the mock services layer has no HTTP, so it enforces only the error-to-`ServiceError` mapping and the behaviour. Recorded as a VERIFY for the real client
+- verification (tests run, reviewer verdict): the Kiro Web sandbox blocks the npm registry (`registry.npmjs.org` 403), so `npm ci`, `make frontend-test` and `make frontend-typecheck` could NOT be run here. The new tests use only symbols already imported in the suite and assert via `getByRole`/`getByLabelText`/direct service state (avoiding the ambiguous-text pitfall from #85), checked against the real `accept` route, `AuditTrail.tsx`, assets route and `mockService.ts`. The full frontend suite + type check need a run by the human. `I-RISK` (the backend half) already passes from #82
+- human review (what I checked or corrected, or `none`): pending `make verify`. The `Makefile` was not edited, so no protected-path approval was needed
