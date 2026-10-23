@@ -25,13 +25,14 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 
 <!-- Every slot is a make target or "none". To be filled in when the project is scaffolded. -->
 
-- **Install:** `make install`: installs all dependencies; today that's the frontend's `npm ci` from `frontend/package-lock.json`.
+- **Install:** `make install`: installs all dependencies: the frontend's `npm ci` from `frontend/package-lock.json` and the backend's `uv sync --locked` from `backend/uv.lock`.
 - **Run:** `make frontend-start` / `make frontend-stop`: starts/stops the frontend Vite dev server on `127.0.0.1:5173` (log: `.scratch/frontend.log`; `frontend-stop` stops only the PID `frontend-start` recorded).
 - **Build frontend:** `make frontend-build`: builds the production output to `frontend/dist/`.
 - **Type-check frontend:** `make frontend-typecheck`: runs `tsc --noEmit` in `frontend/` (`vite build` does not type-check).
-- **Test (all):** `make test`: runs the frontend tests (`make frontend-test`, vitest, the cases in `frontend/src/test/`; the case count is whatever vitest prints, not recorded here).
+- **Test (all):** `make test`: runs `make frontend-test` (vitest, the cases in `frontend/src/test/`) and `make backend-test` (pytest, the backend unit and SQLite integration cases in `tests/`; the case count is whatever each runner prints, not recorded here).
+- **Test (backend):** `make backend-test`: runs the backend pytest suite in `backend/.venv` (starting with the smoke test and U-NET/I-NET).
 - **Test (one file):** `none`
-- **Verify:** `make verify`: tests, frontend type check, whitespace and weakened-test checks. How to use it: `_docs/agent-kit/procedures/verify.md`.
+- **Verify:** `make verify`: both test suites via `make test`, frontend type check, whitespace and weakened-test checks. How to use it: `_docs/agent-kit/procedures/verify.md`.
 - **Validate OpenAPI:** `make openapi-validate`: validates `_docs/openapi.yaml` with `uvx openapi-spec-validator==0.9.0` (VERIFY: package name and OpenAPI 3.1 support).
 - **Assert clean:** `make assert-clean`: confirms nothing in this folder changed (used after QA).
 - **E2E:** `none`
