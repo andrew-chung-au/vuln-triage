@@ -2050,3 +2050,16 @@ Copy this template for each new entry:
 - submission vs showcase: the MCP operations are Showcase (the MCP server with its four tools is task 32), built here as the read API so the task-14 conformance test and the US-12 untrusted-data boundary hold. The responder read ops were already built in #83 (task 10a) and are re-covered by their tests. No write tool exists; every write with the MCP token is 403
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/fastapi), so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13. The full pytest suite needs a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify BASE=origin/main`. `.env.example` unchanged (MCP token is Showcase). The `Makefile` was not edited, so no protected-path approval was needed
+
+### 2026-10-23 — Agent: #85 (task 11) frontend dashboard read views
+
+- date: 2026-10-23
+- task/issue: #85 (task 11): the dashboard read views for assets and ranked findings
+- agent role: implementation agent (Kiro Web session, local sandbox on `main`)
+- model: Auto (server-selected)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to work the next issue after #84 merged; no new key prompt saved
+- files changed: `frontend/src/test/vulntriage.test.tsx` (added the `F-ASSET` and `F-STATUS` describe blocks that render the real `/assets`, `/findings` and `/findings/{id}` screens and assert US-1, US-4, US-5 and US-6 against the services layer); this log entry
+- what was already present: the dashboard read views, components and services/types layer were built by the #34/#45 SPA-shell work (`routes/_authed.assets.index.tsx`, `_authed.findings.index.tsx`, `_authed.findings.$findingId.tsx`, `components/vt/*`, `services/*`). #85 confirms they meet the US-1/4/5/6 acceptance criteria and adds the named `F-ASSET`/`F-STATUS` cases the test strategy calls for; no new view code or dependency was needed
+- new dependencies: none (used the existing services layer and types)
+- verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY — the npm registry is blocked (registry.npmjs.org 403), so `npm ci`, `make frontend-test` and `make frontend-typecheck` could NOT be run here. The new tests use only symbols already imported in the suite and assert against the existing components' real markup (verified by reading `FindingsTable.tsx`, `Badges.tsx`, the asset/finding routes and `mockData.ts`: `formatEpss(null)` is `"EPSS: n/a"`, the status label text, the `asset-owner`/`asset-scan`/`rank-reason`/`brief-pending`/`brief-unavailable` test ids). The full frontend suite + type check need a run by the human
+- human review (what I checked or corrected, or `none`): pending `make verify` (runs the frontend suite and type check). The `Makefile` was not edited, so no protected-path approval was needed

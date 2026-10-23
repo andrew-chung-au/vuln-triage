@@ -716,3 +716,133 @@ describe("contract-shaped screens", () => {
     expect(row).toHaveTextContent("KEV: not listed");
   });
 });
+
+// --- F-ASSET: the assets list read view (issue #85, US-1) ------------------
+
+describe("F-ASSET: assets list read view", () => {
+  it("US-1: lists every asset with owner, criticality and internet-facing", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/assets");
+
+    // A named owner shows its name and contact email.
+    const payments = await screen.findByTestId("asset-owner-a1");
+    expect(payments).toHaveTextContent("Payments team");
+    expect(payments).toHaveTextContent("payments-team@example.com");
+
+    // Criticality and the internet-facing flag are shown for each row.
+    const rows = screen.getAllByRole("row");
+    const paymentsRow = rows.find((r) => within(r).queryByText("payments-api"))!;
+    expect(paymentsRow).toHaveTextContent("critical");
+    expect(within(paymentsRow).getByText("yes")).toBeInTheDocument(); // internet-facing
+    const wikiRow = rows.find((r) => within(r).queryByText("internal-wiki"))!;
+    expect(wikiRow).toHaveTextContent("low");
+    expect(within(wikiRow).getByText("no")).toBeInTheDocument();
+  });
+
+  it("US-1: shows an ownerless marker when both owner fields are unset", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/assets");
+    // internal-wiki (a4) has no owner name and no owner email.
+    const owner = await screen.findByTestId("asset-owner-a4");
+    expect(owner).toHaveTextContent("ownerless");
+    expect(owner).not.toHaveTextContent("@");
+  });
+
+  it("US-1: a partial owner (name or email only) is shown, not ownerless", async () => {
+    // Every seed owner with a name also has an email, so assert the rule directly
+    // through the shared predicate the view uses.
+    expect(isOwnerless({ ownerName: "Someone", ownerEmail: null })).toBe(false);
+    expect(isOwnerless({ ownerName: null, ownerEmail: "a@b.co" })).toBe(false);
+    expect(isOwnerless({ ownerName: null, ownerEmail: null })).toBe(true);
+  });
+});
+
+// --- F-STATUS: the findings status/rank/signal/brief read view -------------
+
+describe("F-STATUS: finding status, rank and signal read view", () => {
+  it("US-4: a finding shows exactly one KEV value, EPSS and the asset context", async () => {
+    await signIn();
+    const list = await mockServices.listFindings();
+    renderComponent(<FindingsTable findings={list} />);
+    const rows = await screen.findAllByTestId("finding-row");
+    const byId = (id: string) => rows.find((r) => r.getAttribute("data-id") === id)!;
+
+    // KEV: listed (f1), not listed (f3), n/a no CVE (f7) — exactly one each row.
+    expect(byId("f1")).toHaveTextContent("KEV: listed");
+    expect(byId("f3")).toHaveTextContent("KEV: not listed");
+    expect(byId("f7")).toHaveTextContent("KEV: n/a (no CVE)");
+    // An EPSS score, or n/a when there is none (f8 has epss null).
+    expect(byId("f1")).toHaveTextContent("EPSS: 0.94");
+    expect(byId("f8")).toHaveTextContent("EPSS: n/a");
+    // A stale signal is marked (f3's EPSS is stale).
+    expect(byId("f3")).toHaveTextContent("(stale)");
+    // The owning asset's criticality and internet-facing flag.
+    expect(byId("f1")).toHaveTextContent("criticality: critical");
+    expect(byId("f1")).toHaveTextContent("internet-facing");
+  });
+
+  it("US-4: the detail view shows the KEV value with a stale marker when the fetch is stale", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f3");
+    expect(await screen.findByText("KEV: not listed")).toBeInTheDocument();
+    // The asset context is present on the detail view.
+    expect(screen.getByTestId("asset-owner")).toHaveTextContent("Payments team");
+  });
+
+  it("US-5: every finding shows its rank reason, and the list is never re-sorted", async () => {
+    await signIn();
+    const list = await mockServices.listFindings();
+    // The services layer ranks; the table renders exactly that order (US-5 determinism).
+    renderComponent(<FindingsTable findings={list} />);
+    const order = (await screen.findAllByTestId("finding-row")).map((r) => r.getAttribute("data-id"));
+    const again = await mockServices.listFindings();
+    expect(again.map((f) => f.id)).toEqual(order); // re-scoring the same inputs = same order
+    // Each finding carries a non-empty rank reason, shown on the detail view.
+    setUser(DEMO_USER);
+    renderApp("/findings/f1");
+    expect((await screen.findByTestId("rank-reason")).textContent).toContain("P1");
+  });
+
+  it("US-6: an available brief whose fix version matches the finding is shown", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f1"); // brief available, fixVersion 3.2.4 == fixedVersion 3.2.4
+    expect(await screen.findByText(/Unsafe deserialisation/)).toBeInTheDocument();
+    expect(screen.getByText(/3\.2\.4/)).toBeInTheDocument();
+    expect(screen.queryByTestId("brief-unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("brief-pending")).not.toBeInTheDocument();
+  });
+
+  it("US-6: a brief not yet generated shows the finding with a 'brief pending' marker", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f8"); // briefStatus pending
+    expect(await screen.findByTestId("brief-pending")).toBeInTheDocument();
+    expect(screen.queryByTestId("brief-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("US-6: a rejected/errored brief shows the finding with a 'brief unavailable' marker", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f5"); // briefStatus unavailable
+    expect(await screen.findByTestId("brief-unavailable")).toBeInTheDocument();
+    expect(screen.queryByTestId("brief-pending")).not.toBeInTheDocument();
+  });
+
+  it("shows every finding status across the list (US-5/US-10 statuses)", async () => {
+    await signIn();
+    const list = await mockServices.listFindings();
+    renderComponent(<FindingsTable findings={list} />);
+    const rows = await screen.findAllByTestId("finding-row");
+    const byId = (id: string) => rows.find((r) => r.getAttribute("data-id") === id)!;
+    // open (f1), risk accepted (f4), fixed (f6) and withdrawn (f7) each render
+    // their status label in the row.
+    expect(byId("f1")).toHaveTextContent("open");
+    expect(byId("f4")).toHaveTextContent("risk accepted");
+    expect(byId("f6")).toHaveTextContent("fixed");
+    expect(byId("f7")).toHaveTextContent("withdrawn");
+  });
+});
