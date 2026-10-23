@@ -72,7 +72,7 @@ You do not buy or configure a domain. The server has an Elastic IP, and `sslip.i
 
 Points to know:
 - Keep the Elastic IP. If it is released, the hostnames change, and every URL in the README with it. It is kept across the nightly stop.
-- Let's Encrypt limits how many certificates it issues per name (VERIFY: rate limits). Every `sslip.io` user shares the `sslip.io` name, so you may hit a limit you did not cause (VERIFY: whether `sslip.io` is treated as its own registered domain). If issuance fails, the staging endpoint while testing or `nip.io` are options for the agents to propose.
+- Let's Encrypt limits how many certificates it issues per name (VERIFY: rate limits). Every `sslip.io` user shares the `sslip.io` name, so you may hit a limit you did not cause (VERIFY: whether `sslip.io` is treated as its own registered domain). If issuance fails, the fallback is named in `_docs/architecture.md` (A36): first the Let's Encrypt staging certificate for the demo (the browser shows a warning you accept once; the `Secure` cookie still works), then another hostname service such as `nip.io` with the same issuance path.
 - The proxy (Caddy, Traefik or nginx with certbot) is chosen in task 17 and needs your approval as a new image.
 
 Record in the task 17 issue: the two hostnames once the Elastic IP exists.
@@ -142,7 +142,7 @@ The instance role's SES permission is send-only, limited to the one verified sen
 
 ## 10. Nightly stop and cost tags
 
-- **Nightly stop.** The server is stopped each night (Cost controls); the schedule is in the Terraform (VERIFY: EventBridge Scheduler). Start the server from the console (EC2 → Instances → Start) before working or demoing. Both environments stop together, so keep it running while graders may visit. The Elastic IP is kept, so the hostnames do not change (VERIFY: an Elastic IP stays associated with a stopped instance).
+- **Nightly stop.** The server is stopped each night (Cost controls); the schedule is in the Terraform (VERIFY: EventBridge Scheduler). Start the server from the console (EC2 → Instances → Start) before working or demoing. Both environments stop together, so switch the nightly stop off (the Terraform variable, apply, or disable the schedule in the console) while graders may visit, and switch it back on afterwards. A stopped server has three effects: the backend runs a catch-up refresh and re-scan at start if the last run is over 24 hours old; an automatic dev deploy to a stopped server is skipped and reported in the workflow summary, so re-run the skipped workflow after you start the server; and anyone visiting the URL sees nothing. The Elastic IP is kept, so the hostnames do not change (VERIFY: an Elastic IP stays associated with a stopped instance).
 - **Cost allocation tag.** After the first apply, activate the `project` tag in Billing → Cost allocation tags (VERIFY), so Cost Explorer can show this project's spend alone. Tags take about a day to appear.
 
 ## 11. Teardown

@@ -75,9 +75,10 @@ has acceptance criteria; non-goals match the brief.
   alerting. Specify the US-13 journey and its shared trace ID, what must stay
   out of telemetry, the US-14 alert rule, and the US-15 responder: what wakes
   it, what it may change, and its credential scope (spec open question 5).
-- Deployment: AWS with CloudFormation (ECR images, dev and prod copies, a
-  separate observability stack with Grafana behind authentication), the
-  manual promotion of the same image from dev to production, and the rollback
+- Deployment: AWS with Terraform (one server running `dev` and `prod` as two
+  Compose projects, images in GHCR, `sslip.io` hostnames; observability, the
+  alert and the responder in local Compose for submission), the manual
+  promotion of the same image from dev to production, and the rollback
   path. Also the Docker-capable development environment, a prerequisite for
   Compose, integration tests and the observability stack; and cost controls,
   with a teardown step.
@@ -138,8 +139,9 @@ as defined in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5. Here
 column in `_docs/architecture.md`; it never means the P1-P4 prioritisation
 tiers from Stage 2. The scoring
 path comes first (app, tests, Compose, deployment, CI/CD with dev and prod,
-observability, alert, on-call agent), then the LLM brief, MCP server and n8n,
-which are committed scope.
+observability, alert, on-call agent) with the backend's own notification and
+schedule (tasks 37, 38) and the close-out (task 39); the LLM brief, MCP server
+and n8n are Showcase (post-submission, tasks 30-36).
 Checklist: no cycles; every user story is covered by a task; every criterion in
 `_docs/rubric.md` is covered by a task.
 
@@ -152,5 +154,5 @@ Checklist: all 12 criteria appear (24 points, 10 to pass); nothing is unmapped.
 
 The Reviewer reads: `_docs/project-brief.md`, `_docs/rubric.md`, then
 `_docs/specs.md`,
-`_docs/architecture.md`, `_docs/api.md`, `_docs/testing.md`,
-`_docs/tasks.md` and `_docs/plan-summary.md`.
+`_docs/architecture.md`, `_docs/api.md`, `_docs/openapi.yaml`,
+`_docs/testing.md`, `_docs/tasks.md` and `_docs/plan-summary.md`.
