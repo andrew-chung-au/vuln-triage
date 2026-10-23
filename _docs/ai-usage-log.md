@@ -2141,3 +2141,12 @@ Copy this template for each new entry:
 - files changed: `_docs/tasks.md` (evidence note under task 2 only), `_docs/verify-locally.md` (new local verification guide), `README.md` (index link), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/npm), so dependencies cannot be installed here. The task 2 change is documentation only. CI on `main` is green at the time of writing (latest run success at `b007833`). The human must run `make verify` on a networked machine before relying on it.
 - human review (what I checked or corrected, or `none`): none yet. Follow-up recorded in `_docs/verify-locally.md` and the task-2 note: `make dev` / `dev-start` / `dev-stop` (task 11 / #85 acceptance) are not in the Makefile and should be filed as a follow-up.
+
+- date: 2026-10-23
+- task/issue: #133 — add make dev / dev-start / dev-stop and wire the frontend to the backend (completes task 11's single-command Tier A run)
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to implement #133 (option A): real fetch service against the existing contract plus the make dev targets, so make dev runs end-to-end.
+- files changed: `frontend/src/services/httpService.ts` (new real fetch service), `frontend/src/services/index.ts` (bind services to httpServices; keep mock as a fixture), `frontend/vite.config.ts` (dev server API proxy, one origin), `frontend/src/test/vulntriage.test.tsx` (vi.mock @/services so route-render tests use the mock), `frontend/src/test/http-service.test.ts` (new: cookie, CSRF, 403->forbidden), `Makefile` (dev/dev-start/dev-stop; PROTECTED, human-approved), `AGENTS.md` (Commands: make dev; PROTECTED, human-approved), `_docs/verify-locally.md` (make dev is now the primary path), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no npm/PyPI), so the frontend suite and type check cannot run here. The human must run `make verify` (and a manual `make dev` end-to-end check) on a networked machine before merge; CI on the PR runs the frontend tests.
+- human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.

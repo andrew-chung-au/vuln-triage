@@ -27,6 +27,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 
 - **Install:** `make install`: installs all dependencies: the frontend's `npm ci` from `frontend/package-lock.json` and the backend's `uv sync --locked` from `backend/uv.lock`.
 - **Run:** `make frontend-start` / `make frontend-stop`: starts/stops the frontend Vite dev server on `127.0.0.1:5173` (log: `.scratch/frontend.log`; `frontend-stop` stops only the PID `frontend-start` recorded).
+- **Dev (all):** `make dev`: applies the SQLite migrations (`alembic upgrade head`) then runs the backend (FastAPI on SQLite, `127.0.0.1:8000`) and the frontend Vite dev server (`127.0.0.1:5173`) together with no Docker; Ctrl-C stops both. Background form: `make dev-start` / `make dev-stop` (logs in `.scratch/`; `dev-stop` stops only the PIDs `dev-start` recorded). `make dev-migrate` runs the migration step alone.
 - **Build frontend:** `make frontend-build`: builds the production output to `frontend/dist/`.
 - **Type-check frontend:** `make frontend-typecheck`: runs `tsc --noEmit` in `frontend/` (`vite build` does not type-check).
 - **Test (all):** `make test`: runs `make frontend-test` (vitest, the cases in `frontend/src/test/`) and `make backend-test` (pytest, the backend unit and SQLite integration cases in `tests/`; the case count is whatever each runner prints, not recorded here).

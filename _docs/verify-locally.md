@@ -8,11 +8,10 @@ This covers the **Tier A (phase S1)** build: the FastAPI backend on SQLite, the
 React/Vite frontend, and the unit + SQLite-integration tests. Docker, Postgres,
 deployment and observability are later phases (S2+) and are out of scope here.
 
-> Status note (2026-10-23): `make test` is implemented and is the single command
-> for both test suites. `make dev` (the single-command local run named in
-> `_docs/tasks.md` task 11) is **not yet in the `Makefile`** — see
-> [Known gap](#known-gap-make-dev) below for the manual two-terminal fallback and
-> the follow-up.
+> Status note (2026-10-23): `make test` runs both test suites, and `make dev`
+> starts the backend and frontend together with one command (issue #133). The
+> frontend talks to the real backend over one origin (the Vite dev server
+> proxies the API paths), so this exercises the end-to-end path.
 
 ## 1. Prerequisites
 
@@ -128,53 +127,42 @@ The goal of the manual check is to confirm the stack runs end to end: the
 frontend talks to the backend over one origin, the backend persists to SQLite,
 and you can sign in and see assets and ranked findings.
 
-### Known gap: `make dev`
-
-`_docs/tasks.md` task 11 specifies a single `make dev` target that starts the
-backend on SQLite and the Vite dev server together (with `make dev-start` /
-`make dev-stop` for the background form). **That target is not in the `Makefile`
-yet**, so until it lands, use the two-terminal fallback below.
-
-> **Follow-up note (task 2, 2026-10-23):** task 11 (issue #85) wired the frontend
-> read views to the backend but did not add the `make dev` / `make dev-start` /
-> `make dev-stop` targets named in its acceptance criteria. This is the
-> single-command Application criterion for Tier A and should be filed as a
-> follow-up so S1 fully meets that clause. (Recorded here per the task-2 rule:
-> record a needed fix as a follow-up note, do not fix it under task 2.)
-
-### Two-terminal fallback
-
-The frontend expects one origin: in development the Vite dev server proxies the
-API paths to the backend, so no CORS is involved. Start the backend first, then
-the frontend dev server.
-
-**Terminal 1 — backend (FastAPI on SQLite):**
+### Start everything with one command
 
 ```sh
-cd backend
-cp ../.env.example ../.env    # fill in GITHUB_READ_TOKEN if you will register assets
-uv run uvicorn vulntriage.main:app --reload --port 8000
+cp .env.example .env    # fill in GITHUB_READ_TOKEN if you will register assets
+make dev
 ```
 
-> `VERIFY:` the import path (`vulntriage.main:app`) and port match the backend's
-> actual ASGI entry point and the Vite proxy target; confirm against
-> `backend/vulntriage/` and `frontend/vite.config.*` before relying on them. If
-> they differ, use the values in those files. When `make dev` lands, prefer it
-> over these raw commands.
+`make dev` first applies the SQLite migrations (`alembic upgrade head`, so the
+schema exists on a fresh checkout), then starts:
 
-The first run creates the SQLite schema via the Alembic migrations in
-`backend/migrations/` (config `backend/alembic.ini`).
+- the backend (FastAPI on SQLite) on `http://127.0.0.1:8000`, and
+- the frontend Vite dev server on `http://127.0.0.1:5173`.
 
-**Terminal 2 — frontend (Vite dev server):**
+They share one origin: the Vite dev server proxies the API paths
+(`/auth`, `/findings`, `/assets`, `/signals`, `/scans`, `/health`) to the
+backend, so there is no CORS and the `vt_session` cookie is first-party. The
+frontend calls the real backend — the in-memory mock is no longer used at
+runtime (it remains only as a vitest fixture).
+
+Press `Ctrl-C` to stop both. The schema is created by the `dev-migrate` step
+(`alembic upgrade head`, migrations in `backend/migrations/`, config
+`backend/alembic.ini`); run `make dev-migrate` on its own to apply migrations
+without starting the servers.
+
+> `VERIFY:` if your backend ASGI entry point or port differs from
+> `vulntriage.main:app` on `127.0.0.1:8000`, set `VITE_API_TARGET` for the proxy
+> and adjust the Makefile target. The defaults match `backend/vulntriage/main.py`
+> and `frontend/vite.config.ts`.
+
+### Background form
+
+To run both in the background (for scripted checks) instead of the foreground:
 
 ```sh
-make frontend-start   # serves on http://127.0.0.1:5173, log: .scratch/frontend.log
-```
-
-Stop it again with:
-
-```sh
-make frontend-stop
+make dev-start   # logs: .scratch/dev-backend.log, .scratch/dev-frontend.log
+make dev-stop    # stops only the processes dev-start recorded
 ```
 
 ### Create a sign-in user
@@ -216,7 +204,8 @@ make clean-scratch     # remove .scratch/ working files
 | `frontend/node_modules is missing: run make install first` | deps not installed | `make install` |
 | `U-NET` / `I-NET` tests fail | a test tried to reach the network | that is the guard; find and stub the outbound call |
 | Install step fails to download | no network / restricted registry access | run on a machine with real PyPI + npm access |
-| `make: dev: No such target` | `make dev` not implemented yet | use the two-terminal fallback in §6 |
+| Dashboard shows no data after `make dev` | backend not reached (proxy target or port) | check `.scratch/dev-backend.log`; set `VITE_API_TARGET` if the backend is not on `127.0.0.1:8000` |
+| `make dev-start` says "already running" | a previous run is still up | `make dev-stop` first |
 
 ## Related docs
 
