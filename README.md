@@ -65,6 +65,7 @@ Planning documents:
 - [_docs/roadmap-showcase.md](_docs/roadmap-showcase.md) — showcase track: work built after the submission
 - [_docs/aws-setup.md](_docs/aws-setup.md) — human-side AWS and GitHub setup for the Tier B/C deployment
 - [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work
+- [_docs/verify-locally.md](_docs/verify-locally.md) — step-by-step guide to install, run `make test`, and bring the app up locally for an end-to-end check
 
 AI workflow evidence:
 

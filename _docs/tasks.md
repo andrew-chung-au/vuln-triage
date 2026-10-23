@@ -16,6 +16,17 @@ Description: Checks the README problem statement, the public issue tracker and t
 Depends on: none
 Covers: Problem Description, Product Specification, Agent Team Specification, Context Management
 
+Evidence note (2026-10-23): the four documentation criteria are each evidenced by one file path in this repository.
+
+| Criterion | Evidence (one path per criterion) | What it shows |
+|---|---|---|
+| Problem Description | `README.md` | States the problem, the system functionality and the expected behaviour (the "The problem", "What VulnTriage does" and "Expected behaviour" sections). |
+| Product Specification | `_docs/specs.md` | The product spec: user stories US-1..US-15, each with an "Acceptance" line, and the edge cases. The public task tracker is the repository's GitHub Issues (e.g. the Milestone A build issues #74-#88), where the issues carry acceptance criteria and role-labelled PM/Engineer/QA/Orchestrator comments show the agents used the tracker. |
+| Agent Team Specification | `_docs/agent-team.md` | Defines the six agent roles plus the human, what each may write, the tool and model per role, QA independence, and the issue lifecycle and hand-over between roles. |
+| Context Management | `AGENTS.md` | Exists and points to the modular docs under "Where to read more": `_docs/project-brief.md`, `_docs/specs.md`, `_docs/rubric.md`, `_docs/roadmap.md`, `_docs/agent-kit/process.md`, `_docs/agent-kit/team/`, `_docs/agent-kit/procedures/`, `_docs/agent-team.md` and `_docs/ai-usage-log.md`. `CLAUDE.md` imports `AGENTS.md`. |
+
+No follow-up fix was needed: each of the four source files exists and names the required content. This note is the only change to `_docs/tasks.md`; no other task entry, document, issue or comment was changed by this task.
+
 ## 3. Backend data model and SQLite persistence
 Goal: Assets, dependencies, findings, lifecycles, jobs and audit entries persist in SQLite.
 Description: Implements the Data model and enums from `_docs/architecture.md` in SQLAlchemy over SQLite, including the `Asset`, `Dependency`, `Finding`, `Lifecycle`, `NotificationJob` (with its `tier` field, the tier when the job was created) and `AuditEntry` tables and their constraints. It adds no API endpoint and seeds no data. The check is the backend unit suite in `make test` showing the migration creates the schema and an audit entry records who, when and the previous value.
