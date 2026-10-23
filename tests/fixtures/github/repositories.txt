@@ -1,0 +1,2 @@
+# Public repositories that `make record-fixtures SOURCE=github` captures: one owner/repo per line.
+# Empty until the human confirms the three proposed repositories (see the #76 Engineer comment).
