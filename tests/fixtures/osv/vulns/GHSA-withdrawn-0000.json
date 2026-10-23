@@ -1,0 +1,26 @@
+{
+  "id": "GHSA-withdrawn-0000",
+  "aliases": ["CVE-2024-00000"],
+  "modified": "2024-02-01T00:00:00Z",
+  "published": "2024-01-01T00:00:00Z",
+  "withdrawn": "2024-01-15T00:00:00Z",
+  "summary": "Withdrawn advisory (not a real vulnerability)",
+  "details": "This advisory was withdrawn by the maintainers; a scan that first sees it must create no finding (E4).",
+  "affected": [
+    {
+      "package": {"ecosystem": "PyPI", "name": "django"},
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "4.2.1"}
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {"type": "ADVISORY", "url": "https://github.com/advisories/GHSA-withdrawn-0000"}
+  ]
+}

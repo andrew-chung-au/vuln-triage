@@ -1,0 +1,23 @@
+{
+  "by_query": {
+    "PyPI|urllib3|1.26.9": {
+      "vulns": [
+        {"id": "GHSA-v845-jxx5-vc9f", "modified": "2023-10-06T00:00:00Z"},
+        {"id": "PYSEC-2023-212", "modified": "2023-10-06T00:00:00Z"}
+      ]
+    },
+    "PyPI|pyyaml|5.1": {
+      "vulns": [
+        {"id": "GHSA-8q59-q68h-6hv4", "modified": "2022-09-01T00:00:00Z"}
+      ]
+    },
+    "PyPI|django|4.2": {
+      "vulns": [
+        {"id": "GHSA-withdrawn-0000", "modified": "2024-01-01T00:00:00Z"}
+      ]
+    },
+    "PyPI|requests|2.28.2": {
+      "vulns": []
+    }
+  }
+}

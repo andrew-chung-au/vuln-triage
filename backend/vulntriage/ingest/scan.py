@@ -22,6 +22,8 @@ from vulntriage.ingest.github import (
     is_readable_path,
     split_repository_url,
 )
+from vulntriage.ingest.matcher import match_asset
+from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
 from vulntriage.ingest.models import (
     INCLUDE_NOT_FOUND,
     INCLUDE_REFUSED,
@@ -174,20 +176,33 @@ def _ingest_requirements(
             queue.append((target, included))
 
 
-def status_for_warnings(warnings: list[ScanWarning]) -> ScanStatus:
-    """INTERIM rule (D3, task 4 only): there is no OSV matching yet.
+def status_for_result(warnings: list[ScanWarning], has_findings: bool) -> ScanStatus:
+    """The asset/scan status from the warnings and the OSV result (task 5, #77).
 
+    ``scanned, findings`` whenever OSV matched at least one finding. Otherwise
     ``scanned, incomplete`` when any version-unknown or refused/missing-include
-    warning exists, else ``scanned, clean``. Task 5 (#77) must replace the
-    "clean" branch by the OSV result (``scanned, findings`` / ``scanned, clean``).
+    warning exists (so "clean" is never claimed over an unscanned entry), else
+    ``scanned, clean``.
     """
+    if has_findings:
+        return ScanStatus.SCANNED_FINDINGS
     if any(w.kind in INCOMPLETE_KINDS for w in warnings):
         return ScanStatus.SCANNED_INCOMPLETE
     return ScanStatus.SCANNED_CLEAN
 
 
-def run_scan(factory: sessionmaker[Session], reader: RepositoryReader, scan_id: int) -> None:
-    """Run one scan to completion. A scan that is already finished is left alone."""
+def run_scan(
+    factory: sessionmaker[Session],
+    reader: RepositoryReader,
+    scan_id: int,
+    osv_client: OsvClientProtocol | None = None,
+) -> None:
+    """Run one scan to completion. A scan that is already finished is left alone.
+
+    ``osv_client`` matches the stored dependencies against OSV. When it is None
+    no matching runs (the dependency ingestion still completes), which keeps the
+    worker and the ingestion-only tests independent of an OSV stub.
+    """
     with factory() as session:
         scan = session.get(Scan, scan_id)
         if scan is None or scan.finished_at is not None:
@@ -207,7 +222,6 @@ def run_scan(factory: sessionmaker[Session], reader: RepositoryReader, scan_id: 
             _fail(session, scan, asset, FailureReason.LOCKFILE_PARSE_ERROR)
             return
 
-        status = status_for_warnings(warnings)
         now = _now()
         session.execute(delete(Dependency).where(Dependency.asset_id == asset.id))
         for entry in entries:
@@ -221,6 +235,22 @@ def run_scan(factory: sessionmaker[Session], reader: RepositoryReader, scan_id: 
                     direct=entry.direct,
                 )
             )
+        session.flush()  # dependency ids are needed for the finding links
+
+        has_findings = False
+        if osv_client is not None:
+            try:
+                has_findings = match_asset(session, asset.id, osv_client)
+            except FeedUnavailable:
+                # E3: OSV unavailable on a scan is a feed failure, not a clean
+                # result. On a first scan there are no findings to keep yet.
+                session.rollback()
+                scan = session.get(Scan, scan_id)
+                asset = session.get(Asset, scan.asset_id)
+                _fail(session, scan, asset, FailureReason.FEED_UNAVAILABLE)
+                return
+
+        status = status_for_result(warnings, has_findings)
         scan.warnings = [w.as_dict() for w in warnings]
         scan.scan_status = status.value
         scan.failure_reason = None
@@ -244,9 +274,13 @@ def _fail(session: Session, scan: Scan, asset: Asset, reason: FailureReason) -> 
     session.commit()
 
 
-def run_pending_scans(factory: sessionmaker[Session], reader: RepositoryReader) -> int:
+def run_pending_scans(
+    factory: sessionmaker[Session],
+    reader: RepositoryReader,
+    osv_client: OsvClientProtocol | None = None,
+) -> int:
     """Run every unfinished scan in order, synchronously; return how many ran."""
     ids = unfinished_scan_ids(factory)
     for scan_id in ids:
-        run_scan(factory, reader, scan_id)
+        run_scan(factory, reader, scan_id, osv_client)
     return len(ids)

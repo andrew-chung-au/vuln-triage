@@ -3,7 +3,9 @@
 Task 4 (#76) adds the first rows. The `fixture-owner__*` GitHub fixtures are
 project-authored (hand-written, not captured); their rows say so. The human
 confirmed three public repositories and ran the live capture on 2026-10-23;
-their captured rows follow.
+their captured rows follow. Task 5 (#77) adds the OSV fixtures, which are
+project-authored for deterministic `U-FIXED`/`U-ALIAS`/`U-WITHDRAW` cases;
+`make record-fixtures SOURCE=osv` can recapture live responses.
 
 ## Rules
 
@@ -45,3 +47,19 @@ their captured rows follow.
 | tests/fixtures/github/heroku__nodejs-getting-started/repo.json | repository info (GitHub redirects `heroku/node-js-getting-started` to this name), default branch `main` | https://github.com/heroku/nodejs-getting-started | 2026-10-23 | 8b8dec11fcf027522a857e0c831ee01b7124f673 | make record-fixtures SOURCE=github | checked: no token, key or credential (`temp_clone_token` is null); public repository metadata only |
 | tests/fixtures/github/heroku__nodejs-getting-started/commit.txt | head commit SHA | https://github.com/heroku/nodejs-getting-started | 2026-10-23 | 8b8dec11fcf027522a857e0c831ee01b7124f673 | make record-fixtures SOURCE=github | checked: a commit SHA only |
 | tests/fixtures/github/heroku__nodejs-getting-started/contents/package-lock.json | package-lock.json (lockfileVersion 3, 5366 lines) | https://github.com/heroku/nodejs-getting-started | 2026-10-23 | 8b8dec11fcf027522a857e0c831ee01b7124f673 | make record-fixtures SOURCE=github | checked: no token, key or credential; one npm package's public deprecation text contains its maintainer's public contact address (line 4997), which is registry metadata and not private data |
+
+### OSV fixtures (task 5, #77)
+
+Project-authored OSV responses in the real OSV schema, built to exercise the
+`U-FIXED`, `U-ALIAS` and `U-WITHDRAW` cases. Versions line up with packages in
+the recorded GitHub fixtures (`urllib3` 1.26.9, `PyYAML` 5.1, `Django` 4.2,
+`requests` 2.28.2). `make record-fixtures SOURCE=osv` recaptures these from the
+public OSV API (`tests/fixtures/osv/packages.txt` lists the confirmed queries).
+
+| path | fixture | source URL | capture date | commit SHA | capture method | token/private-data check |
+|---|---|---|---|---|---|---|
+| tests/fixtures/osv/querybatch.json | querybatch by-query map (urllib3, pyyaml, django, requests) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/vulns/GHSA-v845-jxx5-vc9f.json | urllib3 advisory, two release lines, CVE alias | n/a (project-authored, shape mirrors osv.dev) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/vulns/PYSEC-2023-212.json | urllib3 duplicate advisory sharing CVE-2023-43804 (E9 merge) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/vulns/GHSA-8q59-q68h-6hv4.json | PyYAML advisory, fixed 5.4 | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/vulns/GHSA-withdrawn-0000.json | withdrawn advisory (E4: no finding at first sight) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |

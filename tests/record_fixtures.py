@@ -22,11 +22,14 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "backend"))
 
 from vulntriage.ingest.github import GitHubReader, split_repository_url  # noqa: E402
+from vulntriage.ingest.osv import OsvClient, Query  # noqa: E402
 from vulntriage.ingest.requirements import parse_requirements, resolve_include  # noqa: E402
 
 SOURCES = ("github", "osv", "kev", "epss")
 GITHUB_DIR = HERE / "fixtures" / "github"
+OSV_DIR = HERE / "fixtures" / "osv"
 REPOSITORIES = GITHUB_DIR / "repositories.txt"
+OSV_PACKAGES = OSV_DIR / "packages.txt"
 ROOT_FILES = ("uv.lock", "requirements.txt", "package-lock.json")
 MAX_INCLUDES = 20
 
@@ -95,15 +98,83 @@ def record_github() -> int:
     return 0
 
 
+def read_osv_packages() -> list[Query]:
+    """Confirmed ``ecosystem name version`` lines from ``fixtures/osv/packages.txt``."""
+    queries: list[Query] = []
+    if not OSV_PACKAGES.is_file():
+        return queries
+    for line in OSV_PACKAGES.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        if len(parts) != 3:
+            raise SystemExit(f"packages.txt: expected 'ecosystem name version', got {line!r}")
+        queries.append(Query(parts[0], parts[1], parts[2]))
+    return queries
+
+
+def record_osv() -> int:
+    """Capture OSV querybatch and vuln-detail fixtures for the confirmed packages.
+
+    Public OSV API, no key. Writes ``querybatch.json`` (a ``by_query`` map the
+    stub replays) and ``vulns/<id>.json`` for every advisory the queries return.
+    Hand-written fixtures already in the directory are left in place; only the
+    files for the confirmed packages are rewritten.
+    """
+    queries = read_osv_packages()
+    if not queries:
+        print(
+            f"no packages confirmed in {OSV_PACKAGES}; add 'ecosystem name version' lines first",
+            file=sys.stderr,
+        )
+        return 2
+    client = OsvClient()
+    today = dt.date.today().isoformat()
+    batch = client.query_batch(queries)
+
+    by_query: dict[str, dict[str, object]] = {}
+    vuln_ids: set[str] = set()
+    for query, refs in zip(queries, batch):
+        key = f"{query.ecosystem}|{query.name}|{query.version}"
+        by_query[key] = {
+            "vulns": [
+                {"id": ref.osv_id, "modified": ref.modified} for ref in refs
+            ]
+        }
+        vuln_ids.update(ref.osv_id for ref in refs)
+
+    write(OSV_DIR / "querybatch.json", json.dumps({"by_query": by_query}, indent=2) + "\n")
+    print("| path | fixture | source URL | capture date | commit SHA | capture method | check |")
+    print(
+        f"| tests/fixtures/osv/querybatch.json | querybatch map | https://api.osv.dev/v1/querybatch "
+        f"| {today} | n/a | make record-fixtures SOURCE=osv | TO CHECK by the Engineer |"
+    )
+    for osv_id in sorted(vuln_ids):
+        advisory = client.get_vuln(osv_id)
+        write(OSV_DIR / "vulns" / f"{osv_id}.json", json.dumps(advisory, indent=2) + "\n")
+        print(
+            f"| tests/fixtures/osv/vulns/{osv_id}.json | advisory {osv_id} "
+            f"| https://api.osv.dev/v1/vulns/{osv_id} | {today} | n/a "
+            "| make record-fixtures SOURCE=osv | TO CHECK by the Engineer |"
+        )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2 or argv[1] not in (*SOURCES, "all"):
         print("usage: record_fixtures.py <github|osv|kev|epss|all>", file=sys.stderr)
         return 2
     source = argv[1]
-    if source in ("osv", "kev", "epss"):
-        print(f"{source}: implemented in task 5/6", file=sys.stderr)
+    if source in ("kev", "epss"):
+        print(f"{source}: implemented in task 6", file=sys.stderr)
         return 2
-    return record_github()  # "github", or "all" (only github exists so far)
+    if source == "osv":
+        return record_osv()
+    if source == "all":
+        code = record_github()
+        return code or record_osv()
+    return record_github()
 
 
 if __name__ == "__main__":

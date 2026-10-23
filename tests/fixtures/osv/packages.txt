@@ -1,0 +1,7 @@
+# Packages that `make record-fixtures SOURCE=osv` queries: one "ecosystem name version" per line.
+# Versions line up with packages in the recorded GitHub fixtures so the matcher
+# has matching advisories to work with. Confirm before recapturing.
+PyPI urllib3 1.26.9
+PyPI pyyaml 5.1
+PyPI django 4.2
+PyPI requests 2.28.2
