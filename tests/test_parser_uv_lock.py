@@ -7,6 +7,8 @@ import pytest
 from vulntriage.ingest.models import LockfileParseError
 from vulntriage.ingest.uv_lock import parse_uv_lock
 
+
+pytestmark = pytest.mark.unit  # task 13: the U-* backend unit layer
 LOCK = """\
 version = 1
 requires-python = ">=3.12"

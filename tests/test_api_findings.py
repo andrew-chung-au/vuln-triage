@@ -23,6 +23,9 @@ from vulntriage.ingest.signals import EpssClient, KevClient
 from vulntriage.main import create_app
 
 
+
+pytestmark = pytest.mark.sqlite_integration  # task 13: the SQLite I-* integration layer
+
 @pytest.fixture()
 def factory(sqlite_engine) -> sessionmaker[Session]:  # type: ignore[no-untyped-def]
     Base.metadata.create_all(sqlite_engine)

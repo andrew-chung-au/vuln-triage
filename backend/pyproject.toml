@@ -23,6 +23,10 @@ package = false
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+# --strict-markers: an unknown marker is an error, so every U-*/I-* case is
+# tagged `unit` or `sqlite_integration` and the task-21 CI jobs can select by
+# marker. Backend tests run without Docker, a live feed, a secret or a network.
+addopts = "--strict-markers"
 markers = [
     "unit: pure function or in-memory/SQLite case with no network",
     "sqlite_integration: case that exercises the SQLite integration harness",

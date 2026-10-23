@@ -27,6 +27,9 @@ from vulntriage.ingest.scan import enqueue_scan, run_pending_scans
 from vulntriage.ingest.signals import EpssClient, KevClient
 from vulntriage.main import create_app
 
+
+pytestmark = pytest.mark.sqlite_integration  # task 13: the SQLite I-* integration layer
+
 N8N = "n8n-secret-token"
 MCP = "mcp-secret-token"
 RESP = "responder-secret-token"
