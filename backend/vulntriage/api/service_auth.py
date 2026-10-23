@@ -14,7 +14,6 @@ are compared in constant time.
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable
 
 from fastapi import HTTPException, Request, status
 
@@ -84,6 +83,17 @@ def require_responder(request: Request) -> None:
     _require_service_token(request, get_responder_api_token())
 
 
-def dependency(guard: Callable[[Request], None]) -> Callable[[Request], None]:
-    """Wrap a guard as a FastAPI dependency (kept explicit for readability)."""
-    return guard
+def require_session_or_mcp(request: Request) -> None:
+    """Allow a valid session cookie OR the MCP token (the shared ``getAsset`` op).
+
+    A session cookie is resolved through the normal session guard. Otherwise a
+    bearer must be the MCP token; the n8n or responder token (or an unknown one)
+    is a wrong consumer. Order: ``401`` for no/invalid credential, ``403`` for a
+    valid credential this operation does not list, before the route's ``404``.
+    """
+    from vulntriage.api.security import require_session  # local import avoids a cycle
+
+    if request.cookies.get(COOKIE_NAME):
+        require_session(request)  # raises 401/403 exactly as a cookie op would
+        return
+    _require_service_token(request, get_mcp_api_token())
