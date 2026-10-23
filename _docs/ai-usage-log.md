@@ -2132,3 +2132,12 @@ Copy this template for each new entry:
 - Root cause: the locked FastAPI (0.161.1) does not copy included routes onto `app.routes`; `include_router` adds one `_IncludedRouter` per router, whose routes live on `.original_router.routes` (not `.routes`). The diagnostic run in the devcontainer showed `app.routes` holding only the four docs routes plus four `_IncludedRouter` objects, so the guard map was empty for every API route. The earlier "only `/auth/me` fails" reading was the guard test stopping at its first failing assertion, not 21 routes passing.
 - Fix: `_route_guards()` now walks the app with `fastapi.routing.iter_route_contexts(app.routes)`, the iterator `app.openapi()` itself uses, which yields each effective route with its full path, methods and `original_route` (endpoint and `dependant`). Removed the hand-written `_iter_leaf_routes()` and the TEMP `test_DIAG_dump_guard_map`; kept `test_the_route_tree_is_flattened_and_guards_are_read` as the regression test.
 - verification: `tests/test_openapi_conformance.py` 7 passed; `make verify` passed (389 tests, type check, whitespace, weakened-test check).
+
+- date: 2026-10-23
+- task/issue: task 2 (#75) — planning evidence and tracker hygiene
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to close out S1 by completing task 2 and to add a step-by-step local end-to-end verification guide under `_docs/`.
+- files changed: `_docs/tasks.md` (evidence note under task 2 only), `_docs/verify-locally.md` (new local verification guide), `README.md` (index link), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/npm), so dependencies cannot be installed here. The task 2 change is documentation only. CI on `main` is green at the time of writing (latest run success at `b007833`). The human must run `make verify` on a networked machine before relying on it.
+- human review (what I checked or corrected, or `none`): none yet. Follow-up recorded in `_docs/verify-locally.md` and the task-2 note: `make dev` / `dev-start` / `dev-stop` (task 11 / #85 acceptance) are not in the Makefile and should be filed as a follow-up.
