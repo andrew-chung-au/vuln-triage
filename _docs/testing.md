@@ -91,6 +91,15 @@ Showcase (US-6): brief guardrail unit cases (`U-GUARD`), in this order; the firs
 
 `U-NET` is the network-guard case: the unit harness stubs OSV, KEV, EPSS, GitHub and the LLM, sets `LLM_MODE=stub`, and fails the test on any outbound HTTP call. Unit tests run in `make test` and the PR `unit` job. The frontend's existing vitest suite is the frontend unit/integration layer (`make frontend-test`); this strategy does not replace it.
 
+Data model unit cases (issue #26, in-memory SQLite, `unit`, network guard on):
+
+| ID | Cases | Expected |
+|---|---|---|
+| `U-SCHEMA` | `alembic upgrade head` and `downgrade base` through the Python API; drift check with `compare_metadata`; column names and nullability per table; JSON round trip | Exactly the 14 tables of the Data model (no `Brief`); no drift between migration and models |
+| `U-ENUM` | Enum value lists; `kev_value` (no CVE, listed, not listed, never fetched); out-of-list values (`scanned_clean`, `Open`, `P5`, `urgent`) on every enum column | `IntegrityError`; KEV value derived, not stored |
+| `U-CONSTRAINT` | Keys, unique and foreign-key constraints; `identity_key`; duplicate finding; foreign keys enforced (`PRAGMA foreign_keys=ON`) | `IntegrityError` for each violation; exactly one row after a duplicate finding |
+| `U-AUDIT` | Audit entry round trip (actor, time, previous value, restore link); one target only; `risk accepted` needs a reason unless it restores; append-only | `IntegrityError` for the refused entries; `AppendOnlyError` on ORM update or delete, row unchanged |
+
 Other IDs used in the matrix: `U-UV`, `U-REQ` and `U-NPM` are the parser rows above; `U-ALIAS` (alias/merge lookup); `U-WITHDRAW` (withdrawal and restore); `U-KEV` and `U-EPSS` (signal derivation); `U-FEED` (feed failure and stale marker); `U-GUARD` (the brief guardrail, Showcase); `I-SCAN` (scan status and fixtures); `I-MCP` (the four MCP tools, Showcase); `F-ASSET` and `F-STATUS` (frontend vitest).
 
 ## Integration tests: real Postgres and stored fixtures

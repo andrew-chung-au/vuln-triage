@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from network_guard import install_network_guard, restore_network_guard
+from vulntriage.db.session import enable_sqlite_foreign_keys
 
 DEFAULT_MODE = "stub"
 ACCEPTED_MODES = frozenset({DEFAULT_MODE})
@@ -50,12 +51,16 @@ def pytest_unconfigure(config: pytest.Config) -> None:
 
 @pytest.fixture()
 def sqlite_engine() -> Iterator[Engine]:
-    """A fresh in-memory SQLite engine with no tables, disposed after the test."""
+    """A fresh in-memory SQLite engine with no tables, disposed after the test.
+
+    Foreign keys are enforced (``PRAGMA foreign_keys=ON``), as in production.
+    """
     engine = create_engine(
         "sqlite://",
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
     )
+    enable_sqlite_foreign_keys(engine)
     try:
         yield engine
     finally:
