@@ -1965,3 +1965,15 @@ Copy this template for each new entry:
 - new dependencies: none
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the KEV/EPSS fixtures parse and the signal parse helpers (date/float, catalogue membership, EPSS filtering) and `kev_value` derivation were validated standalone. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed. VERIFY: the KEV catalogue URL/fields and the EPSS `cve=` batch size/fields are marked in `signals.py`; confirm with a live `make record-fixtures SOURCE=kev` / `SOURCE=epss`
+
+### 2026-10-23 — Agent: #79 (task 7) deterministic ranking and rank reason
+
+- date: 2026-10-23
+- task/issue: #79 (task 7): deterministic tier, total order and rank reason per finding
+- agent role: implementation agent (Kiro Web session, local sandbox on `main`)
+- model: Auto (server-selected)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to work the next issue in the plan after #78 merged; no new key prompt saved
+- files changed: new `backend/vulntriage/ingest/ranking.py` (pure `tier_for`, `sort_key`, `order_findings` and the DB-writing `rank_asset`); edit to `backend/vulntriage/ingest/scan.py` (run `rank_asset` after enrichment, replacing the placeholder rank fields from task 5); new `tests/test_ranking.py` (U-TIER, U-TIE, the I-RANK worked example, and a DB `rank_asset` case); `tests/test_ingest.py` (I-FINDINGS asserts the scan's tiers); this log entry
+- new dependencies: none; no new threshold or enum beyond architecture § Prioritisation (T = 0.10, A16-A18)
+- verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the pure ranking logic (all four tier rules, the 0.10 inclusive threshold, the P1-first precedence, and the architecture worked example order `fnd-0001, 0002, 0004, 0005, 0003, 0006`) was validated standalone. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
+- human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed

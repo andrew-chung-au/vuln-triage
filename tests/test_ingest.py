@@ -352,6 +352,13 @@ def test_scan_produces_findings_with_aliases_and_fixed_version(factory) -> None:
         asset = session.get(Asset, aid)
         assert asset.criticality == "low" and asset.internet_facing is False
 
+        # Ranking (task 7) replaced the placeholder tiers. pygoat is not exposed
+        # (low criticality, not internet-facing): urllib3's CVE is KEV-listed but
+        # the asset is not exposed -> P2; pyyaml is not listed, has a fix -> P3.
+        assert findings["urllib3"].tier == "P2"
+        assert findings["urllib3"].rank_reason.startswith("P2: KEV listed, asset not exposed")
+        assert findings["pyyaml"].tier == "P3"
+
 
 # -- queue and worker ---------------------------------------------------------
 
