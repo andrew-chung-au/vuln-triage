@@ -1787,3 +1787,25 @@ Copy this template for each new entry:
 - files changed: `_docs/architecture.md`, `_docs/api.md`, `_docs/openapi.yaml`, `_docs/testing.md`, `_docs/tasks.md`, `_docs/plan-summary.md`, `_docs/roadmap.md`, `_docs/aws-setup.md`, `_docs/planning-process.md`, `_docs/docker-runbook.md`, this log; commits b9e3c23 (WP2), 2a0e169 (WP3), ca470b5 (WP4), 5fcfa8f (WP5), aa9b93a (WP6), 971457b (WP8) and the log commit that follows. `specs.md`, `AGENTS.md`, `Makefile`, `_docs/agent-kit/*`, `opencode.json`, `.claude/*`, `agent-kit.conf` and `_docs/rubric-evidence.md` untouched
 - verification (tests run, reviewer verdict): `make openapi-validate` exit 0 on the edited `openapi.yaml` (22 operations); read-only `.scratch/` scripts recounted the test case IDs (56 submission, 26 Showcase), the register labels and locations, the task headings (1-39), dependencies and the dependency table (no mismatch); `make verify` result is in the issue comment. No QA or review yet
 - human review (what I checked or corrected, or `none`): none in this entry. No protected file was committed. Commands that required approval: none
+
+### 2026-10-23 — Reviewer: plan review of #108 run 2 (PASS)
+
+- date: 2026-10-23
+- task/issue: #108, Reviewer run 2 at `46dd403` (roadmap step 14)
+- agent role: Reviewer, a fresh OpenCode general-purpose subagent launched by the orchestrator, following `_docs/prompts/reviewer-plan-review.md` with run notes (the prompt's "OpenCode wrote the plan" sentence corrected; `openapi.yaml` read in full; documents-reviewed list per the human's decision; only the review file committed)
+- model: `opencode/deepseek-v4.1-flash-free` (OpenCode). The handoff named Claude Code sonnet for run 2; subagents in this environment inherit the main session model, and the review file records the actual model. Human decision 2026-10-23: accept this run as the independent run because it is a different tool and model from the plan's authors (`claude-opus-5-5` and the sonnet engineers), which is the stronger independence; the deviation from the sonnet choice is recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): `_docs/prompts/reviewer-plan-review.md` plus the orchestrator's run notes; no new key prompt saved
+- files changed: `_docs/reviews/2026-10-22-plan-review-2.md` (`fc89dcf`, the Reviewer's only commit); this log entry (appended by the orchestrator)
+- verification (tests run, reviewer verdict): verdict `Reviewer: PASS at 46dd403`; 4 new findings (0 High, 2 Medium, 2 Low) and 2 questions; all 14 earlier Mediums and the E8 High re-checked; `git show --stat fc89dcf` lists one path; `make assert-clean` PASS at `fc89dcf`; `openapi.yaml` read in full (2421 lines)
+- human review (what I checked or corrected, or `none`): the human accepted this run and approved filing one follow-up issue for the leftover findings. No protected file was committed in this entry. Commands that required approval: none
+
+### 2026-10-23 — Orchestrator: #108 stage 2 QA and close-out
+
+- date: 2026-10-23
+- task/issue: #108 closed (roadmap step 14)
+- agent role: Orchestrator (main session), with a QA subagent, a PM subagent and an Engineer subagent, local sandbox on `main`
+- model: `opencode/deepseek-v4.1-flash-free` (OpenCode); the subagents inherited it
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the step 14 handoff note and the human's decisions of 2026-10-22 and 2026-10-23; no new key prompt saved
+- files changed: `README.md` (`f14ac52`); `AGENTS.md` (`bbce6fb`, protected); `_docs/roadmap.md` and this log; `_session-summaries/issue-108-plan-review.md`; the review file `fc89dcf`; the follow-up issue #109 (GitHub, no repository file)
+- verification (tests run, reviewer verdict): QA PASS at `46dd403` (comment 6354307995), `make verify` PASS (62 tests, type check, whitespace, no weakened tests), `make openapi-validate` OK (22 operations); `make assert-clean` PASS after QA and after the Reviewer; the AGENTS.md approval record on #108 matches `git show` (read-only `.scratch/` check, 0 mismatches)
+- human review (what I checked or corrected, or `none`): the human approved the AGENTS.md phase-line diff as written (decision question, 2026-10-23), accepted the Reviewer run 2 model, and approved filing one follow-up issue. Protected commit `bbce6fb` with `HUMAN_APPROVED=1`; record comment 6354792932. Commands that required approval: `HUMAN_APPROVED=1 git commit` for AGENTS.md (merits request, protected file); `gh issue create` for #109 (PM, merits request); `make issue-close N=108` (ask rule)
