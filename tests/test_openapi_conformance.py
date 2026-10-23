@@ -235,24 +235,47 @@ def _guard_schemes(route: object) -> frozenset[str]:
     return frozenset(schemes)
 
 
+def _iter_leaf_routes(routes, prefix: str = "", seen: set[int] | None = None):  # type: ignore[no-untyped-def]
+    """Yield ``(full path, leaf route)`` for every endpoint route, descending into
+    sub-routers/mounts.
+
+    ``app.include_router`` in this FastAPI build keeps each router as a nested
+    container object (its routes are not flattened onto ``app.routes``), so the
+    tree is walked: a node with HTTP ``methods`` and a ``path`` is a leaf; a node
+    that only carries nested ``routes`` is a container and is descended into, its
+    ``prefix`` (if any) accumulated onto the path.
+    """
+    seen = set() if seen is None else seen
+    for route in routes or []:
+        if id(route) in seen:
+            continue
+        seen.add(id(route))
+        path = getattr(route, "path", None)
+        methods = getattr(route, "methods", None)
+        if path and methods:
+            yield prefix + path, route
+        nested = getattr(route, "routes", None)
+        if nested:
+            sub_prefix = prefix + (getattr(route, "prefix", "") or "")
+            yield from _iter_leaf_routes(nested, sub_prefix, seen)
+
+
 def _route_guards(app) -> dict[tuple[str, str], frozenset[str]]:  # type: ignore[no-untyped-def]
     """{(normalised path, method): guard schemes} for every API route on the app.
 
-    Routes are recognised by duck-typing (a ``path``, HTTP ``methods`` and a
-    ``dependant``), so the lookup does not depend on the ``APIRoute`` class
-    identity. HEAD/OPTIONS that FastAPI adds are dropped.
+    The route tree is flattened first (this build nests included routers rather
+    than flattening them onto ``app.routes``). HEAD/OPTIONS that FastAPI adds are
+    dropped. The last writer wins, which is harmless: a given (path, method) has
+    one leaf route.
     """
     guards: dict[tuple[str, str], frozenset[str]] = {}
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if not path or not methods or not hasattr(route, "dependant"):
-            continue
+    for full_path, route in _iter_leaf_routes(app.routes):
+        methods = getattr(route, "methods", None) or set()
         schemes = _guard_schemes(route)
         for method in methods:
             m = method.lower()
             if m in _METHODS:
-                guards[(_normalise(path), m)] = schemes
+                guards[(_normalise(full_path), m)] = schemes
     return guards
 
 
@@ -322,56 +345,42 @@ def test_every_operation_is_guarded_by_the_contract_security_scheme() -> None:
         )
 
 
-def test_DIAG_auth_me_guard_structure() -> None:  # TEMP diagnostic, remove after
-    """Throwaway: dump how FastAPI stores the GET /auth/me guard so we can read
-    it correctly. This test is expected to fail and print the structure."""
+def test_DIAG_dump_guard_map() -> None:  # TEMP diagnostic, remove after
+    """Dump the flattened leaf routes and the computed guard map."""
     app = _route_app()
-    lines: list[str] = []
-    lines.append("ALL app.routes (path | methods | has_endpoint | type):")
-    for r in app.routes:
-        lines.append(
-            f"  {getattr(r, 'path', None)!r} | {getattr(r, 'methods', None)!r} "
-            f"| endpoint={getattr(getattr(r, 'endpoint', None), '__name__', None)} "
-            f"| {type(r).__name__}"
-        )
-    lines.append(f"openapi paths: {sorted(app.openapi()['paths'])}")
-    match = [
-        r for r in app.routes
-        if getattr(r, "path", None) == "/auth/me"
-        and "GET" in (getattr(r, "methods", None) or set())
-    ]
-    if not match:
-        raise AssertionError("DIAG /auth/me NOT in app.routes:\n" + "\n".join(lines))
-    route = match[0]
-    lines.append(f"route type: {type(route).__module__}.{type(route).__name__}")
-    endpoint = getattr(route, "endpoint", None)
-    lines.append(f"endpoint: {getattr(endpoint, '__name__', None)} "
-                 f"wrapped={getattr(endpoint, '__wrapped__', 'NO')!r}")
-    try:
-        sig = inspect.signature(endpoint)
-        for n, p in sig.parameters.items():
-            d = p.default
-            lines.append(f"  param {n!r}: default_type={type(d).__module__}.{type(d).__name__} "
-                         f"dependency={getattr(getattr(d, 'dependency', None), '__name__', None)} "
-                         f"annotation={p.annotation!r}")
-    except (TypeError, ValueError) as exc:
-        lines.append(f"  signature error: {exc!r}")
-    # The raw function, bypassing any wrapping.
-    raw = inspect.unwrap(endpoint) if endpoint is not None else None
-    lines.append(f"unwrapped endpoint: {getattr(raw, '__name__', None)}")
-    if raw is not None and raw is not endpoint:
-        for n, p in inspect.signature(raw).parameters.items():
-            lines.append(f"  raw param {n!r}: default={p.default!r}")
-    dep = getattr(route, "dependant", None)
-    lines.append(f"dependant.call: {getattr(getattr(dep, 'call', None), '__name__', None)}")
-    deps = getattr(dep, "dependencies", None)
-    lines.append(f"dependant.dependencies count: {len(deps) if deps is not None else None}")
-    for i, s in enumerate(deps or []):
-        lines.append(f"  dep[{i}].call={getattr(getattr(s, 'call', None), '__name__', None)} "
-                     f"subdeps={len(getattr(s, 'dependencies', []) or [])}")
-    lines.append(f"dependant attrs with 'depend': "
-                 f"{[a for a in dir(dep) if 'depend' in a.lower()]}")
-    raise AssertionError("DIAG /auth/me:\n" + "\n".join(lines))
+    leaves = list(_iter_leaf_routes(app.routes))
+    guards = _route_guards(app)
+    lines = [f"leaf routes found: {len(leaves)}"]
+    for full_path, route in leaves:
+        lines.append(f"  {full_path!r} methods={getattr(route, 'methods', None)!r} "
+                     f"endpoint={getattr(getattr(route, 'endpoint', None), '__name__', None)}")
+    lines.append(f"guard map entries: {len(guards)}")
+    for k in sorted(guards):
+        lines.append(f"  {k} -> {sorted(guards[k])}")
+    raise AssertionError("DIAG guard map:\n" + "\n".join(lines))
+
+
+def test_the_route_tree_is_flattened_and_guards_are_read() -> None:
+    # Regression for the bug that cost several rounds: this FastAPI build nests
+    # included routers rather than flattening them onto `app.routes`, so a scan
+    # of `app.routes` alone found no endpoint routes and every guard read empty.
+    # Assert the flattener reaches the leaf routes and that at least the four
+    # guard families (and a public route) are detected, so an empty guard map
+    # can never again masquerade as "all operations unguarded".
+    app = _route_app()
+    guards = _route_guards(app)
+    assert ("/auth/me", "get") in guards, sorted(guards)
+    assert guards[("/auth/me", "get")] == frozenset({"cookieAuth"})
+    assert guards[("/signals/refresh", "post")] == frozenset({"n8nAuth"})
+    assert guards[("/mcp/top-exposures", "get")] == frozenset({"mcpAuth"})
+    assert guards[("/responder/notification-jobs", "get")] == frozenset({"responderAuth"})
+    assert guards[("/assets/{}", "get")] == frozenset({"cookieAuth", "mcpAuth"})
+    # login and logout are public (no guard).
+    assert guards.get(("/auth/login", "post"), frozenset()) == frozenset()
+    assert guards.get(("/auth/logout", "post"), frozenset()) == frozenset()
+    # Every operation the contract lists must have a matching flattened route.
+    missing = set(_contract_ops()) - set(guards)
+    assert not missing, f"operations with no flattened route: {missing}"
 
 
 def test_health_is_excluded_by_name_and_not_in_the_contract() -> None:
