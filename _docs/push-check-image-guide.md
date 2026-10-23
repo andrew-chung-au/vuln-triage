@@ -252,11 +252,22 @@ This lasts only for that terminal window. To keep it for every new terminal, add
 the same line to the end of your `~/.bashrc` (your own file, not the repo) and
 open a new terminal. Check it with `echo "$AGENT_PUSH_CHECK_IMAGE"`.
 
+**Always name the destination in a push: `git push origin HEAD:refs/heads/<name>`.**
+A bare `git push` uses the branch's upstream, and a branch created from the
+agent's work tracks the `sandbox` remote. Pushing there is wrong: `sandbox` is
+the agent's folder, which you only ever fetch from. Check with
+`git remote -v` (you want to push to `origin`, the GitHub one) and
+`git rev-parse --abbrev-ref @{upstream}` (it may print `sandbox/main`; that is
+why a bare push fails or goes to the wrong place).
+
+Pick `<name>` for the branch on GitHub, for example
+`feat/26-112-data-model-push-image`. In plan mode the name is only a label.
+
 Now the dry run. Plan mode prints what the push check would run and then
 **blocks the push on purpose**, so nothing is sent to GitHub:
 
 ```
-AGENT_PUSH_CHECK_PLAN=1 git push
+AGENT_PUSH_CHECK_PLAN=1 git push origin HEAD:refs/heads/<name>
 ```
 
 Expected output includes:
@@ -277,11 +288,12 @@ Only after steps 4 to 6 look right, and only if you are happy with the diff you
 reviewed in step 2:
 
 ```
-git push
+git push origin HEAD:refs/heads/<name>
 ```
 
-(If the branch has no upstream yet, git prints the exact `git push --set-upstream
-origin <branch>` command to use; use that.)
+Use the same `<name>` as in step 6. This creates that branch on GitHub; open a
+pull request from it, or merge it into `main` your usual way. Do not add
+`--set-upstream` or push to `sandbox`.
 
 What happens: the push check bundles your new commits, starts a throwaway
 container from the image, checks out your commit, then runs
@@ -307,7 +319,7 @@ throwaway branch that you delete afterwards.
 git switch -c throwaway/no-lock
 git rm backend/uv.lock
 git commit -m "throwaway: remove uv.lock to test the push check"
-git push origin throwaway/no-lock
+git push origin HEAD:refs/heads/throwaway/no-lock
 ```
 
 Expected: the push check runs, `uv sync --locked` fails (an error about a missing
