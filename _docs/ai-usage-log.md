@@ -1897,3 +1897,14 @@ Copy this template for each new entry:
 - files changed: commits a6a342f (parsers), 6ba1cae (reader, hand-written fixtures, recorder, `.env.example`, MANIFEST), 1d7c25f (scan and worker), c5ef99b (`POST /assets`, `main.py`, `tests/test_smoke.py` route assertion); this log. `Makefile` and `AGENTS.md` not edited (proposed Makefile diff returned)
 - verification (tests run, reviewer verdict): `make verify BASE=fb33f75` PASS WITH WARNINGS (62 frontend + 240 backend tests; the warnings are the one rewritten smoke assertion `paths == {}` -> `paths == {"/assets"}` and new fixture files). No live GitHub call was made; the fixtures are hand-written. Reader endpoints and header names are unverified (VERIFY markers in `github.py`)
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none
+
+### 2026-10-23 — Software Engineer: #76 follow-up after QA PASS
+
+- date: 2026-10-23
+- task/issue: #76 follow-up (QA risk 1 and doc notes); issue not closed
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's two-task follow-up (make `read_file` and the include check agree; apply the `testing.md` and `architecture.md` notes); no new key prompt saved
+- files changed: commit 9a7950d (`github.py`, `scan.py`, `tests/test_github_reader.py`, `tests/test_ingest.py`); commit c3f5a46 (`_docs/testing.md`, `_docs/architecture.md`); this log
+- verification (tests run, reviewer verdict): `make backend-test` 246 passed; `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; warnings are the fixture files changed since origin/main, none touched in this follow-up). No reviewer run
+- human review (what I checked or corrected, or `none`): none. Commands that required approval: none
