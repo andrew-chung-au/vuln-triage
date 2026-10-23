@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -125,6 +125,20 @@ backend-lock: ## Update backend/uv.lock after editing backend/pyproject.toml (uv
 backend-test: ## Run the backend pytest suite (needs make install first)
 	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
 	@backend/.venv/bin/pytest -c backend/pyproject.toml tests
+
+# Marker-scoped backend subsets for the CI jobs (issue #139, task 19). Each is a
+# slice of backend-test; `make test` still runs them all for the local gate.
+test-unit: ## Run the backend unit-marked cases only (CI `unit` job)
+	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@backend/.venv/bin/pytest -c backend/pyproject.toml -m unit tests
+
+test-sqlite-integration: ## Run the backend SQLite integration-marked cases only (CI `sqlite-integration` job)
+	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@backend/.venv/bin/pytest -c backend/pyproject.toml -m sqlite_integration tests
+
+test-conformance: ## Run the OpenAPI conformance test only (CI `openapi-validation` job)
+	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@backend/.venv/bin/pytest -c backend/pyproject.toml tests/test_openapi_conformance.py
 
 frontend-test: ## Run the frontend unit tests (vitest run)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }

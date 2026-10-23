@@ -1,18 +1,86 @@
 name: verify
 on: [push, pull_request]
+
+# No job needs a secret or a live feed (the network guard blocks outbound HTTP
+# in tests). A read-only token is all CI gets.
 permissions:
-  contents: read          # the job can read the repo, nothing more
+  contents: read
+
 jobs:
+  # The backend unit-marked cases (U-*). Backend deps only.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-unit
+
+  # The backend SQLite integration cases (I-* on SQLite). Backend deps only.
+  sqlite-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-sqlite-integration
+
+  # The frontend unit tests and the type check (F-*). Frontend deps only.
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24.22.0" }
+      - run: make frontend-install
+      - run: make frontend-test
+      - run: make frontend-typecheck
+
+  # The OpenAPI contract: the spec validates and the backend conforms (I-CONTRACT).
+  openapi-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make openapi-validate
+      - run: make test-conformance
+
+  # The integration cases against real Postgres in the vt-test Compose project.
+  # ubuntu-latest ships Docker + Docker Compose, so no extra setup is needed.
+  postgres-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-integration
+
+  # The full gate, kept so PRs still get the whitespace and weakened-test checks
+  # that the split test jobs above do not cover; it also runs the suite as a
+  # backstop. Needs both toolchains because make verify runs make test (frontend
+  # + backend). (CI passes the default BASE for now; a real BASE is #67.)
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      # VERIFY: astral-sh/setup-uv@v5 is the current major used here; confirm
-      # before bumping and keep the version in step with the dev container.
       - uses: astral-sh/setup-uv@v5
-        with:
-          version: "0.13.1"
-      - run: if grep -q '^install:' Makefile; then make install; fi
+        with: { version: "0.13.1" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "24.22.0" }
+      - run: make install
       - run: make verify
