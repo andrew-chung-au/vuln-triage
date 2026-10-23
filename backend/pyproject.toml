@@ -8,6 +8,8 @@ dependencies = [
     "uvicorn",
     "sqlalchemy",
     "alembic>=1.16,<2",
+    "httpx",
+    "packaging",
 ]
 
 [dependency-groups]

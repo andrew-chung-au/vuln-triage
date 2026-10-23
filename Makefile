@@ -150,3 +150,16 @@ frontend-stop: ## Stop the frontend started by frontend-start
 	for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$$pid" 2>/dev/null || break; sleep 1; done; \
 	if kill -0 "$$pid" 2>/dev/null; then echo "frontend (pid $$pid) did not stop within 10 s"; exit 1; fi; \
 	rm -f .scratch/frontend.pid; echo "frontend stopped"
+
+# --- Fixture recorder (issue #76) ----------------------------------------
+
+# SOURCE must be exactly one of these words; make checks it before any shell command runs.
+RECORD_SOURCES = github osv kev epss all
+
+.PHONY: record-fixtures
+
+record-fixtures: ## Record live fixtures (run by the human; public APIs, no token): make record-fixtures SOURCE=<github|osv|kev|epss|all>
+	$(if $(value SOURCE),,$(error Usage: make record-fixtures SOURCE=<github|osv|kev|epss|all>))
+	$(if $(or $(filter-out $(RECORD_SOURCES),$(value SOURCE)),$(word 2,$(value SOURCE))),$(error SOURCE must be exactly one of: $(RECORD_SOURCES); got '$(value SOURCE)'))
+	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@backend/.venv/bin/python tests/record_fixtures.py "$(value SOURCE)"

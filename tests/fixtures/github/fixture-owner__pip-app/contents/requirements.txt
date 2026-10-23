@@ -1,0 +1,4 @@
+# project-authored fixture
+-r dev/extra.txt
+flask==2.3.3
+jinja2>=3.0
