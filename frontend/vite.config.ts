@@ -18,9 +18,22 @@ export default defineConfig(({ mode }) => {
     Object.entries(env).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
   );
 
+  // In development the frontend and backend share one origin: the Vite dev
+  // server proxies the API paths to the backend (task 11 / #133), so no CORS is
+  // involved and the vt_session cookie is first-party. In Compose and on AWS a
+  // reverse proxy does the same. The target is overridable with VITE_API_TARGET
+  // for a non-default backend address.
+  const apiTarget = env["VITE_API_TARGET"] || "http://127.0.0.1:8000";
+  const apiPaths = ["/auth", "/findings", "/assets", "/signals", "/scans", "/health"];
+
   return {
     define: envDefine,
     css: { transformer: "lightningcss" },
+    server: {
+      proxy: Object.fromEntries(
+        apiPaths.map((path) => [path, { target: apiTarget, changeOrigin: true }]),
+      ),
+    },
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
       dedupe: [

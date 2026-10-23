@@ -1,12 +1,18 @@
-// Single entry point for all backend calls. Swap mockServices for a real
-// API-backed implementation of the same Services interface later.
+// Single entry point for all backend calls.
+//
+// The app uses the real backend-backed service (httpServices). The mock stays
+// exported for vitest fixtures only; it is no longer the production wiring
+// (task 11 / #133). Every implementation satisfies the same Services interface.
+import { httpServices } from "./httpService";
 import { DEMO_CREDENTIALS } from "./mockData";
-import { mockServices } from "./mockService";
 import type { Services } from "./types";
 
-export const services: Services = mockServices;
+export const services: Services = httpServices;
 
-/** Demo credentials are data the login screen needs without importing the mock. */
+/** The mock remains available as a test fixture, not as production wiring. */
+export { mockServices } from "./mockService";
+
+/** Demo credentials shown on the sign-in screen as a hint. */
 export const demoCredentials = DEMO_CREDENTIALS;
 
 export * from "./types";
