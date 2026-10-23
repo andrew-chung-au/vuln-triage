@@ -1,0 +1,25 @@
+{
+  "id": "GHSA-8q59-q68h-6hv4",
+  "aliases": ["CVE-2020-14343"],
+  "modified": "2022-09-01T00:00:00Z",
+  "published": "2021-02-09T00:00:00Z",
+  "summary": "PyYAML: arbitrary code execution via full_load / FullLoader",
+  "details": "A crafted YAML file can execute arbitrary code when loaded with the default or FullLoader before 5.4.",
+  "affected": [
+    {
+      "package": {"ecosystem": "PyPI", "name": "pyyaml"},
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "5.4"}
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {"type": "ADVISORY", "url": "https://github.com/advisories/GHSA-8q59-q68h-6hv4"}
+  ]
+}

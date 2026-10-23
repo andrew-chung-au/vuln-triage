@@ -1,0 +1,25 @@
+{
+  "id": "PYSEC-2023-212",
+  "aliases": ["CVE-2023-43804", "GHSA-v845-jxx5-vc9f"],
+  "modified": "2023-10-06T00:00:00Z",
+  "published": "2023-10-05T00:00:00Z",
+  "summary": "urllib3: Cookie header leak on cross-origin redirect (PYSEC)",
+  "details": "Duplicate advisory for CVE-2023-43804 under the PyPA database.",
+  "affected": [
+    {
+      "package": {"ecosystem": "PyPI", "name": "urllib3"},
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "1.26.17"}
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {"type": "ADVISORY", "url": "https://osv.dev/vulnerability/PYSEC-2023-212"}
+  ]
+}

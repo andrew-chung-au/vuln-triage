@@ -1,0 +1,27 @@
+{
+  "id": "GHSA-v845-jxx5-vc9f",
+  "aliases": ["CVE-2023-43804"],
+  "modified": "2023-10-06T00:00:00Z",
+  "published": "2023-10-04T00:00:00Z",
+  "summary": "urllib3 leaks the Cookie HTTP header on cross-origin redirects",
+  "details": "When redirected cross-origin, urllib3 did not strip the Cookie header. See https://example.invalid/advisory for the writeup.",
+  "affected": [
+    {
+      "package": {"ecosystem": "PyPI", "name": "urllib3"},
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"},
+            {"fixed": "1.26.17"},
+            {"introduced": "2.0.0"},
+            {"fixed": "2.0.6"}
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {"type": "ADVISORY", "url": "https://github.com/urllib3/urllib3/security/advisories/GHSA-v845-jxx5-vc9f"}
+  ]
+}

@@ -10,9 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from github_stub import FixtureTransport
+from osv_stub import OsvFixtureTransport
 from vulntriage.db.enums import ScanTrigger
-from vulntriage.db.models import Asset, Base, Dependency, Finding, Lifecycle, Scan
+from vulntriage.db.models import Asset, Base, Dependency, Finding, FindingDependency, Lifecycle, Scan
 from vulntriage.ingest.github import GitHubReader, RepositoryUnavailable
+from vulntriage.ingest.osv import OsvClient
 from vulntriage.ingest.scan import enqueue_scan, run_pending_scans, unfinished_scan_ids
 from vulntriage.worker import ScanWorker
 
@@ -63,12 +65,12 @@ def make_asset(factory: sessionmaker[Session], url: str = "https://github.com/o/
         return asset.id
 
 
-def scan_once(factory: sessionmaker[Session], asset_id: int, reader: FakeReader) -> Scan:
+def scan_once(factory: sessionmaker[Session], asset_id: int, reader, osv_client=None) -> Scan:  # type: ignore[no-untyped-def]
     with factory() as session:
         scan = enqueue_scan(session, session.get(Asset, asset_id), ScanTrigger.PERSON)
         session.commit()
         scan_id = scan.id
-    run_pending_scans(factory, reader)
+    run_pending_scans(factory, reader, osv_client)
     with factory() as session:
         return session.get(Scan, scan_id)
 
@@ -108,27 +110,33 @@ def test_same_package_in_two_files_is_stored_twice(factory) -> None:  # type: ig
     assert names == [("requests", "uv.lock"), ("requests", "requirements.txt")]
 
 
-def test_interim_status_rule_must_be_replaced_by_osv_result_in_task_5(factory) -> None:  # type: ignore[no-untyped-def]
-    # D3: no OSV matching exists yet. "clean" only means "no warning that makes it incomplete".
+def test_status_without_findings_is_clean_or_incomplete(factory) -> None:  # type: ignore[no-untyped-def]
+    # Task 5: with the OSV stub returning nothing for `requests==2.31.0`, a scan
+    # with no matched finding is "clean"; a version-unknown entry is "incomplete".
+    osv = OsvClient(OsvFixtureTransport().client())
     clean = make_asset(factory)
-    scan_once(factory, clean, FakeReader({"uv.lock": UV}))
+    scan_once(factory, clean, FakeReader({"uv.lock": UV}), osv)
     assert asset_of(factory, clean).scan_status == "scanned, clean"
     assert asset_of(factory, clean).scan_failure_reason is None
 
     unknown = make_asset(factory)
-    scan_once(factory, unknown, FakeReader({"requirements.txt": "pkg\n"}))
+    scan_once(factory, unknown, FakeReader({"requirements.txt": "pkg\n"}), osv)
     assert asset_of(factory, unknown).scan_status == "scanned, incomplete"
 
     ignored = make_asset(factory)
-    scan = scan_once(factory, ignored, FakeReader({"requirements.txt": "-c c.txt\n--index-url x\npkg==1\n"}))
+    scan = scan_once(factory, ignored, FakeReader({"requirements.txt": "-c c.txt\n--index-url x\npkg==1\n"}), osv)
     assert [w["kind"] for w in scan.warnings] == ["constraints file ignored", "index option ignored"]
     assert asset_of(factory, ignored).scan_status == "scanned, clean"  # these never count
     assert scan.scan_status == "scanned, clean"
 
 
-def test_no_finding_or_lifecycle_rows_are_created(factory) -> None:  # type: ignore[no-untyped-def]
+def test_no_osv_client_still_ingests_dependencies_without_findings(factory) -> None:  # type: ignore[no-untyped-def]
+    # The worker and ingestion-only paths run with osv_client=None: dependencies
+    # are stored, no finding or lifecycle row is created, status is clean.
     aid = make_asset(factory)
     scan_once(factory, aid, FakeReader({"uv.lock": UV}))
+    assert [d[1] for d in deps(factory, aid)] == ["requests"]
+    assert asset_of(factory, aid).scan_status == "scanned, clean"
     with factory() as session:
         assert session.scalar(select(func.count()).select_from(Finding)) == 0
         assert session.scalar(select(func.count()).select_from(Lifecycle)) == 0
@@ -283,6 +291,39 @@ def test_fixture_repositories_ingest_through_the_github_reader(factory, slug, ex
         session.commit()
     run_pending_scans(factory, reader)
     assert sorted((d[1], d[2]) for d in deps(factory, aid)) == sorted(expected)
+
+
+# -- I-FINDINGS: scan to findings through the real reader and OSV stub -------
+
+
+def test_scan_produces_findings_with_aliases_and_fixed_version(factory) -> None:  # type: ignore[no-untyped-def]
+    # End to end against the recorded pygoat repository (urllib3 1.26.9, PyYAML
+    # 5.1, Django 4.2, requests 2.28.2) and the committed OSV fixtures.
+    aid = make_asset(factory, url="https://github.com/adeyosemanputra/pygoat")
+    reader = GitHubReader(FixtureTransport().client(), token_provider=lambda: None)
+    osv = OsvClient(OsvFixtureTransport().client())
+    with factory() as session:
+        enqueue_scan(session, session.get(Asset, aid), ScanTrigger.REGISTRATION)
+        session.commit()
+    run_pending_scans(factory, reader, osv)
+
+    assert asset_of(factory, aid).scan_status == "scanned, findings"
+    with factory() as session:
+        findings = {
+            f.package: f
+            for f in session.scalars(select(Finding).where(Finding.asset_id == aid))
+        }
+        # urllib3 (merged aliases, E9) and pyyaml match; django is withdrawn at
+        # first sight (no finding); requests is clean (no finding).
+        assert set(findings) == {"urllib3", "pyyaml"}
+        assert findings["urllib3"].fixed_version == "1.26.17"
+        assert findings["urllib3"].status == "open"
+        assert findings["pyyaml"].fixed_version == "5.4"
+        # Each finding links to the installed dependency it came from.
+        links = session.scalar(
+            select(func.count()).select_from(FindingDependency).where(
+                FindingDependency.finding_id == findings["urllib3"].id))
+        assert links == 1
 
 
 # -- queue and worker ---------------------------------------------------------
