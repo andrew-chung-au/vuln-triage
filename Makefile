@@ -5,7 +5,7 @@
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_ -]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: frontend-install ## Install all dependencies
+install: frontend-install backend-install ## Install all dependencies
 
 verify: ## Run the verification gate: make verify [BASE=<commit>]
 	@bash _docs/agent-kit/scripts/verify.sh $(BASE)
@@ -107,13 +107,21 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install frontend-start frontend-stop frontend-build frontend-test frontend-typecheck
+.PHONY: install test frontend-install backend-install frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck
 
-test: ## Run all tests (currently the frontend's)
+test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
+	@$(MAKE) backend-test
 
 frontend-install: ## Install frontend dependencies (npm ci)
 	@npm --prefix frontend ci
+
+backend-install: ## Install backend dependencies from backend/uv.lock (uv sync --locked)
+	@cd backend && uv sync --locked
+
+backend-test: ## Run the backend pytest suite (needs make install first)
+	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@backend/.venv/bin/pytest -c backend/pyproject.toml tests
 
 frontend-test: ## Run the frontend unit tests (vitest run)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
