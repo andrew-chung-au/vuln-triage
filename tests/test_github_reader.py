@@ -142,6 +142,22 @@ def test_invalid_file_path_raises_before_any_request(path: str) -> None:
     assert stub.requests == []
 
 
+def test_is_readable_path_agrees_with_read_file() -> None:
+    from vulntriage.ingest.github import is_readable_path
+
+    for ok in ["uv.lock", "sub/a b.txt", "a@b+c=d,e~f-g_h.txt"]:
+        assert is_readable_path(ok)
+    for bad in ["cafü.txt", "a$b", "a%20b", "../x", "/x", "", "a\\b", "a//b"]:
+        assert not is_readable_path(bad)
+
+
+def test_oddly_named_path_still_raises_before_any_request() -> None:
+    stub = FixtureTransport()
+    with pytest.raises(RepositoryUnavailable):
+        reader(stub).read_file("fixture-owner", "uv-app", SHA, "cafü/a$b%.txt")
+    assert stub.requests == []
+
+
 def test_redirect_is_not_followed() -> None:
     seen: list[httpx.Request] = []
 

@@ -216,6 +216,18 @@ def test_refused_includes_are_never_read(factory, target: str) -> None:  # type:
     assert asset_of(factory, aid).scan_status == "scanned, incomplete"
 
 
+@pytest.mark.parametrize("target", ["cafü.txt", "a$b.txt", "a%20b.txt", "sub/ü/x.txt"])
+def test_include_path_with_unsupported_characters_is_refused_and_scan_continues(factory, target: str) -> None:  # type: ignore[no-untyped-def]
+    aid = make_asset(factory)
+    reader = FakeReader({"requirements.txt": f"-r {target}\npkg==1\n", target: "never==1\n"})
+    scan = scan_once(factory, aid, reader)
+    assert scan.scan_status == "scanned, incomplete"
+    assert [(w["kind"], w["file"], w["line"]) for w in scan.warnings] == [("include refused", "requirements.txt", 1)]
+    assert "unsupported characters" in scan.warnings[0]["message"]
+    assert target not in reader.read_paths
+    assert [d[1] for d in deps(factory, aid)] == ["pkg"]
+
+
 def test_include_cycle_terminates(factory) -> None:  # type: ignore[no-untyped-def]
     aid = make_asset(factory)
     reader = FakeReader({"requirements.txt": "-r a.txt\n", "a.txt": "-r b.txt\nx==1\n", "b.txt": "-r a.txt\n-r requirements.txt\ny==2\n"})

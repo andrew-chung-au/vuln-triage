@@ -19,6 +19,7 @@ from vulntriage.db.models import Asset, Dependency, Scan
 from vulntriage.ingest.github import (
     RepositoryReader,
     RepositoryUnavailable,
+    is_readable_path,
     split_repository_url,
 )
 from vulntriage.ingest.models import (
@@ -142,6 +143,16 @@ def _ingest_requirements(
             if target is None:
                 warnings.append(
                     ScanWarning(INCLUDE_REFUSED, name, include.line, "include refused")
+                )
+                continue
+            if not is_readable_path(target):
+                warnings.append(
+                    ScanWarning(
+                        INCLUDE_REFUSED,
+                        name,
+                        include.line,
+                        "include refused: path has unsupported characters",
+                    )
                 )
                 continue
             if target in seen:

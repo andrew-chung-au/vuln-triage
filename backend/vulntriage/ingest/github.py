@@ -39,6 +39,11 @@ _SHA_RE = re.compile(r"[0-9a-f]{40}")
 _PATH_RE = re.compile(r"[A-Za-z0-9_.@+=,~ -]+(?:/[A-Za-z0-9_.@+=,~ -]+)*")
 
 
+def is_readable_path(path: str) -> bool:
+    """Whether the reader would accept ``path`` (callers refuse the rest before reading)."""
+    return bool(_PATH_RE.fullmatch(path)) and ".." not in path.split("/")
+
+
 class RepositoryUnavailable(Exception):
     """The repository could not be read (maps to the failure reason of that name)."""
 
@@ -125,7 +130,7 @@ class GitHubReader:
 
     def read_file(self, owner: str, repo: str, sha: str, path: str) -> str | None:
         base = self._check(owner, repo)
-        if not _SHA_RE.fullmatch(sha) or not _PATH_RE.fullmatch(path) or ".." in path.split("/"):
+        if not _SHA_RE.fullmatch(sha) or not is_readable_path(path):
             raise RepositoryUnavailable("repository unavailable")
         response = self._get(
             f"{base}/contents/{quote(path, safe='/')}",
