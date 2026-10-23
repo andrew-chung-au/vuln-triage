@@ -60,6 +60,23 @@ def _login(client: TestClient, username: str = "lead", password: str = PASSWORD)
     return client.post("/auth/login", json={"username": username, "password": password})
 
 
+def _cookie_of(response) -> str:  # type: ignore[no-untyped-def]
+    """The raw vt_session value from a login Set-Cookie header.
+
+    TestClient speaks http://testserver and will not store a `Secure` cookie in
+    its jar, so tests carry the value explicitly on later requests instead.
+    """
+    import re
+
+    match = re.search(rf"{COOKIE_NAME}=([^;]+)", response.headers["set-cookie"])
+    assert match, response.headers.get("set-cookie")
+    return match.group(1)
+
+
+def _session_cookie(client: TestClient, **kw) -> dict[str, str]:  # type: ignore[no-untyped-def]
+    return {COOKIE_NAME: _cookie_of(_login(client, **kw))}
+
+
 # -- login ------------------------------------------------------------------
 
 
@@ -73,16 +90,15 @@ def test_login_sets_httponly_secure_samesite_cookie_and_returns_user(factory) ->
         "email": "lead@example.com", "role": "security lead",
     }
     assert "password" not in response.text and "hash" not in response.text
-    set_cookie = response.headers["set-cookie"]
+    set_cookie = response.headers["set-cookie"].lower()  # attribute casing is cosmetic
     assert COOKIE_NAME in set_cookie
-    assert "HttpOnly" in set_cookie and "Secure" in set_cookie and "SameSite=Strict" in set_cookie
+    assert "httponly" in set_cookie and "secure" in set_cookie and "samesite=strict" in set_cookie
 
 
 def test_login_stores_only_the_hash_of_the_cookie_value(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
-    raw = client.cookies.get(COOKIE_NAME)
+    raw = _cookie_of(_login(client))
     with factory() as session:
         rows = list(session.scalars(select(AuthSession)))
     assert len(rows) == 1
@@ -138,22 +154,22 @@ def test_me_returns_the_user_with_a_session_and_401_without(factory) -> None:  #
     _make_user(factory)
     client = _client(factory)
     assert client.get("/auth/me").status_code == 401
-    _login(client)
-    me = client.get("/auth/me")
+    cookies = _session_cookie(client)
+    me = client.get("/auth/me", cookies=cookies)
     assert me.status_code == 200 and me.json()["username"] == "lead"
 
 
 def test_logout_clears_the_session_and_is_idempotent(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
-    assert client.post("/auth/logout").status_code == 204
+    cookies = _session_cookie(client)
+    assert client.post("/auth/logout", cookies=cookies).status_code == 204
     with factory() as session:
         assert session.scalar(select(func.count()).select_from(AuthSession)) == 0
     # A second logout with no session still succeeds and needs no CSRF header.
-    fresh = _client(factory)
-    assert fresh.post("/auth/logout").status_code == 204
-    assert client.get("/auth/me").status_code == 401
+    assert client.post("/auth/logout").status_code == 204
+    # The cleared session no longer authenticates.
+    assert client.get("/auth/me", cookies=cookies).status_code == 401
 
 
 # -- the guard: CSRF, wrong consumer, expiry --------------------------------
@@ -162,19 +178,20 @@ def test_logout_clears_the_session_and_is_idempotent(factory) -> None:  # type: 
 def test_non_get_requires_the_csrf_header(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
+    cookies = _session_cookie(client)
     # No X-Requested-With header -> 403, changes nothing.
-    assert client.post("/_guarded").status_code == 403
-    assert client.post("/_guarded", headers={"X-Requested-With": "nope"}).status_code == 403
-    ok = client.post("/_guarded", headers={"X-Requested-With": "XMLHttpRequest"})
+    assert client.post("/_guarded", cookies=cookies).status_code == 403
+    assert client.post("/_guarded", cookies=cookies,
+                       headers={"X-Requested-With": "nope"}).status_code == 403
+    ok = client.post("/_guarded", cookies=cookies, headers={"X-Requested-With": "XMLHttpRequest"})
     assert ok.status_code == 200 and ok.json() == {"user": "lead"}
 
 
 def test_get_does_not_require_the_csrf_header(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
-    assert client.get("/_guarded").status_code == 200
+    cookies = _session_cookie(client)
+    assert client.get("/_guarded", cookies=cookies).status_code == 200
 
 
 def test_no_session_is_401(factory) -> None:  # type: ignore[no-untyped-def]
@@ -195,7 +212,7 @@ def test_service_bearer_token_on_a_frontend_operation_is_403(factory) -> None:  
 def test_expired_or_logged_out_session_is_401(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
+    cookies = _session_cookie(client)
     # Age the session past its absolute lifetime, as the clock would.
     with factory() as session:
         row = session.scalar(select(AuthSession))
@@ -204,7 +221,7 @@ def test_expired_or_logged_out_session_is_401(factory) -> None:  # type: ignore[
         row.last_seen_at = old
         row.expires_at = old + ABSOLUTE_LIFETIME
         session.commit()
-    assert client.get("/_guarded").status_code == 401
+    assert client.get("/_guarded", cookies=cookies).status_code == 401
     # The expired row was deleted on that attempt.
     with factory() as session:
         assert session.scalar(select(func.count()).select_from(AuthSession)) == 0
@@ -213,12 +230,12 @@ def test_expired_or_logged_out_session_is_401(factory) -> None:  # type: ignore[
 def test_idle_timeout_expires_the_session(factory) -> None:  # type: ignore[no-untyped-def]
     _make_user(factory)
     client = _client(factory)
-    _login(client)
+    cookies = _session_cookie(client)
     with factory() as session:
         row = session.scalar(select(AuthSession))
         row.last_seen_at = dt.datetime.now(dt.UTC) - IDLE_LIFETIME - dt.timedelta(minutes=1)
         session.commit()
-    assert client.get("/_guarded").status_code == 401
+    assert client.get("/_guarded", cookies=cookies).status_code == 401
 
 
 # -- owner-match rule (A30) -------------------------------------------------
