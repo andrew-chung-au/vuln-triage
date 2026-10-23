@@ -262,6 +262,32 @@ make compose-down            # stop the stack, keep the Postgres volume
 make compose-down CLEAN=1    # also remove the Postgres volume (fresh slate)
 ```
 
+### Run the integration tests on Postgres (issue #138)
+
+The backend integration cases also run against **real Postgres** (not just the
+in-memory SQLite of `make test`), in a test-owned `vt-test` Compose project:
+
+```sh
+make test-integration
+```
+
+This (via `ci/test-integration.sh`) starts only the `db` service under the
+`vt-test` project with its port published to the host, builds the schema with
+Alembic, runs the integration-marked cases against Postgres (each test isolated
+by a transaction rollback), then tears the project down with its volume. It
+needs Docker; it runs in CI (the `postgres-integration` job, wired in task 19)
+or on your host, not in the agent sandbox.
+
+Two safety points:
+
+- **`E-GUARD`** refuses to run unless the target is the `vt-test` database
+  (`postgresql` driver, database `vt`, host `db`/`localhost`/`127.0.0.1`), so the
+  suite can never touch a real or dev database. `E-GUARD`'s own cases run under
+  `make test` (they are pure checks, no Docker).
+- The `make test` SQLite run is unchanged — the same cases run on SQLite by
+  default and on Postgres only when `VT_TEST_DATABASE_URL` is set, which
+  `make test-integration` does for you.
+
 ## 8. Clean up
 
 ```sh

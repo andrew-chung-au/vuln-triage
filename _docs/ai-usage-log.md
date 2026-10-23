@@ -2202,3 +2202,12 @@ Copy this template for each new entry:
 - files changed: `backend/vulntriage/main.py` (drop the deprecated FastAPI(root_path="/api") — D1 was optional/cosmetic; proxy strips /api regardless), `tests/test_github_reader.py` (rewrite test_env_example_* to assert the task-15 contract: required names present, showcase names absent, no committed values), `_docs/api.md` (note the app sets no root_path), two session summaries, this log entry.
 - verification (tests run, reviewer verdict): byte-compiled; the new env-example test logic validated standalone against the real .env.example (passes). Full pytest not runnable here (no venv/PyPI). The human re-runs make verify on the branch.
 - human review (what I checked or corrected, or `none`): the human's make verify run found both issues; this commit addresses them. No test was weakened — the env-example test now asserts a stronger, accurate contract.
+
+- date: 2026-10-23
+- task/issue: #138 (task 16) — real-Postgres integration tests
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#138) and approved the design recommendations (transaction-rollback isolation, reuse compose.yaml's db under vt-test, integration-only via the existing sqlite_integration marker, E-GUARD = vt db + compose host check).
+- files changed: `tests/conftest.py` (db_engine/db_session + sqlite_* aliases, guard_test_database_url E-GUARD, Alembic upgrade in pytest_configure, VT_TEST_DATABASE_URL branch), `tests/test_integration_guard.py` (new E-GUARD unit cases), `ci/test-integration.sh` (new orchestration), `compose.test.yaml` (new test-only db port override), `Makefile` (test-integration + postgres-integration; PROTECTED, human-approved), `_docs/verify-locally.md` (§7 integration subsection), session summary, this log entry.
+- verification (tests run, reviewer verdict): NOT fully run here — sandbox has no Docker/venv/PyPI. Python test files byte-compile; ci/test-integration.sh passes `bash -n`; the E-GUARD accept/reject decisions were cross-checked standalone (3 accept, 5 reject). The human runs `make verify` (SQLite + E-GUARD unit cases) and `make test-integration` (Postgres) on the host.
+- human review (what I checked or corrected, or `none`): the human approved the four design decisions before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
