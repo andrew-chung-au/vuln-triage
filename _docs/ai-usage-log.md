@@ -1906,5 +1906,5 @@ Copy this template for each new entry:
 - model: `claude-sonnet-5-5` (Claude Code)
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's two-task follow-up (make `read_file` and the include check agree; apply the `testing.md` and `architecture.md` notes); no new key prompt saved
 - files changed: commit 9a7950d (`github.py`, `scan.py`, `tests/test_github_reader.py`, `tests/test_ingest.py`); commit c3f5a46 (`_docs/testing.md`, `_docs/architecture.md`); this log
-- verification (tests run, reviewer verdict): `make backend-test` 246 passed; `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; warnings are the fixture files changed since origin/main, none touched in this follow-up). No reviewer run
+- verification (tests run, reviewer verdict): `make backend-test` 246 passed; `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; warnings are the fixture files changed since origin/main, none touched in this follow-up). No reviewer run. After QA FAIL (comment 6359044871) the fixture-layout note in `_docs/testing.md` was corrected to the real `<owner>__<repo>/contents/<path>` layout
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none

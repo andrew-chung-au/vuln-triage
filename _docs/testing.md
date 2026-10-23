@@ -116,11 +116,11 @@ Fixture inventory (all external calls use committed responses; paths are the pla
 | `tests/fixtures/osv/vulns/*.json` | OSV vuln details: aliases, ranges, `withdrawn` | OSV API | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/kev/known_exploited_vulnerabilities.json` | CISA KEV catalogue slice | CISA feed | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/epss/epss.json` | EPSS scores for fixture CVEs | FIRST EPSS API | 2026-10-22 planned baseline; recorder writes the actual date |
-| `tests/fixtures/github/contents/*.json` | Contents API responses for `uv.lock`, `requirements.txt` and `package-lock.json` | GitHub contents API | 2026-10-22 planned baseline; recorder writes the actual date |
+| `tests/fixtures/github/<owner>__<repo>/contents/<path>` (raw bodies; see the layout note below) | Contents API responses for `uv.lock`, `requirements.txt` and `package-lock.json` | GitHub contents API | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/llm/brief-*.json` (Showcase) | LLM outputs: valid, wrong version, URL, timeout, error, refusal | `LLM_MODE=stub` or pinned-model capture | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/malicious/advisory.json` | The `S-FIXTURE` malicious advisory | Project-authored fixture | 2026-10-22 planned baseline; recorder writes the actual date |
 
-Raw GitHub fixture layout (#76): the file captures are raw response bodies at `tests/fixtures/github/contents/<repo-slug>/<filename>` (not the `*.json` wrappers in the row above), plus the repository and commit captures for each repo slug.
+Raw GitHub fixture layout (#76): the file captures are raw response bodies at `tests/fixtures/github/<owner>__<repo>/contents/<path>` (the path may include subfolders, for example `fixture-owner__pip-app/contents/dev/extra.txt`), with `repo.json` and `commit.txt` beside `contents/` (not the `*.json` wrappers in the row above); see `tests/fixtures/MANIFEST.md`.
 
 `ASSUMPTION: T-A2` the deliberate captures happen in the build tasks, not #56: the harness, the network guard and the empty `tests/fixtures/` directory come with task 1, the GitHub contents fixtures and `make record-fixtures` with task 4, the OSV fixtures with task 5, the KEV and EPSS fixtures with task 6, and task 13 completes the manifest and adds the malicious advisory fixture; `fixtures/MANIFEST.md` records the actual capture date and source.
 
