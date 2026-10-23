@@ -176,13 +176,26 @@ def _route_app():  # type: ignore[no-untyped-def]
 
 
 def _guard_schemes(route: object) -> frozenset[str]:
-    """The security schemes implied by the ``Depends`` guards on a route."""
+    """The security schemes implied by the ``Depends`` guards on a route.
+
+    The route's ``dependant`` tree is walked in full (not just its top level): a
+    guard taken as a value parameter (``user: User = Depends(require_session)``)
+    and one taken for its effect only (``_: None = Depends(require_n8n)``) can sit
+    at different depths of ``dependant.dependencies``, so every node is inspected.
+    """
     schemes: set[str] = set()
-    dependant = getattr(route, "dependant", None)
-    for dep in getattr(dependant, "dependencies", []) or []:
+    root = getattr(route, "dependant", None)
+    seen: set[int] = set()
+    stack = [root] if root is not None else []
+    while stack:
+        dep = stack.pop()
+        if dep is None or id(dep) in seen:
+            continue
+        seen.add(id(dep))
         name = getattr(getattr(dep, "call", None), "__name__", "")
         if name in GUARD_SCHEMES:
             schemes |= set(GUARD_SCHEMES[name])
+        stack.extend(getattr(dep, "dependencies", []) or [])
     return frozenset(schemes)
 
 
