@@ -1977,3 +1977,15 @@ Copy this template for each new entry:
 - new dependencies: none; no new threshold or enum beyond architecture § Prioritisation (T = 0.10, A16-A18)
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the pure ranking logic (all four tier rules, the 0.10 inclusive threshold, the P1-first precedence, and the architecture worked example order `fnd-0001, 0002, 0004, 0005, 0003, 0006`) was validated standalone. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed
+
+### 2026-10-23 — Agent: #80 (task 8) finding lifecycle, re-scan and audit trail
+
+- date: 2026-10-23
+- task/issue: #80 (task 8): re-scan status transitions (fixed/withdrawn/reopen/restore) and the audit trail
+- agent role: implementation agent (Kiro Web session, local sandbox on `main`)
+- model: Auto (server-selected)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to work the next issue in the plan after #79 merged; no new key prompt saved
+- files changed: new `backend/vulntriage/ingest/lifecycle.py` (the status machine, lifecycle creation and append-only audit writes); `backend/vulntriage/ingest/matcher.py` refactored so `match_asset` reconciles every (asset, package, vulnerability) on each scan — grouping withdrawn advisories too, lazy vulnerability upsert so a withdrawn-at-first-sight advisory records nothing (E4), and closing findings OSV no longer returns; `backend/vulntriage/ingest/ranking.py` sets the E8 `signals_changed` flag on a risk-accepted finding whose tier rises or KEV becomes listed; new `tests/test_lifecycle.py` (US-10, E4 withdraw/restore, E7 reopen, E8 close, audit trail) with a programmable OSV client; `tests/test_ranking.py` E8 flag test; this log entry
+- new dependencies: none
+- verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the full lifecycle state machine (US-10 fix, E4 withdraw/restore, E7 reopen, E8 close) was validated standalone against every transition. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
+- human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed

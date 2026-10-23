@@ -191,3 +191,48 @@ def test_rank_asset_writes_tier_and_reason_from_signals(factory) -> None:  # typ
         assert finding.rank_reason.startswith("P1: KEV listed and exposed")
         assert finding.rank_inputs["kev"] == "KEV: listed"
         assert finding.rank_inputs["exposed"] is True
+
+
+@pytest.mark.sqlite_integration
+def test_e8_risk_accepted_finding_flagged_signals_changed_when_tier_rises(factory) -> None:  # type: ignore[no-untyped-def]
+    # E8: a risk-accepted finding keeps its status but is flagged when its signals
+    # escalate (here KEV becomes listed, raising the tier). No status change.
+    from sqlalchemy import select
+
+    from vulntriage.db.models import Asset, Finding, Signal, Vulnerability
+    from vulntriage.ingest.ranking import rank_asset
+
+    with factory() as session:
+        asset = Asset(name="a", owner_name=None, owner_email=None, criticality="high",
+                      internet_facing=True, repository_url="https://github.com/o/r")
+        session.add(asset)
+        session.flush()
+        vuln = Vulnerability(identity_key="CVE-2024-9", cve_id="CVE-2024-9")
+        session.add(vuln)
+        session.flush()
+        # risk-accepted finding, not yet KEV-listed -> P3 initially.
+        finding = Finding(asset_id=asset.id, vulnerability_id=vuln.id, ecosystem="PyPI",
+                          package="pkg", fixed_version="2.0.1", status="risk accepted",
+                          tier="P4", rank_inputs={}, rank_reason="",
+                          first_detected_at=dt.datetime(2026, 1, 1, tzinfo=dt.UTC))
+        session.add(finding)
+        session.add(Signal(cve_id="CVE-2024-9", kev_listed=False, epss_score=0.01))
+        aid, fid = asset.id, None
+        session.commit()
+        aid = asset.id
+    with factory() as session:
+        rank_asset(session, aid)  # first ranking: P3, not escalated
+        session.commit()
+    with factory() as session:
+        f = session.scalar(select(Finding))
+        assert f.tier == "P3" and f.signals_changed is False
+        # KEV becomes listed -> next ranking escalates the tier to P1.
+        session.get(Signal, "CVE-2024-9").kev_listed = True
+        session.commit()
+    with factory() as session:
+        rank_asset(session, aid)
+        session.commit()
+    with factory() as session:
+        f = session.scalar(select(Finding))
+        assert f.status == "risk accepted"  # unchanged
+        assert f.tier == "P1" and f.signals_changed is True
