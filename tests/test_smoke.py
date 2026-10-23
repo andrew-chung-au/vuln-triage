@@ -15,7 +15,10 @@ from vulntriage.main import app
 @pytest.mark.unit
 def test_smoke(sqlite_engine: Engine, sqlite_session: Session) -> None:
     assert isinstance(app, FastAPI)
-    assert app.openapi()["paths"] == {}
+    # Task 4 (#76) adds POST /assets; later tasks extend this list.
+    paths = app.openapi()["paths"]
+    assert set(paths) == {"/assets"}
+    assert set(paths["/assets"]) == {"post"}
 
     assert sqlite_session.execute(text("SELECT 1")).scalar_one() == 1
     assert inspect(sqlite_engine).get_table_names() == []
