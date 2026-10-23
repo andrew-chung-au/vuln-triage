@@ -21,6 +21,7 @@ from vulntriage.db.models import (
     Base,
     Dependency,
     Finding,
+    FindingDependency,
     Lifecycle,
 )
 from vulntriage.ingest.matcher import match_asset
@@ -90,8 +91,19 @@ def _make_asset(factory: sessionmaker[Session]) -> int:
 
 
 def _set_version(factory: sessionmaker[Session], asset_id: int, name: str, version: str) -> None:
-    """Replace the asset's dependency set with one package at the given version."""
+    """Replace the asset's dependency set with one package at the given version.
+
+    Mirrors the scan worker: clear the finding-dependency links to the old rows
+    before replacing the dependency set, so the delete does not trip the foreign
+    key (match_asset re-links the still-vulnerable entries on the next scan).
+    """
     with factory() as session:
+        old_ids = select(Dependency.id).where(Dependency.asset_id == asset_id)
+        session.execute(
+            FindingDependency.__table__.delete().where(
+                FindingDependency.dependency_id.in_(old_ids)
+            )
+        )
         session.execute(Dependency.__table__.delete().where(Dependency.asset_id == asset_id))
         session.add(Dependency(asset_id=asset_id, ecosystem="PyPI", name=name,
                                version=version, source_file="requirements.txt", direct=True))

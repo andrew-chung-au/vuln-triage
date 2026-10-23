@@ -145,6 +145,8 @@ def rank_asset(session: Session, asset_id: int) -> None:
         signal = session.get(Signal, vuln.cve_id) if vuln.cve_id else None
         inputs = _inputs_for(finding, vuln, signal, asset.internet_facing, asset.criticality)
         tier, reason = tier_for(inputs)
+        # The first ranking (empty rank_inputs) is a baseline, not an escalation.
+        previously_ranked = bool(finding.rank_inputs)
         previous_tier = finding.tier
         previous_kev = (finding.rank_inputs or {}).get("kev")
         finding.tier = tier.value
@@ -152,8 +154,10 @@ def rank_asset(session: Session, asset_id: int) -> None:
         finding.rank_reason = reason
         # E8: a risk-accepted finding whose signals escalate (the tier rises or
         # KEV becomes listed) keeps its status but is flagged "signals changed".
-        if finding.status == FindingStatus.RISK_ACCEPTED.value and _escalated(
-            previous_tier, tier.value, previous_kev, inputs.kev
+        if (
+            previously_ranked
+            and finding.status == FindingStatus.RISK_ACCEPTED.value
+            and _escalated(previous_tier, tier.value, previous_kev, inputs.kev)
         ):
             finding.signals_changed = True
 
