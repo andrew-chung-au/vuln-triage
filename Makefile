@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-start dev-stop
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -166,17 +166,20 @@ record-fixtures: ## Record live fixtures (run by the human; public APIs, no toke
 
 # --- Dev run (issue #133): backend on SQLite + frontend together ---------
 
-dev: ## Run backend (SQLite) and frontend dev server together; Ctrl-C stops both (no Docker)
-	@echo "Starting backend on 127.0.0.1:8000 and frontend on 127.0.0.1:5173 (Ctrl-C to stop)"
+dev-migrate: ## Create or upgrade the dev SQLite schema (alembic upgrade head)
 	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@cd backend && uv run alembic upgrade head
+
+dev: dev-migrate ## Run backend (SQLite) and frontend dev server together; Ctrl-C stops both (no Docker)
+	@echo "Starting backend on 127.0.0.1:8000 and frontend on 127.0.0.1:5173 (Ctrl-C to stop)"
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
 	@mkdir -p .scratch
-	@cd backend && uv run uvicorn vulntriage.main:app --host 127.0.0.1 --port 8000 & echo $$! > .scratch/dev-backend.pid; \
-	trap 'kill $$(cat .scratch/dev-backend.pid) 2>/dev/null; rm -f .scratch/dev-backend.pid' INT TERM EXIT; \
+	@( cd backend && exec uv run uvicorn vulntriage.main:app --host 127.0.0.1 --port 8000 ) & \
+	backend_pid=$$!; \
+	trap 'kill "$$backend_pid" 2>/dev/null' INT TERM EXIT; \
 	cd frontend && ./node_modules/.bin/vite dev --host 127.0.0.1 --port 5173
 
-dev-start: ## Start backend and frontend in the background (logs in .scratch/; stop with make dev-stop)
-	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+dev-start: dev-migrate ## Start backend and frontend in the background (logs in .scratch/; stop with make dev-stop)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
 	@mkdir -p .scratch
 	@if [ -f .scratch/dev-backend.pid ] && kill -0 "$$(cat .scratch/dev-backend.pid)" 2>/dev/null; then echo "dev backend already running (pid $$(cat .scratch/dev-backend.pid))"; exit 1; fi
