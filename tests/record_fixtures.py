@@ -24,12 +24,16 @@ sys.path.insert(0, str(HERE.parent / "backend"))
 from vulntriage.ingest.github import GitHubReader, split_repository_url  # noqa: E402
 from vulntriage.ingest.osv import OsvClient, Query  # noqa: E402
 from vulntriage.ingest.requirements import parse_requirements, resolve_include  # noqa: E402
+from vulntriage.ingest.signals import EpssClient, KevClient  # noqa: E402
 
 SOURCES = ("github", "osv", "kev", "epss")
 GITHUB_DIR = HERE / "fixtures" / "github"
 OSV_DIR = HERE / "fixtures" / "osv"
+KEV_DIR = HERE / "fixtures" / "kev"
+EPSS_DIR = HERE / "fixtures" / "epss"
 REPOSITORIES = GITHUB_DIR / "repositories.txt"
 OSV_PACKAGES = OSV_DIR / "packages.txt"
+SIGNAL_CVES = HERE / "fixtures" / "cves.txt"
 ROOT_FILES = ("uv.lock", "requirements.txt", "package-lock.json")
 MAX_INCLUDES = 20
 
@@ -161,19 +165,93 @@ def record_osv() -> int:
     return 0
 
 
+def read_cves() -> list[str]:
+    """Confirmed CVE ids (one per line) from ``tests/fixtures/cves.txt``."""
+    cves: list[str] = []
+    if not SIGNAL_CVES.is_file():
+        return cves
+    for line in SIGNAL_CVES.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            cves.append(line)
+    return cves
+
+
+def record_kev() -> int:
+    """Capture a CISA KEV slice for the confirmed CVEs (public feed, no key).
+
+    Fetches the whole catalogue and writes only the fixture CVEs that are listed,
+    so the committed slice stays small. Listed state is still accurate: a CVE
+    absent from the slice is "not in KEV".
+    """
+    cves = read_cves()
+    if not cves:
+        print(f"no CVEs confirmed in {SIGNAL_CVES}; add CVE ids first", file=sys.stderr)
+        return 2
+    catalogue = KevClient().fetch_catalogue()
+    today = dt.date.today().isoformat()
+    listed = [c for c in cves if c in catalogue]
+    out = {
+        "title": "CISA Catalog of Known Exploited Vulnerabilities (fixture slice)",
+        "catalogVersion": today,
+        "count": len(listed),
+        "vulnerabilities": [
+            {"cveID": c, "dateAdded": (catalogue.date_added[c].isoformat()
+                                       if catalogue.date_added.get(c) else None)}
+            for c in listed
+        ],
+    }
+    write(KEV_DIR / "known_exploited_vulnerabilities.json", json.dumps(out, indent=2) + "\n")
+    print("| path | fixture | source URL | capture date | check |")
+    print(
+        f"| tests/fixtures/kev/known_exploited_vulnerabilities.json | KEV slice ({len(listed)} listed) "
+        f"| https://www.cisa.gov/.../known_exploited_vulnerabilities.json | {today} "
+        "| TO CHECK by the Engineer |"
+    )
+    return 0
+
+
+def record_epss() -> int:
+    """Capture FIRST EPSS scores for the confirmed CVEs (public API, no key)."""
+    cves = read_cves()
+    if not cves:
+        print(f"no CVEs confirmed in {SIGNAL_CVES}; add CVE ids first", file=sys.stderr)
+        return 2
+    scores = EpssClient().fetch_scores(cves)
+    today = dt.date.today().isoformat()
+    data = [
+        {
+            "cve": c,
+            "epss": f"{scores[c].score:.9f}" if scores[c].score is not None else None,
+            "percentile": f"{scores[c].percentile:.9f}" if scores[c].percentile is not None else None,
+            "date": scores[c].date.isoformat() if scores[c].date else None,
+        }
+        for c in cves
+        if c in scores
+    ]
+    out = {"status": "OK", "status-code": 200, "total": len(data), "data": data}
+    write(EPSS_DIR / "epss.json", json.dumps(out, indent=2) + "\n")
+    print("| path | fixture | source URL | capture date | check |")
+    print(
+        f"| tests/fixtures/epss/epss.json | EPSS scores ({len(data)} CVEs) "
+        f"| https://api.first.org/data/v1/epss | {today} | TO CHECK by the Engineer |"
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2 or argv[1] not in (*SOURCES, "all"):
         print("usage: record_fixtures.py <github|osv|kev|epss|all>", file=sys.stderr)
         return 2
     source = argv[1]
-    if source in ("kev", "epss"):
-        print(f"{source}: implemented in task 6", file=sys.stderr)
-        return 2
     if source == "osv":
         return record_osv()
+    if source == "kev":
+        return record_kev()
+    if source == "epss":
+        return record_epss()
     if source == "all":
-        code = record_github()
-        return code or record_osv()
+        return record_github() or record_osv() or record_kev() or record_epss()
     return record_github()
 
 
