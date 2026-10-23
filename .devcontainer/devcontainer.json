@@ -1,6 +1,9 @@
 {
   "name": "python-agent-sandbox",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "runServices": ["app", "db"],
+  "workspaceFolder": "/workspaces/vuln-triage-sandbox",
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:2": { "version": "24.22.0", "nvmVersion": "0.40.8", "pnpmVersion": "none" }
@@ -8,7 +11,8 @@
   "containerEnv": {
     "SSH_AUTH_SOCK": "",
     "GIT_TERMINAL_PROMPT": "0",
-    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "DATABASE_URL": "postgresql+psycopg://vt:vt@db:5432/vt"
   },
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin:/home/vscode/.opencode/bin",

@@ -1,0 +1,53 @@
+# Dev-container Compose recipe (issue #31, T3).
+#
+# Two services:
+#   - app: the dev container the agent works in (built from ./Dockerfile).
+#   - db:  Postgres, a sibling service the agent reaches by the hostname `db`
+#          but cannot control. No Docker socket is mounted, so the agent has no
+#          access to the daemon.
+#
+# The agent reaches Postgres at DATABASE_URL (set in devcontainer.json):
+#   postgresql+psycopg://vt:vt@db:5432/vt
+# This recipe is for the dev container only; it is not the application's own
+# Compose stack (task 15) and not production.
+#
+# Reversible: revert this file, Dockerfile and the devcontainer.json change,
+# then rebuild; the `pgdata` named volume can be removed with
+# `docker volume rm` from the host if a clean slate is wanted.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Keep the container running so the dev container attaches to it.
+    command: sleep infinity
+    # Only the workspace (the repo root, one level up from .devcontainer/) is
+    # mounted from the host; no other host path. The folder name must match
+    # devcontainer.json's workspaceFolder (/workspaces/<repo basename>). The
+    # Claude login volume is attached by devcontainer.json's `mounts`.
+    volumes:
+      - ..:/workspaces/vuln-triage-sandbox:cached
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # Pinned to an exact minor version, never `latest`.
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: vt
+      POSTGRES_PASSWORD: vt
+      POSTGRES_DB: vt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vt -d vt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not published to the host; only the `app` service reaches it on the
+    # Compose network by the hostname `db`.
+
+volumes:
+  pgdata:

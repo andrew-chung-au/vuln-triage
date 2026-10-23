@@ -47,7 +47,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 
 ## Project settings
 
-- **Environment:** local sandbox (dev container; no Docker) or a Claude Code cloud session (Docker and Postgres available). Local: the recipe installs Node.js `24.22.0` and uv `0.13.1`; `gh issue ...` works, and the GitHub token is read-only for code (you can't push). Cloud: `gh` is limited to REST through the make targets (`make issue-dump`, `make issue-comment`, `make issue-close`), and the SessionStart hook prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. In both, the token is read/write for issues (you can post comments and close issues). See `_docs/agent-kit/environments.md`.
+- **Environment:** local sandbox (Compose-based dev container) or a Claude Code cloud session (Docker and Postgres available). Local: the dev container is built from `.devcontainer/compose.yaml` with a sibling `db` (Postgres `16.4`) service the agent reaches at `DATABASE_URL=postgresql+psycopg://vt:vt@db:5432/vt` but cannot control (no Docker socket is mounted); the recipe installs Node.js `24.22.0` and uv `0.13.1`; `gh issue ...` works, and the GitHub token is read-only for code (you can't push). The agent cannot run `docker compose`, build images or control the daemon; the human runs the rebuild. Cloud: `gh` is limited to REST through the make targets (`make issue-dump`, `make issue-comment`, `make issue-close`), and the SessionStart hook prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. In both, the token is read/write for issues (you can post comments and close issues). See `_docs/agent-kit/environments.md`.
 - **Branching:** Local sandbox: commit directly to `main`; never push. Cloud session: commit on the session's branch; push only that branch; the human reviews the PR and merges it with a merge commit.
 - **Dependencies:** the frontend's dependencies are locked in `frontend/package-lock.json`; adding one still needs asking.
 - **Session summaries:** `_session-summaries/`, named `issue-<NNN>-<short-name>.md` for issue work and `planning-<YYYY-MM-DD>-<short-name>.md` for planning.
@@ -87,7 +87,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 
 ## Project gotchas
 
-- There is no Docker in this container, so anything needing Docker Compose must wait for a codespace or a Compose-based container recipe (see `_docs/agent-kit/environments.md`).
+- The agent cannot control Docker in this container (no socket), so building images or running `docker compose` must happen in a codespace or on the human's host. The dev container's own `db` (Postgres) sibling service is the exception: it is started by the Compose dev-container recipe (`.devcontainer/compose.yaml`, #31) and reached at `DATABASE_URL`, but the agent cannot start, stop or rebuild it. See `_docs/agent-kit/environments.md`.
 - `make verify` needs `make install` first. The push check needs the image built from `ci/push-check/Dockerfile` (Node 24.22.0, npm 11.19.1, uv 0.13.1, Python 3.12, plus the tools listed in that file; set `AGENT_PUSH_CHECK_IMAGE`; see #32 and #112).
 
 <!-- SHARED: from _docs/agent-kit/templates/AGENTS.md.template. Change it there first, then copy it here. -->
