@@ -119,7 +119,7 @@ Enum values (stored and sent on the wire exactly as written here, ASSUMPTION: (A
 | Finding status | `open`, `risk accepted`, `fixed`, `withdrawn` |
 | Asset scan status | `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`, `scanned, clean` |
 | Failure reason | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files` |
-| KEV value | `KEV: listed`, `KEV: not listed`, `KEV: n/a (no CVE)` |
+| KEV value (derived, not stored) | `KEV: listed`, `KEV: not listed`, `KEV: n/a (no CVE)` |
 | Tier | `P1`, `P2`, `P3`, `P4` |
 | Criticality | `low`, `medium`, `high`, `critical` |
 
