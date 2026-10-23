@@ -24,6 +24,7 @@ from vulntriage.ingest.github import (
 )
 from vulntriage.ingest.matcher import match_asset
 from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
+from vulntriage.ingest.ranking import rank_asset
 from vulntriage.ingest.signals import EpssClientProtocol, KevClientProtocol, enrich_asset
 from vulntriage.ingest.models import (
     INCLUDE_NOT_FOUND,
@@ -258,6 +259,9 @@ def run_scan(
             # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
             # and never raises, so it does not change the OSV scan status.
             enrich_asset(session, asset.id, kev_client, epss_client)
+            # Deterministic ranking (task 7): score every finding from the
+            # signals and asset context, replacing the placeholder rank fields.
+            rank_asset(session, asset.id)
 
         status = status_for_result(warnings, has_findings)
         scan.warnings = [w.as_dict() for w in warnings]
