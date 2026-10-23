@@ -33,6 +33,7 @@ import inspect
 from pathlib import Path
 
 import pytest
+from fastapi.routing import iter_route_contexts
 
 from vulntriage.main import create_app
 
@@ -235,47 +236,25 @@ def _guard_schemes(route: object) -> frozenset[str]:
     return frozenset(schemes)
 
 
-def _iter_leaf_routes(routes, prefix: str = "", seen: set[int] | None = None):  # type: ignore[no-untyped-def]
-    """Yield ``(full path, leaf route)`` for every endpoint route, descending into
-    sub-routers/mounts.
-
-    ``app.include_router`` in this FastAPI build keeps each router as a nested
-    container object (its routes are not flattened onto ``app.routes``), so the
-    tree is walked: a node with HTTP ``methods`` and a ``path`` is a leaf; a node
-    that only carries nested ``routes`` is a container and is descended into, its
-    ``prefix`` (if any) accumulated onto the path.
-    """
-    seen = set() if seen is None else seen
-    for route in routes or []:
-        if id(route) in seen:
-            continue
-        seen.add(id(route))
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if path and methods:
-            yield prefix + path, route
-        nested = getattr(route, "routes", None)
-        if nested:
-            sub_prefix = prefix + (getattr(route, "prefix", "") or "")
-            yield from _iter_leaf_routes(nested, sub_prefix, seen)
-
-
 def _route_guards(app) -> dict[tuple[str, str], frozenset[str]]:  # type: ignore[no-untyped-def]
     """{(normalised path, method): guard schemes} for every API route on the app.
 
-    The route tree is flattened first (this build nests included routers rather
-    than flattening them onto ``app.routes``). HEAD/OPTIONS that FastAPI adds are
-    dropped. The last writer wins, which is harmless: a given (path, method) has
-    one leaf route.
+    ``app.include_router`` nests each router in an ``_IncludedRouter`` rather
+    than copying its routes onto ``app.routes``, so a scan of ``app.routes``
+    sees only FastAPI's own docs routes. ``fastapi.routing.iter_route_contexts``
+    is the walker ``app.openapi()`` itself uses: it yields every effective route
+    with its full (prefixed) path and the ``original_route``, which carries the
+    endpoint and ``dependant``. HEAD/OPTIONS that FastAPI adds are dropped.
     """
     guards: dict[tuple[str, str], frozenset[str]] = {}
-    for full_path, route in _iter_leaf_routes(app.routes):
-        methods = getattr(route, "methods", None) or set()
-        schemes = _guard_schemes(route)
-        for method in methods:
+    for ctx in iter_route_contexts(app.routes):
+        if not ctx.path or not ctx.methods:
+            continue
+        schemes = _guard_schemes(ctx.original_route)
+        for method in ctx.methods:
             m = method.lower()
             if m in _METHODS:
-                guards[(_normalise(full_path), m)] = schemes
+                guards[(_normalise(ctx.path), m)] = schemes
     return guards
 
 
@@ -345,28 +324,12 @@ def test_every_operation_is_guarded_by_the_contract_security_scheme() -> None:
         )
 
 
-def test_DIAG_dump_guard_map() -> None:  # TEMP diagnostic, remove after
-    """Dump the flattened leaf routes and the computed guard map."""
-    app = _route_app()
-    leaves = list(_iter_leaf_routes(app.routes))
-    guards = _route_guards(app)
-    lines = [f"leaf routes found: {len(leaves)}"]
-    for full_path, route in leaves:
-        lines.append(f"  {full_path!r} methods={getattr(route, 'methods', None)!r} "
-                     f"endpoint={getattr(getattr(route, 'endpoint', None), '__name__', None)}")
-    lines.append(f"guard map entries: {len(guards)}")
-    for k in sorted(guards):
-        lines.append(f"  {k} -> {sorted(guards[k])}")
-    raise AssertionError("DIAG guard map:\n" + "\n".join(lines))
-
-
 def test_the_route_tree_is_flattened_and_guards_are_read() -> None:
-    # Regression for the bug that cost several rounds: this FastAPI build nests
-    # included routers rather than flattening them onto `app.routes`, so a scan
-    # of `app.routes` alone found no endpoint routes and every guard read empty.
-    # Assert the flattener reaches the leaf routes and that at least the four
-    # guard families (and a public route) are detected, so an empty guard map
-    # can never again masquerade as "all operations unguarded".
+    # Regression: FastAPI nests included routers rather than flattening them
+    # onto `app.routes`, so a scan of `app.routes` alone found no endpoint
+    # routes and every guard read empty. Assert the walk reaches the API routes
+    # and reads each guard family (and the public routes), so an empty guard
+    # map can never pass as "all operations unguarded".
     app = _route_app()
     guards = _route_guards(app)
     assert ("/auth/me", "get") in guards, sorted(guards)
