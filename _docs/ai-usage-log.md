@@ -1930,3 +1930,14 @@ Copy this template for each new entry:
 - files changed: `_session-summaries/issue-112-push-check-image.md`, `_docs/roadmap.md` check-in; this log entry
 - verification (tests run, reviewer verdict): none run by me. The image steps were run by the human, who gave no output, so versions, image size and the offline `uvx` result are not recorded. QA's earlier PASS covered the static criteria only (comment 6357004988)
 - human review (what I checked or corrected, or `none`): the human ran the image steps themselves. Commands that required approval: `make issue-comment` and `make issue-close` (ask rules)
+
+### 2026-10-23 — Software Engineer: #116 README audience and outcome positioning
+
+- date: 2026-10-23
+- task/issue: #116 (README audience and outcome in "The problem"); issue not closed
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #116 with the human's three decisions (audience option 1, submission-build claims only, extend "The problem"); no new key prompt saved
+- files changed: `README.md` (one audience paragraph and a five-item outcome list added before "VulnTriage addresses that gap"); this log
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; the one warning is `tests/fixtures/github/repositories.txt`, modified before this task and not staged). README grep for Dependabot, alerts, unlike, better than, instead of, available, works today and years showed only pre-existing text and the new "alert fires" line. No reviewer run
+- human review (what I checked or corrected, or `none`): none. Commands that required approval: none

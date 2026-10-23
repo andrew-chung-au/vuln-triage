@@ -7,6 +7,14 @@ The project is in the build phase (phase S1 first): the plan in `_docs/` passed 
 
 Vulnerabilities are published faster than teams can triage them. Most do not affect a given organisation, but the few that do are hard to find. Hand-maintained asset lists go stale, and severity alone does not show what attackers actually exploit. Findings that never reach an owner do not get fixed.
 
+VulnTriage is for the security function of an organisation with many teams: the security lead, who is accountable for exposure, sees one ranked, explainable view across all assets, and each asset owner (the team that owns the code) gets the findings they can fix. The outcome it aims for is that teams know which findings to act on, and who acts:
+
+- **One ranked view.** Every finding is ranked across all assets from evidence of real-world exploitation (CISA KEV and FIRST EPSS) and from the asset's criticality and internet-facing flag. Every rank comes with its reason, and no AI is involved in the ranking.
+- **A named owner.** Each new top-priority finding notifies the asset owner who can fix it.
+- **Checked delivery.** Delivery is checked, and an alert fires if a top-priority finding is not delivered.
+- **Confirmed fixes.** A finding closes only when a re-scan shows the fixed version is in place.
+- **A human decision on risk.** Accepting a risk is a human decision, not an automatic one: an asset owner may accept risk on their own assets and the security lead on any asset. The audit trail records who, when, the previous value and the reason.
+
 VulnTriage addresses that gap: it combines what is installed, what is known to be exploited in the wild, and who owns each asset, then routes the work to that person.
 
 ## What VulnTriage does
