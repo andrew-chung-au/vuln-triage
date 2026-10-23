@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-start dev-stop
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -163,3 +163,33 @@ record-fixtures: ## Record live fixtures (run by the human; public APIs, no toke
 	$(if $(or $(filter-out $(RECORD_SOURCES),$(value SOURCE)),$(word 2,$(value SOURCE))),$(error SOURCE must be exactly one of: $(RECORD_SOURCES); got '$(value SOURCE)'))
 	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
 	@backend/.venv/bin/python tests/record_fixtures.py "$(value SOURCE)"
+
+# --- Dev run (issue #133): backend on SQLite + frontend together ---------
+
+dev: ## Run backend (SQLite) and frontend dev server together; Ctrl-C stops both (no Docker)
+	@echo "Starting backend on 127.0.0.1:8000 and frontend on 127.0.0.1:5173 (Ctrl-C to stop)"
+	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
+	@mkdir -p .scratch
+	@cd backend && uv run uvicorn vulntriage.main:app --host 127.0.0.1 --port 8000 & echo $$! > .scratch/dev-backend.pid; \
+	trap 'kill $$(cat .scratch/dev-backend.pid) 2>/dev/null; rm -f .scratch/dev-backend.pid' INT TERM EXIT; \
+	cd frontend && ./node_modules/.bin/vite dev --host 127.0.0.1 --port 5173
+
+dev-start: ## Start backend and frontend in the background (logs in .scratch/; stop with make dev-stop)
+	@test -x backend/.venv/bin/python || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
+	@mkdir -p .scratch
+	@if [ -f .scratch/dev-backend.pid ] && kill -0 "$$(cat .scratch/dev-backend.pid)" 2>/dev/null; then echo "dev backend already running (pid $$(cat .scratch/dev-backend.pid))"; exit 1; fi
+	@if [ -f .scratch/dev-frontend.pid ] && kill -0 "$$(cat .scratch/dev-frontend.pid)" 2>/dev/null; then echo "dev frontend already running (pid $$(cat .scratch/dev-frontend.pid))"; exit 1; fi
+	@cd backend && nohup uv run uvicorn vulntriage.main:app --host 127.0.0.1 --port 8000 > ../.scratch/dev-backend.log 2>&1 & echo $$! > .scratch/dev-backend.pid
+	@cd frontend && nohup ./node_modules/.bin/vite dev --host 127.0.0.1 --port 5173 > ../.scratch/dev-frontend.log 2>&1 & echo $$! > .scratch/dev-frontend.pid
+	@echo "dev backend (pid $$(cat .scratch/dev-backend.pid)) and frontend (pid $$(cat .scratch/dev-frontend.pid)) started; logs: .scratch/dev-backend.log, .scratch/dev-frontend.log"
+
+dev-stop: ## Stop the processes started by dev-start
+	@for name in dev-backend dev-frontend; do \
+	  if [ -f .scratch/$$name.pid ]; then pid=$$(cat .scratch/$$name.pid); kill "$$pid" 2>/dev/null; \
+	    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$$pid" 2>/dev/null || break; sleep 1; done; \
+	    if kill -0 "$$pid" 2>/dev/null; then echo "$$name (pid $$pid) did not stop within 10 s"; exit 1; fi; \
+	    rm -f .scratch/$$name.pid; echo "$$name stopped"; \
+	  else echo "$$name is not running"; fi; \
+	done
