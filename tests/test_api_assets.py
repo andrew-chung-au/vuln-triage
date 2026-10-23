@@ -10,7 +10,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from auth_helpers import CSRF, PASSWORD, login_cookie, make_user
 from test_ingest import FakeReader
+from vulntriage.api.security import COOKIE_NAME
 from vulntriage.db.models import Asset, Base, Scan
 from vulntriage.ingest.scan import run_pending_scans
 from vulntriage.main import create_app
@@ -40,9 +42,18 @@ def counts(factory: sessionmaker[Session]) -> tuple[int, int]:
         )
 
 
+def _lead_client(factory: sessionmaker[Session], reader: FakeReader, run_worker: bool = False):  # type: ignore[no-untyped-def]
+    """A TestClient signed in as a security lead, with the CSRF header preset."""
+    make_user(factory, username="lead", role="security lead", email="lead@example.com")
+    client = TestClient(create_app(factory, reader, run_worker=run_worker))
+    cookie = login_cookie(client, "lead")
+    client.cookies.set(COOKIE_NAME, cookie[COOKIE_NAME])
+    client.headers.update(CSRF)
+    return client
+
+
 def post(factory: sessionmaker[Session], reader: FakeReader, body: Any) -> Any:
-    client = TestClient(create_app(factory, reader, run_worker=False))
-    return client.post("/assets", json=body)
+    return _lead_client(factory, reader).post("/assets", json=body)
 
 
 def test_valid_registration_returns_201_with_an_asset(factory) -> None:  # type: ignore[no-untyped-def]
@@ -100,7 +111,10 @@ def test_owner_fields_unset_are_stored_null(factory, name, email, expect_name, e
 def test_the_201_returns_before_the_scan_runs(factory) -> None:  # type: ignore[no-untyped-def]
     reader = FakeReader({"uv.lock": "version = 1\n"})
     reader.gate = threading.Event()
+    make_user(factory, username="lead", role="security lead", email="lead@example.com")
     with TestClient(create_app(factory, reader, run_worker=True)) as client:
+        client.cookies.set(COOKIE_NAME, login_cookie(client, "lead")[COOKIE_NAME])
+        client.headers.update(CSRF)
         response = client.post("/assets", json=BODY)
         assert response.status_code == 201
         assert response.json()["scanStatus"] == "not yet scanned"
@@ -176,7 +190,7 @@ def test_every_key_is_required(factory, missing: str) -> None:  # type: ignore[n
 
 
 def test_non_json_and_non_object_bodies_are_refused(factory) -> None:  # type: ignore[no-untyped-def]
-    client = TestClient(create_app(factory, FakeReader(), run_worker=False))
+    client = _lead_client(factory, FakeReader())
     for kwargs in ({"content": "{nope", "headers": {"content-type": "application/json"}}, {"json": []}):
         response = client.post("/assets", **kwargs)
         assert response.status_code == 422

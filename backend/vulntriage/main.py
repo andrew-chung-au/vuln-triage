@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from vulntriage.api.assets import router as assets_router
 from vulntriage.api.auth import router as auth_router
+from vulntriage.api.findings import router as findings_router
 from vulntriage.api.security import LoginThrottle
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
@@ -90,6 +91,7 @@ def create_app(
     app.add_exception_handler(HTTPException, http_error_handler)
     app.include_router(auth_router)
     app.include_router(assets_router)
+    app.include_router(findings_router)
     return app
 
 

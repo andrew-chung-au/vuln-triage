@@ -182,3 +182,25 @@ def order_findings(items: list[RankedFinding]) -> list[int]:
         )
 
     return [item.finding_id for item in sorted(items, key=key)]
+
+
+def ranked_findings(session: Session) -> list[Finding]:
+    """Every finding in the server's deterministic rank order (`GET /findings`).
+
+    The order is the finding's stored tier, then the within-tier key rebuilt
+    from its signals and asset exposure. The same inputs that `rank_asset` wrote
+    drive the order, so the list is stable across calls.
+    """
+    from vulntriage.db.models import Asset
+
+    findings = list(session.scalars(select(Finding)))
+    items: list[RankedFinding] = []
+    for finding in findings:
+        vuln = session.get(Vulnerability, finding.vulnerability_id)
+        signal = session.get(Signal, vuln.cve_id) if vuln.cve_id else None
+        asset = session.get(Asset, finding.asset_id)
+        inputs = _inputs_for(finding, vuln, signal, asset.internet_facing, asset.criticality)
+        items.append(RankedFinding(finding.id, inputs, finding.first_detected_at))
+    order = order_findings(items)
+    by_id = {f.id: f for f in findings}
+    return [by_id[fid] for fid in order]
