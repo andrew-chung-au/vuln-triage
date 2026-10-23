@@ -2,10 +2,12 @@
 
 By default the DB fixtures are in-memory SQLite (``make test``; no Docker). When
 ``VT_TEST_DATABASE_URL`` is set they are a real Postgres database in the
-``vt-test`` Compose project (``make test-integration``; issue #138): the schema
-is built once by Alembic ``upgrade head`` and each test is isolated by a
-transaction rollback. The ``E-GUARD`` check refuses any URL that is not the
-test database, so the integration suite can never touch a real or dev database.
+``vt-test`` Compose project (``make test-integration``; issue #138): each test
+starts from a fresh (empty) schema that its own ``factory`` fixture builds with
+``Base.metadata.create_all`` — the same schema builder the SQLite harness uses —
+so the existing cases run unchanged, and nothing persists between tests. The
+``E-GUARD`` check refuses any URL that is not the test database, so the
+integration suite can never touch a real or dev database.
 
 The public fixtures (``db_engine``/``db_session`` and their legacy
 ``sqlite_engine``/``sqlite_session`` aliases) have the same shape in both modes,
@@ -93,23 +95,6 @@ def guard_test_database_url(url: str) -> None:
         )
 
 
-def _run_migrations(url: str) -> None:
-    """Build the schema with Alembic ``upgrade head`` against ``url``.
-
-    Imported lazily so the SQLite path never loads Alembic.
-    """
-    from pathlib import Path
-
-    from alembic import command
-    from alembic.config import Config
-
-    ini = Path(__file__).resolve().parents[1] / "backend" / "alembic.ini"
-    config = Config(str(ini))
-    # The env reads DATABASE_URL (get_database_url); point it at the test DB.
-    os.environ["DATABASE_URL"] = url
-    command.upgrade(config, "head")
-
-
 def pytest_configure(config: pytest.Config) -> None:
     try:
         validate_mode_environment(os.environ)
@@ -123,8 +108,6 @@ def pytest_configure(config: pytest.Config) -> None:
             guard_test_database_url(url)
         except UnsafeTestDatabase as exc:
             raise pytest.UsageError(str(exc)) from exc
-        # Build the schema once for the whole Postgres session.
-        _run_migrations(url)
 
     install_network_guard()
 
@@ -150,12 +133,13 @@ def db_engine() -> Iterator[Engine]:
     SQLite (default): a fresh in-memory engine with no tables; the caller's
     ``factory`` fixture runs ``Base.metadata.create_all`` as before.
 
-    Postgres (``VT_TEST_DATABASE_URL`` set): an engine bound to a single
-    connection running one outer transaction, rolled back after the test so no
-    data persists between tests. The schema was built once by Alembic in
-    ``pytest_configure``; ``create_all`` on this engine is a no-op because the
-    tables already exist (``checkfirst`` is on by default), so the existing
-    ``factory`` fixtures work unchanged.
+    Postgres (``VT_TEST_DATABASE_URL`` set): a plain engine against the
+    ``vt-test`` database, with a clean (empty) schema at the start of each test
+    so nothing persists between tests. Isolation is by a fresh schema (the plan
+    allows "a transaction rollback or a fresh schema"): ``drop_all`` clears any
+    tables from a previous test, and the caller's ``factory`` fixture then runs
+    ``Base.metadata.create_all`` exactly as on SQLite — so the existing
+    integration cases run unchanged.
     """
     url = os.environ.get(TEST_DATABASE_URL_ENV)
     if not url:
@@ -166,22 +150,15 @@ def db_engine() -> Iterator[Engine]:
             engine.dispose()
         return
 
-    # Postgres: isolate each test in a transaction that is rolled back. Binding
-    # the engine to one connection with an open transaction means every session
-    # and every `create_all(checkfirst=True)` runs inside it, and the rollback
-    # undoes all data changes at teardown.
-    outer = create_engine(url)
-    connection = outer.connect()
-    transaction = connection.begin()
-    bound = create_engine(url, poolclass=StaticPool, creator=lambda: connection.connection)
+    engine = create_engine(url)
+    # Start each test from an empty schema; the test's factory re-creates it.
+    Base.metadata.drop_all(engine)
     try:
-        yield bound
+        yield engine
     finally:
-        bound.dispose()
-        if transaction.is_active:
-            transaction.rollback()
-        connection.close()
-        outer.dispose()
+        # Leave the database empty so the next test (and the next run) is clean.
+        Base.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture()

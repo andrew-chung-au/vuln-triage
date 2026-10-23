@@ -2211,3 +2211,12 @@ Copy this template for each new entry:
 - files changed: `tests/conftest.py` (db_engine/db_session + sqlite_* aliases, guard_test_database_url E-GUARD, Alembic upgrade in pytest_configure, VT_TEST_DATABASE_URL branch), `tests/test_integration_guard.py` (new E-GUARD unit cases), `ci/test-integration.sh` (new orchestration), `compose.test.yaml` (new test-only db port override), `Makefile` (test-integration + postgres-integration; PROTECTED, human-approved), `_docs/verify-locally.md` (§7 integration subsection), session summary, this log entry.
 - verification (tests run, reviewer verdict): NOT fully run here — sandbox has no Docker/venv/PyPI. Python test files byte-compile; ci/test-integration.sh passes `bash -n`; the E-GUARD accept/reject decisions were cross-checked standalone (3 accept, 5 reject). The human runs `make verify` (SQLite + E-GUARD unit cases) and `make test-integration` (Postgres) on the host.
 - human review (what I checked or corrected, or `none`): the human approved the four design decisions before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
+
+- date: 2026-10-23
+- task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the #139 CI run exercised make test-integration for the first time; the postgres-integration job FAILED with AttributeError: 'dict' object has no attribute 'transaction_status' on 155 tests.
+- files changed: `tests/conftest.py` (replace the single-shared-connection rollback with fresh-schema isolation: db_engine drop_all at setup/teardown on Postgres, each test's factory runs create_all as on SQLite; remove the Alembic _run_migrations helper and its call), `_session-summaries/issue-138-postgres-integration.md` (record the change and the reason), this log entry.
+- verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
+- human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
