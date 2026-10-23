@@ -1,0 +1,13 @@
+# Test-run override (issue #138, task 16).
+#
+# Used with compose.yaml under the `vt-test` project name to publish the `db`
+# port to the host, so the pytest process (which runs outside Compose) can
+# reach Postgres at localhost:5432. It adds nothing else: the application
+# compose.yaml keeps the db unpublished for the real stack.
+#
+#   docker compose -p vt-test -f compose.yaml -f compose.test.yaml up -d --wait db
+
+services:
+  db:
+    ports:
+      - "5432:5432"

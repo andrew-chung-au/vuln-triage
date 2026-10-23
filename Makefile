@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -208,3 +208,13 @@ compose-up: ## Build and start the full app stack (frontend, backend, Postgres);
 
 compose-down: ## Stop the app stack (add CLEAN=1 to also remove the Postgres volume)
 	@docker compose down $(if $(CLEAN),--volumes,)
+
+# --- Real-Postgres integration tests (issue #138, task 16) ---------------
+# Run the integration cases against Postgres in the vt-test Compose project.
+# Needs Docker; runs in CI or on the human's host, not the agent sandbox.
+
+test-integration: ## Run the integration cases against Postgres (vt-test Compose project)
+	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
+	@bash ci/test-integration.sh
+
+postgres-integration: test-integration ## CI alias for the postgres-integration job (task 19 wires it in)
