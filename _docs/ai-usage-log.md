@@ -1989,3 +1989,14 @@ Copy this template for each new entry:
 - new dependencies: none
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the full lifecycle state machine (US-10 fix, E4 withdraw/restore, E7 reopen, E8 close) was validated standalone against every transition. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed
+
+### 2026-10-23 — Agent: #80 follow-up, two fixes from the human's make verify run
+
+- date: 2026-10-23
+- task/issue: #80 (task 8), after the human ran `make install && make verify` (6 failed, 319 passed)
+- agent role: implementation agent (Kiro Web session), on `feat/80-lifecycle-rescan-audit`
+- model: Auto (server-selected)
+- prompt or instruction given: the human pasted the failing `make verify` output
+- files changed: `backend/vulntriage/ingest/scan.py` (clear `finding_dependencies` links to the old dependency rows before the per-scan `DELETE FROM dependencies`, so a re-scan with existing findings does not trip the foreign key — a real production bug, not only a test bug); `backend/vulntriage/ingest/ranking.py` (the first ranking, with empty `rank_inputs`, is a baseline and no longer sets `signals_changed`); `tests/test_lifecycle.py` (the `_set_version` helper mirrors the scan worker's link-clearing); `tests/test_ranking.py` unchanged in intent; this log entry
+- verification (tests run, reviewer verdict): the human's run reported 319 passed and 6 failed before these fixes; the failures were the FK violation on re-scan (5 cases) and the spurious first-rank escalation (1 case). Re-run still owed to the human — the Kiro Web sandbox has no PyPI access, so I could not run `make verify` here; the changed files byte-compile under CPython 3.12.13
+- human review: pending re-run of `make verify BASE=origin/main`
