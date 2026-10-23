@@ -32,7 +32,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from fastapi.routing import APIRoute
 
 from vulntriage.main import create_app
 
@@ -163,30 +162,78 @@ def _parse_operation(lines: list[str], i: int) -> tuple[dict, int]:
             "security": frozenset(security) if security_declared else frozenset()}, i
 
 
-# -- the generated side: read FastAPI's routes ------------------------------
+# -- the generated side -----------------------------------------------------
+#
+# Path, method and success status come from ``app.openapi()`` -- the document the
+# contract test exists to check, and the same source ``test_smoke`` reads. The
+# security requirement is read off each route's ``Depends`` guard, because the
+# generated document carries no ``security`` block for a ``Depends``-based guard;
+# routes are matched to openapi operations by their normalised path and method.
 
 
-def _generated_ops() -> dict[tuple[str, str], dict]:
-    """{(normalised path, method): {status, schemes}} from the live FastAPI app."""
-    app = create_app(session_factory=None, reader=None, run_worker=False)
-    ops: dict[tuple[str, str], dict] = {}
+def _route_app():  # type: ignore[no-untyped-def]
+    return create_app(session_factory=None, reader=None, run_worker=False)
+
+
+def _guard_schemes(route: object) -> frozenset[str]:
+    """The security schemes implied by the ``Depends`` guards on a route."""
+    schemes: set[str] = set()
+    dependant = getattr(route, "dependant", None)
+    for dep in getattr(dependant, "dependencies", []) or []:
+        name = getattr(getattr(dep, "call", None), "__name__", "")
+        if name in GUARD_SCHEMES:
+            schemes |= set(GUARD_SCHEMES[name])
+    return frozenset(schemes)
+
+
+def _route_guards(app) -> dict[tuple[str, str], frozenset[str]]:  # type: ignore[no-untyped-def]
+    """{(normalised path, method): guard schemes} for every API route on the app.
+
+    Routes are recognised by duck-typing (a ``path``, HTTP ``methods`` and a
+    ``dependant``), so the lookup does not depend on the ``APIRoute`` class
+    identity. HEAD/OPTIONS that FastAPI adds are dropped.
+    """
+    guards: dict[tuple[str, str], frozenset[str]] = {}
     for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue  # skip docs/openapi/static infrastructure routes
-        if route.path in EXCLUDED_PATHS:
+        path = getattr(route, "path", None)
+        methods = getattr(route, "methods", None)
+        if not path or not methods or not hasattr(route, "dependant"):
             continue
-        schemes: set[str] = set()
-        for dep in route.dependant.dependencies:
-            name = getattr(dep.call, "__name__", "")
-            if name in GUARD_SCHEMES:
-                schemes |= set(GUARD_SCHEMES[name])
-        for method in route.methods:
+        schemes = _guard_schemes(route)
+        for method in methods:
+            m = method.lower()
+            if m in _METHODS:
+                guards[(_normalise(path), m)] = schemes
+    return guards
+
+
+def _generated_ops(app=None) -> dict[tuple[str, str], dict]:  # type: ignore[no-untyped-def]
+    """{(normalised path, method): {status, security}} from the live FastAPI app.
+
+    Path/method/success-status are taken from ``app.openapi()`` (so a route that
+    openapi does not surface cannot pass unseen); the security requirement is the
+    guard wired on the matching route.
+    """
+    app = app or _route_app()
+    guards = _route_guards(app)
+    ops: dict[tuple[str, str], dict] = {}
+    for raw_path, methods in app.openapi()["paths"].items():
+        if raw_path in EXCLUDED_PATHS:
+            continue
+        path = _normalise(raw_path)
+        for method, operation in methods.items():
             m = method.lower()
             if m not in _METHODS:
-                continue  # ignore HEAD/OPTIONS that FastAPI adds
-            ops[(_normalise(route.path), m)] = {
-                "status": route.status_code or 200,
-                "security": frozenset(schemes),
+                continue
+            responses = operation.get("responses", {})
+            success = sorted(c for c in responses if str(c).startswith("2"))
+            if len(success) != 1:
+                raise AssertionError(
+                    f"{method.upper()} {raw_path}: expected one 2xx response, got {success}"
+                )
+            ops[(path, m)] = {
+                "status": int(success[0]),
+                "security": guards.get((path, m), frozenset()),
             }
     return ops
 
@@ -238,11 +285,7 @@ def test_health_is_excluded_by_name_and_not_in_the_contract() -> None:
         return {"status": "ok"}
 
     # With /health served but excluded by name, the operation sets still match.
-    generated = {(_normalise(r.path), m.lower())
-                 for r in app.routes if isinstance(r, APIRoute)
-                 for m in r.methods if m.lower() in _METHODS
-                 if r.path not in EXCLUDED_PATHS}
-    assert generated == set(_contract_ops())
+    assert set(_generated_ops(app)) == set(_contract_ops())
 
 
 def test_a_route_missing_from_the_contract_fails_the_comparison() -> None:
@@ -254,10 +297,7 @@ def test_a_route_missing_from_the_contract_fails_the_comparison() -> None:
     def _extra() -> dict[str, str]:  # type: ignore[no-untyped-def]
         return {}
 
-    gen = {(_normalise(r.path), m.lower())
-           for r in app.routes if isinstance(r, APIRoute)
-           for m in r.methods if m.lower() in _METHODS
-           if r.path not in EXCLUDED_PATHS}
+    gen = set(_generated_ops(app))
     assert gen != set(_contract_ops())
     assert ("/_not_in_contract", "get") in gen
 
