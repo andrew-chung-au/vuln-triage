@@ -326,12 +326,23 @@ def test_DIAG_auth_me_guard_structure() -> None:  # TEMP diagnostic, remove afte
     """Throwaway: dump how FastAPI stores the GET /auth/me guard so we can read
     it correctly. This test is expected to fail and print the structure."""
     app = _route_app()
-    route = next(
+    lines: list[str] = []
+    lines.append("ALL app.routes (path | methods | has_endpoint | type):")
+    for r in app.routes:
+        lines.append(
+            f"  {getattr(r, 'path', None)!r} | {getattr(r, 'methods', None)!r} "
+            f"| endpoint={getattr(getattr(r, 'endpoint', None), '__name__', None)} "
+            f"| {type(r).__name__}"
+        )
+    lines.append(f"openapi paths: {sorted(app.openapi()['paths'])}")
+    match = [
         r for r in app.routes
         if getattr(r, "path", None) == "/auth/me"
         and "GET" in (getattr(r, "methods", None) or set())
-    )
-    lines: list[str] = []
+    ]
+    if not match:
+        raise AssertionError("DIAG /auth/me NOT in app.routes:\n" + "\n".join(lines))
+    route = match[0]
     lines.append(f"route type: {type(route).__module__}.{type(route).__name__}")
     endpoint = getattr(route, "endpoint", None)
     lines.append(f"endpoint: {getattr(endpoint, '__name__', None)} "
