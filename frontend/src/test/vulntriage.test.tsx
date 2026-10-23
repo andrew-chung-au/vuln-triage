@@ -851,3 +851,125 @@ describe("F-STATUS: finding status, rank and signal read view", () => {
     expect(byId("f7")).toHaveTextContent("withdrawn");
   });
 });
+
+// --- F-STATUS write path: risk acceptance, audit and re-scan (issue #86) ---
+
+describe("F-STATUS write path: risk acceptance, audit trail and re-scan", () => {
+  it("US-11: a security lead accepts risk with a reason, and the audit trail records who/when/previous/reason", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f1/accept");
+
+    fireEvent.change(await screen.findByLabelText(/Reason/), { target: { value: "Mitigated by an upstream WAF rule" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept risk" }));
+
+    // The write goes through POST /findings/{id}/risk-acceptance and lands back
+    // on the detail view with the new status and a recorded audit entry.
+    await waitFor(() => expect(screen.getByText(/← Findings/)).toBeInTheDocument());
+    const finding = await mockServices.getFinding("f1");
+    expect(finding.status).toBe("risk accepted");
+    const entry = finding.auditTrail.at(-1)!;
+    expect(entry.newValue).toBe("risk accepted");
+    expect(entry.previousValue).toBe("open");
+    expect(entry.reason).toBe("Mitigated by an upstream WAF rule");
+    expect(entry.actor).toBe(DEMO_USER.id); // the signed-in user is the "who"
+    expect(entry.source).toBe("dashboard");
+  });
+
+  it("US-11: an empty or whitespace-only reason is refused and the status does not change", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f1/accept");
+
+    fireEvent.change(await screen.findByLabelText(/Reason/), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept risk" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("A reason is required to accept this risk.");
+    const finding = await mockServices.getFinding("f1");
+    expect(finding.status).toBe("open");
+    expect(finding.auditTrail).toHaveLength(0);
+  });
+
+  it("US-11: a security lead may accept on any finding; an asset owner only on a matching asset", async () => {
+    // Security lead: allowed on an asset they do not own.
+    await signIn();
+    expect((await mockServices.acceptRisk("f2", "lead can accept anywhere")).status).toBe("risk accepted");
+    resetMockData();
+
+    // Asset owner, matching asset (payments-team owns a1 / finding f1): allowed.
+    await signInAsOwner();
+    expect((await mockServices.acceptRisk("f1", "owner accepts own asset")).status).toBe("risk accepted");
+    resetMockData();
+
+    // Asset owner, non-matching asset (f2 is on a2): refused, nothing changes.
+    await signInAsOwner();
+    const err = await getRejection(mockServices.acceptRisk("f2", "not my asset"));
+    expect(err.code).toBe("forbidden");
+    expect((await mockServices.getFinding("f2")).status).toBe("open");
+  });
+
+  it("US-11: the owner-mismatch refusal shows on the accept screen and leaves the finding open", async () => {
+    await signInAsOwner();
+    setUser(DEMO_OWNER_USER);
+    renderApp("/findings/f2/accept");
+
+    fireEvent.change(await screen.findByLabelText(/Reason/), { target: { value: "Attempt on an asset I do not own" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept risk" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("You can only accept risk on findings for assets you own.");
+    expect((await mockServices.getFinding("f2")).status).toBe("open");
+  });
+
+  it("US-11: a non-open finding cannot be risk accepted (the accept screen offers no form)", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    renderApp("/findings/f6/accept"); // f6 is fixed
+    expect(await screen.findByText("Only open findings can be risk accepted.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Reason/)).not.toBeInTheDocument();
+    // And the service refuses it with a conflict, changing nothing.
+    const err = await getRejection(mockServices.acceptRisk("f6", "too late"));
+    expect(err.code).toBe("conflict");
+    expect((await mockServices.getFinding("f6")).status).toBe("fixed");
+  });
+
+  it("US-11: no automated path sets risk accepted — only acceptRisk does, via a human", async () => {
+    await signIn();
+    // A re-scan (the only other write) never sets risk accepted.
+    const before = await mockServices.getFinding("f1");
+    await mockServices.reScan(before.assetId);
+    expect((await mockServices.getFinding("f1")).status).toBe(before.status);
+  });
+
+  it("US-10: a signed-in user requests a manual re-scan from the dashboard; status is unchanged until it finishes", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    const reScan = vi.spyOn(mockServices, "reScan");
+    renderApp("/assets");
+
+    const before = await mockServices.getAsset("a1");
+    fireEvent.click(await screen.findByRole("button", { name: "Re-scan payments-api" }));
+    expect(await screen.findByText("Re-scan requested")).toBeInTheDocument();
+    expect(reScan).toHaveBeenCalledWith("a1"); // POST /assets/{id}/rescan
+    // The current scan status does not change until the scan finishes.
+    expect(await mockServices.getAsset("a1")).toEqual(before);
+  });
+
+  it("maps a rejected write to a ServiceError and shows its message", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    vi.spyOn(mockServices, "reScan").mockRejectedValue(new ServiceError("not_found", "Asset not found."));
+    renderApp("/assets");
+    fireEvent.click(await screen.findByRole("button", { name: "Re-scan payments-api" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Asset not found.");
+  });
+
+  it("renders the audit trail with who, when, previous, new and reason", async () => {
+    // f4 is risk-accepted in the seed with a recorded audit entry.
+    renderComponent(<AuditTrail entries={seedFindings().find((f) => f.id === "f4")!.auditTrail} />);
+    const row = screen.getByRole("row", { name: /Jordan Vale/ });
+    expect(row).toHaveTextContent("Jordan Vale");      // who (display name)
+    expect(row).toHaveTextContent("open");             // previous value
+    expect(row).toHaveTextContent("risk accepted");    // new value
+    expect(row).toHaveTextContent(/Exports are only consumed/); // reason
+  });
+});
