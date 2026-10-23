@@ -134,7 +134,8 @@ cp .env.example .env    # fill in GITHUB_READ_TOKEN if you will register assets
 make dev
 ```
 
-`make dev` starts:
+`make dev` first applies the SQLite migrations (`alembic upgrade head`, so the
+schema exists on a fresh checkout), then starts:
 
 - the backend (FastAPI on SQLite) on `http://127.0.0.1:8000`, and
 - the frontend Vite dev server on `http://127.0.0.1:5173`.
@@ -145,9 +146,10 @@ backend, so there is no CORS and the `vt_session` cookie is first-party. The
 frontend calls the real backend — the in-memory mock is no longer used at
 runtime (it remains only as a vitest fixture).
 
-Press `Ctrl-C` to stop both. The first backend start creates the SQLite schema
-via the Alembic migrations in `backend/migrations/` (config
-`backend/alembic.ini`).
+Press `Ctrl-C` to stop both. The schema is created by the `dev-migrate` step
+(`alembic upgrade head`, migrations in `backend/migrations/`, config
+`backend/alembic.ini`); run `make dev-migrate` on its own to apply migrations
+without starting the servers.
 
 > `VERIFY:` if your backend ASGI entry point or port differs from
 > `vulntriage.main:app` on `127.0.0.1:8000`, set `VITE_API_TARGET` for the proxy

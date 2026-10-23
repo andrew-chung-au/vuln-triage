@@ -34,6 +34,13 @@ function headerValue(init: RequestInit, name: string): string | undefined {
   return headers[name];
 }
 
+/** The first captured call, asserted present (one request per operation here). */
+function firstCall(calls: Captured[]): Captured {
+  const call = calls[0];
+  if (!call) throw new Error("expected fetch to have been called");
+  return call;
+}
+
 const DEMO_USER = {
   id: "u1",
   username: "lead",
@@ -50,29 +57,32 @@ describe("httpServices transport", () => {
   it("sends the session cookie on every request", async () => {
     const calls = stubFetch(() => jsonResponse([]));
     await httpServices.listAssets();
-    expect(calls[0].url).toBe("/assets");
-    expect(calls[0].init.credentials).toBe("include");
+    const call = firstCall(calls);
+    expect(call.url).toBe("/assets");
+    expect(call.init.credentials).toBe("include");
   });
 
   it("sends the CSRF header on a cookie non-GET write", async () => {
     const calls = stubFetch(() => jsonResponse(DEMO_USER));
     await httpServices.acceptRisk("f1", "Mitigated by WAF");
-    expect(calls[0].url).toBe("/findings/f1/risk-acceptance");
-    expect(calls[0].init.method).toBe("POST");
-    expect(headerValue(calls[0].init, "X-Requested-With")).toBe("XMLHttpRequest");
-    expect(calls[0].init.credentials).toBe("include");
+    const call = firstCall(calls);
+    expect(call.url).toBe("/findings/f1/risk-acceptance");
+    expect(call.init.method).toBe("POST");
+    expect(headerValue(call.init, "X-Requested-With")).toBe("XMLHttpRequest");
+    expect(call.init.credentials).toBe("include");
   });
 
   it("omits the CSRF header on login and logout", async () => {
     const loginCalls = stubFetch(() => jsonResponse(DEMO_USER));
     await httpServices.login("lead", "pw");
-    expect(loginCalls[0].init.method).toBe("POST");
-    expect(headerValue(loginCalls[0].init, "X-Requested-With")).toBeUndefined();
+    const loginCall = firstCall(loginCalls);
+    expect(loginCall.init.method).toBe("POST");
+    expect(headerValue(loginCall.init, "X-Requested-With")).toBeUndefined();
     vi.unstubAllGlobals();
 
     const logoutCalls = stubFetch(() => new Response(null, { status: 204 }));
     await httpServices.logout();
-    expect(headerValue(logoutCalls[0].init, "X-Requested-With")).toBeUndefined();
+    expect(headerValue(firstCall(logoutCalls).init, "X-Requested-With")).toBeUndefined();
   });
 
   it("maps a 403 body to a forbidden ServiceError", async () => {

@@ -41,12 +41,9 @@ interface WireError {
 }
 
 function isWireError(value: unknown): value is WireError {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Record<string, unknown>).code === "string" &&
-    typeof (value as Record<string, unknown>).message === "string"
-  );
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record["code"] === "string" && typeof record["message"] === "string";
 }
 
 /** Map a non-2xx response to a ServiceError, reading the { code, message } body. */

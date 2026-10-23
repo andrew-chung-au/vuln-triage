@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
   // involved and the vt_session cookie is first-party. In Compose and on AWS a
   // reverse proxy does the same. The target is overridable with VITE_API_TARGET
   // for a non-default backend address.
-  const apiTarget = env.VITE_API_TARGET || "http://127.0.0.1:8000";
+  const apiTarget = env["VITE_API_TARGET"] || "http://127.0.0.1:8000";
   const apiPaths = ["/auth", "/findings", "/assets", "/signals", "/scans", "/health"];
 
   return {
