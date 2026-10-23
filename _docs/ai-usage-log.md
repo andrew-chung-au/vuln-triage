@@ -2184,3 +2184,12 @@ Copy this template for each new entry:
 - files changed: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `compose.yaml`, `backend/.dockerignore`, `frontend/.dockerignore`, `.env.example` (rewritten), `backend/vulntriage/main.py` (/health route + root_path=/api), `frontend/src/services/httpService.ts` (API_BASE=/api), `frontend/src/test/http-service.test.ts` (2 URL assertions), `frontend/vite.config.ts` (single /api proxy with rewrite), `_docs/openapi.yaml` (servers.url=/api), `_docs/api.md` (base-path + health notes), `Makefile` (compose-up/compose-down; PROTECTED, human-approved), two session summaries (#137 and the /api proposal), this log entry.
 - verification (tests run, reviewer verdict): NOT run here — the Kiro Web sandbox has no Docker/PyPI and a read-only uv dir, so `make compose-up` and `make verify` cannot run. main.py byte-compiles. The human runs `make verify` (frontend + conformance must stay green; backend/tests unchanged by the /api move) and `make compose-up`, then hard-refreshes /findings to confirm the SPA loads.
 - human review (what I checked or corrected, or `none`): the human approved Option B and D1/D2 after reading the impact proposal; the protected Makefile (compose targets) is approved in-session before its HUMAN_APPROVED commit.
+
+- date: 2026-10-23
+- task/issue: #137 follow-up — document the Compose stack in _docs/verify-locally.md
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked that the verify steps live in _docs/verify-locally.md.
+- files changed: `_docs/verify-locally.md` (new §7 "Run the full Compose stack (phase S2)" with make compose-up, the /env setup, the /api one-origin note and the /findings hard-refresh acceptance; corrected the §6 Vite proxy note to the single /api prefix; renumbered Clean up to §8; added Compose troubleshooting rows and updated the status/scope notes), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): docs only; no code changed. Not run (sandbox has no Docker/PyPI).
+- human review (what I checked or corrected, or `none`): none yet; part of PR #147.
