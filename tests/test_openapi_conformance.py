@@ -322,6 +322,47 @@ def test_every_operation_is_guarded_by_the_contract_security_scheme() -> None:
         )
 
 
+def test_DIAG_auth_me_guard_structure() -> None:  # TEMP diagnostic, remove after
+    """Throwaway: dump how FastAPI stores the GET /auth/me guard so we can read
+    it correctly. This test is expected to fail and print the structure."""
+    app = _route_app()
+    route = next(
+        r for r in app.routes
+        if getattr(r, "path", None) == "/auth/me"
+        and "GET" in (getattr(r, "methods", None) or set())
+    )
+    lines: list[str] = []
+    lines.append(f"route type: {type(route).__module__}.{type(route).__name__}")
+    endpoint = getattr(route, "endpoint", None)
+    lines.append(f"endpoint: {getattr(endpoint, '__name__', None)} "
+                 f"wrapped={getattr(endpoint, '__wrapped__', 'NO')!r}")
+    try:
+        sig = inspect.signature(endpoint)
+        for n, p in sig.parameters.items():
+            d = p.default
+            lines.append(f"  param {n!r}: default_type={type(d).__module__}.{type(d).__name__} "
+                         f"dependency={getattr(getattr(d, 'dependency', None), '__name__', None)} "
+                         f"annotation={p.annotation!r}")
+    except (TypeError, ValueError) as exc:
+        lines.append(f"  signature error: {exc!r}")
+    # The raw function, bypassing any wrapping.
+    raw = inspect.unwrap(endpoint) if endpoint is not None else None
+    lines.append(f"unwrapped endpoint: {getattr(raw, '__name__', None)}")
+    if raw is not None and raw is not endpoint:
+        for n, p in inspect.signature(raw).parameters.items():
+            lines.append(f"  raw param {n!r}: default={p.default!r}")
+    dep = getattr(route, "dependant", None)
+    lines.append(f"dependant.call: {getattr(getattr(dep, 'call', None), '__name__', None)}")
+    deps = getattr(dep, "dependencies", None)
+    lines.append(f"dependant.dependencies count: {len(deps) if deps is not None else None}")
+    for i, s in enumerate(deps or []):
+        lines.append(f"  dep[{i}].call={getattr(getattr(s, 'call', None), '__name__', None)} "
+                     f"subdeps={len(getattr(s, 'dependencies', []) or [])}")
+    lines.append(f"dependant attrs with 'depend': "
+                 f"{[a for a in dir(dep) if 'depend' in a.lower()]}")
+    raise AssertionError("DIAG /auth/me:\n" + "\n".join(lines))
+
+
 def test_health_is_excluded_by_name_and_not_in_the_contract() -> None:
     # /health is not an operation in the contract and the backend serves none;
     # the exclusion is defensive so a future /health route cannot slip in.
