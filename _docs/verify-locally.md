@@ -4,14 +4,21 @@ A step-by-step guide for independently checking the VulnTriage build on your own
 machine: install the dependencies, run the test suites (`make test`), and bring
 the application up locally (frontend + backend) for a manual end-to-end check.
 
-This covers the **Tier A (phase S1)** build: the FastAPI backend on SQLite, the
-React/Vite frontend, and the unit + SQLite-integration tests. Docker, Postgres,
-deployment and observability are later phases (S2+) and are out of scope here.
+It covers two ways to run the app:
 
-> Status note (2026-10-23): `make test` runs both test suites, and `make dev`
-> starts the backend and frontend together with one command (issue #133). The
-> frontend talks to the real backend over one origin (the Vite dev server
-> proxies the API paths), so this exercises the end-to-end path.
+- **Tier A (phase S1), §1-§6:** the FastAPI backend on SQLite + the React/Vite
+  frontend via `make dev`, with the unit + SQLite-integration tests. No Docker.
+- **The Compose stack (phase S2), §7:** the full stack (frontend, backend and
+  Postgres) in Docker Compose via `make compose-up` (issue #137). Needs Docker.
+
+Deployment and observability are later phases (S3+) and are out of scope here.
+
+> Status note (2026-10-23): `make test` runs both test suites; `make dev` starts
+> the backend and frontend together on SQLite (issue #133); and `make compose-up`
+> starts the full stack with Postgres in Docker (issue #137). In every case the
+> frontend talks to the real backend over one origin — the API is served under
+> `/api` and the proxy (Vite in dev, nginx in Compose) strips the prefix — so
+> the SPA owns `/`, `/findings` and `/assets`.
 
 ## 1. Prerequisites
 
@@ -33,8 +40,8 @@ A quick way to see them all at once:
 make tool-versions
 ```
 
-Docker is **not** required for this guide (it is only needed for the S2 Compose
-stack).
+Docker is **not** required for the Tier A guide (§1-§6). It is required for the
+Compose stack in §7, which also needs `docker compose`.
 
 ## 2. Get the code
 
@@ -140,11 +147,12 @@ schema exists on a fresh checkout), then starts:
 - the backend (FastAPI on SQLite) on `http://127.0.0.1:8000`, and
 - the frontend Vite dev server on `http://127.0.0.1:5173`.
 
-They share one origin: the Vite dev server proxies the API paths
-(`/auth`, `/findings`, `/assets`, `/signals`, `/scans`, `/health`) to the
-backend, so there is no CORS and the `vt_session` cookie is first-party. The
-frontend calls the real backend — the in-memory mock is no longer used at
-runtime (it remains only as a vitest fixture).
+They share one origin: the API is served under `/api`, and the Vite dev server
+proxies `/api/*` to the backend (stripping the `/api` prefix), so the SPA owns
+`/`, `/findings` and `/assets` for client-side routing, there is no CORS, and
+the `vt_session` cookie is first-party. The frontend calls the real backend —
+the in-memory mock is no longer used at runtime (it remains only as a vitest
+fixture).
 
 Press `Ctrl-C` to stop both. The schema is created by the `dev-migrate` step
 (`alembic upgrade head`, migrations in `backend/migrations/`, config
@@ -189,10 +197,77 @@ This exercises the full Tier A path: frontend → backend → SQLite, with the
 session cookie and CSRF header, matching the Application and Testing criteria for
 phase S1.
 
-## 7. Clean up
+## 7. Run the full Compose stack (phase S2)
+
+This runs the whole application — frontend, backend and **Postgres** — in Docker
+Compose with one command (issue #137). It is the container form of §6: the same
+one-origin app, but on Postgres instead of SQLite, and served by nginx instead
+of the Vite dev server.
+
+Needs Docker and `docker compose`. Run it on a Docker-capable host (your machine
+or CI), not in the agent sandbox.
+
+### Start the stack
+
+```sh
+cp .env.example .env    # then set POSTGRES_PASSWORD (others may stay blank to start)
+make compose-up
+```
+
+`make compose-up` runs `docker compose up --build -d --wait`, which builds the
+images and starts the services in dependency order, waiting until each is
+healthy:
+
+1. `db` — Postgres 16.4, on a named volume (`pgdata`) so data survives a restart.
+2. `migrations` — runs `alembic upgrade head` once, then exits.
+3. `backend` — FastAPI (uvicorn on `0.0.0.0:8000`); health-checked at `/health`.
+4. `frontend` — nginx serving the built SPA on port `8080`; health-checked at
+   `/healthz`. This is the only service published to the host.
+
+The app is then at **`http://localhost:8080`**.
+
+### `.env` for the stack
+
+Copy `.env.example` to a git-ignored `.env`. For the stack to start you only need
+`POSTGRES_PASSWORD`; `GITHUB_READ_TOKEN` is needed only to register assets, and
+the stub switches (`LLM_MODE=stub`, `RESPONDER_MODE=stub`) keep their defaults.
+The file lists names only; no values are committed.
+
+### One origin and the `/api` prefix
+
+The API is served under `/api`: the browser calls `/api/...`, and the frontend's
+nginx routes `/api/*` to the backend (stripping the prefix), while every other
+path serves the SPA. This is what lets the SPA own `/`, `/findings` and
+`/assets` as client-side routes without colliding with the API.
+
+### What to check (acceptance)
+
+1. Open `http://localhost:8080` — the sign-in page loads.
+2. Create a sign-in user and sign in (see §6 "Create a sign-in user"; run the
+   operator command inside the backend container, e.g.
+   `docker compose exec backend <command>`).
+3. Register an asset and confirm findings appear — same end-to-end path as §6,
+   now on Postgres.
+4. **The `/api` acceptance check:** navigate to a page such as
+   `http://localhost:8080/findings`, then **hard-refresh** (Ctrl/Cmd-Shift-R).
+   The SPA must load the findings page — **not** raw API JSON. (If you get JSON,
+   the proxy prefix-strip or the SPA fallback is misconfigured.)
+5. **Data survives a restart:** `make compose-down` then `make compose-up` again
+   (without `CLEAN=1`); the data registered in step 3 is still there.
+
+### Stop the stack
+
+```sh
+make compose-down            # stop the stack, keep the Postgres volume
+make compose-down CLEAN=1    # also remove the Postgres volume (fresh slate)
+```
+
+## 8. Clean up
 
 ```sh
 make frontend-stop     # if the dev server is still running
+make dev-stop          # if make dev-start is still running
+make compose-down      # if the Compose stack is still up
 make clean-scratch     # remove .scratch/ working files
 ```
 
@@ -206,6 +281,10 @@ make clean-scratch     # remove .scratch/ working files
 | Install step fails to download | no network / restricted registry access | run on a machine with real PyPI + npm access |
 | Dashboard shows no data after `make dev` | backend not reached (proxy target or port) | check `.scratch/dev-backend.log`; set `VITE_API_TARGET` if the backend is not on `127.0.0.1:8000` |
 | `make dev-start` says "already running" | a previous run is still up | `make dev-stop` first |
+| `make compose-up`: `.env is missing` | no `.env` for the stack | `cp .env.example .env` and set `POSTGRES_PASSWORD` |
+| `http://localhost:8080/findings` returns JSON on refresh | nginx `/api` prefix-strip or the SPA fallback is misconfigured | check `frontend/nginx.conf` (`location /api/` and `try_files ... /index.html`) |
+| Compose data gone after a restart | the stack was brought down with `CLEAN=1` (volume removed) | use plain `make compose-down`; `CLEAN=1` is a deliberate fresh slate |
+| a service never becomes healthy | a dependency failed its health check | `docker compose ps` and `docker compose logs <service>` to see which |
 
 ## Related docs
 

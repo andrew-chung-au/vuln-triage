@@ -19,20 +19,25 @@ export default defineConfig(({ mode }) => {
   );
 
   // In development the frontend and backend share one origin: the Vite dev
-  // server proxies the API paths to the backend (task 11 / #133), so no CORS is
-  // involved and the vt_session cookie is first-party. In Compose and on AWS a
-  // reverse proxy does the same. The target is overridable with VITE_API_TARGET
-  // for a non-default backend address.
+  // server proxies the API to the backend (task 11 / #133), so no CORS is
+  // involved and the vt_session cookie is first-party. The API lives under
+  // /api, so the SPA owns `/`, `/findings` and `/assets` for client-side
+  // routing; the proxy strips the /api prefix so the backend still sees
+  // `/findings`, `/assets`, etc. (same behaviour as the Compose nginx). The
+  // target is overridable with VITE_API_TARGET for a non-default backend.
   const apiTarget = env["VITE_API_TARGET"] || "http://127.0.0.1:8000";
-  const apiPaths = ["/auth", "/findings", "/assets", "/signals", "/scans", "/health"];
 
   return {
     define: envDefine,
     css: { transformer: "lightningcss" },
     server: {
-      proxy: Object.fromEntries(
-        apiPaths.map((path) => [path, { target: apiTarget, changeOrigin: true }]),
-      ),
+      proxy: {
+        "/api": {
+          target: apiTarget,
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/api/, ""),
+        },
+      },
     },
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

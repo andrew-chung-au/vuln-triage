@@ -1,0 +1,81 @@
+# Application Compose stack (issue #137, task 15).
+#
+# One command starts the whole app on one origin:
+#   docker compose up --build -d --wait   (via `make compose-up`)
+#
+# Services:
+#   db         Postgres, pinned, with a named volume so data survives a restart.
+#   migrations runs `alembic upgrade head` once, then exits 0.
+#   backend    FastAPI on 0.0.0.0:8000, starts after migrations complete.
+#   frontend   nginx serving the built SPA and proxying the API to the backend;
+#              this is the only service the browser/host talks to (one origin).
+#
+# This is the application stack. The Collector, the other observability
+# services, MailHog and n8n are NOT here (tasks 24 / 33). No image is pushed
+# here (task 17). Secrets come from a git-ignored .env (see .env.example);
+# values are never committed.
+
+services:
+  db:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: vt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vt -d vt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrations:
+    build:
+      context: ./backend
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://vt:${POSTGRES_PASSWORD}@db:5432/vt
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://vt:${POSTGRES_PASSWORD}@db:5432/vt
+      GITHUB_READ_TOKEN: ${GITHUB_READ_TOKEN:-}
+      RESPONDER_API_TOKEN: ${RESPONDER_API_TOKEN:-}
+      LLM_MODE: ${LLM_MODE:-stub}
+      RESPONDER_MODE: ${RESPONDER_MODE:-stub}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:

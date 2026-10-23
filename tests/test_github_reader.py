@@ -227,11 +227,47 @@ def test_recorders_with_no_confirmed_inputs_return_2_and_make_no_request(monkeyp
     assert record_fixtures.record_epss() == 2
 
 
-def test_env_example_has_only_the_empty_token_name() -> None:
+def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
+    """`.env.example` (task 15) lists the submission setting/secret names only.
+
+    It must name what the submission needs, must not name showcase-only
+    settings, and must carry no real values: every setting line is ``NAME=``
+    (empty) or a stub default (``LLM_MODE=stub`` / ``RESPONDER_MODE=stub``).
+    """
     from pathlib import Path
 
     text = (Path(__file__).resolve().parent.parent / ".env.example").read_text()
-    assert text.strip() == "GITHUB_READ_TOKEN="
+
+    setting_lines = [
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    names = {line.split("=", 1)[0] for line in setting_lines}
+
+    # Required submission names (task 15 acceptance).
+    assert {
+        "POSTGRES_PASSWORD",
+        "GITHUB_READ_TOKEN",
+        "RESPONDER_API_TOKEN",
+        "GRAFANA_ADMIN_PASSWORD",
+        "RESPONDER_LLM_KEY",
+        "LLM_MODE",
+        "RESPONDER_MODE",
+    } <= names
+
+    # Showcase-only settings must not appear in the submission file.
+    assert names.isdisjoint(
+        {"MCP_API_TOKEN", "N8N_API_TOKEN", "LLM_API_KEY", "SMTP_PASSWORD"}
+    )
+
+    # No real values: each line is NAME= (empty) or a stub-mode default.
+    for line in setting_lines:
+        name, _, value = line.partition("=")
+        if name in {"LLM_MODE", "RESPONDER_MODE"}:
+            assert value == "stub"
+        else:
+            assert value == "", f"{name} must have no committed value, got {value!r}"
 
 
 def test_split_repository_url() -> None:

@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -196,3 +196,15 @@ dev-stop: ## Stop the processes started by dev-start
 	    rm -f .scratch/$$name.pid; echo "$$name stopped"; \
 	  else echo "$$name is not running"; fi; \
 	done
+
+# --- Compose stack (issue #137, task 15) ---------------------------------
+# The full application stack (frontend, backend, Postgres) on one origin.
+# Needs Docker and a .env (copy .env.example). Runs on the human's host or in
+# CI, not in the agent sandbox.
+
+compose-up: ## Build and start the full app stack (frontend, backend, Postgres); needs a .env
+	@test -f .env || { echo ".env is missing: copy .env.example to .env and fill it in" >&2; exit 1; }
+	@docker compose up --build -d --wait
+
+compose-down: ## Stop the app stack (add CLEAN=1 to also remove the Postgres volume)
+	@docker compose down $(if $(CLEAN),--volumes,)
