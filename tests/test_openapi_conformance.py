@@ -29,6 +29,7 @@ mis-parsing. ``make openapi-validate`` validates the contract document itself.
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 import pytest
@@ -175,15 +176,50 @@ def _route_app():  # type: ignore[no-untyped-def]
     return create_app(session_factory=None, reader=None, run_worker=False)
 
 
+def _guard_names_from_signature(func: object, seen: set[int]) -> set[str]:
+    """Guard-function names reached from ``func``'s ``Depends(...)`` parameters.
+
+    Reads the source of truth: every parameter default that is a FastAPI
+    ``Depends`` marker exposes the dependency callable on ``.dependency``. A
+    dependency may itself depend on a guard, so this recurses into each
+    dependency callable (cycle-guarded by ``id``). This does not rely on how
+    FastAPI builds its internal ``Dependant`` tree.
+    """
+    names: set[str] = set()
+    if func is None or id(func) in seen:
+        return names
+    seen.add(id(func))
+    try:
+        params = inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        return names
+    for param in params.values():
+        dependency = getattr(param.default, "dependency", None)
+        if dependency is None:
+            continue
+        name = getattr(dependency, "__name__", "")
+        if name in GUARD_SCHEMES:
+            names.add(name)
+        names |= _guard_names_from_signature(dependency, seen)
+    return names
+
+
 def _guard_schemes(route: object) -> frozenset[str]:
     """The security schemes implied by the ``Depends`` guards on a route.
 
-    The route's ``dependant`` tree is walked in full (not just its top level): a
-    guard taken as a value parameter (``user: User = Depends(require_session)``)
-    and one taken for its effect only (``_: None = Depends(require_n8n)``) can sit
-    at different depths of ``dependant.dependencies``, so every node is inspected.
+    Guards are read from the route endpoint's own ``Depends(...)`` parameters
+    (and, recursively, their dependencies) via the function signature -- the
+    source of truth -- so a guard taken as a value (``user: User =
+    Depends(require_session)``) is found as reliably as one taken for its effect
+    only (``_: None = Depends(require_n8n)``). The route's ``dependant`` tree is
+    also walked as a backstop for guards attached off the endpoint signature
+    (e.g. router- or decorator-level ``dependencies=[...]``).
     """
     schemes: set[str] = set()
+    endpoint = getattr(route, "endpoint", None)
+    for name in _guard_names_from_signature(endpoint, set()):
+        schemes |= set(GUARD_SCHEMES[name])
+
     root = getattr(route, "dependant", None)
     seen: set[int] = set()
     stack = [root] if root is not None else []
