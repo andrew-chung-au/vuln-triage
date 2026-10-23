@@ -963,9 +963,10 @@ describe("F-STATUS write path: risk acceptance, audit trail and re-scan", () => 
     expect(await screen.findByRole("alert")).toHaveTextContent("Asset not found.");
   });
 
-  it("renders the audit trail with who, when, previous, new and reason", async () => {
-    // f4 is risk-accepted in the seed with a recorded audit entry.
-    renderComponent(<AuditTrail entries={seedFindings().find((f) => f.id === "f4")!.auditTrail} />);
+  it("renders the audit trail with who, when, previous, new and reason", () => {
+    // f4 is risk-accepted in the seed with a recorded audit entry. Render the
+    // component directly (no router), as the other AuditTrail tests do.
+    render(<AuditTrail entries={seedFindings().find((f) => f.id === "f4")!.auditTrail} />);
     const row = screen.getByRole("row", { name: /Jordan Vale/ });
     expect(row).toHaveTextContent("Jordan Vale");      // who (display name)
     expect(row).toHaveTextContent("open");             // previous value
