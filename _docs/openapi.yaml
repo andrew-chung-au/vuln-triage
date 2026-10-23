@@ -139,8 +139,8 @@ info:
     validates OpenAPI 3.1.
 
 servers:
-  - url: /
-    description: Same origin as the dashboard
+  - url: /api
+    description: Same origin as the dashboard; the API is served under /api
 
 tags:
   - name: auth

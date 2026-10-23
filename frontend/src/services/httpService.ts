@@ -26,6 +26,14 @@ import type {
 const CSRF_HEADER = "X-Requested-With";
 const CSRF_VALUE = "XMLHttpRequest";
 
+// The API lives under /api on the same origin so the SPA can own `/`,
+// `/findings` and `/assets` for client-side routing without colliding with the
+// API. The reverse proxy (nginx in Compose, the Vite dev server in dev) routes
+// /api/* to the backend and strips this prefix, so the backend still sees
+// `/findings`, `/assets`, etc. Every per-call path below stays relative; this
+// is the single place the prefix is applied.
+const API_BASE = "/api";
+
 const SERVICE_ERROR_CODES: ReadonlySet<string> = new Set<ServiceErrorCode>([
   "validation",
   "not_found",
@@ -101,7 +109,7 @@ async function request(path: string, options: RequestOptions = {}): Promise<Resp
   }
   let response: Response;
   try {
-    response = await fetch(path, init);
+    response = await fetch(`${API_BASE}${path}`, init);
   } catch {
     // Network-level failure (backend down, proxy unreachable). Surface a typed
     // error rather than a raw TypeError.

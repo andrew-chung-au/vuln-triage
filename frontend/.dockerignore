@@ -1,0 +1,7 @@
+# Keep the frontend build context small and free of local/secret files.
+node_modules/
+dist/
+.scratch/
+.env
+.env.*
+!.env.example

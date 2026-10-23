@@ -2175,3 +2175,12 @@ Copy this template for each new entry:
 - files changed: filed 8 GitHub issues #137-#144 (tasks 15-22); updated `_session-summaries/planning-2026-10-23-tier-b-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the Milestone A house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A convention.
 - human review (what I checked or corrected, or `none`): the human approved the grooming open points before filing.
+
+- date: 2026-10-23
+- task/issue: #137 (task 15) — one-command Compose stack, incl. the /api prefix move (Option B)
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start #137, then (on hitting the SPA/API path collision) preferred Option B and asked for an impact analysis + proposal before changes; then approved the recommendations (Option B, root_path=/api, /api/health).
+- files changed: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `compose.yaml`, `backend/.dockerignore`, `frontend/.dockerignore`, `.env.example` (rewritten), `backend/vulntriage/main.py` (/health route + root_path=/api), `frontend/src/services/httpService.ts` (API_BASE=/api), `frontend/src/test/http-service.test.ts` (2 URL assertions), `frontend/vite.config.ts` (single /api proxy with rewrite), `_docs/openapi.yaml` (servers.url=/api), `_docs/api.md` (base-path + health notes), `Makefile` (compose-up/compose-down; PROTECTED, human-approved), two session summaries (#137 and the /api proposal), this log entry.
+- verification (tests run, reviewer verdict): NOT run here — the Kiro Web sandbox has no Docker/PyPI and a read-only uv dir, so `make compose-up` and `make verify` cannot run. main.py byte-compiles. The human runs `make verify` (frontend + conformance must stay green; backend/tests unchanged by the /api move) and `make compose-up`, then hard-refreshes /findings to confirm the SPA loads.
+- human review (what I checked or corrected, or `none`): the human approved Option B and D1/D2 after reading the impact proposal; the protected Makefile (compose targets) is approved in-session before its HUMAN_APPROVED commit.

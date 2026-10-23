@@ -1,0 +1,10 @@
+# Keep the backend build context small and free of local/secret files.
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.scratch/
+.env
+.env.*
+!.env.example

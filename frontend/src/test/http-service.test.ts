@@ -58,7 +58,7 @@ describe("httpServices transport", () => {
     const calls = stubFetch(() => jsonResponse([]));
     await httpServices.listAssets();
     const call = firstCall(calls);
-    expect(call.url).toBe("/assets");
+    expect(call.url).toBe("/api/assets");
     expect(call.init.credentials).toBe("include");
   });
 
@@ -66,7 +66,7 @@ describe("httpServices transport", () => {
     const calls = stubFetch(() => jsonResponse(DEMO_USER));
     await httpServices.acceptRisk("f1", "Mitigated by WAF");
     const call = firstCall(calls);
-    expect(call.url).toBe("/findings/f1/risk-acceptance");
+    expect(call.url).toBe("/api/findings/f1/risk-acceptance");
     expect(call.init.method).toBe("POST");
     expect(headerValue(call.init, "X-Requested-With")).toBe("XMLHttpRequest");
     expect(call.init.credentials).toBe("include");

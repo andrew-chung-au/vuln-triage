@@ -84,7 +84,11 @@ def create_app(
             if engine is not None:
                 engine.dispose()
 
-    app = FastAPI(lifespan=lifespan)
+    # The app is served behind a reverse proxy at /api (the proxy strips the
+    # prefix, so routes stay mounted at /findings, /assets, etc. and the tests
+    # are unaffected). root_path makes the self-served OpenAPI/docs advertise
+    # the /api base, matching openapi.yaml's servers.url.
+    app = FastAPI(lifespan=lifespan, root_path="/api")
     app.state.session_factory = session_factory
     app.state.worker = None
     app.state.login_throttle = LoginThrottle()
@@ -94,6 +98,19 @@ def create_app(
     app.include_router(assets_router)
     app.include_router(findings_router)
     app.include_router(service_router)
+
+    @app.get("/health", include_in_schema=False)
+    def health() -> dict[str, str]:
+        """Infrastructure liveness probe, outside the OpenAPI contract.
+
+        Mounted at ``/health`` on the app. The container health check calls it
+        directly (``:8000/health``); through the reverse proxy it is reached at
+        ``/api/health`` (the proxy strips ``/api``). It needs no credential and
+        returns no VulnTriage data. The task-14 conformance test excludes
+        ``/health`` by name (``_docs/api.md``).
+        """
+        return {"status": "ok"}
+
     return app
 
 
