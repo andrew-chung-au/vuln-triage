@@ -137,11 +137,11 @@ def _parse_body(raw: bytes, model: type[BaseModel]) -> Any:
     try:
         data = json.loads(raw) if raw else None
     except ValueError:
-        raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY) from None
+        raise _error("validation", 422) from None
     try:
         return model.model_validate(data)
     except ValidationError:
-        raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY) from None
+        raise _error("validation", 422) from None
 
 
 @router.post("/assets", status_code=201)
@@ -226,9 +226,12 @@ class AssetUpdateInput(BaseModel):
         return value
 
     def provided(self) -> dict[str, Any]:
-        """Map of attr-name -> value for exactly the fields the body included."""
-        by_alias = {f.alias or name: name for name, f in self.model_fields.items()}
-        return {by_alias[a]: getattr(self, by_alias[a]) for a in self.model_fields_set}
+        """Map of attr-name -> value for exactly the fields the body included.
+
+        ``model_fields_set`` holds the attribute names of the fields present in
+        the body (pydantic records them by field name, not alias).
+        """
+        return {name: getattr(self, name) for name in self.model_fields_set}
 
 
 @router.patch("/assets/{asset_id}")
@@ -247,7 +250,7 @@ async def update_asset(
         body = _parse_body(raw, AssetUpdateInput)
         provided = body.provided()
         if not provided:  # minProperties: 1
-            raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY)
+            raise _error("validation", 422)
 
         changed = _apply_update(session, asset, provided, user)
         if changed:

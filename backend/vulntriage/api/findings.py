@@ -108,10 +108,10 @@ def _validated_reason(raw: bytes) -> str:
     try:
         body = json.loads(raw) if raw else None
     except ValueError:
-        raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY) from None
+        raise _error("validation", 422) from None
     if not isinstance(body, dict) or set(body) != {"reason"}:
-        raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise _error("validation", 422)
     reason = body.get("reason")
     if not isinstance(reason, str) or not reason.strip():
-        raise _error("validation", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise _error("validation", 422)
     return reason
