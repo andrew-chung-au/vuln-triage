@@ -1875,3 +1875,14 @@ Copy this template for each new entry:
 - files changed: `83260c0` (`ci/push-check/Dockerfile`), `9902d07` (`AGENTS.md`, protected), `_session-summaries/issue-112-push-check-image.md`, `_docs/roadmap.md` check-in; this log entry
 - verification (tests run, reviewer verdict): QA PASS for the criteria checkable by reading (comment 6357004988) at `9902d07`; `make verify` PASS WITH WARNINGS (62 frontend + 56 backend tests); `make assert-clean` PASS after QA. The image was not built or run (no Docker in this container); the criteria that need the image are not verified and wait for the human
 - human review (what I checked or corrected, or `none`): the human approved filing #112, the image scope, and the `AGENTS.md` text (record 6356988788). I corrected one muddled criterion in the PM draft before filing. Commands that required approval: `HUMAN_APPROVED=1 git commit` for `AGENTS.md` (protected file); `make issue-comment` (ask rule)
+
+### 2026-10-23 — Orchestrator: #112 step-by-step guide for the human
+
+- date: 2026-10-23
+- task/issue: #112 (push-check image), at the human's request: a detailed guide saying where each step runs
+- agent role: Orchestrator (main session), no subagent
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for a step-by-step guide in `_docs` with more detail than the bullet points, including where to run each command; no new key prompt saved
+- files changed: `_docs/push-check-image-guide.md`; this log
+- verification (tests run, reviewer verdict): none. The guide was written from `environments.md`, the `pre-push` script, the Dockerfile and QA's command list (comment 6357004988). None of its commands was run: there is no Docker here, and the sandbox's `git remote` setup was not checked. No QA
+- human review (what I checked or corrected, or `none`): none
