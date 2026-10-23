@@ -87,7 +87,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 ## Project gotchas
 
 - There is no Docker in this container, so anything needing Docker Compose must wait for a codespace or a Compose-based container recipe (see `_docs/agent-kit/environments.md`).
-- `make verify` needs `make install` first. The push check needs an image with Node (set `AGENT_PUSH_CHECK_IMAGE`; see #32).
+- `make verify` needs `make install` first. The push check needs the image built from `ci/push-check/Dockerfile` (Node 24.22.0, npm 11.19.1, uv 0.13.1, Python 3.12, plus the tools listed in that file; set `AGENT_PUSH_CHECK_IMAGE`; see #32 and #112).
 
 <!-- SHARED: from _docs/agent-kit/templates/AGENTS.md.template. Change it there first, then copy it here. -->
 
