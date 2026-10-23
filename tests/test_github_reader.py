@@ -15,6 +15,8 @@ from vulntriage.ingest.github import (
     split_repository_url,
 )
 
+pytestmark = pytest.mark.unit  # task 13: the U-* backend unit layer
+
 SENTINEL = "ghp_SENTINEL_TOKEN_VALUE_123"
 SHA = "1111111111111111111111111111111111111111"
 

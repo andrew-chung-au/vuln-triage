@@ -9,6 +9,8 @@ import pytest
 
 from vulntriage.ingest.requirements import parse_requirements, resolve_include
 
+
+pytestmark = pytest.mark.unit  # task 13: the U-* backend unit layer
 FILE = "requirements.txt"
 
 

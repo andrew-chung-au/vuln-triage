@@ -10,6 +10,8 @@ from vulntriage.ingest.models import LockfileParseError
 from vulntriage.ingest.package_lock import parse_package_lock
 
 
+
+pytestmark = pytest.mark.unit  # task 13: the U-* backend unit layer
 def lock(packages: dict, version: int = 3) -> str:
     return json.dumps({"name": "app", "lockfileVersion": version, "packages": packages})
 

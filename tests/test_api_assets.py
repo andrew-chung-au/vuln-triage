@@ -17,6 +17,9 @@ from vulntriage.db.models import Asset, Base, Scan
 from vulntriage.ingest.scan import run_pending_scans
 from vulntriage.main import create_app
 
+
+pytestmark = pytest.mark.sqlite_integration  # task 13: the SQLite I-* integration layer
+
 URL = "https://github.com/octo/repo"
 BODY: dict[str, Any] = {
     "name": "Payments",

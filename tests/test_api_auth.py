@@ -20,6 +20,8 @@ from vulntriage.api.security import (
     require_session,
 )
 from vulntriage.db.models import AuthSession, Base, User
+
+pytestmark = pytest.mark.sqlite_integration  # task 13: the SQLite I-* integration layer
 from vulntriage.main import create_app
 
 PASSWORD = "correct horse battery staple"

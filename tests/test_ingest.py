@@ -30,6 +30,8 @@ from vulntriage.ingest.scan import enqueue_scan, run_pending_scans, unfinished_s
 from vulntriage.ingest.signals import EpssClient, KevClient
 from vulntriage.worker import ScanWorker
 
+pytestmark = pytest.mark.sqlite_integration  # task 13: the SQLite I-* integration layer
+
 SHA = "a" * 40
 
 UV = 'version = 1\n[[package]]\nname = "requests"\nversion = "2.31.0"\n'
