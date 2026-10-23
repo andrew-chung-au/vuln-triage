@@ -23,6 +23,7 @@ from vulntriage.ingest.github import (
     split_repository_url,
 )
 from vulntriage.ingest.matcher import match_asset
+from vulntriage.ingest.notifications import create_top_tier_jobs
 from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
 from vulntriage.ingest.ranking import rank_asset
 from vulntriage.ingest.signals import EpssClientProtocol, KevClientProtocol, enrich_asset
@@ -272,6 +273,10 @@ def run_scan(
             # Deterministic ranking (task 7): score every finding from the
             # signals and asset context, replacing the placeholder rank fields.
             rank_asset(session, asset.id)
+            # US-8 (task 10a): create one top-tier notification job per lifecycle
+            # for each finding now in P1. Idempotent, so a re-scan adds no
+            # duplicate. Delivery is the task-37 worker.
+            create_top_tier_jobs(session, asset.id)
 
         status = status_for_result(warnings, has_findings)
         scan.warnings = [w.as_dict() for w in warnings]
