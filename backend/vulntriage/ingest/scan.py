@@ -24,6 +24,7 @@ from vulntriage.ingest.github import (
 )
 from vulntriage.ingest.matcher import match_asset
 from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
+from vulntriage.ingest.signals import EpssClientProtocol, KevClientProtocol, enrich_asset
 from vulntriage.ingest.models import (
     INCLUDE_NOT_FOUND,
     INCLUDE_REFUSED,
@@ -196,12 +197,17 @@ def run_scan(
     reader: RepositoryReader,
     scan_id: int,
     osv_client: OsvClientProtocol | None = None,
+    kev_client: KevClientProtocol | None = None,
+    epss_client: EpssClientProtocol | None = None,
 ) -> None:
     """Run one scan to completion. A scan that is already finished is left alone.
 
     ``osv_client`` matches the stored dependencies against OSV. When it is None
     no matching runs (the dependency ingestion still completes), which keeps the
     worker and the ingestion-only tests independent of an OSV stub.
+    ``kev_client`` and ``epss_client`` enrich the resulting findings' CVEs with
+    KEV and EPSS signals; a feed failure there marks signals stale and never
+    changes the scan status (E3).
     """
     with factory() as session:
         scan = session.get(Scan, scan_id)
@@ -249,6 +255,9 @@ def run_scan(
                 asset = session.get(Asset, scan.asset_id)
                 _fail(session, scan, asset, FailureReason.FEED_UNAVAILABLE)
                 return
+            # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
+            # and never raises, so it does not change the OSV scan status.
+            enrich_asset(session, asset.id, kev_client, epss_client)
 
         status = status_for_result(warnings, has_findings)
         scan.warnings = [w.as_dict() for w in warnings]
@@ -278,9 +287,11 @@ def run_pending_scans(
     factory: sessionmaker[Session],
     reader: RepositoryReader,
     osv_client: OsvClientProtocol | None = None,
+    kev_client: KevClientProtocol | None = None,
+    epss_client: EpssClientProtocol | None = None,
 ) -> int:
     """Run every unfinished scan in order, synchronously; return how many ran."""
     ids = unfinished_scan_ids(factory)
     for scan_id in ids:
-        run_scan(factory, reader, scan_id, osv_client)
+        run_scan(factory, reader, scan_id, osv_client, kev_client, epss_client)
     return len(ids)

@@ -11,11 +11,23 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from github_stub import FixtureTransport
 from osv_stub import OsvFixtureTransport
-from vulntriage.db.enums import ScanTrigger
-from vulntriage.db.models import Asset, Base, Dependency, Finding, FindingDependency, Lifecycle, Scan
+from signals_stub import EpssFixtureTransport, KevFixtureTransport
+from vulntriage.db.enums import ScanTrigger, kev_value
+from vulntriage.db.models import (
+    Asset,
+    Base,
+    Dependency,
+    Finding,
+    FindingDependency,
+    Lifecycle,
+    Scan,
+    Signal,
+    Vulnerability,
+)
 from vulntriage.ingest.github import GitHubReader, RepositoryUnavailable
 from vulntriage.ingest.osv import OsvClient
 from vulntriage.ingest.scan import enqueue_scan, run_pending_scans, unfinished_scan_ids
+from vulntriage.ingest.signals import EpssClient, KevClient
 from vulntriage.worker import ScanWorker
 
 SHA = "a" * 40
@@ -298,14 +310,16 @@ def test_fixture_repositories_ingest_through_the_github_reader(factory, slug, ex
 
 def test_scan_produces_findings_with_aliases_and_fixed_version(factory) -> None:  # type: ignore[no-untyped-def]
     # End to end against the recorded pygoat repository (urllib3 1.26.9, PyYAML
-    # 5.1, Django 4.2, requests 2.28.2) and the committed OSV fixtures.
+    # 5.1, Django 4.2, requests 2.28.2) and the committed OSV, KEV and EPSS fixtures.
     aid = make_asset(factory, url="https://github.com/adeyosemanputra/pygoat")
     reader = GitHubReader(FixtureTransport().client(), token_provider=lambda: None)
     osv = OsvClient(OsvFixtureTransport().client())
+    kev = KevClient(KevFixtureTransport().client())
+    epss = EpssClient(EpssFixtureTransport().client())
     with factory() as session:
         enqueue_scan(session, session.get(Asset, aid), ScanTrigger.REGISTRATION)
         session.commit()
-    run_pending_scans(factory, reader, osv)
+    run_pending_scans(factory, reader, osv, kev, epss)
 
     assert asset_of(factory, aid).scan_status == "scanned, findings"
     with factory() as session:
@@ -324,6 +338,19 @@ def test_scan_produces_findings_with_aliases_and_fixed_version(factory) -> None:
             select(func.count()).select_from(FindingDependency).where(
                 FindingDependency.finding_id == findings["urllib3"].id))
         assert links == 1
+
+        # KEV/EPSS enrichment attached per CVE: urllib3's CVE is KEV-listed,
+        # pyyaml's is not; both carry an EPSS score. Asset context is present.
+        signals = {s.cve_id: s for s in session.scalars(select(Signal))}
+        urllib_cve = session.get(Vulnerability, findings["urllib3"].vulnerability_id).cve_id
+        pyyaml_cve = session.get(Vulnerability, findings["pyyaml"].vulnerability_id).cve_id
+        assert signals[urllib_cve].kev_listed is True
+        assert signals[pyyaml_cve].kev_listed is False
+        assert kev_value(urllib_cve, signals[urllib_cve].kev_listed).value == "KEV: listed"
+        assert signals[urllib_cve].epss_score is not None
+        assert signals[pyyaml_cve].epss_score is not None
+        asset = session.get(Asset, aid)
+        assert asset.criticality == "low" and asset.internet_facing is False
 
 
 # -- queue and worker ---------------------------------------------------------

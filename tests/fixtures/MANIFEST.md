@@ -63,3 +63,16 @@ public OSV API (`tests/fixtures/osv/packages.txt` lists the confirmed queries).
 | tests/fixtures/osv/vulns/PYSEC-2023-212.json | urllib3 duplicate advisory sharing CVE-2023-43804 (E9 merge) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
 | tests/fixtures/osv/vulns/GHSA-8q59-q68h-6hv4.json | PyYAML advisory, fixed 5.4 | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
 | tests/fixtures/osv/vulns/GHSA-withdrawn-0000.json | withdrawn advisory (E4: no finding at first sight) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+
+### KEV and EPSS fixtures (task 6, #78)
+
+Project-authored CISA KEV and FIRST EPSS responses in the real feed shapes,
+covering the CVEs the OSV fixtures carry (CVE-2023-43804 for urllib3, listed in
+KEV; CVE-2020-14343 for PyYAML, not listed). `make record-fixtures SOURCE=kev`
+and `SOURCE=epss` recapture these from the public feeds; the confirmed CVEs are
+in `tests/fixtures/cves.txt`.
+
+| path | fixture | source URL | capture date | commit SHA | capture method | token/private-data check |
+|---|---|---|---|---|---|---|
+| tests/fixtures/kev/known_exploited_vulnerabilities.json | KEV slice (CVE-2023-43804 listed; an unrelated listed CVE) | n/a (project-authored, shape mirrors cisa.gov) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written, public CVE metadata only) |
+| tests/fixtures/epss/epss.json | EPSS scores for CVE-2023-43804 and CVE-2020-14343 | n/a (project-authored, shape mirrors api.first.org) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |

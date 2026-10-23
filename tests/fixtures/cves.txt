@@ -1,0 +1,4 @@
+# CVEs that `make record-fixtures SOURCE=kev` and `SOURCE=epss` capture: one per line.
+# These line up with the OSV fixtures' advisories so a scan's findings have signals.
+CVE-2023-43804
+CVE-2020-14343
