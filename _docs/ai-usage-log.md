@@ -2133,8 +2133,8 @@ Copy this template for each new entry:
 - Fix: `_route_guards()` now walks the app with `fastapi.routing.iter_route_contexts(app.routes)`, the iterator `app.openapi()` itself uses, which yields each effective route with its full path, methods and `original_route` (endpoint and `dependant`). Removed the hand-written `_iter_leaf_routes()` and the TEMP `test_DIAG_dump_guard_map`; kept `test_the_route_tree_is_flattened_and_guards_are_read` as the regression test.
 - verification: `tests/test_openapi_conformance.py` 7 passed; `make verify` passed (389 tests, type check, whitespace, weakened-test check).
 
-- date: 2026-10-23
-- task/issue: task 2 (#75) — planning evidence and tracker hygiene
+#### date: 2026-10-23 — task/issue: task 2 (#75) — planning evidence and tracker hygiene
+
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to close out S1 by completing task 2 and to add a step-by-step local end-to-end verification guide under `_docs/`.
@@ -2142,11 +2142,21 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/npm), so dependencies cannot be installed here. The task 2 change is documentation only. CI on `main` is green at the time of writing (latest run success at `b007833`). The human must run `make verify` on a networked machine before relying on it.
 - human review (what I checked or corrected, or `none`): none yet. Follow-up recorded in `_docs/verify-locally.md` and the task-2 note: `make dev` / `dev-start` / `dev-stop` (task 11 / #85 acceptance) are not in the Makefile and should be filed as a follow-up.
 
-- date: 2026-10-23
-- task/issue: #133 — add make dev / dev-start / dev-stop and wire the frontend to the backend (completes task 11's single-command Tier A run)
+#### date: 2026-10-23 — task/issue: Tier B review, documentation tidy-up and Milestone B grooming (step 12 for Milestone B)
+
+- agent role: PM + doc tidy (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to review the Tier B roadmap for missing planning, tidy the spread-out/confusing docs, then groom the Tier B tasks into issue proposals with a "PM confirm with human" note (no issues filed yet).
+- files changed: `_docs/tier-b-build.md` (new consolidated Tier B build sheet), `_docs/roadmap.md` (S1 status -> done; D-numbering disambiguation note), `README.md` (index link to the build sheet), `_session-summaries/planning-2026-10-23-tier-b-grooming.md` (new grooming proposal, 8 issues with acceptance criteria and PM->human confirm blocks), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): docs only; no code changed. `make verify` not run (sandbox has no npm/PyPI; nothing to test). Assessment grounded in tasks.md, architecture.md, testing.md and roadmap.md.
+- human review (what I checked or corrected, or `none`): none yet. The grooming doc is a proposal; issues are not filed and await the human's confirmation of the open points. Also flagged separately: PR #135 is needed because the #133 work did not reach `main` via the earlier PR chain.
+
+#### date: 2026-10-23 — task/issue: #133 — add make dev / dev-start / dev-stop and wire the frontend to the backend (completes task 11's single-command Tier A run)
+
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to implement #133 (option A): real fetch service against the existing contract plus the make dev targets, so make dev runs end-to-end.
 - files changed: `frontend/src/services/httpService.ts` (new real fetch service), `frontend/src/services/index.ts` (bind services to httpServices; keep mock as a fixture), `frontend/vite.config.ts` (dev server API proxy, one origin), `frontend/src/test/vulntriage.test.tsx` (vi.mock @/services so route-render tests use the mock), `frontend/src/test/http-service.test.ts` (new: cookie, CSRF, 403->forbidden), `Makefile` (dev/dev-start/dev-stop; PROTECTED, human-approved), `AGENTS.md` (Commands: make dev; PROTECTED, human-approved), `_docs/verify-locally.md` (make dev is now the primary path), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no npm/PyPI), so the frontend suite and type check cannot run here. The human must run `make verify` (and a manual `make dev` end-to-end check) on a networked machine before merge; CI on the PR runs the frontend tests.
 - human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.
+
