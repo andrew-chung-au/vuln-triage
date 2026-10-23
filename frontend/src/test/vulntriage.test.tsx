@@ -811,7 +811,12 @@ describe("F-STATUS: finding status, rank and signal read view", () => {
     setUser(DEMO_USER);
     renderApp("/findings/f1"); // brief available, fixVersion 3.2.4 == fixedVersion 3.2.4
     expect(await screen.findByText(/Unsafe deserialisation/)).toBeInTheDocument();
-    expect(screen.getByText(/3\.2\.4/)).toBeInTheDocument();
+    // The brief's fix version (3.2.4) matches the finding's fixed version; assert
+    // on the brief's own "Fix version:" line (3.2.4 appears several times on the page).
+    const fixLine = screen.getByText(
+      (_content, el) => el?.tagName === "P" && /Fix version:/.test(el.textContent ?? "") && /3\.2\.4/.test(el.textContent ?? ""),
+    );
+    expect(fixLine).toBeInTheDocument();
     expect(screen.queryByTestId("brief-unavailable")).not.toBeInTheDocument();
     expect(screen.queryByTestId("brief-pending")).not.toBeInTheDocument();
   });
