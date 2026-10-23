@@ -1809,3 +1809,80 @@ Copy this template for each new entry:
 - files changed: `README.md` (`f14ac52`); `AGENTS.md` (`bbce6fb`, protected); `_docs/roadmap.md` and this log; `_session-summaries/issue-108-plan-review.md`; the review file `fc89dcf`; the follow-up issue #109 (GitHub, no repository file)
 - verification (tests run, reviewer verdict): QA PASS at `46dd403` (comment 6354307995), `make verify` PASS (62 tests, type check, whitespace, no weakened tests), `make openapi-validate` OK (22 operations); `make assert-clean` PASS after QA and after the Reviewer; the AGENTS.md approval record on #108 matches `git show` (read-only `.scratch/` check, 0 mismatches)
 - human review (what I checked or corrected, or `none`): the human approved the AGENTS.md phase-line diff as written (decision question, 2026-10-23), accepted the Reviewer run 2 model, and approved filing one follow-up issue. Protected commit `bbce6fb` with `HUMAN_APPROVED=1`; record comment 6354792932. Commands that required approval: `HUMAN_APPROVED=1 git commit` for AGENTS.md (merits request, protected file); `gh issue create` for #109 (PM, merits request); `make issue-close N=108` (ask rule)
+
+### 2026-10-23 — Engineer: #74 backend skeleton and shared test harness
+
+- date: 2026-10-23
+- task/issue: #74 (task 1, "Backend skeleton with one passing test"), implemented as a subagent; issue not closed, QA not run
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: `opencode/deepseek-v4.1-flash-free` (OpenCode)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement the PM grooming comment 6355211703, with the human's D1 = A and approved dependency batch; no new key prompt saved
+- files changed: `backend/pyproject.toml`, `backend/uv.lock`, `backend/vulntriage/__init__.py`, `backend/vulntriage/main.py`, `tests/conftest.py`, `tests/network_guard.py`, `tests/test_smoke.py`, `tests/test_network_guard.py`, `tests/fixtures/MANIFEST.md` (commit `e673df2`); `.github/workflows/verify.yml` and `Makefile` (working-tree changes left uncommitted for approval at hand-over); this log
+- verification (tests run, reviewer verdict): `make test` PASS (frontend 62 tests, backend 3: `test_smoke`, `U-NET`, `I-NET`); `make verify BASE=8910c8a` PASS WITH WARNINGS (whitespace PASS; type check PASS; the only warnings are "test fixtures changed" for the new `tests/conftest.py` and `tests/fixtures/MANIFEST.md`, which are additions, not loosened fixtures); red run with the guard temporarily disabled: U-NET and I-NET both failed (`DID NOT RAISE OutboundNetworkBlocked`), temporary edit reverted; `LLM_MODE=live` manual run exited 4 before collection; scope greps empty; no QA or review yet
+- human review (what I checked or corrected, or `none`): none yet. Commands that required approval: `uv lock` and `make install` for the approved fastapi/uvicorn/sqlalchemy/pytest batch (network downloads, pre-approved by the human in this session); `git commit` including `.github/workflows/verify.yml` was blocked by the kit hook, which requires `HUMAN_APPROVED=1` (returned to the orchestrator; the CI file is uncommitted); the protected `Makefile` diff is left uncommitted for the orchestrator's `HUMAN_APPROVED=1` commit
+
+### 2026-10-23 — Orchestrator: #74 close-out
+
+- date: 2026-10-23
+- task/issue: #74 (task 1, "Backend skeleton with one passing test"), orchestration after the Engineer hand-over: commits, QA, decision point, close-out
+- agent role: Orchestrator (main session), resumed after a usage-limit stop; the earlier part of the session ran on `opencode/deepseek-v4.1-flash-free` and this close-out on Claude Code (`claude-sonnet-5-5`)
+- model: `claude-sonnet-5-5` (Claude Code) for the close-out steps recorded here
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to pick up the stopped session from its transcript; no new key prompt saved
+- files changed: `961f322` (CI: uv 0.13.1), `f2afe1e` (`Makefile`, protected), `4952e6b` (`AGENTS.md`, protected), `bacf137` (`_session-summaries/issue-074-backend-skeleton.md`); this log entry and the `_docs/roadmap.md` check-in. The first three commits were made in the earlier part of the session; the close-out only confirmed them against `git log` and the issue comments
+- verification (tests run, reviewer verdict): QA PASS at `f2afe1e` (comment 6356100822); QA's `make verify BASE=8910c8a` PASS WITH WARNINGS (62 frontend + 3 backend tests; the only warning is "test fixtures changed" for the new harness files); `make assert-clean` PASS after QA (as reported in the earlier session). I did not re-run `make verify` in the close-out; the tree was clean at `4952e6b`
+- human review (what I checked or corrected, or `none`): the human approved the Makefile diff (record 6355572492) and the AGENTS.md diff (record 6356140221), both committed with `HUMAN_APPROVED=1`, and approved filing the npm-vulnerability follow-up, filed as #111 (Not in S1). I checked the usage log's earlier Engineer entry: its "Makefile and CI uncommitted" statement was true at hand-over and is superseded by the commits above. Commands that required approval: `HUMAN_APPROVED=1 git commit` for `Makefile` and `AGENTS.md` (protected files); `make issue-comment` and `make issue-close` (ask rules)
+
+### 2026-10-23 — Engineer: #26 data model and SQLite persistence (implemented, committed)
+
+- date: 2026-10-23
+- task/issue: #26 (task 3, "Backend data model and SQLite persistence"), implemented as a subagent in two stages (second stage after the orchestrator ran `make backend-lock`/`backend-install` and committed the Makefile as d811e9b); issue not closed, QA not run
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement PM grooming comment 6356748748 with the human's six decisions (Alembic approved, `backend-lock` target only, no Brief, all notification enum values, ORM append-only guard, one `DATABASE_URL` setting); no new key prompt saved
+- files changed: `backend/uv.lock`, `backend/vulntriage/db/{__init__,enums,identity,models,session}.py`, `backend/alembic.ini`, `backend/migrations/{env.py,script.py.mako,versions/0001_initial_schema.py}`, `backend/pyproject.toml` (alembic), `tests/conftest.py`, `tests/test_db_schema.py`, `tests/test_db_migration.py`, `_docs/testing.md` (U-SCHEMA, U-ENUM, U-CONSTRAINT, U-AUDIT); this log
+- verification (tests run, reviewer verdict): after the lock, `make backend-test` first failed the drift test (the model's inferred float column vs the migration; fixed by declaring `Float` explicitly), then passed: 56 passed. `make verify` PASS WITH WARNINGS (frontend 62, backend 56, type check and whitespace PASS; the only warning is "test fixtures changed" for `tests/conftest.py`, which now enables the foreign-key pragma, a tightening; `tests/fixtures/MANIFEST.md` is flagged only because the diff base is origin/main). No QA or review
+- human review (what I checked or corrected, or `none`): none yet. Commands that required approval: protected `Makefile` commit d811e9b with `HUMAN_APPROVED=1` (merits request, protected file); `make backend-lock` and `make backend-install` (network, new dependency alembic 1.20.1 with mako 1.4.3 and markupsafe 3.0.4); WebFetch of the PyPI alembic JSON
+
+### 2026-10-23 — Orchestrator: #26 data model and SQLite persistence, close-out; #112 filed
+
+- date: 2026-10-23
+- task/issue: #26 (task 3), orchestration: PM grooming, Engineer, QA, decision point, close-out; and filing #112 (push-check image) at the human's request
+- agent role: Orchestrator (main session) with PM, Software Engineer and QA subagents
+- model: `claude-sonnet-5-5` (Claude Code) for the orchestrator and all three subagents
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction "work ok S1: #26 (task 3)", then the human's answers to the decision questions; no new key prompt saved
+- files changed: `d811e9b` (`Makefile`, protected), `8ec6313` (Engineer's implementation), `b3e08a7` (`_docs/architecture.md`), `b6086fa` (`AGENTS.md`, protected), `_session-summaries/issue-026-data-model-sqlite.md`, `_docs/roadmap.md` check-in; this log entry
+- verification (tests run, reviewer verdict): QA PASS at `8ec6313` (comment 6356915049, 17 grooming criteria); QA's `make verify` PASS WITH WARNINGS (62 frontend + 56 backend tests; the only warning is the tightened `tests/conftest.py` fixture and the origin/main-based `MANIFEST.md` flag); `make assert-clean` PASS after QA with HEAD unchanged at `8ec6313`. I did not re-run `make verify` after the later `architecture.md` and `AGENTS.md` commits, which change no code
+- human review (what I checked or corrected, or `none`): the human approved Alembic, the exact `Makefile` diff (record 6356828269) and the `AGENTS.md` diff (record 6356930604), the architecture rewording, and noting QA's risks only. I replaced one muddled criterion in the PM's #112 draft before filing. Commands that required approval: `HUMAN_APPROVED=1 git commit` for `Makefile` and `AGENTS.md` (protected files); `make backend-lock` and `make backend-install` (network, new dependency); `make issue-comment` and `make issue-close` (ask rules)
+
+### 2026-10-23 — Engineer: #112 push-check image Dockerfile (committed, not built)
+
+- date: 2026-10-23
+- task/issue: #112 (push-check image); issue not closed, QA not run
+- agent role: Software Engineer subagent, local sandbox on `main`
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #112 with the human's decisions (custom image, Python 3.12 baked in, `ci/push-check/Dockerfile`, all four extra tools); no new key prompt saved
+- files changed: `ci/push-check/Dockerfile` (new, commit 83260c0); this log. `AGENTS.md` not edited (proposed diff returned to the orchestrator)
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (62 frontend + 56 backend tests; the warning is the fixtures flag against origin/main from earlier issues, not from this change). The image was NOT built or tested: there is no Docker in this container. Versions looked up by web fetch: pip-audit 2.10.1 (PyPI), Terraform 1.17.0 with SHA-256 sums (releases.hashicorp.com), Python 3.12.15 (python.org), node:24.22.0-bookworm digest (Docker Hub), uv 0.13.1 release exists (GitHub). Unverified: the npm bundled in the base image, ghcr.io/astral-sh/uv:0.13.1 tag, offline `uvx` from the baked cache
+- human review (what I checked or corrected, or `none`): none. Commands that required approval: none
+
+### 2026-10-23 — Orchestrator: #112 push-check image (QA PASS on the static criteria; issue left open)
+
+- date: 2026-10-23
+- task/issue: #112 (push-check image), orchestration: PM draft and filing, Engineer, QA
+- agent role: Orchestrator (main session) with PM, Software Engineer and QA subagents
+- model: `claude-sonnet-5-5` (Claude Code) for the orchestrator and all three subagents
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's request to file an issue for the push-check failure, then their answers (custom image, Python baked in, Dockerfile in the repo, all four extra tools, scheduled right after #26); no new key prompt saved
+- files changed: `83260c0` (`ci/push-check/Dockerfile`), `9902d07` (`AGENTS.md`, protected), `_session-summaries/issue-112-push-check-image.md`, `_docs/roadmap.md` check-in; this log entry
+- verification (tests run, reviewer verdict): QA PASS for the criteria checkable by reading (comment 6357004988) at `9902d07`; `make verify` PASS WITH WARNINGS (62 frontend + 56 backend tests); `make assert-clean` PASS after QA. The image was not built or run (no Docker in this container); the criteria that need the image are not verified and wait for the human
+- human review (what I checked or corrected, or `none`): the human approved filing #112, the image scope, and the `AGENTS.md` text (record 6356988788). I corrected one muddled criterion in the PM draft before filing. Commands that required approval: `HUMAN_APPROVED=1 git commit` for `AGENTS.md` (protected file); `make issue-comment` (ask rule)
+
+### 2026-10-23 — Orchestrator: #112 step-by-step guide for the human
+
+- date: 2026-10-23
+- task/issue: #112 (push-check image), at the human's request: a detailed guide saying where each step runs
+- agent role: Orchestrator (main session), no subagent
+- model: `claude-sonnet-5-5` (Claude Code)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked for a step-by-step guide in `_docs` with more detail than the bullet points, including where to run each command; no new key prompt saved
+- files changed: `_docs/push-check-image-guide.md`; this log
+- verification (tests run, reviewer verdict): none. The guide was written from `environments.md`, the `pre-push` script, the Dockerfile and QA's command list (comment 6357004988). None of its commands was run: there is no Docker here, and the sandbox's `git remote` setup was not checked. No QA
+- human review (what I checked or corrected, or `none`): none
