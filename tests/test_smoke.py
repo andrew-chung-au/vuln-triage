@@ -15,13 +15,19 @@ from vulntriage.main import app
 @pytest.mark.unit
 def test_smoke(sqlite_engine: Engine, sqlite_session: Session) -> None:
     assert isinstance(app, FastAPI)
-    # Task 4 (#76) added POST /assets; task 9a (#81) added the auth routes.
+    # Routes grow by task: #76 POST /assets; #81 auth; #82 the resource endpoints.
     paths = app.openapi()["paths"]
-    assert set(paths) == {"/assets", "/auth/login", "/auth/logout", "/auth/me"}
-    assert set(paths["/assets"]) == {"post"}
-    assert set(paths["/auth/login"]) == {"post"}
-    assert set(paths["/auth/logout"]) == {"post"}
-    assert set(paths["/auth/me"]) == {"get"}
+    assert set(paths) == {
+        "/assets", "/assets/{asset_id}", "/assets/{asset_id}/rescan",
+        "/findings", "/findings/{finding_id}", "/findings/{finding_id}/risk-acceptance",
+        "/auth/login", "/auth/logout", "/auth/me",
+    }
+    assert set(paths["/assets"]) == {"get", "post"}
+    assert set(paths["/assets/{asset_id}"]) == {"get", "patch"}
+    assert set(paths["/assets/{asset_id}/rescan"]) == {"post"}
+    assert set(paths["/findings"]) == {"get"}
+    assert set(paths["/findings/{finding_id}"]) == {"get"}
+    assert set(paths["/findings/{finding_id}/risk-acceptance"]) == {"post"}
 
     assert sqlite_session.execute(text("SELECT 1")).scalar_one() == 1
     assert inspect(sqlite_engine).get_table_names() == []
