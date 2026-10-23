@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test frontend-typecheck
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -118,6 +118,9 @@ frontend-install: ## Install frontend dependencies (npm ci)
 
 backend-install: ## Install backend dependencies from backend/uv.lock (uv sync --locked)
 	@cd backend && uv sync --locked
+
+backend-lock: ## Update backend/uv.lock after editing backend/pyproject.toml (uv lock)
+	@cd backend && uv lock
 
 backend-test: ## Run the backend pytest suite (needs make install first)
 	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
