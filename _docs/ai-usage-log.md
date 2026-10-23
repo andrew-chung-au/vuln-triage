@@ -2160,3 +2160,12 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no npm/PyPI), so the frontend suite and type check cannot run here. The human must run `make verify` (and a manual `make dev` end-to-end check) on a networked machine before merge; CI on the PR runs the frontend tests.
 - human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.
 
+
+- date: 2026-10-23
+- task/issue: #31 (T3) — Compose-based dev container so Postgres runs as a sibling service
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to pick up #31 and approved: add psycopg[binary], keep the write/restart/read persistence test as #68, use a Compose dev container with a small app Dockerfile.
+- files changed: `.devcontainer/compose.yaml` (new; app + pinned postgres:16.4 `db` sibling, no docker.sock, workspace-only host mount, pgdata named volume, healthcheck), `.devcontainer/Dockerfile` (new; python:3.12 app image), `.devcontainer/devcontainer.json` (converted from single `image` to Compose: dockerComposeFile/service/runServices/workspaceFolder; DATABASE_URL=postgresql+psycopg://vt:vt@db:5432/vt), `backend/pyproject.toml` (add psycopg[binary]>=3.2,<4; human-approved), `AGENTS.md` (protected: Environment line + the Docker gotcha, human-approved), `_docs/ai-usage-log.md` (this entry), session summary.
+- verification (tests run, reviewer verdict): NOT run here. The Kiro Web sandbox is read-only for uv's Python dir and has no PyPI, so `uv lock`, `make backend-lock`, `make backend-test` and the Docker rebuild cannot run. The human must, during the rebuild: run `make backend-lock` (psycopg is a new dependency, so `uv.lock` must be regenerated before `uv sync --locked`), rebuild the dev container, then run `make backend-test` with `DATABASE_URL` set to the `db` service and quote the result. The dedicated write/restart/read persistence test stays #68.
+- human review (what I checked or corrected, or `none`): the human approved psycopg[binary], the #68 scope split, and the Compose-devcontainer + app Dockerfile approach before the build; the protected AGENTS.md diff is approved in-session before its HUMAN_APPROVED commit.

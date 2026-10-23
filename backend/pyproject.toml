@@ -11,6 +11,7 @@ dependencies = [
     "httpx",
     "packaging",
     "argon2-cffi",
+    "psycopg[binary]>=3.2,<4",
 ]
 
 [dependency-groups]
