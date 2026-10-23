@@ -100,7 +100,7 @@ Data model unit cases (issue #26, in-memory SQLite, `unit`, network guard on):
 | `U-CONSTRAINT` | Keys, unique and foreign-key constraints; `identity_key`; duplicate finding; foreign keys enforced (`PRAGMA foreign_keys=ON`) | `IntegrityError` for each violation; exactly one row after a duplicate finding |
 | `U-AUDIT` | Audit entry round trip (actor, time, previous value, restore link); one target only; `risk accepted` needs a reason unless it restores; append-only | `IntegrityError` for the refused entries; `AppendOnlyError` on ORM update or delete, row unchanged |
 
-Other IDs used in the matrix: `U-UV`, `U-REQ` and `U-NPM` are the parser rows above; `U-ALIAS` (alias/merge lookup); `U-WITHDRAW` (withdrawal and restore); `U-KEV` and `U-EPSS` (signal derivation); `U-FEED` (feed failure and stale marker); `U-GUARD` (the brief guardrail, Showcase); `I-SCAN` (scan status and fixtures); `I-MCP` (the four MCP tools, Showcase); `F-ASSET` and `F-STATUS` (frontend vitest).
+Other IDs used in the matrix: `U-UV`, `U-REQ` and `U-NPM` are the parser rows above; `U-ALIAS` (alias/merge lookup); `U-WITHDRAW` (withdrawal and restore); `U-KEV` and `U-EPSS` (signal derivation); `U-FEED` (feed failure and stale marker); `U-GUARD` (the brief guardrail, Showcase); `U-GITHUB` (the GitHub reader's unit cases in `tests/test_github_reader.py`: GET only, `api.github.com` only, owner/repo/path validated before any request, no redirects, token never in errors or logs, `read_file` and the scan's include check agreeing on supported paths; added by #76); `I-SCAN` (scan status and fixtures); `I-MCP` (the four MCP tools, Showcase); `F-ASSET` and `F-STATUS` (frontend vitest).
 
 ## Integration tests: real Postgres and stored fixtures
 
@@ -120,6 +120,8 @@ Fixture inventory (all external calls use committed responses; paths are the pla
 | `tests/fixtures/llm/brief-*.json` (Showcase) | LLM outputs: valid, wrong version, URL, timeout, error, refusal | `LLM_MODE=stub` or pinned-model capture | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/malicious/advisory.json` | The `S-FIXTURE` malicious advisory | Project-authored fixture | 2026-10-22 planned baseline; recorder writes the actual date |
 
+Raw GitHub fixture layout (#76): the file captures are raw response bodies at `tests/fixtures/github/contents/<repo-slug>/<filename>` (not the `*.json` wrappers in the row above), plus the repository and commit captures for each repo slug.
+
 `ASSUMPTION: T-A2` the deliberate captures happen in the build tasks, not #56: the harness, the network guard and the empty `tests/fixtures/` directory come with task 1, the GitHub contents fixtures and `make record-fixtures` with task 4, the OSV fixtures with task 5, the KEV and EPSS fixtures with task 6, and task 13 completes the manifest and adds the malicious advisory fixture; `fixtures/MANIFEST.md` records the actual capture date and source.
 
 `make record-fixtures` (planned, task 4; the Makefile is protected, so it is its own human-approved commit) is the documented re-capture target. It never runs in CI. CI has no live-feed credentials and a network guard (task 1); `I-NET` calls a live URL and must fail. Fixtures are refreshed only by a deliberate, recorded re-capture, not by CI.
@@ -128,7 +130,7 @@ Integration cases through the app and database:
 
 | Case | `_docs/api.md` endpoint(s) | Asserts |
 |---|---|---|
-| `I-ASSET` | `POST /assets`, `GET /assets`, `GET /assets/{id}` | Registration, scan status, owner fields and warnings. |
+| `I-ASSET` | `POST /assets`, `GET /assets`, `GET /assets/{id}` | Registration, scan status, owner fields and warnings. Until #82 adds the reads, `I-ASSET` covers `POST /assets` only. |
 | `I-ASSET-UPDATE` | `PATCH /assets/{id}`, `GET /assets/{id}`, `GET /findings`, the backend delivery worker, in-process fake mail sink | Only a `security lead` may update (an `asset owner` gets `403`, an unknown id `404`, an empty body, an extra field or a bad email `422`, each with no change); a changed field writes one audit entry (user, time, previous value, new value) and an unchanged value writes none; a criticality or exposure change re-scores the findings; setting an owner email on an ownerless asset releases its `held: ownerless` job and the delivery sends exactly one email, and a name-only owner's `held: owner email missing` job is released the same way, while a `held: configuration error` job stays held. |
 | `I-FINDINGS` | `GET /findings`, `GET /findings/{id}` | Findings, aliases, fixed version, KEV/EPSS and asset context. |
 | `I-RANK` | `GET /findings` | Server rank order and rank reason. |
