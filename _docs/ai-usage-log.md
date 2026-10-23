@@ -1908,3 +1908,14 @@ Copy this template for each new entry:
 - files changed: commit 9a7950d (`github.py`, `scan.py`, `tests/test_github_reader.py`, `tests/test_ingest.py`); commit c3f5a46 (`_docs/testing.md`, `_docs/architecture.md`); this log
 - verification (tests run, reviewer verdict): `make backend-test` 246 passed; `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; warnings are the fixture files changed since origin/main, none touched in this follow-up). No reviewer run. After QA FAIL (comment 6359044871) the fixture-layout note in `_docs/testing.md` was corrected to the real `<owner>__<repo>/contents/<path>` layout
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none
+
+### 2026-10-23 — Orchestrator: #76 asset registration and repository ingestion, close-out
+
+- date: 2026-10-23
+- task/issue: #76 (task 4), orchestration: PM grooming, Engineer, QA twice, decision point, close-out
+- agent role: Orchestrator (main session) with PM, Software Engineer and QA subagents
+- model: `claude-sonnet-5-5` (Claude Code) for the orchestrator and all subagents
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to start the next task that would not interfere with #112, then to pause after grooming, then to continue; no new key prompt saved
+- files changed: `fb33f75` (dependencies), `95eb7bf` (`Makefile`, protected), `_session-summaries/issue-076-asset-ingestion.md`, `_docs/roadmap.md` check-in; this log entry. The Engineer's commits are recorded in its own entries
+- verification (tests run, reviewer verdict): QA FAIL once on a wrong fixture-layout line in `_docs/testing.md` (comment 6359044871), then QA PASS at `2f54435` (comment 6359063365); `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests); `make assert-clean` PASS after each QA run
+- human review (what I checked or corrected, or `none`): the human approved `httpx` and `packaging`, the exact `Makefile` diff (record 6358822028), the fixes at the decision point, and the held `AGENTS.md` line. I added the dependencies myself and ran the lock. Commands that required approval: `make backend-lock` and `make backend-install` (network, new dependencies); `HUMAN_APPROVED=1 git commit` for `Makefile` (protected file); `make issue-comment` and `make issue-close` (ask rules)
