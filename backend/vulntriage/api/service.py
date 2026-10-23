@@ -39,6 +39,7 @@ from vulntriage.db.models import (
     Finding,
     Lifecycle,
     NotificationJob,
+    Vulnerability,
     VulnerabilityAlias,
 )
 from vulntriage.ingest.notifications import create_top_tier_jobs
