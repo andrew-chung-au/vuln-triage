@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from vulntriage.api.security import may_accept_risk, require_session
+from vulntriage.api.service_auth import require_session_or_mcp
 from vulntriage.db.enums import ScanStatus, ScanTrigger, UserRole
 from vulntriage.db.models import Asset, AuditEntry, User
 from vulntriage.ingest.github import split_repository_url
@@ -184,8 +185,9 @@ def list_assets(request: Request, user: User = Depends(require_session)) -> list
 
 @router.get("/assets/{asset_id}")
 def get_asset(
-    asset_id: str, request: Request, user: User = Depends(require_session)
+    asset_id: str, request: Request, _: None = Depends(require_session_or_mcp)
 ) -> dict[str, object]:
+    # The one operation two consumers share (session cookie or MCP token).
     factory: sessionmaker[Session] = request.app.state.session_factory
     with factory() as session:
         asset = _lookup(session, asset_id)
