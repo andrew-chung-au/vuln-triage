@@ -59,10 +59,15 @@ services:
       # Publish the backend so the host test can drive login + POST /assets.
       - "127.0.0.1:8000:8000"
     depends_on:
+      # The observability services define no healthcheck, so wait only for
+      # "started" (service_healthy would error: "no healthcheck configured").
+      # The backend tolerates a not-yet-ready Collector (OTLP export is
+      # best-effort/retried, A40) and MailHog (the DeliveryWorker polls and
+      # retries), and the test polls each backend with a timeout.
       otel-collector:
-        condition: service_healthy
+        condition: service_started
       mailhog:
-        condition: service_healthy
+        condition: service_started
 
   # The frontend is not needed for the telemetry journey (the test drives the
   # backend API directly). Give it a trivial no-op override so a full
