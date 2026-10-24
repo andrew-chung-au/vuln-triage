@@ -100,6 +100,24 @@ _ALLOWED_LABEL_KEYS = frozenset({"finding_id", "tier", "alertname", "grafana_fol
 # alert label set only, not the envelope.
 _FORBIDDEN_IN_LABELS = ("owner", "@", "http", "bearer", "secret", "advisory")
 
+# How long past creation the firing job is backdated: just past the backend's
+# 30-minute W, so a `claimed` job reads 1 (A33; _OVERDUE_WINDOW is unchanged).
+_PAST_W_MINUTES = 31
+
+
+def _seed_firing_job() -> dict:
+    """Seed one overdue top-tier job that stays overdue for the whole case.
+
+    The job is `claimed` and backdated past W, not `failed`: the backend's
+    DeliveryWorker polls every 30s and retries `failed` jobs, so a seeded
+    `failed` job was delivered to MailHog and flipped to `sent` (gauge 0)
+    before the 60s metric export usually saw it as 1. The worker never selects
+    a `claimed` job, so it stays overdue until the case changes it. The #159
+    A-FIRE criterion allows either form ("failed, or pending/claimed backdated
+    past the 30-min window W").
+    """
+    return seed_overdue_job(state="claimed", tier="P1", age_minutes=_PAST_W_MINUTES)
+
 
 @pytest.fixture(autouse=True)
 def _clean_between_cases():  # type: ignore[no-untyped-def]
@@ -139,7 +157,7 @@ def _clean_between_cases():  # type: ignore[no-untyped-def]
 @pytest.mark.skipif(_RULE_ABSENT, reason="positive A-FIRE runs only with the rule present")
 def test_a_fire_one_overdue_job_fires_once_at_both_sinks() -> None:
     """A-FIRE: one overdue top-tier job → exactly one alert at BOTH sinks."""
-    result = seed_overdue_job(state="failed", tier="P1")
+    result = _seed_firing_job()
     finding_id = result["finding_id"]
 
     # The gauge reads the stored job state: the series goes to 1 for this finding.
@@ -184,7 +202,7 @@ def test_a_fire_negative_no_rule_no_firing() -> None:
     evaluate it, nothing is sent. If a future change re-added firing without the
     rule, this assertion would fail — which is the point.
     """
-    result = seed_overdue_job(state="failed", tier="P1")
+    result = _seed_firing_job()
     finding_id = result["finding_id"]
     wait_for_overdue_value(finding_id, 1)
 
@@ -222,7 +240,7 @@ def test_a_held_ownerless_never_fires() -> None:
 @pytest.mark.skipif(_RULE_ABSENT, reason="runs only in the rule-present pass")
 def test_a_tier_recorded_tier_wins_over_rescore() -> None:
     """A-TIER: the series/alert show the job's recorded tier, not the finding's new tier."""
-    result = seed_overdue_job(state="failed", tier="P1")
+    result = _seed_firing_job()
     finding_id = result["finding_id"]
     wait_for_overdue_value(finding_id, 1)
 
@@ -279,7 +297,7 @@ def test_a_gap_part2_metric_gap_sends_human_only_nodata() -> None:
     VERIFY: Grafana 11.3.0 NoData timing on the running stack — how many missing
     evaluations trigger it and that the NoData instance routes human-only.
     """
-    result = seed_overdue_job(state="failed", tier="P1")
+    result = _seed_firing_job()
     finding_id = result["finding_id"]
     wait_for_overdue_value(finding_id, 1)
     wait_for_webhook_requests(1)  # the finding's own firing reached the responder once
@@ -306,7 +324,7 @@ def test_a_gap_part2_metric_gap_sends_human_only_nodata() -> None:
 @pytest.mark.skipif(_RULE_ABSENT, reason="runs only in the rule-present pass")
 def test_a_resolve_resolution_is_not_a_second_alert() -> None:
     """A-RESOLVE: driving the job to sent resolves the alert; it is not a second alert (D1 option 1)."""
-    result = seed_overdue_job(state="failed", tier="P1")
+    result = _seed_firing_job()
     finding_id = result["finding_id"]
     wait_for_overdue_value(finding_id, 1)
     firing = wait_for_webhook_requests(1)
