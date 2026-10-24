@@ -1,0 +1,58 @@
+# Telemetry-journey test override (issue #172 PR 2, task 40 + task 25's
+# T-JOURNEY-BE). Used together with the app compose.yaml AND the observability
+# observability/compose.yaml under ONE project, so the backend, Postgres and the
+# observability services (Collector, Prometheus, Tempo, Loki, MailHog) share one
+# Docker network and reach each other by service name:
+#
+#   docker compose -p vt-telemetry \
+#     -f compose.yaml -f observability/compose.yaml -f compose.telemetry.yaml \
+#     up -d --wait
+#
+# This runs the REAL stack configuration (Postgres, migrations, the backend
+# image) with only the deltas a no-live-feed journey test needs: fixtures mode,
+# the test environment, the fixtures mount, and the OTLP + MailHog wiring. The
+# user-creation command runs inside the backend container, so nothing needs
+# Postgres published to the host. #159 and #160 reuse this override.
+#
+# Needs Docker; runs in CI (the telemetry job) or on the human's host, never in
+# the agent sandbox.
+
+services:
+  # The migrations one-shot already exists in compose.yaml; it builds the schema
+  # in Postgres before the backend serves. No override needed here.
+
+  backend:
+    environment:
+      # Feed source: replay the committed fixtures, no live feed (A42). The
+      # fail-closed gate permits fixtures only in dev/test, so set test.
+      VT_FEEDS: fixtures
+      DEPLOYMENT_ENVIRONMENT: test
+      # The fixtures are NOT in the image (the Dockerfile copies only
+      # vulntriage); they are bind-mounted read-only below and pointed at here.
+      VT_FIXTURES_ROOT: /fixtures
+      # Export OTLP to the Collector on the shared network (traces/metrics/logs).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: vulntriage-backend
+      SERVICE_VERSION: compose-test
+      # Deliver owner notifications to MailHog on the shared network.
+      MAIL_TRANSPORT: mailhog
+      MAIL_SENDER: vulntriage@sender.example
+      MAIL_SMTP_HOST: mailhog
+      MAIL_SMTP_PORT: "1025"
+    volumes:
+      # Read-only: the test replays these; the backend never writes them.
+      - ./tests/fixtures:/fixtures:ro
+    ports:
+      # Publish the backend so the host test can drive login + POST /assets.
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+
+  # The frontend is not needed for the telemetry journey (the test drives the
+  # backend API directly). Give it a trivial no-op override so a full
+  # `up` does not build/run it. VERIFY: a `profiles` guard or simply not
+  # selecting it; here we leave it to the harness to bring up only the services
+  # it names, so no frontend override is required.

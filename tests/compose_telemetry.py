@@ -35,6 +35,9 @@ from typing import Any
 
 TEMPO_URL = os.environ.get("VT_TEMPO_URL", "http://localhost:3200")
 LOKI_URL = os.environ.get("VT_LOKI_URL", "http://localhost:3100")
+PROMETHEUS_URL = os.environ.get("VT_PROMETHEUS_URL", "http://localhost:9090")
+MAILHOG_URL = os.environ.get("VT_MAILHOG_URL", "http://localhost:8025")
+BACKEND_URL = os.environ.get("VT_BACKEND_URL", "http://localhost:8000")
 
 # How long to wait for a signal to appear (export + ingest latency).
 DEFAULT_TIMEOUT_S = float(os.environ.get("VT_COMPOSE_POLL_TIMEOUT", "60"))
@@ -93,6 +96,40 @@ def wait_for_trace(trace_id: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict[
     return _poll(lambda: tempo_trace(trace_id), timeout_s)
 
 
+def tempo_search_trace_ids(span_name: str, lookback_s: int = 3600) -> list[str]:
+    """Trace ids that contain a span named ``span_name`` (Tempo search API).
+
+    VERIFY: Tempo 2.6.1 search endpoint ``GET /api/search?q=...`` (TraceQL) and
+    the result shape (``traces[].traceID``); the older ``tags=`` form is the
+    fallback. Used to find the journey's trace id from the ``scan.run`` root span
+    after a scan is driven over HTTP (the HTTP response does not expose it).
+    """
+    end = int(time.time())
+    start = end - lookback_s
+    query = f'{{ name = "{span_name}" }}'
+    url = f"{TEMPO_URL}/api/search?" + urllib.parse.urlencode(
+        {"q": query, "start": start, "end": end, "limit": 50}
+    )
+    payload = _get_json(url)
+    traces = payload.get("traces") or []
+    return [t.get("traceID") for t in traces if t.get("traceID")]
+
+
+def wait_for_trace_with_span(span_name: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> str:
+    """Wait until Tempo has a trace containing ``span_name``; return its trace id."""
+    ids = _poll(lambda: tempo_search_trace_ids(span_name) or False, timeout_s)
+    return ids[0]
+
+
+def _iter_spans(trace: dict[str, Any]):  # type: ignore[no-untyped-def]
+    """Yield each span dict in a Tempo trace document (both nesting shapes)."""
+    batches = trace.get("batches") or trace.get("resourceSpans") or []
+    for batch in batches:
+        scopes = batch.get("scopeSpans") or batch.get("instrumentationLibrarySpans") or []
+        for scope in scopes:
+            yield from scope.get("spans", [])
+
+
 def span_attribute_keys(trace: dict[str, Any]) -> set[str]:
     """Collect every span-attribute key present in a Tempo trace document.
 
@@ -100,16 +137,17 @@ def span_attribute_keys(trace: dict[str, Any]) -> set[str]:
     ``resourceSpans``) differ by Tempo version; this reads both common shapes.
     """
     keys: set[str] = set()
-    batches = trace.get("batches") or trace.get("resourceSpans") or []
-    for batch in batches:
-        scopes = batch.get("scopeSpans") or batch.get("instrumentationLibrarySpans") or []
-        for scope in scopes:
-            for sp in scope.get("spans", []):
-                for attr in sp.get("attributes", []):
-                    key = attr.get("key")
-                    if key:
-                        keys.add(key)
+    for sp in _iter_spans(trace):
+        for attr in sp.get("attributes", []):
+            key = attr.get("key")
+            if key:
+                keys.add(key)
     return keys
+
+
+def span_names(trace: dict[str, Any]) -> set[str]:
+    """Collect every span name present in a Tempo trace document."""
+    return {sp.get("name") for sp in _iter_spans(trace) if sp.get("name")}
 
 
 # -- Loki -------------------------------------------------------------------
@@ -251,3 +289,128 @@ def wait_for_log_entry(
             f"{exc}; waited for a Loki entry matching {logql!r} with marker {marker!r}. "
             f"Loki state: {_loki_diagnostic(logql)}"
         ) from exc
+
+
+# -- Prometheus -------------------------------------------------------------
+
+
+def prometheus_query(promql: str) -> list[dict[str, Any]]:
+    """Run an instant query and return its result vector (``data.result``).
+
+    VERIFY: the ``/api/v1/query`` response shape on Prometheus v2.54.1.
+    """
+    url = f"{PROMETHEUS_URL}/api/v1/query?" + urllib.parse.urlencode({"query": promql})
+    payload = _get_json(url)
+    if payload.get("status") != "success":
+        raise ComposeQueryError(f"prometheus query {promql!r} not successful: {payload}")
+    return payload.get("data", {}).get("result", [])
+
+
+def wait_for_metric(promql: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[dict[str, Any]]:
+    """Wait until an instant query returns at least one series.
+
+    The series set depends on the Collector exporter's scrape interval and
+    Prometheus's own scrape, so polling (not a single query) is required.
+    """
+    return _poll(lambda: prometheus_query(promql) or False, timeout_s)
+
+
+# -- MailHog ----------------------------------------------------------------
+
+
+def mailhog_messages() -> list[dict[str, Any]]:
+    """Return the messages MailHog currently holds.
+
+    VERIFY: MailHog v1.0.1 ``GET /api/v2/messages`` shape (``items`` with
+    ``Content``/``To``/``From``).
+    """
+    payload = _get_json(f"{MAILHOG_URL}/api/v2/messages")
+    if isinstance(payload, dict):
+        return payload.get("items", []) or []
+    return payload or []
+
+
+def mailhog_recipients(messages: list[dict[str, Any]]) -> set[str]:
+    """Collect recipient addresses from MailHog messages (VERIFY: v1.0.1 shape)."""
+    out: set[str] = set()
+    for msg in messages:
+        for to in msg.get("To", []) or []:
+            mailbox, domain = to.get("Mailbox"), to.get("Domain")
+            if mailbox and domain:
+                out.add(f"{mailbox}@{domain}")
+    return out
+
+
+def wait_for_mail(count: int = 1, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[dict[str, Any]]:
+    """Wait until MailHog holds at least ``count`` messages."""
+    return _poll(
+        lambda: (msgs := mailhog_messages()) if len(msgs) >= count else False,
+        timeout_s,
+    )
+
+
+# -- Backend HTTP (drive the journey over the published port) ---------------
+# The journey logs in as the seeded security-lead user and registers the pygoat
+# asset; the container's workers then run scan -> enqueue -> deliver. The
+# vt_session cookie is Secure, so (as tests/auth_helpers.py does) scrape it from
+# Set-Cookie and resend it; every non-GET carries the X-Requested-With CSRF
+# header.
+
+_CSRF_HEADER = "X-Requested-With"
+_CSRF_VALUE = "XMLHttpRequest"
+_COOKIE_NAME = "vt_session"
+
+
+def _backend_request(
+    method: str, path: str, *, cookie: str | None = None, json_body: Any | None = None
+) -> tuple[int, dict[str, str], bytes]:
+    """One request to the backend; returns (status, headers, body). Loopback only."""
+    data = None
+    headers: dict[str, str] = {}
+    if json_body is not None:
+        data = json.dumps(json_body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    if method != "GET":
+        headers[_CSRF_HEADER] = _CSRF_VALUE
+    if cookie is not None:
+        headers["Cookie"] = f"{_COOKIE_NAME}={cookie}"
+    req = urllib.request.Request(f"{BACKEND_URL}{path}", data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310 (loopback)
+            return resp.status, {k.lower(): v for k, v in resp.headers.items()}, resp.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, {k.lower(): v for k, v in (exc.headers or {}).items()}, exc.read()
+    except (urllib.error.URLError, OSError) as exc:
+        raise ComposeQueryError(f"{method} {path} failed: {exc}") from exc
+
+
+def backend_login(username: str, password: str) -> str:
+    """POST /auth/login; return the vt_session cookie value (raises on failure)."""
+    status, headers, body = _backend_request(
+        "POST", "/auth/login", json_body={"username": username, "password": password}
+    )
+    if status != 200:
+        raise ComposeQueryError(f"login failed ({status}): {body!r}")
+    set_cookie = headers.get("set-cookie", "")
+    import re
+
+    match = re.search(rf"{_COOKIE_NAME}=([^;]+)", set_cookie)
+    if not match:
+        raise ComposeQueryError(f"login response had no {_COOKIE_NAME} cookie: {set_cookie!r}")
+    return match.group(1)
+
+
+def backend_register_asset(cookie: str, asset: dict[str, Any]) -> dict[str, Any]:
+    """POST /assets with the session cookie; return the created asset JSON."""
+    status, _headers, body = _backend_request("POST", "/assets", cookie=cookie, json_body=asset)
+    if status != 201:
+        raise ComposeQueryError(f"POST /assets failed ({status}): {body!r}")
+    return json.loads(body)
+
+
+def wait_for_backend_health(timeout_s: float = DEFAULT_TIMEOUT_S) -> bool:
+    """Wait until the backend answers /health (the container is serving)."""
+    def _ok() -> bool:
+        status, _h, _b = _backend_request("GET", "/health")
+        return status == 200
+    return _poll(lambda: _ok() or False, timeout_s)
