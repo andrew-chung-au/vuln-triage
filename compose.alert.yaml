@@ -1,0 +1,105 @@
+# Alert-job test stack (issue #159, task 27). Layered on the telemetry stack:
+#
+#   docker compose -p vt-alert \
+#     -f compose.yaml -f compose.telemetry.yaml -f compose.alert.yaml up -d --wait ...
+#
+# compose.telemetry.yaml already `include`s observability/compose.yaml (so its
+# bind mounts — Grafana provisioning, Prometheus/Tempo/Loki configs — resolve
+# against observability/) and brings up the app stack (db, migrations, backend)
+# on the shared network. This file is a `-f` OVERRIDE merged on top; it adds only
+# what the `alert` job needs beyond the telemetry journey and never edits
+# observability/compose.yaml (the telemetry job shares it):
+#
+#   1. Grafana -> MailHog SMTP, so the US-14 human-email alert is delivered
+#      (Grafana sends the mail itself; observability/compose.yaml sets no SMTP).
+#   2. A stub webhook sink (the responder destination; the real receiver is
+#      task 28), run from the backend image already in the stack — NO new image
+#      or dependency (stdlib http.server, tests/alert_webhook_sink.py).
+#   3. The alert env on the backend and the responder/human-email wiring.
+#
+# VERIFY (external Compose/Grafana details, confirmed on the running stack):
+# - Overriding the `grafana` service (imported by the telemetry file's `include`)
+#   from this `-f` override file is supported on the CI Compose version
+#   (compose-go PR #559; the older "conflicts with imported resource" bug is
+#   fixed in current Docker Compose on ubuntu-latest). If a pinned CI Compose
+#   still errors, move the Grafana SMTP override into compose.telemetry.yaml's
+#   own file (it does the `include`, so it may redefine the service) guarded by
+#   the GF_SMTP_* env being empty for the telemetry job.
+# - The exact GF_SMTP_* keys grafana/grafana:11.3.0 needs and that MailHog
+#   (mailhog/mailhog:v1.0.1) accepts Grafana's SMTP with no auth / no TLS.
+# - The provisioning env the rule reads (VT_ALERT_HUMAN_EMAIL,
+#   VT_RESPONDER_WEBHOOK_URL, VT_RESPONDER_WEBHOOK_TOKEN) reaches the imported
+#   Grafana container (set by ci/test-compose.sh, throwaway values only).
+#
+# Needs Docker; runs in CI (the `alert` job) or on the human's host, never in the
+# agent sandbox.
+
+services:
+  # Grafana sends the human-email alert over SMTP. observability/compose.yaml
+  # sets no SMTP, so wire it to MailHog here (override of the imported service).
+  grafana:
+    environment:
+      # Keep the admin password observability/compose.yaml requires.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # SMTP -> MailHog on the shared network. VERIFY: the exact key set on
+      # grafana/grafana:11.3.0 (these are the documented 11.x keys).
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: mailhog:1025
+      GF_SMTP_FROM_ADDRESS: ${MAIL_SENDER:-vulntriage@sender.example}
+      GF_SMTP_FROM_NAME: VulnTriage Alerts
+      GF_SMTP_SKIP_VERIFY: "true"
+      # The alerting provisioning (us14-overdue.yaml) interpolates these at load.
+      VT_ALERT_HUMAN_EMAIL: ${VT_ALERT_HUMAN_EMAIL:?set VT_ALERT_HUMAN_EMAIL}
+      VT_RESPONDER_WEBHOOK_URL: ${VT_RESPONDER_WEBHOOK_URL:?set VT_RESPONDER_WEBHOOK_URL}
+      VT_RESPONDER_WEBHOOK_TOKEN: ${VT_RESPONDER_WEBHOOK_TOKEN:-alert-not-a-secret}
+    volumes:
+      # A-FIRE negative (rule-removed) toggle, as a harness-controlled mount, not
+      # a manual edit: VT_ALERT_PROVISIONING selects which provisioning tree
+      # Grafana loads. It defaults to the committed tree (task 26's rule present);
+      # ci/test-compose.sh's rule-absent pass points it at a copy with the rule
+      # file removed. The committed observability/grafana/provisioning/ tree is
+      # never changed. Same target path as the imported mount, so this overrides
+      # it (Compose merges volumes by target). The dashboards mount is re-stated
+      # because re-declaring the volumes list for a service replaces it.
+      - ${VT_ALERT_PROVISIONING:-./observability/grafana/provisioning}:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+      mailhog:
+        condition: service_started
+      webhook-sink:
+        condition: service_started
+
+  # The responder destination: a record-only HTTP sink (task 28 builds the real
+  # receiver). Built from the SAME backend image (build context ./backend, as
+  # compose.yaml's backend) so no new image or dependency is added; it only
+  # swaps the command to run the stdlib http.server recorder. It records each
+  # POST so the cases can read "0 to the responder" or "1 naming finding X".
+  #
+  # The sink module lives in tests/ (not baked into the backend image, which
+  # copies only vulntriage), so it is bind-mounted read-only and put on
+  # PYTHONPATH. The image's venv is on PATH; the recorder is pure stdlib.
+  webhook-sink:
+    build:
+      context: ./backend
+    command: ["python", "-m", "alert_webhook_sink"]
+    working_dir: /app
+    environment:
+      VT_WEBHOOK_SINK_PORT: "9099"
+      PYTHONPATH: /sink
+    volumes:
+      - ./tests/alert_webhook_sink.py:/sink/alert_webhook_sink.py:ro
+    ports:
+      # Published so the host-side case can read the recorded requests.
+      - "127.0.0.1:9099:9099"
+
+  backend:
+    environment:
+      # Carry the telemetry override's backend env (VT_FEEDS, OTLP, MAIL_*) and
+      # add the alert values; the seam (manage.py alert-*) runs in this image and
+      # writes to the same Postgres the overdue gauge reads.
+      VT_ALERT_HUMAN_EMAIL: ${VT_ALERT_HUMAN_EMAIL:?set VT_ALERT_HUMAN_EMAIL}
+      VT_RESPONDER_WEBHOOK_URL: ${VT_RESPONDER_WEBHOOK_URL:?set VT_RESPONDER_WEBHOOK_URL}
+      VT_RESPONDER_WEBHOOK_TOKEN: ${VT_RESPONDER_WEBHOOK_TOKEN:-alert-not-a-secret}
