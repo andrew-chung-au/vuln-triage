@@ -2260,3 +2260,12 @@ Copy this template for each new entry:
 - files changed: `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (new; 9 proposed Milestone C issues for tasks 23-29, 37, 38, 39, each with acceptance criteria from tasks.md/architecture.md/testing.md and a PM->human confirm block; filing/build order; the open D4 + responder-runtime + main-branch-protection gates on task 28; the dependency approvals), this log entry.
 - verification (tests run, reviewer verdict): docs only; nothing filed. Grounded in the authoritative task descriptions and the Tier C design sections; mirrors the Tier B grooming format.
 - human review (what I checked or corrected, or `none`): none yet; the grooming is a proposal awaiting the human's answers to the confirm blocks before any issue is filed.
+
+- date: 2026-10-23
+- task/issue: #154 (task 23) — OpenTelemetry instrumentation and the exclusion helper
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human said work on #154 and approved the 5-package OTel set (incl. opentelemetry-instrumentation-sqlalchemy, kept for the showcase) and showcase notes for host CPU/mem/RPS metrics and the alert owner-annotation decision.
+- files changed: new `backend/vulntriage/observability/` (allowlist.py, settings.py, tracing.py, metrics.py, logs.py, __init__.py); `backend/vulntriage/main.py` (setup_tracing/setup_metrics, FastAPI + SQLAlchemy instrumentation); `backend/vulntriage/ingest/scan.py` (scan.run root + repository.read/osv.query/signals.enrich/prioritise child spans; Scan.trace_id from the root span); `backend/vulntriage/ingest/notifications.py` (notification.enqueue span; traceparent from the span, placeholder removed); `backend/pyproject.toml` (5 OTel deps); `tests/test_observability.py` (new); `_docs/roadmap-showcase.md` (X10 host/RPS metrics); `_docs/tier-c-build.md` (alert owner-annotation note); session summary; this log entry.
+- verification (tests run, reviewer verdict): NOT run here — the sandbox has no PyPI, so OTel is not installed and make verify/the new tests cannot run. All changed files byte-compile; the allowlist filter was validated standalone (keeps exactly the A32 keys). The human runs make backend-lock then make verify on the host.
+- human review (what I checked or corrected, or `none`): the human approved the 5-package set and the two showcase notes before the build. Recorded a task-24 follow-up: the Collector must drop db.statement (SQLAlchemy instrumentation emits it) with a test.
