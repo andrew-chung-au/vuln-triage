@@ -68,6 +68,25 @@ jobs:
       - run: make backend-install
       - run: make test-integration
 
+  # Light dependency security scan (task 20): the fixture self-test then the
+  # real scan of the app's own production deps. Fails on high/critical, reports
+  # lower. Reaches public advisory services (not the app's live feeds) and uses
+  # no secret. pip-audit is installed as a tool, not an app dependency.
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "24.22.0" }
+      - run: uv tool install pip-audit==2.10.1
+      - run: make security-scan-selftest
+      - run: make security-scan
+
   # The full gate, kept so PRs still get the whitespace and weakened-test checks
   # that the split test jobs above do not cover; it also runs the suite as a
   # backstop. Needs both toolchains because make verify runs make test (frontend
