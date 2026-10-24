@@ -50,6 +50,19 @@ listed at the end for completeness.
 | C8 | 2 (evidence note), 39, #19 | Close-out: README sections for deployment, observability and the responder; #19 (AI usage report); the full rubric re-audit; the teardown plan ready for after grading; time reserved for the three peer reviews. | C7, B6 | the human runs teardown and the peer reviews | all | `_docs/rubric-evidence.md` at the final commit shows **all 12 criteria MET** |
 | C9 | 38 | The backend scheduler: the daily KEV/EPSS refresh and the scheduled re-scan run inside the backend (replaces the n8n schedule for submission), with the 24-hour catch-up rule. | S1 (tasks 8, 10 only) | a library scheduler would be a dependency (ask); a clock loop needs none | Application | a fake-clock test shows changed signals/ranks after the scheduled run, a re-scan of every asset, and no second notification job on a repeated run (`I-SCHED`) |
 
+## Note: the alert's `owner` annotation (course parity)
+
+The course (Part 4) includes **owner** in the alert payload (service, environment,
+version, owner, dashboard URL). Our C5 alert (task 26) carries the dashboard
+link, environment and version but **not an owner**, on purpose: the alert's only
+identifying label is the opaque finding id (tier is the one other label), so no
+owner contact detail enters telemetry (the US-13 no-leak guarantee). For showcase
+parity a **non-PII** owner/team annotation (e.g. the asset's team name, never an
+email) could be added — a deliberate, bounded choice, recorded here so it is not
+an accidental omission. Default for submission: keep the alert minimal (no owner
+field); revisit as a showcase enrichment (see X10 in `roadmap-showcase.md` for
+the related host/RPS metrics).
+
 ### Showcase (built after S5, not submission)
 
 | # | Task(s) | Builds | Why showcase |
