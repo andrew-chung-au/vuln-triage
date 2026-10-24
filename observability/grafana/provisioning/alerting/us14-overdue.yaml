@@ -1,0 +1,194 @@
+# US-14 alert rule, contact points and notification policy (issue #158, task
+# 26), provisioned as code. Grafana loads everything under
+# /etc/grafana/provisioning/alerting (the whole provisioning folder is mounted
+# read-only by observability/compose.yaml), so adding this file needs no Compose
+# change.
+#
+# Design authority: _docs/architecture.md § Observability, "US-14 alert rule".
+# In one line: `max by (finding_id, tier) (vt_top_tier_notification_overdue) == 1`,
+# evaluated every minute over a 30-minute window, one alert instance per finding;
+# a finding alert goes to the responder webhook *and* the human email, and the
+# NoData alert (no finding_id, meaning the backend/metric/Collector is down) goes
+# to the human email only.
+#
+# The backend already encodes the 30-minute window W and the held-job exemption
+# in the metric itself (task 26, backend/vulntriage/observability/metrics.py):
+# the series is 1 only once a top-tier job is `failed`, or `pending`/`claimed`
+# past W from creation; 0 once `sent` (kept 24h); held jobs emit nothing. So the
+# rule is a thin `== 1` threshold with `for: 0s` — the "30-minute window" lives
+# in the metric, not in a Grafana `for` duration.
+#
+# VERIFY (external Grafana details, confirmed on the pinned grafana/grafana:11.3.0
+# image when the human first runs the stack with Docker):
+#   - The file-provisioning schema below (apiVersion 1: groups/contactPoints/
+#     policies) loads clean on 11.3.0.
+#   - A classic-condition threshold (refId B, type `threshold`, evaluator `eq`
+#     param 1) fires one instance per {finding_id,tier} series returned by A.
+#   - A single contact point with two receivers (email + webhook) delivers to
+#     both; and a policy `matcher` of the form `finding_id =~ ".+"` matches only
+#     alerts that carry a non-empty finding_id (so the NoData instance, which has
+#     no finding_id, falls through to the default human-email route).
+#   - The webhook receiver's bearer auth header shape (authorization_scheme /
+#     authorization_credentials) on 11.3.0 — the responder receiver is built in
+#     task 28; here it is only the destination wiring.
+#   - repeat_interval of 8760h (1 year) is accepted as the "do not re-send"
+#     stand-in (A33: no repeat notification; a policy can only set a long repeat
+#     interval, not disable repeats outright).
+
+apiVersion: 1
+
+#######################################################################
+# Alert rule
+#######################################################################
+groups:
+  - orgId: 1
+    name: us14-notification-overdue
+    folder: VulnTriage
+    # Evaluated every minute (A33 / spec Open question 4).
+    interval: 1m
+    rules:
+      - uid: us14-top-tier-overdue
+        title: Top-tier owner notification overdue
+        # Condition is refId B (the == 1 threshold on A).
+        condition: B
+        data:
+          # A: the metric reduced to one value per finding/tier. An instant
+          # query, so each {finding_id,tier} series is its own alert instance.
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: max by (finding_id, tier) (vt_top_tier_notification_overdue)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+          # B: fire when A == 1. A classic threshold expression (datasource
+          # __expr__) so Grafana keeps A's labels on each instance.
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: B
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: eq
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+        dashboardUid: us13-journey
+        # The heartbeat series means an empty metric is never "no data"; a true
+        # NoData is the backend/metric/Collector being down, and it fires one
+        # instance with no finding_id (routed to the human only, see policies).
+        noDataState: Alerting
+        executionErrorState: Alerting
+        # The window lives in the metric (W = 30 min), so no extra pending here.
+        for: 0s
+        annotations:
+          summary: >-
+            A top-tier owner notification is overdue for finding
+            {{ $labels.finding_id }} (tier {{ $labels.tier }}).
+          # Dashboard link, environment and version (task 26 acceptance). No
+          # owner annotation for submission (US-14 payload carries finding id
+          # and tier only; architecture § Security boundaries).
+          # VERIFY: the exact dashboard URL path on 11.3.0 (/d/<uid>/<slug>).
+          dashboard_url: /d/us13-journey/us-13-journey
+          # environment/version come from the backend's OTel resource
+          # (deployment.environment, service.version). VERIFY: how the Collector's
+          # Prometheus export surfaces those resource attributes as metric
+          # labels on 11.3.0 — if they land as deployment_environment /
+          # service_version labels the templates below resolve per instance;
+          # otherwise set them from the stack's ${DEPLOYMENT_ENVIRONMENT} /
+          # ${SERVICE_VERSION} env instead.
+          environment: '{{ $labels.deployment_environment }}'
+          version: '{{ $labels.service_version }}'
+        labels: {}
+        isPaused: false
+
+#######################################################################
+# Contact points
+#######################################################################
+contactPoints:
+  # A finding alert (it names a finding) goes to BOTH destinations: the
+  # responder webhook and the human email. One contact point, two receivers.
+  - orgId: 1
+    name: finding-alert
+    receivers:
+      - uid: finding-human-email
+        type: email
+        settings:
+          # VERIFY: the human recipient address is set from the stack's config,
+          # not committed here (no real address in the repo).
+          addresses: '${VT_ALERT_HUMAN_EMAIL}'
+          singleEmail: true
+      - uid: finding-responder-webhook
+        type: webhook
+        settings:
+          # The responder receiver is task 28; this is the destination only.
+          url: '${VT_RESPONDER_WEBHOOK_URL}'
+          httpMethod: POST
+          # VERIFY: bearer auth header shape on 11.3.0.
+          authorization_scheme: Bearer
+          authorization_credentials: '${VT_RESPONDER_WEBHOOK_TOKEN}'
+
+  # The NoData alert (no finding_id) and the default route go to the human only;
+  # the responder is never woken without a finding.
+  - orgId: 1
+    name: human-email
+    receivers:
+      - uid: human-email-only
+        type: email
+        settings:
+          addresses: '${VT_ALERT_HUMAN_EMAIL}'
+          singleEmail: true
+
+#######################################################################
+# Notification policy
+#######################################################################
+policies:
+  - orgId: 1
+    # Default: anything without a finding_id (the NoData instance, and any other
+    # alert) reaches the human only.
+    receiver: human-email
+    group_by:
+      - grafana_folder
+      - alertname
+    routes:
+      # A finding alert: it carries a non-empty finding_id. Route to the
+      # combined responder-webhook + human-email contact point. Group by
+      # finding_id so each finding is one notification (tier never changes for a
+      # job, so one finding is one instance -> one group).
+      - receiver: finding-alert
+        matchers:
+          - finding_id =~ ".+"
+        group_by:
+          - finding_id
+        group_wait: 0s
+        group_interval: 1m
+        # A33: no repeat notification while the alert stays open. A policy can
+        # only set a long repeat interval, not disable repeats, so this is set
+        # far beyond any time an alert can stay unresolved.
+        repeat_interval: 8760h
+        continue: false

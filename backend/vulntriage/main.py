@@ -25,7 +25,7 @@ from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
 from vulntriage.mail.delivery import DeliveryWorker
-from vulntriage.observability.metrics import setup_metrics
+from vulntriage.observability.metrics import set_overdue_source, setup_metrics
 from vulntriage.observability.tracing import setup_tracing
 from vulntriage.scheduler import Scheduler
 from vulntriage.worker import ScanWorker
@@ -81,6 +81,11 @@ def create_app(
             SQLAlchemyInstrumentor().instrument(engine=engine)
             factory = create_session_factory(engine)
         app.state.session_factory = factory
+        # Wire the US-14 overdue gauge (task 26) to the live session factory.
+        # setup_metrics ran at app construction (below), before the DB existed,
+        # so the gauge emitted only the heartbeat until now. From here it reads
+        # stored job state each time Prometheus scrapes.
+        set_overdue_source(factory)
         worker: ScanWorker | None = None
         scheduler: Scheduler | None = None
         delivery: DeliveryWorker | None = None
@@ -107,6 +112,9 @@ def create_app(
         try:
             yield
         finally:
+            # Stop the gauge reading a factory whose engine is about to be
+            # disposed; it falls back to the heartbeat-only series.
+            set_overdue_source(None)
             if delivery is not None:
                 delivery.stop()
             if scheduler is not None:
