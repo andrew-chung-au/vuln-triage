@@ -7,24 +7,26 @@ runs — and never *skips* — in the no-Docker gate. A missing service is a har
 failure here, never a silent skip (``_docs/testing.md`` Telemetry: "A missing
 required service fails the job").
 
-Scope (Option C narrowing, human decision 2026-10-24): #157 ships only
-``T-REFUSE`` plus the ``make test-compose`` ``JOB`` selector. The
-delivery-dependent cases — the MailHog forms of ``I-OWNER-NOAWS`` /
-``I-OWNER-SENDER``, ``T-E6``, ``T-DELIVER-TRACE`` and the full ``T-JOURNEY-BE`` —
-need the *deployed backend container* to deliver (a host process delivering
-would not prove the container has no AWS credential; the ``I-OWNER-SENDER``
-refusal must come from the backend's guard). That containerized-backend-delivers
-harness is built with prerequisite #172, which carries those cases. See the
-``telemetry`` job-table row in ``_docs/testing.md``.
+Cases (built across #157 and #172):
+- ``T-REFUSE`` (#157): a host-side driver emits an app-helper span/log AND a
+  raw-OpenTelemetry span through the Collector; the test confirms the Collector
+  drops the excluded attributes (keys absent in Tempo, values absent in Loki)
+  while an allowlisted key survives — so a broken Collector config fails it.
+- ``T-JOURNEY-BE`` (#172 PR 2): drive one scan→notification journey through the
+  *deployed backend container* (login + ``POST /assets`` over the published
+  port, ``VT_FEEDS=fixtures``). Assert the submission span list shares one trace
+  id in Tempo, the ``vt_notifications_total`` metric and the JSON log carry that
+  id, and the owner email reaches MailHog.
+- ``I-OWNER-NOAWS`` / ``I-OWNER-SENDER`` MailHog forms (#172 PR 2): the container
+  delivers to MailHog with no AWS credential; a verified-sender mismatch is
+  refused by the backend's own guard and nothing is delivered.
 
-``T-REFUSE`` drives ``tests/compose_driver.py`` (a subprocess in the backend
-venv so its OTLP export reaches the Collector). The driver emits, in one trace,
-both an app-helper span/log (the code-level allowlist drops excluded attributes
-before export) AND a raw-OpenTelemetry-API span that bypasses the helper so the
-excluded attributes actually reach the Collector — which must strip them. The
-test then confirms Tempo holds none of the excluded keys (so a broken Collector
-config fails it, not just the code path) and Loki holds none of the excluded
-values, while the allowlisted ``vt.scan.id`` survives.
+All are marked ``compose`` and DESELECTED by ``make test`` / ``make verify``
+(the default ``-m "not compose"``), so they never run — and never *skip* — in
+the no-Docker gate. A missing service is a hard failure here, never a silent
+skip. The harness (``ci/test-compose.sh``) brings up the app + observability
+stacks under one project and seeds the login-able security-lead user inside the
+backend container (task 9's ``create-user``, #176).
 """
 
 from __future__ import annotations
@@ -49,10 +51,39 @@ _DRIVER_PATH_DIRS = [str(_TESTS_DIR), str(_REPO_ROOT / "backend")]
 
 from compose_telemetry import (
     ComposeQueryError,
+    backend_login,
+    backend_register_asset,
+    mailhog_messages,
+    mailhog_recipients,
     span_attribute_keys,
+    span_names,
+    wait_for_backend_health,
     wait_for_log_entry,
+    wait_for_mail,
+    wait_for_metric,
     wait_for_trace,
+    wait_for_trace_spans,
+    wait_for_trace_with_span,
 )
+
+# The security-lead user the harness seeded in-container, and the pygoat asset
+# whose KEV-listed dependency ranks P1 (exposed: internetFacing + high).
+_USERNAME = os.environ.get("VT_TEST_USERNAME", "telemetry-lead")
+_PASSWORD = os.environ.get("VT_TEST_PASSWORD", "telemetry-not-a-secret")
+_PYGOAT_ASSET = {
+    "name": "pygoat",
+    "ownerName": "Owner",
+    "ownerEmail": "owner@team.example",
+    "criticality": "high",
+    "internetFacing": True,
+    "repositoryUrl": "https://github.com/adeyosemanputra/pygoat",
+}
+# The submission backend span list for T-JOURNEY-BE (brief.generate is showcase,
+# not asserted).
+_JOURNEY_SPANS = {
+    "scan.run", "repository.read", "osv.query", "signals.enrich",
+    "prioritise", "notification.enqueue", "notification.deliver",
+}
 
 # Loki labels OTLP-ingested logs with the service name (service.name resource
 # attribute -> service_name label on Loki 3.x). The harness sets
@@ -141,3 +172,82 @@ def test_t_refuse_excluded_attributes_never_leave_the_collector() -> None:
     all_meta_keys = {k for _line, meta in entries for k in meta}
     for forbidden_key in ("owner.email", "authorization", "url.full", "db.statement"):
         assert forbidden_key not in all_meta_keys, f"{forbidden_key} leaked to Loki metadata: {all_meta_keys}"
+
+
+# -- T-JOURNEY-BE (the full scan->notification journey, one trace id) ----------
+
+
+def test_t_journey_be_one_trace_across_metric_trace_log_and_mailhog() -> None:
+    """US-13: one scan->notification journey, one trace id in metric/trace/log.
+
+    Drives the real backend container (login + POST /assets, VT_FEEDS=fixtures),
+    then asserts: the submission span list shares one trace id in Tempo; the
+    vt_notifications_total metric exists; a JSON log carries that trace id; and
+    the owner email reached MailHog.
+    """
+    assert wait_for_backend_health(), "backend container did not become healthy"
+    mail_before = len(mailhog_messages())
+
+    cookie = backend_login(_USERNAME, _PASSWORD)
+    asset = backend_register_asset(cookie, _PYGOAT_ASSET)
+    print(f"T-JOURNEY-BE: registered asset {asset.get('id')!r}; driving the journey")
+
+    # The scan runs in the container; find the JOURNEY trace by a span unique to
+    # it — notification.enqueue (the T-REFUSE driver also emits a scan.run, so
+    # searching scan.run can match the wrong trace). notification.enqueue is
+    # produced only by create_top_tier_jobs for a real P1 finding.
+    trace_id = wait_for_trace_with_span("notification.enqueue")
+    assert len(trace_id) == 32 and int(trace_id, 16) != 0
+    print(f"T-JOURNEY-BE: journey trace id {trace_id}")
+
+    # Tempo: wait until the trace carries the full submission backend span list
+    # (notification.deliver lands when the DeliveryWorker next polls, ~30s).
+    trace = wait_for_trace_spans(trace_id, _JOURNEY_SPANS)
+    names = span_names(trace)
+    # The only identifying labels on the deliver span are finding id and tier.
+    keys = span_attribute_keys(trace)
+    assert "vt.finding.id" in keys and "vt.tier" in keys, keys
+
+    # Metric: a sent top-tier notification is counted (same journey).
+    wait_for_metric('vt_notifications_total{vt_outcome="sent"}')
+
+    # Log: a JSON log line carries the same trace id (the journey join).
+    lines = wait_for_log_entry('{service_name="vulntriage-backend"}', trace_id)
+    assert lines, "no Loki log entry carried the journey trace id"
+
+    # Delivery: the owner email reached MailHog (the container delivered it).
+    messages = wait_for_mail(mail_before + 1)
+    assert "owner@team.example" in mailhog_recipients(messages), mailhog_recipients(messages)
+
+
+# -- I-OWNER-NOAWS (MailHog form): the container delivers with no AWS cred ------
+
+
+def test_i_owner_noaws_container_delivers_to_mailhog() -> None:
+    """The deployed container (no AWS credential) delivers the owner email.
+
+    Reuses the journey: if T-JOURNEY-BE's registration already delivered, this
+    confirms MailHog holds a message addressed to the owner. The container runs
+    with MAIL_TRANSPORT=mailhog and no AWS credential in its environment, so a
+    delivered message proves the no-AWS path.
+    """
+    assert wait_for_backend_health(), "backend container did not become healthy"
+    # Ensure a journey has run (idempotent: a second POST /assets for the same
+    # asset is rejected, so rely on the delivered mail being present).
+    messages = wait_for_mail(1)
+    assert "owner@team.example" in mailhog_recipients(messages), (
+        f"no owner email at MailHog: {mailhog_recipients(messages)}"
+    )
+
+
+# -- I-OWNER-SENDER (MailHog form) is NOT here --------------------------------
+# The honest container-level form requires the backend to attempt a send whose
+# From is not the configured verified sender — but the backend always sends
+# From = MAIL_SENDER, so there is no product path to trigger the mismatch at
+# container level, and a test-constructed wrong-From send would test the
+# transport class in isolation, not the deployed guard (the same hollowness
+# #157 avoided). The verified-sender refusal is covered by the unit case
+# tests/test_notifications.py::test_i_owner_sender_* (the backend's own guard,
+# under make test). The MailHog form is deferred to PR 3 / #159, where the demo
+# defect (task 28) gives a real in-container path that exercises a held/refused
+# delivery. Recorded in _docs/testing.md.

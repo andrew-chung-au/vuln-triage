@@ -338,3 +338,118 @@ def test_s_notify_advisory_url_is_defanged_in_sent_body(factory) -> None:  # typ
     assert "https://" not in body
     assert "hxxps[:]//evil[.]example/x" in body
     assert "www[.]evil[.]example" in body
+
+
+# -- S-NOTIFY-LOG (#177): the delivery log carries the job's journey trace id ---
+
+
+@pytest.fixture()
+def captured_logs():  # type: ignore[no-untyped-def]
+    """Capture emitted OTLP log records for one test via an in-memory exporter.
+
+    Attaches an InMemoryLogRecordExporter (on a SimpleLogRecordProcessor, so it
+    is synchronous — no flush timing) to the dedicated telemetry logger that
+    log_event emits on, mirroring the #174 pattern. Returns a getter for the
+    finished log records.
+    """
+    import logging as _logging
+
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogRecordExporter,
+        SimpleLogRecordProcessor,
+    )
+
+    from vulntriage.observability import logs as logs_mod
+
+    logs_mod.setup_logging()
+    exporter = InMemoryLogRecordExporter()
+    provider = LoggerProvider()
+    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    handler = LoggingHandler(level=_logging.NOTSET, logger_provider=provider)
+    logs_mod._otel_logger.addHandler(handler)
+    try:
+        yield exporter.get_finished_logs
+    finally:
+        logs_mod._otel_logger.removeHandler(handler)
+        provider.shutdown()
+
+
+def test_s_notify_log_delivery_log_shares_the_jobs_traceparent_trace_id(
+    factory, captured_logs
+) -> None:  # type: ignore[no-untyped-def]
+    """#177: the delivery outcome is logged with the job's journey trace id.
+
+    Not merely "a log was written" — the log record's trace id must equal the
+    trace id in the job's stored notification.enqueue traceparent (the journey
+    trace), because it is emitted inside the notification.deliver span (a child
+    of that traceparent). A log with any trace id is how this gap survived QA.
+    """
+    _seed_p1_asset(factory)
+    job = _only_job(factory)
+    # The journey trace id is the middle field of the stored W3C traceparent.
+    expected_trace_id = job.traceparent.split("-")[1]
+    assert len(expected_trace_id) == 32 and int(expected_trace_id, 16) != 0
+
+    sent = _worker(factory, RecordingTransport(VERIFIED_SENDER)).deliver_pending()
+    assert sent == 1
+
+    deliver_logs = [
+        lr.log_record
+        for lr in captured_logs()
+        if (lr.log_record.body == "notification.deliver"
+            or (lr.log_record.attributes or {}).get("vt.event") == "notification.deliver")
+    ]
+    assert len(deliver_logs) == 1, f"expected one delivery log, got {len(deliver_logs)}"
+    record = deliver_logs[0]
+    attrs = dict(record.attributes or {})
+    assert attrs.get("vt.outcome") == "sent", attrs
+    assert attrs.get("vt.finding.id"), attrs
+    # No excluded data leaked onto the log.
+    for forbidden in ("owner.email", "authorization", "url.full", "db.statement"):
+        assert forbidden not in attrs
+    # The journey join: the log's trace id equals the job's stored traceparent.
+    assert trace.format_trace_id(record.trace_id) == expected_trace_id
+
+
+def test_s_notify_log_failed_outcome_is_logged(factory) -> None:  # type: ignore[no-untyped-def]
+    """A failed delivery is logged too (the US-15 responder reads this from Loki)."""
+    import logging as _logging
+
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogRecordExporter,
+        SimpleLogRecordProcessor,
+    )
+
+    from vulntriage.observability import logs as logs_mod
+
+    _seed_p1_asset(factory)
+
+    class FailingTransport:
+        verified_sender = VERIFIED_SENDER
+
+        def send(self, message):  # type: ignore[no-untyped-def]
+            raise RuntimeError("smtp down")
+
+    logs_mod.setup_logging()
+    exporter = InMemoryLogRecordExporter()
+    provider = LoggerProvider()
+    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    handler = LoggingHandler(level=_logging.NOTSET, logger_provider=provider)
+    logs_mod._otel_logger.addHandler(handler)
+    try:
+        _worker(factory, FailingTransport()).deliver_pending()
+        records = [
+            lr.log_record for lr in exporter.get_finished_logs()
+            if lr.log_record.body == "notification.deliver"
+            or (lr.log_record.attributes or {}).get("vt.event") == "notification.deliver"
+        ]
+    finally:
+        logs_mod._otel_logger.removeHandler(handler)
+        provider.shutdown()
+
+    assert records, "a failed delivery emitted no notification.deliver log"
+    attrs = dict(records[-1].attributes or {})
+    assert attrs.get("vt.outcome") == "failed", attrs
+    assert attrs.get("vt.error.code") == "send_failed", attrs

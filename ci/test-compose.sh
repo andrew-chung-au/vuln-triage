@@ -42,38 +42,69 @@ if [ ! -x backend/.venv/bin/pytest ]; then
   exit 1
 fi
 
-# The observability stack publishes its ports to localhost (see
-# observability/compose.yaml). The backend-side driver (tests/compose_driver.py)
-# runs as a host process in the backend venv and exports to the Collector over
-# the published gRPC port; the pytest cases query the other services likewise.
-COMPOSE=(docker compose -p "$PROJECT" -f observability/compose.yaml)
+# The telemetry job runs the app stack (db, migrations, backend) AND the
+# observability stack together under ONE project via compose.telemetry.yaml
+# (which `include`s both), so the backend reaches the Collector/MailHog/Postgres
+# by service name on the shared network, with the fixtures mode, fixtures mount
+# and OTLP/mail wiring applied. The pytest cases drive the backend over its
+# published port (127.0.0.1:8000) and query Prometheus/Tempo/Loki/MailHog on
+# their published localhost ports. T-REFUSE still runs its host-side driver
+# against the same Collector.
+# compose.yaml + the telemetry override are a -f merge (so the backend override
+# applies); the override `include`s observability/compose.yaml (so its bind
+# mounts resolve against observability/). See compose.telemetry.yaml's header.
+COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml)
 
-# OTLP settings the driver reads (observability/settings.py). The T-REFUSE
-# driver only emits a span and a log through the Collector; it does not deliver
-# mail or open a database, so no MAIL_* / DATABASE_URL is needed here (those
-# return with the delivery-dependent cases in #172). GRAFANA_ADMIN_PASSWORD is
-# required by the compose file; a throwaway value is fine for the test project.
+# Env the host-side T-REFUSE driver reads (observability/settings.py). The
+# containerized journey reads its env from compose.telemetry.yaml, not here.
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
 export OTEL_SERVICE_NAME="vulntriage-backend"
 export DEPLOYMENT_ENVIRONMENT="test"
 export SERVICE_VERSION="compose-test"
+# Required by the compose files; throwaway values for the test project only.
 export GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-test-only-not-a-secret}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-vt-test-not-a-secret}"
+
+# The security-lead user the journey logs in as (seeded inside the container, so
+# the password is piped on stdin and never on a command line). The test reads
+# these too (to log in over HTTP).
+export VT_TEST_USERNAME="telemetry-lead"
+export VT_TEST_PASSWORD="telemetry-not-a-secret"
+export VT_BACKEND_URL="http://localhost:8000"
+# The journey's notification.deliver span/metric/mail appear only after the
+# DeliveryWorker's next poll (~30s) plus the batch-export flush, so give the
+# pollers more than the 60s default.
+export VT_COMPOSE_POLL_TIMEOUT="${VT_COMPOSE_POLL_TIMEOUT:-150}"
 
 cleanup() {
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
+seed_user() {
+  # Create the login-able security-lead user INSIDE the backend container
+  # (task 9's create-user command, #176), password piped on stdin via
+  # `run -T` so it is never a command-line argument. The migrations service has
+  # already built the schema in Postgres, which this shares.
+  echo "== seeding the security-lead user (in-container) =="
+  printf '%s\n' "$VT_TEST_PASSWORD" | "${COMPOSE[@]}" run -T --rm backend \
+    python -m vulntriage.manage create-user \
+    --username "$VT_TEST_USERNAME" --display-name "Telemetry Lead" \
+    --email "lead@telemetry.test" --role "security lead"
+}
+
 run_telemetry() {
-  echo "== starting the observability stack (project $PROJECT) =="
-  "${COMPOSE[@]}" up -d --wait || return 1
+  echo "== starting the app + observability stack (project $PROJECT) =="
+  # Bring up only the services the journey needs (not the frontend). --wait
+  # blocks until each is healthy; migrations runs to completion first.
+  "${COMPOSE[@]}" up -d --wait db migrations otel-collector prometheus tempo loki mailhog backend || return 1
+
+  seed_user || return 1
 
   mkdir -p .scratch
-  echo "== running the telemetry cases (T-REFUSE) =="
-  # The compose-marked case queries the stack; -m compose selects only it. -s
-  # (no capture) so the driver's VT_DRIVER_RESULT line and the T-REFUSE
-  # diagnostic (which excluded keys the helper path sent to the Collector) show
-  # in the CI log even on a green run — useful for the negative-check evidence.
+  echo "== running the telemetry cases (T-REFUSE + T-JOURNEY-BE + I-OWNER-* MailHog) =="
+  # -m compose selects the compose-marked cases; -s so the driver/journey
+  # diagnostics show in the CI log even on a green run.
   backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_telemetry.py
 }
 

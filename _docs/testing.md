@@ -326,7 +326,7 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
-| `telemetry` | `ubuntu-latest` with Compose | `make test-compose JOB=telemetry` | `T-REFUSE`; pending #172 (the containerized-backend-delivers harness): `T-JOURNEY-BE`, `T-E6`, the MailHog forms of `I-OWNER-NOAWS` and `I-OWNER-SENDER`, and `T-DELIVER-TRACE` |
+| `telemetry` | `ubuntu-latest` with Compose | `make test-compose JOB=telemetry` | `T-REFUSE`, `T-JOURNEY-BE`, and the MailHog form of `I-OWNER-NOAWS` (#172 PR 2); `I-OWNER-SENDER` MailHog form and `T-E6` pending #159/PR 3 |
 | `alert` | `ubuntu-latest` with Compose | `make test-compose JOB=alert` (planned) | `A-FIRE`, `A-TIER`, `A-GAP`, `A-RESOLVE`, `A-HELD` |
 | `responder` | `ubuntu-latest` with Compose | `make test-compose JOB=responder` (planned) | `P-DEMO-BE`, `P-PROD-REFUSAL`, `I-RESP-*` |
 
@@ -334,13 +334,14 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 
 Task 25 (#157) ships the `JOB` selector and **`T-REFUSE`** only: the backend's real span/log helpers emit excluded attributes through the Collector and the exported signals carry none of them. #157's acceptance criteria were narrowed to that case (human decision, 2026-10-24, "Option C done right").
 
-The other telemetry cases are **deferred to prerequisite #172** because they all require the *deployed backend container* to deliver — not a host-side test process:
-- `T-JOURNEY-BE` (the full `scan.run` → … → `notification.deliver` span list) needs the running backend wired to the feed fixtures to produce a P1 finding.
-- The MailHog forms of `I-OWNER-NOAWS` / `I-OWNER-SENDER` are only meaningful when the *container* delivers: `I-OWNER-NOAWS` proves the deployed container has no AWS credential, and `I-OWNER-SENDER`'s refusal must come from the backend's own guard (not a direct `transport.send` in the test).
-- `T-E6` (telemetry backend down, delivery unaffected) needs the container delivering to be a real assertion.
-- `T-DELIVER-TRACE` is a planned **delivery-half** case (the real `notification.deliver` span + metric + log share one trace id through the export pipeline). It is explicitly **not** `T-JOURNEY-BE` and must **not** count toward US-13 in the traceability matrix (that row stays `T-JOURNEY-BE`); it proves the export/link only.
+The other telemetry cases are built on the **containerized-backend-delivers harness of #172** (the backend runs as a container on `VT_FEEDS=fixtures`, drives a scan over HTTP, and the assertions read what actually arrived at MailHog/Prometheus/Tempo/Loki) — not a host-side test process:
+- `T-JOURNEY-BE` (#172 PR 2): the **submission journey is 7 spans** — `scan.run` → `repository.read` → `osv.query` → `signals.enrich` → `prioritise` → `notification.enqueue` → `notification.deliver`. `brief.generate` (the 8th span in the `T-JOURNEY` list above) is **Showcase** (the LLM brief is not built for submission), so it is not emitted or asserted. All 7 share one trace id; the `vt_notifications_total` metric and the structured `notification.deliver` JSON log carry the same id (the delivery worker logs every outcome — `sent`/`failed`/`held` — via `log_event`, #177), and the owner email reaches MailHog.
+- The MailHog form of `I-OWNER-NOAWS` (#172 PR 2) is only meaningful when the *container* delivers: it proves the deployed container (no AWS credential) sends the owner email to MailHog.
+- The MailHog form of `I-OWNER-SENDER` is **deferred to #159/PR 3**: the backend always sends From = `MAIL_SENDER`, so there is no product path to make it attempt a wrong-From send at container level, and a test-constructed wrong-From send would test the transport class in isolation, not the deployed guard. The verified-sender refusal is already covered by the unit case `tests/test_notifications.py::test_i_owner_sender_*`; the MailHog form lands with task 28's demo defect (#160/#159), which gives a real in-container held/refused-delivery path.
+- `T-E6` (telemetry backend down, delivery unaffected, **and alerts unaffected**) is **deferred to #159/PR 3**: its "alerts unaffected" clause needs the US-14 alert rule and the `alert` job (task 27 / #159), which do not exist yet, so it lands with — or after — them rather than asserting less than the case says.
+- `T-DELIVER-TRACE` is **retired, covered by `T-JOURNEY-BE` (#172)**. It was only the delivery-half fallback for when the full journey could not run; `T-JOURNEY-BE` asserts the same trace-id join across metric/trace/log and more, so the fallback is redundant. It is kept here for history and is in no job.
 
-#172 builds the containerized-backend-delivers harness (seed the database, let the container's `DeliveryWorker` deliver, assert via MailHog/Prometheus/Tempo/Loki) and carries all four cases above plus `T-JOURNEY-BE`. The `alert`/`responder` jobs are tasks 27 (#159) and 28 (#160). #157 closes on `T-REFUSE` + the selector; `make test-compose JOB=alert|responder` exits 3 ("not implemented in #157") until those tasks land.
+#172 PR 1 wired the feed clients + `VT_FEEDS=fixtures`; PR 2 adds the containerized harness, `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms. The `alert`/`responder` jobs are tasks 27 (#159) and 28 (#160); `make test-compose JOB=alert|responder` exits 3 ("not implemented") until those tasks land.
 
 `make test` remains the single local test command for the rubric's unit + integration requirement, and `make verify` remains the gate. No test is skipped to make a check pass.
 
