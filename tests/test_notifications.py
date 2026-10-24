@@ -318,11 +318,18 @@ def test_s_notify_advisory_url_is_defanged_in_sent_body(factory) -> None:  # typ
     with factory() as session:
         lifecycle = session.get(Lifecycle, job.lifecycle_id)
         finding = session.get(Finding, lifecycle.finding_id)
-        advisory = session.scalar(
-            select(Advisory).where(Advisory.vulnerability_id == finding.vulnerability_id)
+        # A vulnerability may carry more than one advisory (merged aliases, E9),
+        # and the worker reads one with no fixed order, so edit every advisory
+        # of this vulnerability. Then whichever one the worker picks carries the
+        # seeded URL, regardless of SQLite/Postgres row order.
+        advisories = list(
+            session.scalars(
+                select(Advisory).where(Advisory.vulnerability_id == finding.vulnerability_id)
+            )
         )
-        assert advisory is not None
-        advisory.summary = "Exploit at https://evil.example/x and www.evil.example"
+        assert advisories, "expected at least one advisory for the delivered finding"
+        for advisory in advisories:
+            advisory.summary = "Exploit at https://evil.example/x and www.evil.example"
         session.commit()
 
     sink = RecordingTransport(VERIFIED_SENDER)

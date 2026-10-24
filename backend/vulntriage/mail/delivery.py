@@ -277,8 +277,13 @@ class DeliveryWorker:
         asset = session.get(Asset, finding.asset_id)
         if asset is None:
             return None
+        # A vulnerability may carry more than one advisory (merged aliases, E9);
+        # order by osv_id so the delivered notification is deterministic across
+        # runs and backends rather than whatever row the DB returns first.
         advisory = session.scalar(
-            select(Advisory).where(Advisory.vulnerability_id == finding.vulnerability_id)
+            select(Advisory)
+            .where(Advisory.vulnerability_id == finding.vulnerability_id)
+            .order_by(Advisory.osv_id)
         )
         return asset, finding, advisory
 
