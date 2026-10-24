@@ -70,8 +70,11 @@ run_telemetry() {
 
   mkdir -p .scratch
   echo "== running the telemetry cases (T-REFUSE) =="
-  # The compose-marked case queries the stack; -m compose selects only it.
-  backend/.venv/bin/pytest -c backend/pyproject.toml -m compose tests/test_compose_telemetry.py
+  # The compose-marked case queries the stack; -m compose selects only it. -s
+  # (no capture) so the driver's VT_DRIVER_RESULT line and the T-REFUSE
+  # diagnostic (which excluded keys the helper path sent to the Collector) show
+  # in the CI log even on a green run — useful for the negative-check evidence.
+  backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_telemetry.py
 }
 
 run_not_implemented() {
