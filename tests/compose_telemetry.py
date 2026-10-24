@@ -141,14 +141,68 @@ def loki_lines(logql: str, since_s: int = 3600) -> list[str]:
     return lines
 
 
+def loki_labels() -> list[str]:
+    """The label names Loki currently knows (diagnostic). VERIFY: /labels API."""
+    payload = _get_json(f"{LOKI_URL}/loki/api/v1/labels")
+    return payload.get("data", []) or []
+
+
+def loki_label_values(label: str) -> list[str]:
+    """The values Loki has for ``label`` (diagnostic). VERIFY: /label/<n>/values."""
+    try:
+        payload = _get_json(f"{LOKI_URL}/loki/api/v1/label/{label}/values")
+    except ComposeQueryError:
+        return []
+    return payload.get("data", []) or []
+
+
+def _loki_diagnostic(logql: str) -> str:
+    """A one-string snapshot of what Loki holds, for a timed-out log wait.
+
+    Turns a blind "no line found" timeout into a decisive next step: it shows
+    the label names Loki knows, the values of common OTLP labels, and a sample
+    of whatever the selector *does* return — so the log says whether the
+    selector label is wrong, logs never arrived, or the marker is missing.
+    """
+    parts: list[str] = []
+    try:
+        parts.append(f"loki labels: {loki_labels()}")
+    except ComposeQueryError as exc:
+        parts.append(f"loki labels query failed: {exc}")
+    for label in ("service_name", "service", "exporter", "job"):
+        values = loki_label_values(label)
+        if values:
+            parts.append(f"{label} values: {values}")
+    try:
+        sample = loki_lines(logql)[:5]
+        parts.append(f"sample lines for {logql!r}: {sample}")
+    except ComposeQueryError as exc:
+        parts.append(f"sample query failed: {exc}")
+    # Also try a wide selector so we see lines even if the given selector is wrong.
+    try:
+        wide = loki_lines('{service_name=~".+"}')[:5]
+        parts.append(f'sample lines for {{service_name=~".+"}}: {wide}')
+    except ComposeQueryError as exc:
+        parts.append(f"wide query failed: {exc}")
+    return " | ".join(parts)
+
+
 def wait_for_log_line(logql: str, contains: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[str]:
     """Wait until at least one line matching ``logql`` contains ``contains``.
 
     Returns the matching lines. Polling (rather than a single fetch) closes the
     loophole where slow ingestion returns nothing and the caller's "no excluded
-    value in any matching line" check passes without inspecting anything.
+    value in any matching line" check passes without inspecting anything. On
+    timeout it raises with a Loki diagnostic (labels + sample lines), so a blind
+    "no line" result is turned into a decisive next step rather than a guess.
     """
-    return _poll(
-        lambda: [ln for ln in loki_lines(logql) if contains in ln] or False,
-        timeout_s,
-    )
+    try:
+        return _poll(
+            lambda: [ln for ln in loki_lines(logql) if contains in ln] or False,
+            timeout_s,
+        )
+    except ComposeQueryError as exc:
+        raise ComposeQueryError(
+            f"{exc}; waited for a line matching {logql!r} containing {contains!r}. "
+            f"Loki state: {_loki_diagnostic(logql)}"
+        ) from exc
