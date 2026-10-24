@@ -13,7 +13,7 @@ socket (`AGENTS.md` Project gotchas), so Compose stacks, live dependency scans,
 and AWS applies are authored by the agent and **verified by the human**. This
 file collects those hand-offs so a cloud session has one checklist.
 
-Last updated: 2026-10-24.
+Last updated: 2026-10-24 (#159 alert job: CI job committed; cross-ref to verify-locally.md §7b).
 
 ---
 
@@ -125,10 +125,11 @@ app + observability + webhook-sink stack and drives firing from stored job state
 through the task-26 Grafana rule — so it is authored here and **verified by the
 human/CI under Docker**. `make verify` in the sandbox is unaffected: the cases are
 `compose`-marked and deselected, and the seam's own logic is covered under
-`make test` (`tests/test_manage.py`). The CI `alert` job for
-`.github/workflows/verify.yml` is **uncommitted pending human approval** (exact
-diff in the Engineer comment on #159). **No new dependency; `backend/uv.lock`
-unchanged.**
+`make test` (`tests/test_manage.py`). The CI `alert` job in
+`.github/workflows/verify.yml` was **human-approved and committed**
+(`HUMAN_APPROVED=1`, commit `adf3733`, mirrors the `telemetry` job). **No new
+dependency; `backend/uv.lock` unchanged.** How to run the job locally:
+`_docs/verify-locally.md` §7b.
 
 - [ ] (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=alert` is green: it brings up `compose.yaml` + `compose.telemetry.yaml` + `compose.alert.yaml` under the `vt-alert` project, seeds an overdue top-tier job with the in-container seam, and passes the A-* cases; then the rule-absent negative pass passes. Wire the CI `alert` job (the proposed `.github/workflows/verify.yml` change) once approved and confirm it is green on the PR. Expect the `VERIFY:` shapes to need a fix on the first real run — that is normal.
 - [ ] `VERIFY:` the exact `GF_SMTP_*` keys on `grafana/grafana:11.3.0` and that `mailhog/mailhog:v1.0.1` accepts Grafana's SMTP with no auth / no TLS (the human-email alert is delivered by Grafana, not the backend; wired in `compose.alert.yaml`).
@@ -138,7 +139,7 @@ unchanged.**
 - [ ] `VERIFY:` that overriding the imported `grafana` service (env + the provisioning/dashboards volumes) from `compose.alert.yaml` as a third `-f` file works on the pinned CI Compose version (compose-go PR #559 fixed the old "conflicts with imported resource" bug). If a pinned version still errors, move the Grafana SMTP override into `compose.telemetry.yaml` (it does the `include`), guarded by the `GF_SMTP_*`/`VT_ALERT_*` env being empty for the telemetry job.
 - [ ] `VERIFY:` the A-FIRE-negative toggle — that Grafana provisions cleanly with the rule file absent from the `VT_ALERT_PROVISIONING` copy (no rule = no firing, not an error), and that `up -d --force-recreate --no-deps grafana` reloads it mid-run.
 - [ ] Also under `make verify` (no Docker): `tests/test_manage.py` covers the seam (`alert-seed`/`alert-set`/`alert-rescore`/`alert-clear`) against `compute_overdue_series` on SQLite, and `tests/test_marker_hygiene.py` now allows `test_compose_alert.py` to carry `compose` (the two allowed modules).
-- [ ] Protected-file approval: the `.github/workflows/verify.yml` `alert` job (mirrors `telemetry`) is proposed in the Engineer comment and must be human-approved before it is committed (`HUMAN_APPROVED=1`) and before #159 closes. The `Makefile` already wires `COMPOSE_JOBS=alert` (no Makefile change).
+- [x] Protected-file approval: the `.github/workflows/verify.yml` `alert` job (mirrors `telemetry`) was human-approved and committed (`HUMAN_APPROVED=1`, commit `adf3733`). The `Makefile` already wires `COMPOSE_JOBS=alert` (no Makefile change).
 - [ ] Note: `I-OWNER-SENDER` MailHog form and `T-E6` stay follow-ups (Out of scope in #159).
 - [ ] Close #159 when `make test-compose JOB=alert` (both passes) is green in CI with the approved `alert` job.
 
@@ -146,6 +147,12 @@ unchanged.**
 
 ## Convention
 
+- This file is the **single consolidated checklist** of every open human/CI
+  verification action, grouped by issue. For *how to run* the app and the
+  Compose test jobs (`make dev`, `make compose-up`, `make test-compose`), see
+  the step-by-step guide in `_docs/verify-locally.md` (§6 app, §7 Compose stack,
+  §7b the Compose test jobs); this file holds the per-issue items you tick off
+  while you run them.
 - An item here is the agent saying "I wrote and offline-checked this; it needs a real run I can't do." The agent records the same steps in the issue's session summary; this file is the cross-issue index.
 - Prefer the smallest capable environment: CI for anything a workflow already runs; a Codespace/cloud session for Docker/network; the human's machine only for AWS applies and secrets.
 - After a run, paste the result on the issue (and tick here). Keep this file to **open** items only.
