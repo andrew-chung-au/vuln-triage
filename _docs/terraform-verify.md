@@ -1,9 +1,14 @@
-# Verifying the Terraform (task 17 / #141)
+# Verifying the Terraform (task 17 / #141; task 21 / #142)
 
 How to check the `terraform/` modules before and after applying them. The agent
 writes the Terraform; **the human runs every `terraform apply`** and performs the
-checks in §3-§5 (the agent holds no AWS credentials and never applies —
+checks in §3-§6 (the agent holds no AWS credentials and never applies —
 `_docs/architecture.md` § Security boundaries, `_docs/aws-setup.md`).
+
+Task 21 (#142, the automatic dev deploy) adds **one** read-only permission to the
+deploy-roles module; §6 is its own re-apply-and-verify section. A later task that
+changes any `terraform/` file must add the same kind of note: say which module to
+re-apply and what to check.
 
 This runbook is the single place that says what "the Terraform is verified"
 means. It complements, and does not replace:
@@ -52,6 +57,7 @@ Deploy-roles module:
 - [ ] OIDC provider: reused when it already exists (the `create_oidc_provider` variable is `false`), created only when absent — one provider per URL per account (`VERIFY:` the account; `_docs/aws-setup.md` step 7.3).
 - [ ] Trust policy audience is `sts.amazonaws.com`; subject is limited to **this** repository, `ref:refs/heads/main` for the dev role and `environment:production` for the prod role. No wildcard over other repositories or over pull requests (`VERIFY:` the OIDC `sub` claim format).
 - [ ] Dev role can run only the dev deploy on the server; prod role only the production deploy. Neither can change IAM, Terraform state or the server configuration, or read secrets.
+- [ ] Dev role's deploy policy (task 21 / #142): `ssm:SendCommand` scoped to `project=vuln-triage` instances + the `AWS-RunShellScript` document, `ssm:GetCommandInvocation`/`ssm:ListCommandInvocations`, and a **read-only** `ec2:DescribeInstances` (no resource scoping is possible, so it is on `*`). Confirm there is **no** `ec2:StartInstances`/`StopInstances`/`RunInstances`/`TerminateInstances` or any other mutating action — the role only reads state and sends the deploy command (`_docs/architecture.md` Cost controls (2): the deploy "first reads the instance state").
 
 Server module:
 - [ ] Security group opens **80 and 443 only**; **no SSH (port 22)** and **no key pair**. Access is AWS SSM Session Manager (the instance role has `AmazonSSMManagedInstanceCore`).
@@ -96,12 +102,35 @@ bucket), confirm **no resource tagged `project=vuln-triage` remains** (Tag Edito
 or Resource Groups; `VERIFY:`), the Elastic IP is released, and the next bill
 shows no running charges.
 
+## 6. Re-apply for the automatic dev deploy (task 21 / #142)
+
+Task 21 adds the `deploy-dev` job to `.github/workflows/deploy.yml` (deploy the
+`dev` Compose project on merge to `main`, and skip-and-report when the server is
+stopped). For the job to "first read the instance state" before it calls the
+server, the **dev deploy role gains a read-only `ec2:DescribeInstances`
+statement** in `terraform/deploy-roles/main.tf`. This is the only Terraform
+change for #142.
+
+Re-apply (the human, with AWS):
+
+- [ ] **Re-apply the deploy-roles module** (`terraform apply` in `terraform/deploy-roles/`). The role ARN is unchanged, so the GitHub variable `AWS_DEV_ROLE_ARN` does **not** change. Confirm the second `terraform plan` shows **"No changes"** (idempotence).
+- [ ] The dev role now has the §2 permissions, including `ec2:DescribeInstances` and **no** mutating EC2 action (re-check the §2 dev-role item).
+
+Then the end-to-end check for #142 (needs a push to `main`):
+
+- [ ] **Server running:** a merge to `main` with the tests green runs `deploy-dev`, which deploys the `dev` project by image tag and records the tag and both image digests in the job summary (the deploy log). `https://dev.<elastic-ip>.sslip.io` answers the new build (no rebuild on the server — it pulls the tag).
+- [ ] **A red test leaves the previous version running:** a merge whose tests fail does not deploy (the push-to-`main` build/deploy is gated by the required test jobs); the running `dev` build is unchanged.
+- [ ] **Server stopped (the nightly stop):** a merge while the instance is `stopped` ends with the visible summary **`dev deploy skipped: server stopped`** — the job does **not** call the server, is **not** a pass-as-deployed and **not** a failed deploy. After starting the server (EC2 → Instances → Start) and re-running the workflow, the deploy completes (`_docs/aws-setup.md` step 10, `_docs/architecture.md` Cost controls (2)).
+
+Note: the `deploy-dev` job runs only on push to `main`; pull requests never
+receive an AWS role (confirmed by the `deploy` workflow not running on PRs).
+
 ## Notes / VERIFY (settled at apply time)
 
 These carry `VERIFY:` in `_docs/architecture.md` / `_docs/aws-setup.md` and are
 confirmed against the AWS/Terraform docs when the human applies:
 
-- SSM Run Command (or an equivalent) as the deploy mechanism.
+- SSM Run Command (or an equivalent) as the deploy mechanism. Task 21 (#142) implements it as `ssm:SendCommand` on the `AWS-RunShellScript` document, with the dev role reading state via `ec2:DescribeInstances`; confirm on the running stack that the instance is an SSM-managed target and the command runs under the AL2023 shell.
 - S3-native state locking (no DynamoDB lock table) in the Terraform version used; if absent, a lock table is added to the bootstrap module.
 - `t3.medium` sizing (fallback `t3.small`).
 - Let's Encrypt rate limits for the shared `sslip.io` name; the staging-cert / `nip.io` fallback.
