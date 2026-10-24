@@ -25,6 +25,7 @@ from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
 from vulntriage.mail.delivery import DeliveryWorker
+from vulntriage.observability.logs import setup_logging
 from vulntriage.observability.metrics import set_overdue_source, setup_metrics
 from vulntriage.observability.tracing import setup_tracing
 from vulntriage.scheduler import Scheduler
@@ -130,6 +131,7 @@ def create_app(
     # notification.enqueue traceparent work in every configuration.
     setup_tracing()
     setup_metrics()
+    setup_logging()
 
     # The app is served behind a reverse proxy at /api, which strips the prefix,
     # so routes stay mounted at /findings, /assets, etc. and the tests are

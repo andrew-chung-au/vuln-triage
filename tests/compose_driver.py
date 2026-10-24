@@ -110,6 +110,13 @@ def _flush_providers() -> None:
     if callable(mp_flush):
         mp_flush()
 
+    from opentelemetry._logs import get_logger_provider
+
+    logger_provider = get_logger_provider()
+    lp_flush = getattr(logger_provider, "force_flush", None)
+    if callable(lp_flush):
+        lp_flush()
+
 
 _COMMANDS = {"refuse": cmd_refuse}
 
