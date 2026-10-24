@@ -63,6 +63,7 @@ Planning documents:
 - [_docs/reviews/2026-10-16-final-rubric-impact.md](_docs/reviews/2026-10-16-final-rubric-impact.md) — impact of the final rubric on the plan (issue #11)
 - [_docs/roadmap.md](_docs/roadmap.md) — order of the open work, score checkpoints and progress check-ins
 - [_docs/tier-b-build.md](_docs/tier-b-build.md) — consolidated Tier B (S2-S3) build sheet: per-milestone task, dependency, human prerequisite and done-when
+- [_docs/tier-c-build.md](_docs/tier-c-build.md) — consolidated Tier C (S4) build sheet: observability, alert and on-call milestones, build order, and the open D4 / human prerequisites
 - [_docs/roadmap-showcase.md](_docs/roadmap-showcase.md) — showcase track: work built after the submission
 - [_docs/aws-setup.md](_docs/aws-setup.md) — human-side AWS and GitHub setup for the Tier B/C deployment
 - [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work

@@ -2229,3 +2229,11 @@ Copy this template for each new entry:
 - files changed: `tests/conftest.py` (replace the single-shared-connection rollback with fresh-schema isolation: db_engine drop_all at setup/teardown on Postgres, each test's factory runs create_all as on SQLite; remove the Alembic _run_migrations helper and its call), `_session-summaries/issue-138-postgres-integration.md` (record the change and the reason), this log entry.
 - verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
 - human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
+- date: 2026-10-23
+- task/issue: Tier C build sheet (roadmapping document, like tier-b-build.md)
+- agent role: PM / doc (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start roadmapping the Tier C build document.
+- files changed: `_docs/tier-c-build.md` (new; consolidated Tier C/S4 build sheet: per-milestone C2-C9 table with task, builds, depends-on, human step/decision, criterion and done-when; the showcase C1/C4 split; the task-37-built-inside-C3 build-order note; the dependency chain; the open D4 + responder-runtime + main-branch-protection prerequisites; the score checkpoints), `README.md` (index link), this log entry.
+- verification (tests run, reviewer verdict): docs only; no code. Grounded in roadmap.md § Tier C milestones, tasks.md tasks 23-29/37-39, architecture.md § Observability / § Responder agent / § Security boundaries, and testing.md. Points to the sources rather than restating design; adds no new precedence rule.
+- human review (what I checked or corrected, or `none`): none yet. Flags that D4 (responder false-positive rule, a protected specs.md change) is still open and blocks C6, and that the responder runtime and main branch protection are human prerequisites before task 28.
