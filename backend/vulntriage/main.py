@@ -13,6 +13,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy.orm import Session, sessionmaker
 
 from vulntriage.api.assets import router as assets_router
@@ -22,6 +24,8 @@ from vulntriage.api.security import LoginThrottle
 from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
+from vulntriage.observability.metrics import setup_metrics
+from vulntriage.observability.tracing import setup_tracing
 from vulntriage.worker import ScanWorker
 
 
@@ -69,6 +73,10 @@ def create_app(
         factory = session_factory
         if factory is None:
             engine = create_db_engine()
+            # SQLAlchemy auto-instrumentation: DB spans nested under the journey.
+            # db.statement is NOT on the allowlist, so it is dropped in code and
+            # again at the Collector (task 24), so raw SQL never leaves telemetry.
+            SQLAlchemyInstrumentor().instrument(engine=engine)
             factory = create_session_factory(engine)
         app.state.session_factory = factory
         worker: ScanWorker | None = None
@@ -84,12 +92,21 @@ def create_app(
             if engine is not None:
                 engine.dispose()
 
+    # OpenTelemetry (task 23): install the SDK providers before the app is
+    # built. Export is a no-op without a Collector endpoint (A40), but real span
+    # contexts are always created, so the journey trace, metrics and the
+    # notification.enqueue traceparent work in every configuration.
+    setup_tracing()
+    setup_metrics()
+
     # The app is served behind a reverse proxy at /api, which strips the prefix,
     # so routes stay mounted at /findings, /assets, etc. and the tests are
     # unaffected. The /api base lives in openapi.yaml's servers.url; the
     # FastAPI(root_path=...) constructor arg is deprecated in this version, so
     # it is not set here (it was only cosmetic for the self-served /docs).
     app = FastAPI(lifespan=lifespan)
+    # FastAPI auto-instrumentation: HTTP spans with the allowlisted http.* attrs.
+    FastAPIInstrumentor.instrument_app(app)
     app.state.session_factory = session_factory
     app.state.worker = None
     app.state.login_throttle = LoginThrottle()

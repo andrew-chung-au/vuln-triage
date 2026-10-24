@@ -1942,9 +1942,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (62 frontend + 246 backend tests; the one warning is `tests/fixtures/github/repositories.txt`, modified before this task and not staged). README grep for Dependabot, alerts, unlike, better than, instead of, available, works today and years showed only pre-existing text and the new "alert fires" line. No reviewer run
 - human review (what I checked or corrected, or `none`): none. Commands that required approval: none
 
-### 2026-10-23 — Agent: #77 (task 5) OSV matching and fixed-version resolution
+### 2026-10-24 — Agent: #77 (task 5) OSV matching and fixed-version resolution
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #77 (task 5): OSV matching, fixed-version resolution, finding creation
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -1954,9 +1954,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `uv sync`, `make install`, `make test` and `make verify` could NOT be run here. All changed/new Python files byte-compile under CPython 3.12.13. The two pure algorithms were validated standalone against the spec examples and edge cases: SemVer 2.0.0 precedence (semver.org §11.4 chain, leading `v`, numeric vs string); and the five-step fixed-version rule loaded from the real `osv_ranges`/`versions` modules (spec example 1.2.0→1.2.5 and 2.0.0→2.0.1, open-ended and last_affected-only → no fixed version, overlapping intervals → lowest value outside every containing interval, urllib3 merged-advisory case → 1.26.17). The alias union-find grouping was validated standalone (two advisories sharing a CVE → one group; a bridging advisory → one group). The full pytest suite still needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify` (push-check image `vulntriage-push-check:1`) before merging; the `Makefile` was not edited so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #78 (task 6) KEV and EPSS enrichment
+### 2026-10-24 — Agent: #78 (task 6) KEV and EPSS enrichment
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #78 (task 6): CISA KEV and FIRST EPSS signal enrichment per finding CVE
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -1966,9 +1966,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the KEV/EPSS fixtures parse and the signal parse helpers (date/float, catalogue membership, EPSS filtering) and `kev_value` derivation were validated standalone. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed. VERIFY: the KEV catalogue URL/fields and the EPSS `cve=` batch size/fields are marked in `signals.py`; confirm with a live `make record-fixtures SOURCE=kev` / `SOURCE=epss`
 
-### 2026-10-23 — Agent: #79 (task 7) deterministic ranking and rank reason
+### 2026-10-24 — Agent: #79 (task 7) deterministic ranking and rank reason
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #79 (task 7): deterministic tier, total order and rank reason per finding
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -1978,9 +1978,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the pure ranking logic (all four tier rules, the 0.10 inclusive threshold, the P1-first precedence, and the architecture worked example order `fnd-0001, 0002, 0004, 0005, 0003, 0006`) was validated standalone. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #80 (task 8) finding lifecycle, re-scan and audit trail
+### 2026-10-24 — Agent: #80 (task 8) finding lifecycle, re-scan and audit trail
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #80 (task 8): re-scan status transitions (fixed/withdrawn/reopen/restore) and the audit trail
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -1990,9 +1990,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY with no PyPI access, so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the full lifecycle state machine (US-10 fix, E4 withdraw/restore, E7 reopen, E8 close) was validated standalone against every transition. The full pytest suite needs a run by the human on a networked machine (or CI) before merge
 - human review (what I checked or corrected, or `none`): pending. The human should run `make install && make verify BASE=origin/main` before merging; the `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #80 follow-up, two fixes from the human's make verify run
+### 2026-10-24 — Agent: #80 follow-up, two fixes from the human's make verify run
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #80 (task 8), after the human ran `make install && make verify` (6 failed, 319 passed)
 - agent role: implementation agent (Kiro Web session), on `feat/80-lifecycle-rescan-audit`
 - model: Auto (server-selected)
@@ -2001,9 +2001,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the human's run reported 319 passed and 6 failed before these fixes; the failures were the FK violation on re-scan (5 cases) and the spurious first-rank escalation (1 case). Re-run still owed to the human — the Kiro Web sandbox has no PyPI access, so I could not run `make verify` here; the changed files byte-compile under CPython 3.12.13
 - human review: pending re-run of `make verify BASE=origin/main`
 
-### 2026-10-23 — Agent: #81 (task 9a) session authentication and CSRF guard
+### 2026-10-24 — Agent: #81 (task 9a) session authentication and CSRF guard
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #81 (task 9a): session cookie auth, CSRF header guard, login lockout, owner-match rule
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2013,9 +2013,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI, no argon2/fastapi installed), so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the dependency-free logic (login-lockout sliding window and expiry, the owner-match trim/case-fold rule, and the session-token hashing) was validated standalone. The full pytest suite needs a run by the human after `make backend-lock`
 - human review (what I checked or corrected, or `none`): the human approved adding `argon2-cffi`. Pending: `make backend-lock && make backend-install && make verify BASE=origin/main`. The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #82 (task 9b) findings, assets, re-scan and risk-acceptance API
+### 2026-10-24 — Agent: #82 (task 9b) findings, assets, re-scan and risk-acceptance API
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #82 (task 9b): the frontend resource endpoints behind the session guard
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2025,9 +2025,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI, no fastapi/argon2 installed), so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the affected-range projection was validated standalone. The contract's error order (risk acceptance: 404 then owner-403 then 422; registerAsset/updateAsset: role-403 before body-422) is enforced by reading the raw body and validating it after the earlier checks, instead of via a pydantic body param. The full pytest suite needs a run by the human (and will exercise the `test_api_assets.py` guard changes)
 - human review (what I checked or corrected, or `none`): pending `make verify BASE=origin/main`. The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #83 (task 10a) service API and notification jobs
+### 2026-10-24 — Agent: #83 (task 10a) service API and notification jobs
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #83 (task 10a): n8n/responder service operations, top-tier job creation, showcase stubs
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2038,9 +2038,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/fastapi/argon2), so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13; the service-auth decision table, the A27 due dates, the idempotency key and the traceparent format were validated standalone. The full pytest suite needs a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify BASE=origin/main`. `.env.example` left unchanged: the n8n/MCP tokens are Showcase and the responder token arrives with task 28, per `tasks.md`. The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #84 (task 10b) MCP and responder read APIs
+### 2026-10-24 — Agent: #84 (task 10b) MCP and responder read APIs
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #84 (task 10b): the three MCP read operations and getAsset's dual consumer; responder reads confirmed
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2051,9 +2051,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/fastapi), so `make install`/`make test`/`make verify` could NOT be run here. All changed/new files byte-compile under CPython 3.12.13. The full pytest suite needs a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify BASE=origin/main`. `.env.example` unchanged (MCP token is Showcase). The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #85 (task 11) frontend dashboard read views
+### 2026-10-24 — Agent: #85 (task 11) frontend dashboard read views
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #85 (task 11): the dashboard read views for assets and ranked findings
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2064,9 +2064,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY — the npm registry is blocked (registry.npmjs.org 403), so `npm ci`, `make frontend-test` and `make frontend-typecheck` could NOT be run here. The new tests use only symbols already imported in the suite and assert against the existing components' real markup (verified by reading `FindingsTable.tsx`, `Badges.tsx`, the asset/finding routes and `mockData.ts`: `formatEpss(null)` is `"EPSS: n/a"`, the status label text, the `asset-owner`/`asset-scan`/`rank-reason`/`brief-pending`/`brief-unavailable` test ids). The full frontend suite + type check need a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify` (runs the frontend suite and type check). The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #86 (task 12) risk acceptance, audit trail and re-scan UI
+### 2026-10-24 — Agent: #86 (task 12) risk acceptance, audit trail and re-scan UI
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #86 (task 12): the dashboard write path — accept risk, audit trail, manual re-scan
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2078,9 +2078,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox blocks the npm registry (`registry.npmjs.org` 403), so `npm ci`, `make frontend-test` and `make frontend-typecheck` could NOT be run here. The new tests use only symbols already imported in the suite and assert via `getByRole`/`getByLabelText`/direct service state (avoiding the ambiguous-text pitfall from #85), checked against the real `accept` route, `AuditTrail.tsx`, assets route and `mockService.ts`. The full frontend suite + type check need a run by the human. `I-RISK` (the backend half) already passes from #82
 - human review (what I checked or corrected, or `none`): pending `make verify`. The `Makefile` was not edited, so no protected-path approval was needed
 
-### 2026-10-23 — Agent: #87 (task 13) backend test layers and stored fixtures
+### 2026-10-24 — Agent: #87 (task 13) backend test layers and stored fixtures
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #87 (task 13): consolidate the backend unit and SQLite integration test layers, fixtures and manifest
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2092,9 +2092,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI), so `make test`/`make verify` could NOT be run here. All test files byte-compile under CPython 3.12.13; the marker coverage was audited (every file resolves to `unit`, `sqlite_integration` or a correct mix), the MANIFEST was confirmed to name every captured fixture with a source and capture date, and `--strict-markers` was confirmed not to require a mark (only to reject an unknown one). The full suite needs a run by the human
 - human review (what I checked or corrected, or `none`): pending `make verify`. The `Makefile` was not edited (so no protected-path approval); `backend/pyproject.toml` is not protected
 
-### 2026-10-23 — Agent: #88 (task 14) OpenAPI conformance and validation
+### 2026-10-24 — Agent: #88 (task 14) OpenAPI conformance and validation
 
-- date: 2026-10-23
+- date: 2026-10-24
 - task/issue: #88 (task 14): the I-CONTRACT conformance test comparing FastAPI's generated document with _docs/openapi.yaml
 - agent role: implementation agent (Kiro Web session, local sandbox on `main`)
 - model: Auto (server-selected)
@@ -2106,34 +2106,38 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/fastapi), so `make test`/`make verify` could NOT be run here. The test byte-compiles under CPython 3.12.13; the strict contract parser was run standalone against the real _docs/openapi.yaml and extracted exactly 22 operations with the right status codes (16x200, 3x202, 2x204, 1x201) and security counts (cookieAuth 9, mcpAuth 4, n8nAuth 6, responderAuth 2; login/logout public), which cross-checks the generated side's guard counts. The full suite needs a run by the human; `make openapi-validate` is unchanged (the contract was not edited)
 - human review (what I checked or corrected, or `none`): the human approved Option A. Pending `make verify`. The `Makefile` and `_docs/openapi.yaml` were not edited (openapi.yaml is read-only here), so no protected-path approval was needed
 
-#### 2026-10-23 — follow-up: #88 conformance test fix after first `make verify`
+#### 2026-10-24 — follow-up: #88 conformance test fix after first `make verify`
 
+- date: 2026-10-24
 - The human's first `make verify` run of PR #130 reported 383 passed, 5 failed: the 5 new conformance tests failed because `_generated_ops()` returned an empty set. Root cause: the generated side identified routes by the `APIRoute` class (`isinstance(route, APIRoute)`), which matched zero routes at the granularity the test iterated.
 - Fix (commit `bf3b633` on `feat/88-openapi-conformance`): the generated side now takes the path set, method set and success status from `app.openapi()["paths"]` — the document the test exists to check and the same source `test_smoke` reads successfully — and reads the security requirement off each route's `Depends` guard, matching routes to openapi operations by normalised path + method. Guards are found by duck-typing (`path` + `methods` + `dependant`), not by class identity. Removed the now-unused `from fastapi.routing import APIRoute` import; the two inline helper tests (`/health` exclusion, extra-route-fails) now reuse `_generated_ops(app)`.
 - Cross-check (standalone, since the sandbox has no PyPI/fastapi): the backend declares exactly 22 route operations with status codes 1×201, 3×202, 2×204, 16×200, and guard counts require_session 8, require_session_or_mcp 1, require_n8n 6, require_mcp 3, require_responder 2 (→ cookieAuth 9, mcpAuth 4, n8nAuth 6, responderAuth 2; login/logout public). These match the contract parser's 22 ops and the recorded status/security tallies, so the generated and contract sides reconcile.
 - verification: still pending the human's `make verify` (sandbox cannot run the fastapi suite). The file byte-compiles under CPython 3.12.13 and carries no trailing whitespace.
 
-#### 2026-10-23 — follow-up 2: #88 guard detection for GET /auth/me
+#### 2026-10-24 — follow-up 2: #88 guard detection for GET /auth/me
 
+- date: 2026-10-24
 - With the `openapi()`-derived generated side in place, the second `make verify` run passed path/method/status for all 22 operations and left a single failure: `('/auth/me', 'get')` reported no guard schemes (`set()`) against the contract's `{cookieAuth}`. `/auth/me` is guarded by `Depends(require_session)` like the other cookie routes, but `_guard_schemes()` scanned only the route dependant's top-level `dependencies` and missed it there.
 - Fix (commit `48789b2`): `_guard_schemes()` now walks the entire `dependant` tree — the root dependant plus every sub-dependency, with an `id()`-based cycle guard — so a guard call is found at whatever depth FastAPI nests it. The scheme map and the rest of the test are unchanged.
 - verification: pending the human's next `make verify` (the sandbox has no fastapi, so this cannot be run here). The file byte-compiles under CPython 3.12.13 and has no trailing whitespace.
 
-#### 2026-10-23 — follow-up 3: #88 guard read from the endpoint signature
+#### 2026-10-24 — follow-up 3: #88 guard read from the endpoint signature
 
+- date: 2026-10-24
 - The recursive dependant-tree walk still returned no schemes for `GET /auth/me`, so the guard is simply not reachable via `route.dependant.dependencies` the way the other cookie routes' guards are (that route takes the guard as a value, `user: User = Depends(require_session)`, with no `Request` parameter; the already-passing routes all take `request: Request` plus the guard).
 - Fix (commit `8d8d31b`): read guards from the source of truth — the endpoint function signature. Each parameter whose default is a FastAPI `Depends` marker exposes the dependency callable on `.dependency`; the reader collects any whose `__name__` is a known guard and recurses into dependency callables (cycle-guarded). The dependant-tree walk is kept as a backstop for router- or decorator-level `dependencies=[...]` that do not appear in the endpoint signature. Added `import inspect`.
 - verification: pending the human's next `make verify`. The file byte-compiles under CPython 3.12.13 and has no trailing whitespace. If this still misses `/auth/me`, the next step is a one-off diagnostic (printing the route's dependant tree and signature) run in the devcontainer, since the sandbox cannot import fastapi.
 
-#### 2026-10-23 — follow-up 4: #88 route walk through FastAPI's own route iterator
+#### 2026-10-24 — follow-up 4: #88 route walk through FastAPI's own route iterator
 
+- date: 2026-10-24
 - agent role: implementation agent (Claude Code cloud session, on `feat/88-openapi-conformance`)
 - model: see the session record (not recorded in the repository)
 - Root cause: the locked FastAPI (0.161.1) does not copy included routes onto `app.routes`; `include_router` adds one `_IncludedRouter` per router, whose routes live on `.original_router.routes` (not `.routes`). The diagnostic run in the devcontainer showed `app.routes` holding only the four docs routes plus four `_IncludedRouter` objects, so the guard map was empty for every API route. The earlier "only `/auth/me` fails" reading was the guard test stopping at its first failing assertion, not 21 routes passing.
 - Fix: `_route_guards()` now walks the app with `fastapi.routing.iter_route_contexts(app.routes)`, the iterator `app.openapi()` itself uses, which yields each effective route with its full path, methods and `original_route` (endpoint and `dependant`). Removed the hand-written `_iter_leaf_routes()` and the TEMP `test_DIAG_dump_guard_map`; kept `test_the_route_tree_is_flattened_and_guards_are_read` as the regression test.
 - verification: `tests/test_openapi_conformance.py` 7 passed; `make verify` passed (389 tests, type check, whitespace, weakened-test check).
 
-#### date: 2026-10-23 — task/issue: task 2 (#75) — planning evidence and tracker hygiene
+#### date: 2026-10-24 — task/issue: task 2 (#75) — planning evidence and tracker hygiene
 
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
@@ -2142,8 +2146,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no PyPI/npm), so dependencies cannot be installed here. The task 2 change is documentation only. CI on `main` is green at the time of writing (latest run success at `b007833`). The human must run `make verify` on a networked machine before relying on it.
 - human review (what I checked or corrected, or `none`): none yet. Follow-up recorded in `_docs/verify-locally.md` and the task-2 note: `make dev` / `dev-start` / `dev-stop` (task 11 / #85 acceptance) are not in the Makefile and should be filed as a follow-up.
 
-#### date: 2026-10-23 — task/issue: Tier B review, documentation tidy-up and Milestone B grooming (step 12 for Milestone B)
+#### date: 2026-10-24 — task/issue: Tier B review, documentation tidy-up and Milestone B grooming (step 12 for Milestone B)
 
+- date: 2026-10-24
 - agent role: PM + doc tidy (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to review the Tier B roadmap for missing planning, tidy the spread-out/confusing docs, then groom the Tier B tasks into issue proposals with a "PM confirm with human" note (no issues filed yet).
@@ -2151,8 +2156,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): docs only; no code changed. `make verify` not run (sandbox has no npm/PyPI; nothing to test). Assessment grounded in tasks.md, architecture.md, testing.md and roadmap.md.
 - human review (what I checked or corrected, or `none`): none yet. The grooming doc is a proposal; issues are not filed and await the human's confirmation of the open points. Also flagged separately: PR #135 is needed because the #133 work did not reach `main` via the earlier PR chain.
 
-#### date: 2026-10-23 — task/issue: #133 — add make dev / dev-start / dev-stop and wire the frontend to the backend (completes task 11's single-command Tier A run)
+#### date: 2026-10-24 — task/issue: #133 — add make dev / dev-start / dev-stop and wire the frontend to the backend (completes task 11's single-command Tier A run)
 
+- date: 2026-10-24
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to implement #133 (option A): real fetch service against the existing contract plus the make dev targets, so make dev runs end-to-end.
@@ -2160,7 +2166,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` NOT run — the Kiro Web sandbox is network-mode INTEGRATIONS_ONLY (no npm/PyPI), so the frontend suite and type check cannot run here. The human must run `make verify` (and a manual `make dev` end-to-end check) on a networked machine before merge; CI on the PR runs the frontend tests.
 - human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.
 
-#### date: 2026-10-23 — task/issue: #31 (T3) — Compose-based dev container so Postgres runs as a sibling service
+#### date: 2026-10-24 — task/issue: #31 (T3) — Compose-based dev container so Postgres runs as a sibling service
+
+- date: 2026-10-24
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to pick up #31 and approved: add psycopg[binary], keep the write/restart/read persistence test as #68, use a Compose dev container with a small app Dockerfile.
@@ -2168,7 +2176,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT run here. The Kiro Web sandbox is read-only for uv's Python dir and has no PyPI, so `uv lock`, `make backend-lock`, `make backend-test` and the Docker rebuild cannot run. The human must, during the rebuild: run `make backend-lock` (psycopg is a new dependency, so `uv.lock` must be regenerated before `uv sync --locked`), rebuild the dev container, then run `make backend-test` with `DATABASE_URL` set to the `db` service and quote the result. The dedicated write/restart/read persistence test stays #68.
 - human review (what I checked or corrected, or `none`): the human approved psycopg[binary], the #68 scope split, and the Compose-devcontainer + app Dockerfile approach before the build; the protected AGENTS.md diff is approved in-session before its HUMAN_APPROVED commit.
 
-#### date: 2026-10-23 — task/issue: Milestone B issues filed (#137-#144) after human confirmation of the grooming proposal
+#### date: 2026-10-24 — task/issue: Milestone B issues filed (#137-#144) after human confirmation of the grooming proposal
+
+- date: 2026-10-24
 - agent role: PM (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human confirmed the grooming proposal: file now, AWS account + Budgets ready so no D5 fallback date needed, security-scan tools and Terraform approved.
@@ -2176,8 +2186,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the Milestone A house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A convention.
 - human review (what I checked or corrected, or `none`): the human approved the grooming open points before filing.
 
-- date: 2026-10-23
-- task/issue: #137 (task 15) — one-command Compose stack, incl. the /api prefix move (Option B)
+#### date: 2026-10-24 — task/issue: #137 (task 15) — one-command Compose stack, incl. the /api prefix move (Option B
+
+- date: 2026-10-24 
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start #137, then (on hitting the SPA/API path collision) preferred Option B and asked for an impact analysis + proposal before changes; then approved the recommendations (Option B, root_path=/api, /api/health).
@@ -2185,8 +2196,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT run here — the Kiro Web sandbox has no Docker/PyPI and a read-only uv dir, so `make compose-up` and `make verify` cannot run. main.py byte-compiles. The human runs `make verify` (frontend + conformance must stay green; backend/tests unchanged by the /api move) and `make compose-up`, then hard-refreshes /findings to confirm the SPA loads.
 - human review (what I checked or corrected, or `none`): the human approved Option B and D1/D2 after reading the impact proposal; the protected Makefile (compose targets) is approved in-session before its HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #137 follow-up — document the Compose stack in _docs/verify-locally.md
+#### date: 2026-10-24 — task/issue: #137 follow-up — document the Compose stack in _docs/verify-locally.md
+
+- date: 2026-10-24  
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked that the verify steps live in _docs/verify-locally.md.
@@ -2194,8 +2206,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): docs only; no code changed. Not run (sandbox has no Docker/PyPI).
 - human review (what I checked or corrected, or `none`): none yet; part of PR #147.
 
-- date: 2026-10-23
-- task/issue: #137 fixes from make verify (human-run on the branch)
+#### date: 2026-10-24 — task/issue: #137 fixes from make verify (human-run on the branch)
+
+- date: 2026-10-24
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human ran make verify on feat/137-compose-stack; it FAILED on a stale .env.example test and warned on a deprecated root_path.
@@ -2203,8 +2216,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): byte-compiled; the new env-example test logic validated standalone against the real .env.example (passes). Full pytest not runnable here (no venv/PyPI). The human re-runs make verify on the branch.
 - human review (what I checked or corrected, or `none`): the human's make verify run found both issues; this commit addresses them. No test was weakened — the env-example test now asserts a stronger, accurate contract.
 
-- date: 2026-10-23
-- task/issue: #138 (task 16) — real-Postgres integration tests
+#### date: 2026-10-24 — task/issue: #138 (task 16) — real-Postgres integration tests
+
+- date: 2026-10-24
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#138) and approved the design recommendations (transaction-rollback isolation, reuse compose.yaml's db under vt-test, integration-only via the existing sqlite_integration marker, E-GUARD = vt db + compose host check).
@@ -2212,8 +2226,9 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT fully run here — sandbox has no Docker/venv/PyPI. Python test files byte-compile; ci/test-integration.sh passes `bash -n`; the E-GUARD accept/reject decisions were cross-checked standalone (3 accept, 5 reject). The human runs `make verify` (SQLite + E-GUARD unit cases) and `make test-integration` (Postgres) on the host.
 - human review (what I checked or corrected, or `none`): the human approved the four design decisions before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #139 (task 19) — CI test pipeline
+#### date: 2026-10-24 — task/issue: #139 (task 19) — CI test pipeline
+
+- date: 2026-10-24
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#139) and chose Option B (thin make targets per marker, so every CI job runs through make).
@@ -2221,15 +2236,17 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT run here (sandbox can't run GitHub Actions or the suite). Verified every `- run: make ...` maps to a real Makefile target, and that the unit/sqlite_integration markers partition the backend suite (no unmarked test). The human confirms on the first PR CI run.
 - human review (what I checked or corrected, or `none`): the human chose Option B over Option A (raw pytest in CI); the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
-- agent role: Engineer (Kiro, Vibe session)
+#### date: 2026-10-24 — task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
+
+- date: 2026-10-24- agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the #139 CI run exercised make test-integration for the first time; the postgres-integration job FAILED with AttributeError: 'dict' object has no attribute 'transaction_status' on 155 tests.
 - files changed: `tests/conftest.py` (replace the single-shared-connection rollback with fresh-schema isolation: db_engine drop_all at setup/teardown on Postgres, each test's factory runs create_all as on SQLite; remove the Alembic _run_migrations helper and its call), `_session-summaries/issue-138-postgres-integration.md` (record the change and the reason), this log entry.
 - verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
 - human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
 
+#### date: 2026-10-24 — fix/111-vite-advisory
+  
 - date: 2026-10-24
 - task/issue: #111 — upgrade Vite from 8.1.5 to 8.1.6 for GHSA-587h-7wmj-h5pm
 - agent role: Engineer (OpenCode, software-engineer role)
@@ -2238,3 +2255,62 @@ Copy this template for each new entry:
 - files changed: `frontend/package.json`, `frontend/package-lock.json` (vite 8.1.5 -> 8.1.6, exact pin), `Makefile` (add `frontend-audit` target and `.PHONY` entry; PROTECTED, human-approved in-session, committed alone with `HUMAN_APPROVED=1`), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): `make verify BASE=830f14fc0704648502ebe0926d81ed0ad4e2e206` -> PASS (87 frontend tests, 396 backend tests, type check, whitespace, no test files changed). Pre-upgrade `npm audit --json`: 1 high (`vite@8.1.5`, five advisories, metadata high 1 / total 1). Post-upgrade `npm audit --json`: 0 high, 0 critical, 0 total. `make install` twice gave the same lockfile hash `b076df2bd825f867fe1c6a78879b430ce4410d10`.
 - human review (what I checked or corrected, or `none`): human approved the exact vite version, the npm install/audit network commands, the `make install` runs, and the exact protected `Makefile` diff before implementation; diff not yet reviewed.
+
+#### date: 2026-10-24 — task/issue: Tier C build sheet (roadmapping document, like tier-b-build.md)
+
+- date: 2026-10-24- agent role: PM / doc (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start roadmapping the Tier C build document.
+- files changed: `_docs/tier-c-build.md` (new; consolidated Tier C/S4 build sheet: per-milestone C2-C9 table with task, builds, depends-on, human step/decision, criterion and done-when; the showcase C1/C4 split; the task-37-built-inside-C3 build-order note; the dependency chain; the open D4 + responder-runtime + main-branch-protection prerequisites; the score checkpoints), `README.md` (index link), this log entry.
+- verification (tests run, reviewer verdict): docs only; no code. Grounded in roadmap.md § Tier C milestones, tasks.md tasks 23-29/37-39, architecture.md § Observability / § Responder agent / § Security boundaries, and testing.md. Points to the sources rather than restating design; adds no new precedence rule.
+- human review (what I checked or corrected, or `none`): none yet. Flags that D4 (responder false-positive rule, a protected specs.md change) is still open and blocks C6, and that the responder runtime and main branch protection are human prerequisites before task 28.
+
+#### date: 2026-10-24 — task/issue: #141 (task 17) — Terraform verification runbook (written before the Terraform itself)
+
+- date: 2026-10-24- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to write up the Terraform verification steps in _docs if not already there, before writing the Terraform. Running #141 in parallel with the other agent's #140 (no file overlap: #141 adds new terraform/ and a new deploy.yml; it does not touch Makefile or verify.yml).
+- files changed: `_docs/terraform-verify.md` (new: §1 static fmt/validate checks that need no AWS, §2 pre-apply security review checklist, §3 per-module apply verification, §4 the #141 dev-URL acceptance, §5 teardown verification; consolidates the Terraform checks that were scattered across architecture.md, aws-setup.md and the push-check guide), `README.md` (index link), this log entry.
+- verification (tests run, reviewer verdict): docs only; no code yet. The runbook references real commands (terraform fmt/validate as in push-check-image-guide.md) and the aws-setup.md apply order. The Terraform modules themselves are the next step.
+- human review (what I checked or corrected, or `none`): none yet; the runbook defines how the human verifies the modules that come next.
+
+#### date: 2026-10-24 — task/issue: #141 (task 17) — Terraform modules + GHCR build workflow
+
+- date: 2026-10-24- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human approved the recommendations for #141 (Caddy reverse proxy, region ap-southeast-2, Secrets Manager, t3.medium, OIDC-reuse as a variable, SES deferred) and asked that the Terraform verification runbook exist in _docs first (done: _docs/terraform-verify.md).
+- files changed: `terraform/README.md`, `terraform/bootstrap/*` (state bucket), `terraform/deploy-roles/*` (OIDC + dev/prod roles), `terraform/server/*` (EC2, EIP, SG, instance role, EBS+DLM snapshots, nightly-stop schedule, user-data.sh, caddy/Caddyfile), each with a terraform.tfvars.example; `.github/workflows/deploy.yml` (new; build-once → tag → GHCR → record digest; dev-deploy job scaffolded for task 21), `.gitignore` (terraform state/tfvars), session summary, this log entry. No Makefile/verify.yml change (parallel with #140).
+- verification (tests run, reviewer verdict): NOT run here — the sandbox has no AWS or Terraform. Checked: balanced braces in every .tf, .tfvars.example tracked while state/real tfvars are git-ignored, the workflow uses only GITHUB_TOKEN + the OIDC role. The human runs terraform fmt/validate and every apply per _docs/terraform-verify.md; the task's acceptance (dev sslip.io URL answers, deploy log names a digest) is a human step.
+- human review (what I checked or corrected, or `none`): the human approved Caddy and the defaults before the build; the Terraform is reviewed and applied by the human (agents never apply or hold AWS credentials).
+
+#### date: 2026-10-24 — task/issue: Tier C (Milestone C) issue grooming — proposal, not filed
+- date: 2026-10-24
+- task/issue: Tier C (Milestone C) issue grooming — proposal, not filed
+- agent role: PM (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start grooming the Tier C jobs as was done for Tier B.
+- files changed: `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (new; 9 proposed Milestone C issues for tasks 23-29, 37, 38, 39, each with acceptance criteria from tasks.md/architecture.md/testing.md and a PM->human confirm block; filing/build order; the open D4 + responder-runtime + main-branch-protection gates on task 28; the dependency approvals), this log entry.
+- verification (tests run, reviewer verdict): docs only; nothing filed. Grounded in the authoritative task descriptions and the Tier C design sections; mirrors the Tier B grooming format.
+- human review (what I checked or corrected, or `none`): none yet; the grooming is a proposal awaiting the human's answers to the confirm blocks before any issue is filed.
+
+#### date: 2026-10-24 — task/issue: #154 (task 23) — OpenTelemetry instrumentation and the exclusion helper
+
+- date: 2026-10-24
+- task/issue: #154 (task 23) — OpenTelemetry instrumentation and the exclusion helper
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human said work on #154 and approved the 5-package OTel set (incl. opentelemetry-instrumentation-sqlalchemy, kept for the showcase) and showcase notes for host CPU/mem/RPS metrics and the alert owner-annotation decision.
+- files changed: new `backend/vulntriage/observability/` (allowlist.py, settings.py, tracing.py, metrics.py, logs.py, __init__.py); `backend/vulntriage/main.py` (setup_tracing/setup_metrics, FastAPI + SQLAlchemy instrumentation); `backend/vulntriage/ingest/scan.py` (scan.run root + repository.read/osv.query/signals.enrich/prioritise child spans; Scan.trace_id from the root span); `backend/vulntriage/ingest/notifications.py` (notification.enqueue span; traceparent from the span, placeholder removed); `backend/pyproject.toml` (5 OTel deps); `tests/test_observability.py` (new); `_docs/roadmap-showcase.md` (X10 host/RPS metrics); `_docs/tier-c-build.md` (alert owner-annotation note); session summary; this log entry.
+- verification (tests run, reviewer verdict): NOT run here — the sandbox has no PyPI, so OTel is not installed and make verify/the new tests cannot run. All changed files byte-compile; the allowlist filter was validated standalone (keeps exactly the A32 keys). The human runs make backend-lock then make verify on the host.
+- human review (what I checked or corrected, or `none`): the human approved the 5-package set and the two showcase notes before the build. Recorded a task-24 follow-up: the Collector must drop db.statement (SQLAlchemy instrumentation emits it) with a test.
+
+#### date: 2026-10-24 — task/issue: Milestone C issues filed (#154-#163) after human confirmation
+
+- date: 2026-10-24
+- task/issue: Milestone C issues filed (#154-#163) after human confirmation
+- agent role: PM (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human confirmed the Tier C grooming and said file the issues.
+- files changed: filed 10 GitHub issues #154-#163 (tasks 23-29, 37, 38, 39) in build order; updated `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A/B convention. Task 28/#160's Constraints record its gates (D4, responder runtime, main branch protection).
+- human review (what I checked or corrected, or `none`): the human confirmed the grooming before filing.

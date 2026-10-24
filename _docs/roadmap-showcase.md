@@ -23,6 +23,7 @@ Ordered by value for effort; the order may change.
 | X7 | Hardening: managed database or snapshots, secret scanning in CI, Terraform linting and a `plan` check on pull requests | "Production ready" credibility | X1 | Small each |
 | X8 | Write-ups: architecture diagram, the agent-team process, cost notes | The agent-kit process is a story in itself | Submission done | Small |
 | X9 | Portfolio "Launch demo" button: a static portfolio site (GitHub Pages) calls one Lambda function URL, which triggers the X1 workflow; a scheduled workflow destroys the environment after a fixed lifetime | A live demo on request with $0 standing cost; a serverless control plane to talk about | X1 | Small to medium; Lambda free tier |
+| X10 | Host and runtime metrics on the Grafana dashboard: CPU, memory and requests-per-second (the course Part 4 "at minimum" monitoring bar). Add the Collector `hostmetrics` receiver (or a node/cAdvisor exporter) to the `observability/` stack and a dashboard row; the FastAPI HTTP metrics (RPS, latency, errors) already come from the auto-instrumentation (task 23). Not required by the rubric (Observability scores on the US-13 journey); this meets the course's production-monitoring expectation for the showcase | Infra health alongside the app-domain metrics; parity with the course's monitoring | task 24 (the observability stack) | Small |
 
 ## X1 design notes
 

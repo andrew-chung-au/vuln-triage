@@ -27,6 +27,7 @@ from vulntriage.ingest.notifications import create_top_tier_jobs
 from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
 from vulntriage.ingest.ranking import rank_asset
 from vulntriage.ingest.signals import EpssClientProtocol, KevClientProtocol, enrich_asset
+from vulntriage.observability.tracing import current_trace_id_hex, span
 from vulntriage.ingest.models import (
     INCLUDE_NOT_FOUND,
     INCLUDE_REFUSED,
@@ -57,7 +58,12 @@ def _now() -> dt.datetime:
 
 
 def new_trace_id() -> str:
-    """A fresh 32-hex trace id (real OpenTelemetry ids arrive with task 23)."""
+    """A 32-hex placeholder trace id for an enqueued-but-not-yet-run scan.
+
+    When the scan runs, ``run_scan`` overwrites ``Scan.trace_id`` with the real
+    ``scan.run`` root span's trace id (task 23), so the finished scan's trace id
+    is the journey trace.
+    """
     return uuid.uuid4().hex
 
 
@@ -211,15 +217,19 @@ def run_scan(
     KEV and EPSS signals; a feed failure there marks signals stale and never
     changes the scan status (E3).
     """
-    with factory() as session:
+    with span("scan.run", {"vt.scan.id": str(scan_id)}), factory() as session:
         scan = session.get(Scan, scan_id)
         if scan is None or scan.finished_at is not None:
             return
         asset = session.get(Asset, scan.asset_id)
         if asset is None:
             return
+        # The scan's trace id is this scan.run root span's trace id, so the
+        # Scan row joins the journey trace (replaces the enqueue-time placeholder).
+        scan.trace_id = current_trace_id_hex()
         try:
-            sha, entries, warnings = _read_and_parse(reader, asset.repository_url)
+            with span("repository.read", {"vt.asset.id": str(asset.id)}):
+                sha, entries, warnings = _read_and_parse(reader, asset.repository_url)
         except RepositoryUnavailable:
             _fail(session, scan, asset, FailureReason.REPOSITORY_UNAVAILABLE)
             return
@@ -258,7 +268,8 @@ def run_scan(
         has_findings = False
         if osv_client is not None:
             try:
-                has_findings = match_asset(session, asset.id, osv_client)
+                with span("osv.query", {"vt.asset.id": str(asset.id)}):
+                    has_findings = match_asset(session, asset.id, osv_client)
             except FeedUnavailable:
                 # E3: OSV unavailable on a scan is a feed failure, not a clean
                 # result. On a first scan there are no findings to keep yet.
@@ -269,13 +280,16 @@ def run_scan(
                 return
             # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
             # and never raises, so it does not change the OSV scan status.
-            enrich_asset(session, asset.id, kev_client, epss_client)
+            with span("signals.enrich", {"vt.asset.id": str(asset.id)}):
+                enrich_asset(session, asset.id, kev_client, epss_client)
             # Deterministic ranking (task 7): score every finding from the
             # signals and asset context, replacing the placeholder rank fields.
-            rank_asset(session, asset.id)
+            with span("prioritise", {"vt.asset.id": str(asset.id)}):
+                rank_asset(session, asset.id)
             # US-8 (task 10a): create one top-tier notification job per lifecycle
             # for each finding now in P1. Idempotent, so a re-scan adds no
-            # duplicate. Delivery is the task-37 worker.
+            # duplicate. Delivery is the task-37 worker. This opens the
+            # notification.enqueue span (task 23) and stores its traceparent.
             create_top_tier_jobs(session, asset.id)
 
         status = status_for_result(warnings, has_findings)
