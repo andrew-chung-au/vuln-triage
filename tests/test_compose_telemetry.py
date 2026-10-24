@@ -33,10 +33,15 @@ import sys
 
 import pytest
 
-# The directory holding compose_driver.py (this file's own directory). The
-# driver is run as `python -m compose_driver` in a subprocess, which does not
-# inherit pytest's sys.path, so this dir is put on the child's PYTHONPATH.
-_TESTS_DIR = str(pathlib.Path(__file__).resolve().parent)
+# The driver runs as `python -m compose_driver` in a subprocess, which does not
+# inherit pytest's sys.path. It needs two dirs on PYTHONPATH:
+#   tests/   — to import compose_driver itself (this file's own directory);
+#   backend/ — to import vulntriage (the backend is not pip-installed;
+#              `package = false`, so pytest resolves it via `pythonpath = ["."]`
+#              relative to backend/, which the child does not inherit).
+_TESTS_DIR = pathlib.Path(__file__).resolve().parent
+_REPO_ROOT = _TESTS_DIR.parent
+_DRIVER_PATH_DIRS = [str(_TESTS_DIR), str(_REPO_ROOT / "backend")]
 
 from compose_telemetry import (
     ComposeQueryError,
@@ -55,13 +60,14 @@ def _run_driver(command: str) -> dict:
     """Run tests/compose_driver.py <command> and return its result JSON.
 
     The harness sets the backend venv and OTLP endpoint in the environment; this
-    inherits them, and prepends the tests dir to PYTHONPATH so the subprocess
-    can import compose_driver (it does not inherit pytest's sys.path). A non-JSON
-    or failing run is a hard error (never a skip).
+    inherits them, and prepends the tests dir and backend dir to PYTHONPATH so
+    the subprocess can import compose_driver and vulntriage (it does not inherit
+    pytest's sys.path). A non-JSON or failing run is a hard error (never a skip).
     """
     env = os.environ.copy()
     existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = _TESTS_DIR + (os.pathsep + existing if existing else "")
+    parts = [*_DRIVER_PATH_DIRS, existing] if existing else list(_DRIVER_PATH_DIRS)
+    env["PYTHONPATH"] = os.pathsep.join(parts)
     proc = subprocess.run(
         [sys.executable, "-m", "compose_driver", command],
         capture_output=True,
