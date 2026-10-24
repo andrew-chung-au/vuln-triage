@@ -86,6 +86,25 @@ jobs:
       - run: make backend-install
       - run: make test-compose JOB=telemetry
 
+  # The alert Compose job (issue #159, task 27): the US-14 A-* alert cases. The
+  # app + observability + stub-webhook-sink stack is brought up (compose.yaml +
+  # compose.telemetry.yaml + compose.alert.yaml); the in-container seam puts a
+  # top-tier job into stored state, and the task-26 Grafana rule fires the alert
+  # to MailHog (human email) and the stub webhook sink (responder), plus the
+  # rule-absent negative pass. ubuntu-latest ships Docker + Docker Compose. Runs
+  # only the `compose`-marked alert cases via the JOB selector; no live feed or
+  # secret (the stack is local, throwaway env set in ci/test-compose.sh).
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-compose JOB=alert
+
   # The full gate, kept so PRs still get the whitespace and weakened-test checks
   # that the split test jobs above do not cover; it also runs the suite as a
   # backstop. Needs both toolchains because make verify runs make test (frontend
