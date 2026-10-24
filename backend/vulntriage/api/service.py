@@ -42,10 +42,9 @@ from vulntriage.db.models import (
     Vulnerability,
     VulnerabilityAlias,
 )
-from vulntriage.ingest.notifications import create_top_tier_jobs
-from vulntriage.ingest.ranking import rank_asset, ranked_findings
+from vulntriage.ingest.ranking import ranked_findings
+from vulntriage.ingest.refresh import refresh_all
 from vulntriage.ingest.scan import enqueue_scan
-from vulntriage.ingest.signals import enrich_asset
 
 router = APIRouter()
 
@@ -75,11 +74,7 @@ def signals_refresh(request: Request, _: None = Depends(require_n8n)) -> Respons
     kev = getattr(request.app.state, "kev_client", None)
     epss = getattr(request.app.state, "epss_client", None)
     with factory() as session:
-        for asset_id in list(session.scalars(select(Asset.id))):
-            if kev is not None or epss is not None:
-                enrich_asset(session, asset_id, kev, epss)
-            rank_asset(session, asset_id)
-            create_top_tier_jobs(session, asset_id)
+        refresh_all(session, kev, epss)
         session.commit()
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
