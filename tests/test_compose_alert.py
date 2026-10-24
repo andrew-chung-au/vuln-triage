@@ -63,9 +63,11 @@ from compose_alert import (
     start_service,
     stop_service,
     wait_for_alert_email,
+    wait_for_no_finding_series,
     wait_for_overdue_value,
     wait_for_webhook_health,
     wait_for_webhook_requests,
+    webhook_alert_labels,
     webhook_finding_ids,
     webhook_recorded,
     webhook_reset,
@@ -80,9 +82,22 @@ pytestmark = pytest.mark.compose
 # normal, rule-present run). See run_alert() in ci/test-compose.sh.
 _RULE_ABSENT = os.environ.get("VT_ALERT_RULE_ABSENT") == "1"
 
-# Payload content that must NEVER appear in the responder/human alert (US-14
-# carries finding id + tier only; architecture § Security boundaries).
-_FORBIDDEN_IN_PAYLOAD = ("owner", "@", "http", "Bearer", "secret", "advisory", "summary")
+# The per-alert LABELS the responder is allowed to see: the finding's own
+# finding_id/tier plus Grafana's standard routing labels. The no-leak guarantee
+# (US-14 carries finding id + tier only; architecture § Security boundaries) is
+# about this label set, NOT the raw webhook envelope — Grafana's body
+# legitimately carries externalURL/generatorURL/annotations.summary/dashboard_url
+# (i.e. "http"/"summary"/"@"), so substring-scanning the whole body for those is
+# a false positive (QA risk 1). We assert the per-alert labels carry only the
+# allowed keys and none of the forbidden markers.
+# VERIFY: the exact Grafana 11.3.0 standard label set on first green run — adjust
+# _ALLOWED_LABEL_KEYS if 11.3.0 adds another non-identifying routing key.
+_ALLOWED_LABEL_KEYS = frozenset({"finding_id", "tier", "alertname", "grafana_folder"})
+
+# Substrings that must NEVER appear in an alert LABEL key or value (owner
+# contact, advisory text, URL, credential). These are checked against the per-
+# alert label set only, not the envelope.
+_FORBIDDEN_IN_LABELS = ("owner", "@", "http", "bearer", "secret", "advisory")
 
 
 @pytest.fixture(autouse=True)
@@ -97,6 +112,12 @@ def _clean_between_cases():  # type: ignore[no-untyped-def]
     webhook_reset()
     yield
     clear_seed()
+    # The OTLP→Prometheus exporter keeps the last-observed finding series for a
+    # scrape window after clear_seed() drops the DB row, so a later case could
+    # otherwise inherit a stale finding_id series. Wait for the empty state to
+    # actually be visible before the next case starts (a hard failure if it
+    # never clears — never a weakening of any "empty system" assertion).
+    wait_for_no_finding_series()
 
 
 # -- A-FIRE: fires once, names the finding, both sinks ------------------------
@@ -119,13 +140,22 @@ def test_a_fire_one_overdue_job_fires_once_at_both_sinks() -> None:
     emails = wait_for_alert_email(ALERT_HUMAN_EMAIL, 1)
     assert emails, "no human-email alert reached MailHog"
 
-    # The payload names the finding (id + tier) and carries nothing else.
-    for req in webhook:
-        body = (req.get("body") or "").lower()
-        for banned in _FORBIDDEN_IN_PAYLOAD:
-            # finding_id/tier labels are allowed; the banned markers (owner/url/
-            # credential/advisory) must be absent from the responder payload.
-            assert banned not in body, f"responder payload leaked {banned!r}: {req.get('body')}"
+    # No-leak check, narrowed to the per-alert LABEL set (the responder-visible
+    # identity of the alert) rather than the raw Grafana envelope, which
+    # legitimately carries externalURL/generatorURL/annotations.summary. Each
+    # alert's labels must name the finding (finding_id + tier) plus only
+    # Grafana's own standard routing keys, and must carry no owner/email/url/
+    # advisory/credential marker.
+    label_sets = webhook_alert_labels(webhook)
+    assert label_sets, f"no per-alert labels in the responder payload: {webhook}"
+    for labels in label_sets:
+        assert "finding_id" in labels, f"alert labels do not name the finding: {labels}"
+        extra = set(labels) - _ALLOWED_LABEL_KEYS
+        assert not extra, f"responder alert carried unexpected label keys {extra}: {labels}"
+        for key, value in labels.items():
+            blob = f"{key}={value}".lower()
+            for banned in _FORBIDDEN_IN_LABELS:
+                assert banned not in blob, f"responder alert label leaked {banned!r}: {labels}"
 
 
 # -- A-FIRE negative: rule removed → no firing at either sink -----------------
@@ -200,8 +230,14 @@ def test_a_tier_recorded_tier_wins_over_rescore() -> None:
 @pytest.mark.skipif(_RULE_ABSENT, reason="runs only in the rule-present pass")
 def test_a_gap_part1_empty_system_fires_nothing() -> None:
     """A-GAP part 1: with no jobs, the rule does not fire and neither sink receives anything."""
-    # _clean_between_cases already cleared all seeded jobs: the system is empty
-    # (only the label-less 0 heartbeat series exists).
+    # _clean_between_cases already cleared all seeded jobs, but the OTLP→
+    # Prometheus exporter can keep a stale finding series for a scrape window
+    # after the DB row is gone (an eventual-consistency gap, not a product
+    # defect). Wait for the empty state to be visible before asserting it — a
+    # hard failure if it never clears (this still proves an empty system shows
+    # no finding series; it just does not race the staleness window).
+    wait_for_no_finding_series()
+
     full = overdue_series()
     # Every series present is the label-less heartbeat (no finding_id) reading 0.
     for s in full:
@@ -284,6 +320,11 @@ def _is_firing(request: dict) -> bool:
     ``status: resolved`` at the top level (and per-alert ``status``). This reads
     the top-level status and treats anything not explicitly ``resolved`` as a
     firing, so a resolved message is never miscounted as a second alert.
+
+    Reviewed for QA risk 1 (the envelope carrying ``http``/``summary``): this is
+    already status-based — it keys off the top-level ``status`` field, and its
+    only body fallback looks for the literal word ``resolved``, never for the
+    ambiguous envelope substrings — so it is left as-is.
     """
     payload = request.get("json")
     if isinstance(payload, dict):

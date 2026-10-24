@@ -213,6 +213,35 @@ def webhook_finding_ids(recorded: list[dict[str, Any]]) -> set[str]:
     return ids
 
 
+def webhook_alert_labels(recorded: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Return the per-alert ``labels`` dict for every alert in the recorded payloads.
+
+    Grafana's webhook body is ``{"alerts": [{"labels": {...}, ...}, ...]}``. The
+    per-alert ``labels`` are the only place the finding is named on the wire; the
+    SURROUNDING envelope (``externalURL``, ``generatorURL``,
+    ``annotations.summary``, ``dashboard_url``) legitimately carries ``http`` /
+    ``summary`` / ``@`` and must NOT be substring-scanned for leaks. The no-leak
+    guarantee is about the responder-visible label set, so the A-FIRE case asserts
+    against THIS, not the raw body.
+
+    VERIFY (confirmed on the running stack in the alert Compose CI job): the exact
+    label set Grafana 11.3.0 puts on a per-alert ``labels`` — the finding
+    ``finding_id``/``tier`` plus Grafana's own standard keys (``alertname``,
+    ``grafana_folder``). Any owner/email/url/advisory/credential key appearing here
+    is a real leak.
+    """
+    out: list[dict[str, str]] = []
+    for req in recorded:
+        payload = req.get("json")
+        if isinstance(payload, dict):
+            for alert in payload.get("alerts", []) or []:
+                if isinstance(alert, dict):
+                    labels = alert.get("labels") or {}
+                    if isinstance(labels, dict):
+                        out.append({str(k): str(v) for k, v in labels.items()})
+    return out
+
+
 def _finding_ids_in(payload: Any) -> set[str]:
     out: set[str] = set()
     if isinstance(payload, dict):
@@ -266,6 +295,40 @@ def wait_for_overdue_value(finding_id: int, value: int, timeout_s: float = DEFAU
         return False
 
     _poll(lambda: _match() or False, timeout_s)
+
+
+def _has_finding_series() -> bool:
+    """True while any ``vt_top_tier_notification_overdue`` series carries a finding_id.
+
+    The label-less ``0`` heartbeat series never carries a finding_id, so this is
+    True only while a real per-finding series is still present on the exporter.
+    """
+    for s in overdue_series():
+        if "finding_id" in (s.get("metric") or {}):
+            return True
+    return False
+
+
+def wait_for_no_finding_series(timeout_s: float = DEFAULT_TIMEOUT_S) -> None:
+    """Wait until NO overdue series carries a ``finding_id`` (only the heartbeat).
+
+    The OTLP→Prometheus exporter at ``otel-collector:8889`` retains a
+    last-observed series for a scrape window after the gauge stops observing a
+    finding (``clear_seed()`` deletes the DB row, so the gauge callback drops the
+    series, but Prometheus has not yet marked the old sample stale). This is an
+    eventual-consistency gap, not a product defect: the "empty system shows no
+    finding series" assertions must WAIT for that staleness window to pass before
+    they run, rather than racing it.
+
+    A hard failure (``ComposeQueryError``) if a finding series never clears
+    within ``timeout_s`` — the empty-system guarantee is still proven, it is just
+    not asserted before the exporter has caught up. VERIFY (confirmed on the
+    running stack in the alert Compose CI job): the actual staleness window at
+    ``otel-collector:8889`` is well within ``VT_COMPOSE_POLL_TIMEOUT``; if it ever
+    exceeds that, restarting Prometheus (or a longer bounded wait) is the lever,
+    never weakening the assertion.
+    """
+    _poll(lambda: (not _has_finding_series()) or False, timeout_s)
 
 
 def mailhog_alert_messages(to: str | None = None) -> list[dict[str, Any]]:
