@@ -2213,6 +2213,15 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the human approved the four design decisions before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
 
 - date: 2026-10-23
+- task/issue: #139 (task 19) — CI test pipeline
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#139) and chose Option B (thin make targets per marker, so every CI job runs through make).
+- files changed: `.github/workflows/verify.yml` (six jobs: unit, sqlite-integration, frontend, openapi-validation, postgres-integration, plus the retained verify gate), `Makefile` (test-unit / test-sqlite-integration / test-conformance; PROTECTED, human-approved), session summary, this log entry.
+- verification (tests run, reviewer verdict): NOT run here (sandbox can't run GitHub Actions or the suite). Verified every `- run: make ...` maps to a real Makefile target, and that the unit/sqlite_integration markers partition the backend suite (no unmarked test). The human confirms on the first PR CI run.
+- human review (what I checked or corrected, or `none`): the human chose Option B over Option A (raw pytest in CI); the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
+
+- date: 2026-10-23
 - task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
