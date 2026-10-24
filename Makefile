@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -147,6 +147,10 @@ frontend-test: ## Run the frontend unit tests (vitest run)
 frontend-typecheck: ## Type-check the frontend (tsc --noEmit; vite build does not run tsc)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
 	@cd frontend && ./node_modules/.bin/tsc --noEmit
+
+frontend-audit: ## Audit frontend dependencies (npm audit)
+	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }
+	@cd frontend && npm audit
 
 frontend-build: ## Build the frontend production output (vite build)
 	@test -d frontend/node_modules || { echo "frontend/node_modules is missing: run make install first" >&2; exit 1; }

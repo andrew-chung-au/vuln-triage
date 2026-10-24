@@ -2245,6 +2245,17 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
 - human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
 
+#### date: 2026-10-24 — fix/111-vite-advisory
+  
+- date: 2026-10-24
+- task/issue: #111 — upgrade Vite from 8.1.5 to 8.1.6 for GHSA-587h-7wmj-h5pm
+- agent role: Engineer (OpenCode, software-engineer role)
+- model: opencode/deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to implement groomed #111 with D1/D3 (`npm install --save-dev --save-exact vite@8.1.6`), D2 (`make frontend-audit` target, protected Makefile diff approved), and approved the npm network commands and `make install`; return requests instead of running anything needing approval. Groomed body and PM context are in #111 comments 6377705971 and 6377706848.
+- files changed: `frontend/package.json`, `frontend/package-lock.json` (vite 8.1.5 -> 8.1.6, exact pin), `Makefile` (add `frontend-audit` target and `.PHONY` entry; PROTECTED, human-approved in-session, committed alone with `HUMAN_APPROVED=1`), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): `make verify BASE=830f14fc0704648502ebe0926d81ed0ad4e2e206` -> PASS (87 frontend tests, 396 backend tests, type check, whitespace, no test files changed). Pre-upgrade `npm audit --json`: 1 high (`vite@8.1.5`, five advisories, metadata high 1 / total 1). Post-upgrade `npm audit --json`: 0 high, 0 critical, 0 total. `make install` twice gave the same lockfile hash `b076df2bd825f867fe1c6a78879b430ce4410d10`.
+- human review (what I checked or corrected, or `none`): human approved the exact vite version, the npm install/audit network commands, the `make install` runs, and the exact protected `Makefile` diff before implementation; diff not yet reviewed.
+
 #### date: 2026-10-24 — task/issue: Tier C build sheet (roadmapping document, like tier-b-build.md)
 
 - date: 2026-10-24- agent role: PM / doc (Kiro, Vibe session)
@@ -2303,4 +2314,3 @@ Copy this template for each new entry:
 - files changed: filed 10 GitHub issues #154-#163 (tasks 23-29, 37, 38, 39) in build order; updated `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A/B convention. Task 28/#160's Constraints record its gates (D4, responder runtime, main branch protection).
 - human review (what I checked or corrected, or `none`): the human confirmed the grooming before filing.
-
