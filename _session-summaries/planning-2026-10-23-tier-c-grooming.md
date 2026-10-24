@@ -3,8 +3,14 @@
 **Date:** 2026-10-23
 **Author:** PM grooming pass (Kiro, Vibe session)
 **Scope:** Milestone C / phase S4, `_docs/tasks.md` tasks 23-29, 37, 38, 39.
-**Status:** PROPOSAL — not filed. Each issue below has a "PM → human: confirm"
-block. File the issues only after the human confirms the open points.
+**Status:** FILED 2026-10-23. The human confirmed; the 10 issues are filed in
+build order: C-23=#154 (task 23), C-24=#155 (task 24), C-37=#156 (task 37),
+C-25=#157 (task 25), C-26=#158 (task 26), C-27=#159 (task 27), C-28=#160
+(task 28), C-29=#161 (task 29), C-38=#162 (task 38), C-39=#163 (task 39). No
+GitHub milestone/label is set, matching the Milestone A/B convention. The
+confirm-block items (D4, the responder runtime, `main` branch protection before
+task 28/#160; the dependency approvals; the scheduler library-or-loop choice)
+are recorded in each issue's Constraints and settled when the issue is picked up.
 
 This is step 12 for Milestone C ("PM proposal approved by the human; each issue
 carries its story's acceptance criteria", `_docs/roadmap.md` § Sequence row 12),

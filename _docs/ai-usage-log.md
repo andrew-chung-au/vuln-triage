@@ -2260,3 +2260,12 @@ Copy this template for each new entry:
 - files changed: `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (new; 9 proposed Milestone C issues for tasks 23-29, 37, 38, 39, each with acceptance criteria from tasks.md/architecture.md/testing.md and a PM->human confirm block; filing/build order; the open D4 + responder-runtime + main-branch-protection gates on task 28; the dependency approvals), this log entry.
 - verification (tests run, reviewer verdict): docs only; nothing filed. Grounded in the authoritative task descriptions and the Tier C design sections; mirrors the Tier B grooming format.
 - human review (what I checked or corrected, or `none`): none yet; the grooming is a proposal awaiting the human's answers to the confirm blocks before any issue is filed.
+
+- date: 2026-10-23
+- task/issue: Milestone C issues filed (#154-#163) after human confirmation
+- agent role: PM (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human confirmed the Tier C grooming and said file the issues.
+- files changed: filed 10 GitHub issues #154-#163 (tasks 23-29, 37, 38, 39) in build order; updated `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
+- verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A/B convention. Task 28/#160's Constraints record its gates (D4, responder runtime, main branch protection).
+- human review (what I checked or corrected, or `none`): the human confirmed the grooming before filing.
