@@ -2251,3 +2251,12 @@ Copy this template for each new entry:
 - files changed: `terraform/README.md`, `terraform/bootstrap/*` (state bucket), `terraform/deploy-roles/*` (OIDC + dev/prod roles), `terraform/server/*` (EC2, EIP, SG, instance role, EBS+DLM snapshots, nightly-stop schedule, user-data.sh, caddy/Caddyfile), each with a terraform.tfvars.example; `.github/workflows/deploy.yml` (new; build-once → tag → GHCR → record digest; dev-deploy job scaffolded for task 21), `.gitignore` (terraform state/tfvars), session summary, this log entry. No Makefile/verify.yml change (parallel with #140).
 - verification (tests run, reviewer verdict): NOT run here — the sandbox has no AWS or Terraform. Checked: balanced braces in every .tf, .tfvars.example tracked while state/real tfvars are git-ignored, the workflow uses only GITHUB_TOKEN + the OIDC role. The human runs terraform fmt/validate and every apply per _docs/terraform-verify.md; the task's acceptance (dev sslip.io URL answers, deploy log names a digest) is a human step.
 - human review (what I checked or corrected, or `none`): the human approved Caddy and the defaults before the build; the Terraform is reviewed and applied by the human (agents never apply or hold AWS credentials).
+
+- date: 2026-10-23
+- task/issue: Tier C (Milestone C) issue grooming — proposal, not filed
+- agent role: PM (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start grooming the Tier C jobs as was done for Tier B.
+- files changed: `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (new; 9 proposed Milestone C issues for tasks 23-29, 37, 38, 39, each with acceptance criteria from tasks.md/architecture.md/testing.md and a PM->human confirm block; filing/build order; the open D4 + responder-runtime + main-branch-protection gates on task 28; the dependency approvals), this log entry.
+- verification (tests run, reviewer verdict): docs only; nothing filed. Grounded in the authoritative task descriptions and the Tier C design sections; mirrors the Tier B grooming format.
+- human review (what I checked or corrected, or `none`): none yet; the grooming is a proposal awaiting the human's answers to the confirm blocks before any issue is filed.
