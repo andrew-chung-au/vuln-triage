@@ -24,6 +24,7 @@ from vulntriage.api.security import LoginThrottle
 from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
+from vulntriage.mail.delivery import DeliveryWorker
 from vulntriage.observability.metrics import setup_metrics
 from vulntriage.observability.tracing import setup_tracing
 from vulntriage.scheduler import Scheduler
@@ -82,6 +83,7 @@ def create_app(
         app.state.session_factory = factory
         worker: ScanWorker | None = None
         scheduler: Scheduler | None = None
+        delivery: DeliveryWorker | None = None
         if run_worker:
             worker = ScanWorker(factory, reader or GitHubReader())
             worker.start()
@@ -94,11 +96,19 @@ def create_app(
                 epss_client=getattr(app.state, "epss_client", None),
             )
             scheduler.start()
+            # The owner-notification delivery worker (task 37). It builds its
+            # transport from the mail settings on first use, so a missing
+            # MAIL_SENDER holds the job rather than crashing the worker.
+            delivery = DeliveryWorker(factory)
+            delivery.start()
         app.state.worker = worker
         app.state.scheduler = scheduler
+        app.state.delivery_worker = delivery
         try:
             yield
         finally:
+            if delivery is not None:
+                delivery.stop()
             if scheduler is not None:
                 scheduler.stop()
             if worker is not None:
@@ -124,6 +134,7 @@ def create_app(
     app.state.session_factory = session_factory
     app.state.worker = None
     app.state.scheduler = None
+    app.state.delivery_worker = None
     app.state.login_throttle = LoginThrottle()
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(HTTPException, http_error_handler)

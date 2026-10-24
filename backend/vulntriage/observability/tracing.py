@@ -85,6 +85,39 @@ def span(name: str, attributes: Mapping[str, Any] | None = None) -> Iterator[Spa
         yield current
 
 
+@contextmanager
+def span_from_traceparent(
+    name: str, traceparent: str, attributes: Mapping[str, Any] | None = None
+) -> Iterator[Span]:
+    """Start ``name`` as a child of a stored W3C ``traceparent`` (task 37).
+
+    The backend's ``notification.deliver`` span must join the trace of the
+    ``notification.enqueue`` span whose ``traceparent`` was stored on the job
+    (task 23), so the US-13 journey shares one trace id across the enqueue and
+    the later delivery. Extracts a remote parent context from the stored string
+    with the W3C trace-context propagator, then starts the span inside it.
+
+    Attributes are filtered through the allowlist, exactly like :func:`span`, so
+    no owner contact detail, advisory text or URL can be set on the span. The
+    context manager also makes it the current span for its scope.
+    """
+    # Imported here (not at module import) to keep the propagator out of the
+    # import graph of modules that never cross a stored traceparent.
+    from opentelemetry.context import attach, detach
+    from opentelemetry.trace.propagation.tracecontext import (
+        TraceContextTextMapPropagator,
+    )
+
+    parent = TraceContextTextMapPropagator().extract({"traceparent": traceparent})
+    attrs = filter_attributes(attributes or {})
+    token = attach(parent)
+    try:
+        with get_tracer().start_as_current_span(name, attributes=attrs) as current:
+            yield current
+    finally:
+        detach(token)
+
+
 def set_span_attributes(current: Span, attributes: Mapping[str, Any]) -> None:
     """Set attributes on ``current``, dropping any not on the allowlist."""
     for key, value in filter_attributes(attributes).items():
