@@ -50,7 +50,7 @@ _DRIVER_PATH_DIRS = [str(_TESTS_DIR), str(_REPO_ROOT / "backend")]
 from compose_telemetry import (
     ComposeQueryError,
     span_attribute_keys,
-    wait_for_log_line,
+    wait_for_log_entry,
     wait_for_trace,
 )
 
@@ -118,11 +118,21 @@ def test_t_refuse_excluded_attributes_never_leave_the_collector() -> None:
     # the drop is selective — the Collector did not simply drop whole spans).
     assert any(k in keys for k in ("vt.scan.id", "vt.scan.status")), keys
 
-    # No excluded *value* appears in the backend's log lines. Poll until a line
-    # carrying this run's marker is present (so slow ingestion cannot let the
-    # check pass without inspecting anything), then assert none leaked.
-    lines = wait_for_log_line(_LOKI_SELECTOR, marker)
-    assert lines, "no Loki log line carried this run's marker"
-    for line in lines:
+    # Logs: poll until this run's log entry reaches Loki (the raw log record the
+    # driver emits carries the marker as vt.scan.id in structured metadata; the
+    # body is the event name only). Polling means slow ingestion cannot let the
+    # check pass without inspecting anything. Then assert no excluded VALUE
+    # appears in any entry's line or metadata — the Collector must have stripped
+    # the excluded attributes from the raw log record, so a broken Collector log
+    # config leaks them here.
+    entries = wait_for_log_entry(_LOKI_SELECTOR, marker)
+    assert entries, "no Loki log entry carried this run's marker"
+    for line, meta in entries:
+        haystack = line + " " + " ".join(f"{k}={v}" for k, v in meta.items())
         for banned in _EXCLUDED_MARKERS:
-            assert banned not in line, f"excluded value {banned!r} leaked to Loki: {line}"
+            assert banned not in haystack, f"excluded value {banned!r} leaked to Loki: {line} / {meta}"
+    # The excluded attribute KEYS must also be absent from the metadata (the
+    # Collector's keep_keys drop on the log pipeline).
+    all_meta_keys = {k for _line, meta in entries for k in meta}
+    for forbidden_key in ("owner.email", "authorization", "url.full", "db.statement"):
+        assert forbidden_key not in all_meta_keys, f"{forbidden_key} leaked to Loki metadata: {all_meta_keys}"

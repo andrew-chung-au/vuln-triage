@@ -134,11 +134,28 @@ def loki_query_range(logql: str, since_s: int = 3600) -> list[dict[str, Any]]:
 
 def loki_lines(logql: str, since_s: int = 3600) -> list[str]:
     """Return the raw log line strings matching a LogQL query."""
-    lines: list[str] = []
+    return [line for line, _meta in loki_entries(logql, since_s)]
+
+
+def loki_entries(logql: str, since_s: int = 3600) -> list[tuple[str, dict[str, Any]]]:
+    """Return (line, metadata) for each matching entry.
+
+    OTLP log *attributes* land in Loki as structured metadata, not the line body
+    (the body is the event name). ``metadata`` merges the stream labels and any
+    per-entry structured metadata, so a caller can check attribute values.
+    VERIFY: on Loki 3.2.1 a query_range value is ``[ts, line]`` or
+    ``[ts, line, {structured metadata}]``; both shapes are handled here.
+    """
+    entries: list[tuple[str, dict[str, Any]]] = []
     for stream in loki_query_range(logql, since_s):
-        for _ts, line in stream.get("values", []):
-            lines.append(line)
-    return lines
+        labels = dict(stream.get("stream", {}) or {})
+        for value in stream.get("values", []):
+            line = value[1] if len(value) > 1 else ""
+            meta = dict(labels)
+            if len(value) > 2 and isinstance(value[2], dict):
+                meta.update(value[2])
+            entries.append((line, meta))
+    return entries
 
 
 def loki_labels() -> list[str]:
@@ -204,5 +221,33 @@ def wait_for_log_line(logql: str, contains: str, timeout_s: float = DEFAULT_TIME
     except ComposeQueryError as exc:
         raise ComposeQueryError(
             f"{exc}; waited for a line matching {logql!r} containing {contains!r}. "
+            f"Loki state: {_loki_diagnostic(logql)}"
+        ) from exc
+
+
+def wait_for_log_entry(
+    logql: str, marker: str, timeout_s: float = DEFAULT_TIMEOUT_S
+) -> list[tuple[str, dict[str, Any]]]:
+    """Wait until an entry whose line or metadata contains ``marker`` appears.
+
+    The marker (this run's vt.scan.id value) is in the record's structured
+    metadata, not the body (the body is the event name), so this checks both.
+    Returns the matching (line, metadata) entries; raises with a Loki diagnostic
+    on timeout, so a blind miss is a decisive next step rather than a guess.
+    """
+
+    def _match() -> list[tuple[str, dict[str, Any]]] | bool:
+        found = [
+            (line, meta)
+            for line, meta in loki_entries(logql)
+            if marker in line or any(marker in str(v) for v in meta.values())
+        ]
+        return found or False
+
+    try:
+        return _poll(_match, timeout_s)
+    except ComposeQueryError as exc:
+        raise ComposeQueryError(
+            f"{exc}; waited for a Loki entry matching {logql!r} with marker {marker!r}. "
             f"Loki state: {_loki_diagnostic(logql)}"
         ) from exc

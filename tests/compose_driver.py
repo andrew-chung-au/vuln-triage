@@ -88,9 +88,33 @@ def cmd_refuse() -> int:
                 raw.set_attribute(key, value)  # excluded, Collector must drop
         # The log helper filters in code; pass excluded keys to prove the drop.
         log_event("scan.run", {**excluded, "vt.scan.id": marker})
+        # Also emit a RAW OTLP log record (bypassing log_event's in-code filter)
+        # carrying the excluded attributes + the marker, so the Collector is what
+        # must strip them from the log pipeline — parallel to the raw span. A
+        # broken Collector log config would then leak these to Loki.
+        _emit_raw_log(marker, excluded)
     _flush_providers()
     _result({"cmd": "refuse", "marker": marker, "trace_id": trace_id})
     return 0
+
+
+def _emit_raw_log(marker: str, excluded: dict) -> None:
+    """Emit one raw OTLP log record with excluded attributes (bypass the filter).
+
+    Uses the SDK logger directly (not log_event), so the excluded attributes DO
+    leave the backend on the log pipeline and the Collector must drop them. The
+    marker is carried as an allowlisted-shaped attribute (vt.scan.id) so the test
+    can find this record's structured metadata in Loki; the excluded keys must
+    be absent there. setup_logging() installed the LoggerProvider already.
+    """
+    from opentelemetry._logs import SeverityNumber, get_logger_provider
+
+    logger = get_logger_provider().get_logger("vulntriage-compose-test")
+    logger.emit(
+        body="scan.refuse.raw",
+        severity_number=SeverityNumber.INFO,
+        attributes={"vt.scan.id": marker, **excluded},
+    )
 
 
 def _flush_providers() -> None:
