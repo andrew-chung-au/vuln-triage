@@ -61,6 +61,7 @@ from vulntriage.db.models import (
     Finding,
     Lifecycle,
     NotificationJob,
+    User,
     Vulnerability,
 )
 from vulntriage.db.session import create_db_engine, create_session_factory
