@@ -43,15 +43,16 @@ if [ ! -x backend/.venv/bin/pytest ]; then
 fi
 
 # The telemetry job runs the app stack (db, migrations, backend) AND the
-# observability stack together under ONE project, so the backend reaches the
-# Collector/MailHog/Postgres by service name on the shared network
-# (compose.telemetry.yaml adds the fixtures mode, fixtures mount and OTLP/mail
-# wiring). The pytest cases drive the backend over its published port
-# (127.0.0.1:8000) and query Prometheus/Tempo/Loki/MailHog on their published
-# localhost ports. T-REFUSE still runs its host-side driver against the same
-# Collector.
-COMPOSE=(docker compose -p "$PROJECT"
-  -f compose.yaml -f observability/compose.yaml -f compose.telemetry.yaml)
+# observability stack together under ONE project via compose.telemetry.yaml
+# (which `include`s both), so the backend reaches the Collector/MailHog/Postgres
+# by service name on the shared network, with the fixtures mode, fixtures mount
+# and OTLP/mail wiring applied. The pytest cases drive the backend over its
+# published port (127.0.0.1:8000) and query Prometheus/Tempo/Loki/MailHog on
+# their published localhost ports. T-REFUSE still runs its host-side driver
+# against the same Collector.
+# One compose file that `include`s compose.yaml + observability/compose.yaml
+# (each resolves its own relative paths — see compose.telemetry.yaml's header).
+COMPOSE=(docker compose -p "$PROJECT" -f compose.telemetry.yaml)
 
 # Env the host-side T-REFUSE driver reads (observability/settings.py). The
 # containerized journey reads its env from compose.telemetry.yaml, not here.

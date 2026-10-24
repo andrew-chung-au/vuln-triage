@@ -1,21 +1,30 @@
-# Telemetry-journey test override (issue #172 PR 2, task 40 + task 25's
-# T-JOURNEY-BE). Used together with the app compose.yaml AND the observability
-# observability/compose.yaml under ONE project, so the backend, Postgres and the
-# observability services (Collector, Prometheus, Tempo, Loki, MailHog) share one
-# Docker network and reach each other by service name:
+# Telemetry-journey test stack (issue #172 PR 2, task 40 + task 25's
+# T-JOURNEY-BE). It `include`s the app compose.yaml AND the observability
+# observability/compose.yaml, so the backend, Postgres and the observability
+# services (Collector, Prometheus, Tempo, Loki, MailHog) share ONE Docker
+# network and reach each other by service name:
 #
-#   docker compose -p vt-telemetry \
-#     -f compose.yaml -f observability/compose.yaml -f compose.telemetry.yaml \
-#     up -d --wait
+#   docker compose -p vt-telemetry -f compose.telemetry.yaml up -d --wait ...
+#
+# `include` (not `-f` merge) is deliberate: each included file is loaded with
+# ITS OWN project directory for relative-path resolution (Docker docs), so the
+# observability compose's `./prometheus.yml` etc. resolve against observability/
+# and compose.yaml's `./backend` against the repo root. A plain `-f a -f b`
+# merge resolves every relative path against the FIRST file's directory, which
+# breaks the observability bind mounts (the first real CI run hit exactly that).
 #
 # This runs the REAL stack configuration (Postgres, migrations, the backend
 # image) with only the deltas a no-live-feed journey test needs: fixtures mode,
 # the test environment, the fixtures mount, and the OTLP + MailHog wiring. The
 # user-creation command runs inside the backend container, so nothing needs
-# Postgres published to the host. #159 and #160 reuse this override.
+# Postgres published to the host. #159 and #160 reuse this stack.
 #
 # Needs Docker; runs in CI (the telemetry job) or on the human's host, never in
 # the agent sandbox.
+
+include:
+  - path: compose.yaml
+  - path: observability/compose.yaml
 
 services:
   # The migrations one-shot already exists in compose.yaml; it builds the schema
