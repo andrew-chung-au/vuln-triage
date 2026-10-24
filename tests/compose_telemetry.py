@@ -96,6 +96,38 @@ def wait_for_trace(trace_id: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> dict[
     return _poll(lambda: tempo_trace(trace_id), timeout_s)
 
 
+def wait_for_trace_spans(
+    trace_id: str, required: set[str], timeout_s: float = DEFAULT_TIMEOUT_S
+) -> dict[str, Any]:
+    """Wait until the trace contains every span name in ``required``; return it.
+
+    The journey spans arrive over time: the scan spans first, then
+    ``notification.deliver`` when the DeliveryWorker next polls (~30s) and its
+    export flushes. Polling the full set (not just trace existence) avoids
+    asserting before the delivery span lands. Raises with the names seen so far
+    on timeout.
+    """
+    def _complete():  # type: ignore[no-untyped-def]
+        try:
+            trace = tempo_trace(trace_id)
+        except ComposeQueryError:
+            return False
+        names = {sp.get("name") for sp in _iter_spans(trace) if sp.get("name")}
+        return trace if required <= names else False
+
+    try:
+        return _poll(_complete, timeout_s)
+    except ComposeQueryError as exc:
+        seen: set[str] = set()
+        try:
+            seen = {sp.get("name") for sp in _iter_spans(tempo_trace(trace_id)) if sp.get("name")}
+        except ComposeQueryError:
+            pass
+        raise ComposeQueryError(
+            f"{exc}; trace {trace_id} missing spans {required - seen}; present: {seen}"
+        ) from exc
+
+
 def tempo_search_trace_ids(span_name: str, lookback_s: int = 3600) -> list[str]:
     """Trace ids that contain a span named ``span_name`` (Tempo search API).
 
@@ -343,10 +375,12 @@ def mailhog_recipients(messages: list[dict[str, Any]]) -> set[str]:
 
 def wait_for_mail(count: int = 1, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[dict[str, Any]]:
     """Wait until MailHog holds at least ``count`` messages."""
-    return _poll(
-        lambda: (msgs := mailhog_messages()) if len(msgs) >= count else False,
-        timeout_s,
-    )
+
+    def _enough() -> list[dict[str, Any]] | bool:
+        msgs = mailhog_messages()
+        return msgs if len(msgs) >= count else False
+
+    return _poll(_enough, timeout_s)
 
 
 # -- Backend HTTP (drive the journey over the published port) ---------------

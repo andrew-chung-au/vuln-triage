@@ -71,6 +71,10 @@ export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-vt-test-not-a-secret}"
 export VT_TEST_USERNAME="telemetry-lead"
 export VT_TEST_PASSWORD="telemetry-not-a-secret"
 export VT_BACKEND_URL="http://localhost:8000"
+# The journey's notification.deliver span/metric/mail appear only after the
+# DeliveryWorker's next poll (~30s) plus the batch-export flush, so give the
+# pollers more than the 60s default.
+export VT_COMPOSE_POLL_TIMEOUT="${VT_COMPOSE_POLL_TIMEOUT:-150}"
 
 cleanup() {
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true

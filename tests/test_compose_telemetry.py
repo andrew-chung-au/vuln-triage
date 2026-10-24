@@ -62,6 +62,7 @@ from compose_telemetry import (
     wait_for_mail,
     wait_for_metric,
     wait_for_trace,
+    wait_for_trace_spans,
     wait_for_trace_with_span,
 )
 
@@ -191,16 +192,18 @@ def test_t_journey_be_one_trace_across_metric_trace_log_and_mailhog() -> None:
     asset = backend_register_asset(cookie, _PYGOAT_ASSET)
     print(f"T-JOURNEY-BE: registered asset {asset.get('id')!r}; driving the journey")
 
-    # The scan runs in the container; find the journey trace by its scan.run root.
-    trace_id = wait_for_trace_with_span("scan.run")
+    # The scan runs in the container; find the JOURNEY trace by a span unique to
+    # it — notification.enqueue (the T-REFUSE driver also emits a scan.run, so
+    # searching scan.run can match the wrong trace). notification.enqueue is
+    # produced only by create_top_tier_jobs for a real P1 finding.
+    trace_id = wait_for_trace_with_span("notification.enqueue")
     assert len(trace_id) == 32 and int(trace_id, 16) != 0
     print(f"T-JOURNEY-BE: journey trace id {trace_id}")
 
-    # Tempo: the trace carries the full submission backend span list.
-    trace = wait_for_trace(trace_id)
+    # Tempo: wait until the trace carries the full submission backend span list
+    # (notification.deliver lands when the DeliveryWorker next polls, ~30s).
+    trace = wait_for_trace_spans(trace_id, _JOURNEY_SPANS)
     names = span_names(trace)
-    missing = _JOURNEY_SPANS - names
-    assert not missing, f"journey trace is missing spans {missing}; present: {names}"
     # The only identifying labels on the deliver span are finding id and tier.
     keys = span_attribute_keys(trace)
     assert "vt.finding.id" in keys and "vt.tier" in keys, keys
