@@ -12,3 +12,83 @@ def get_github_read_token() -> str | None:
     sent only to ``api.github.com`` by :class:`vulntriage.ingest.github.GitHubReader`.
     """
     return os.environ.get("GITHUB_READ_TOKEN") or None
+
+
+# --- Feed source selection (VT_FEEDS) and the fail-closed environment gate ---
+# task 40 (#172): a deployed/Compose scan must match/enrich/rank with no live
+# feed. VT_FEEDS=live (default) uses real HTTP; VT_FEEDS=fixtures replays the
+# committed fixtures. An unknown value stops start-up (never a silent fall-back
+# to live). Fixture mode is refused unless DEPLOYMENT_ENVIRONMENT is explicitly
+# dev or test, read RAW so unset/prod/unknown fail closed (A42; the same test
+# VT_DEMO_DEFECT uses, A35; closes T-A8).
+
+FEEDS_LIVE = "live"
+FEEDS_FIXTURES = "fixtures"
+_FEEDS_VALUES = (FEEDS_LIVE, FEEDS_FIXTURES)
+
+# DEPLOYMENT_ENVIRONMENT values that permit fixture mode / the demo defect.
+_NON_PRODUCTION_ENVIRONMENTS = ("dev", "test")
+
+
+class FeedsConfigurationError(RuntimeError):
+    """VT_FEEDS is an unknown value, or fixtures mode is used outside dev/test.
+
+    Raised at start-up so a misconfiguration stops the backend rather than
+    silently running against live feeds or shipping fixtures to production.
+    """
+
+
+def get_feeds_mode(environ: object = None) -> str:
+    """Return the validated feed source: ``live`` (default) or ``fixtures``.
+
+    Pure when ``environ`` is passed (a mapping): it reads only that mapping, so
+    it is unit-testable. An unset value is ``live``; any value other than
+    ``live``/``fixtures`` raises :class:`FeedsConfigurationError` (no silent
+    fall-back). When fixtures is selected, the environment gate below must also
+    pass; call :func:`require_feeds_allowed` at start-up to enforce it.
+    """
+    env = os.environ if environ is None else environ
+    raw = env.get("VT_FEEDS")
+    if not raw:
+        return FEEDS_LIVE
+    value = raw.strip()
+    if value not in _FEEDS_VALUES:
+        raise FeedsConfigurationError(
+            f"VT_FEEDS={raw!r} is not valid; use one of {_FEEDS_VALUES} (or leave it unset for {FEEDS_LIVE!r})"
+        )
+    return value
+
+
+def is_non_production_environment(environ: object = None) -> bool:
+    """Whether DEPLOYMENT_ENVIRONMENT is EXPLICITLY ``dev`` or ``test``.
+
+    Reads the RAW ``DEPLOYMENT_ENVIRONMENT`` value — NOT
+    ``observability.settings.get_deployment_environment()``, which defaults to
+    ``dev`` when unset and would fail open. Unset, ``prod``, or any other value
+    returns False (treated as production), so the fixture-mode and demo-defect
+    refusals fail closed. Pure when ``environ`` is passed.
+    """
+    env = os.environ if environ is None else environ
+    raw = env.get("DEPLOYMENT_ENVIRONMENT")
+    if raw is None:
+        return False
+    return raw.strip() in _NON_PRODUCTION_ENVIRONMENTS
+
+
+def require_feeds_allowed(environ: object = None) -> str:
+    """Validate VT_FEEDS and the environment gate at start-up; return the mode.
+
+    Raises :class:`FeedsConfigurationError` when VT_FEEDS is unknown, or when
+    fixtures mode is selected while the environment is not explicitly dev/test
+    (fail closed: unset/prod/unknown refuse). Returns the validated mode so the
+    caller can build the clients.
+    """
+    mode = get_feeds_mode(environ)
+    if mode == FEEDS_FIXTURES and not is_non_production_environment(environ):
+        env = os.environ if environ is None else environ
+        shown = env.get("DEPLOYMENT_ENVIRONMENT")
+        raise FeedsConfigurationError(
+            "VT_FEEDS=fixtures is refused unless DEPLOYMENT_ENVIRONMENT is explicitly "
+            f"'dev' or 'test' (got {shown!r}); fixtures must never run in production"
+        )
+    return mode

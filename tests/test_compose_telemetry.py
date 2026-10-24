@@ -105,6 +105,11 @@ def test_t_refuse_excluded_attributes_never_leave_the_collector() -> None:
     trace_id = result["trace_id"]
     marker = result["marker"]
     assert len(trace_id) == 32 and int(trace_id, 16) != 0
+    # Visible in the CI log: which excluded keys the helper path actually sent to
+    # the Collector (empty normally; non-empty if the code allowlist is widened).
+    # Makes a green result read as "the Collector stripped it", not "never sent".
+    print(f"T-REFUSE: helper path sent excluded keys to Collector: "
+          f"{result.get('helper_sent_excluded_keys')}")
 
     trace = wait_for_trace(trace_id)
     keys = span_attribute_keys(trace)

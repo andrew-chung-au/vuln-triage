@@ -80,6 +80,15 @@ def cmd_refuse() -> int:
     with span("scan.run", {"vt.scan.id": marker}) as current:
         set_span_attributes(current, excluded)  # filtered in code -> dropped
         trace_id = current_trace_id_hex()
+        # Diagnostic: which of the excluded keys the HELPER path actually let
+        # through the code allowlist onto the exported span. Normally empty (the
+        # code allowlist drops them all); if the code allowlist is widened (e.g.
+        # owner.email added), the matching keys appear here, so a green T-REFUSE
+        # reads as "the helper SENT it to the Collector and the Collector
+        # stripped it", not "it was never sent".
+        helper_sent = sorted(
+            k for k in excluded if k in dict(getattr(current, "attributes", {}) or {})
+        )
         # A CHILD span set through the raw API: the excluded attributes bypass
         # the code allowlist and go to the Collector, which must strip them.
         with tracer.start_as_current_span("scan.refuse.raw") as raw:
@@ -94,7 +103,10 @@ def cmd_refuse() -> int:
         # broken Collector log config would then leak these to Loki.
         _emit_raw_log(marker, excluded)
     _flush_providers()
-    _result({"cmd": "refuse", "marker": marker, "trace_id": trace_id})
+    _result(
+        {"cmd": "refuse", "marker": marker, "trace_id": trace_id,
+         "helper_sent_excluded_keys": helper_sent}
+    )
     return 0
 
 
