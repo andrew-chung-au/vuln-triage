@@ -142,8 +142,14 @@ run_alert() {
   export VT_COMPOSE_PROJECT="$PROJECT"
   export VT_COMPOSE_FILES="compose.yaml compose.telemetry.yaml compose.alert.yaml"
   # The alert needs a gauge scrape + >= one 1-minute rule evaluation + delivery,
-  # so give the pollers headroom over the telemetry default.
-  export VT_COMPOSE_POLL_TIMEOUT="${VT_COMPOSE_POLL_TIMEOUT:-240}"
+  # so give the pollers real headroom over the telemetry default. The top-level
+  # default above already SET VT_COMPOSE_POLL_TIMEOUT to 150, so a
+  # `:-240`-style default on the same variable would never apply (the alert job
+  # would silently run at the too-tight 150s and time out the firing waits).
+  # Force 300s here regardless of that top-level default, but keep it
+  # overridable via a DEDICATED knob (VT_ALERT_POLL_TIMEOUT) so the human can
+  # still tune the alert job without disturbing the telemetry default.
+  export VT_COMPOSE_POLL_TIMEOUT="${VT_ALERT_POLL_TIMEOUT:-300}"
 
   mkdir -p .scratch
 

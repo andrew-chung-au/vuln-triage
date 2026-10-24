@@ -43,6 +43,7 @@ from typing import Any
 from compose_telemetry import (  # noqa: F401 (re-exported for the cases)
     ComposeQueryError,
     DEFAULT_TIMEOUT_S,
+    MAILHOG_URL,
     _get_json,
     _poll,
     mailhog_messages,
@@ -329,6 +330,29 @@ def wait_for_no_finding_series(timeout_s: float = DEFAULT_TIMEOUT_S) -> None:
     never weakening the assertion.
     """
     _poll(lambda: (not _has_finding_series()) or False, timeout_s)
+
+
+def mailhog_reset() -> None:
+    """Delete every message MailHog currently holds (call between cases).
+
+    MailHog keeps caught mail in memory only, with no per-recipient delete, so a
+    human-email alert delivered by a PRIOR case (A-FIRE's firing email, or
+    A-GAP part 2's NoData email) would otherwise linger and contaminate a later
+    case's "no human email" / "exactly one email" assertions. Clearing it at
+    each case boundary removes that cross-case contamination; it does NOT weaken
+    any assertion — each case still proves exactly what its criterion says,
+    against a sink that holds only its own mail.
+
+    VERIFY: MailHog v1.0.1 delete-all is the v1 endpoint ``DELETE
+    /api/v1/messages`` (the read API used elsewhere is the v2 ``GET
+    /api/v2/messages``; delete-all lives on v1), returning 200 on success.
+    """
+    req = urllib.request.Request(f"{MAILHOG_URL}/api/v1/messages", method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=10):  # noqa: S310 (loopback)
+            return
+    except (urllib.error.URLError, OSError) as exc:
+        raise ComposeQueryError(f"mailhog reset failed: {exc}") from exc
 
 
 def mailhog_alert_messages(to: str | None = None) -> list[dict[str, Any]]:

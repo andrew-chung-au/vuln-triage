@@ -56,6 +56,7 @@ from compose_alert import (
     ComposeQueryError,
     clear_seed,
     mailhog_alert_messages,
+    mailhog_reset,
     overdue_series,
     rescore_finding,
     seed_overdue_job,
@@ -102,16 +103,28 @@ _FORBIDDEN_IN_LABELS = ("owner", "@", "http", "bearer", "secret", "advisory")
 
 @pytest.fixture(autouse=True)
 def _clean_between_cases():  # type: ignore[no-untyped-def]
-    """Each case starts from zero seeded jobs and an empty webhook sink.
+    """Each case starts from zero seeded jobs, an empty webhook sink and an empty MailHog.
 
     Keeps "exactly one" / "nothing" assertions honest: no case inherits another
-    case's firing job or recorded request.
+    case's firing job, recorded request, or delivered email.
+
+    Clearing MailHog (mailhog_reset) removes cross-case email contamination: a
+    human-email alert delivered by a PRIOR case (A-FIRE's firing email, or
+    A-GAP part 2's legitimate NoData email) would otherwise linger in MailHog's
+    in-memory store and make a later case's ``mailhog_alert_messages(...) == []``
+    assertion see another case's mail. This is a test-correctness fix, NOT a
+    weakening: each case still proves exactly what its criterion says, now
+    against a sink that holds only its own mail. The reset runs in SETUP (so
+    each case starts clean) AND in teardown (so a case that legitimately leaves
+    mail — A-GAP part 2's NoData email — does not bleed into the next case).
     """
     assert wait_for_webhook_health(), "stub webhook sink did not become healthy"
     clear_seed()
     webhook_reset()
+    mailhog_reset()
     yield
     clear_seed()
+    mailhog_reset()
     # The OTLP→Prometheus exporter keeps the last-observed finding series for a
     # scrape window after clear_seed() drops the DB row, so a later case could
     # otherwise inherit a stale finding_id series. Wait for the empty state to
