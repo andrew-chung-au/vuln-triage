@@ -33,3 +33,19 @@ build/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Terraform (task 17 / #141): never commit state, local dirs or real tfvars.
+# Only *.tf, *.tfvars.example and the module READMEs are tracked.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl

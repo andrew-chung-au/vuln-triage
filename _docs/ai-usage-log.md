@@ -2238,3 +2238,12 @@ Copy this template for each new entry:
 - files changed: `_docs/terraform-verify.md` (new: §1 static fmt/validate checks that need no AWS, §2 pre-apply security review checklist, §3 per-module apply verification, §4 the #141 dev-URL acceptance, §5 teardown verification; consolidates the Terraform checks that were scattered across architecture.md, aws-setup.md and the push-check guide), `README.md` (index link), this log entry.
 - verification (tests run, reviewer verdict): docs only; no code yet. The runbook references real commands (terraform fmt/validate as in push-check-image-guide.md) and the aws-setup.md apply order. The Terraform modules themselves are the next step.
 - human review (what I checked or corrected, or `none`): none yet; the runbook defines how the human verifies the modules that come next.
+
+- date: 2026-10-23
+- task/issue: #141 (task 17) — Terraform modules + GHCR build workflow
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human approved the recommendations for #141 (Caddy reverse proxy, region ap-southeast-2, Secrets Manager, t3.medium, OIDC-reuse as a variable, SES deferred) and asked that the Terraform verification runbook exist in _docs first (done: _docs/terraform-verify.md).
+- files changed: `terraform/README.md`, `terraform/bootstrap/*` (state bucket), `terraform/deploy-roles/*` (OIDC + dev/prod roles), `terraform/server/*` (EC2, EIP, SG, instance role, EBS+DLM snapshots, nightly-stop schedule, user-data.sh, caddy/Caddyfile), each with a terraform.tfvars.example; `.github/workflows/deploy.yml` (new; build-once → tag → GHCR → record digest; dev-deploy job scaffolded for task 21), `.gitignore` (terraform state/tfvars), session summary, this log entry. No Makefile/verify.yml change (parallel with #140).
+- verification (tests run, reviewer verdict): NOT run here — the sandbox has no AWS or Terraform. Checked: balanced braces in every .tf, .tfvars.example tracked while state/real tfvars are git-ignored, the workflow uses only GITHUB_TOKEN + the OIDC role. The human runs terraform fmt/validate and every apply per _docs/terraform-verify.md; the task's acceptance (dev sslip.io URL answers, deploy log names a digest) is a human step.
+- human review (what I checked or corrected, or `none`): the human approved Caddy and the defaults before the build; the Terraform is reviewed and applied by the human (agents never apply or hold AWS credentials).
