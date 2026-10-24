@@ -55,6 +55,7 @@ from vulntriage.mail.transport import (
     build_transport,
 )
 from vulntriage.observability import metrics
+from vulntriage.observability.logs import log_event
 from vulntriage.observability.metrics import setup_metrics
 from vulntriage.observability.tracing import set_span_attributes, span_from_traceparent
 
@@ -73,6 +74,30 @@ _DELIVERABLE_STATES = (
 
 def _now() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
+
+
+def _log_delivery_outcome(
+    job: NotificationJob, finding: Finding, *, outcome: str, error_code: str | None
+) -> None:
+    """Emit the US-13 structured delivery-outcome log (#177).
+
+    Called INSIDE the ``notification.deliver`` span (the child of the job's
+    stored ``traceparent``), so the log carries the journey trace id and the
+    metric/trace/log share it. Ids and outcome codes only — the attributes go
+    through the allowlist in ``log_event``, so no advisory text, contact, URL or
+    credential can leak. Every outcome is logged (``sent``, ``failed``,
+    ``held``); the ``failed`` log is what the US-15 responder reads from Loki to
+    find the failing finding (task 28 / #160).
+    """
+    attributes: dict[str, str] = {
+        "vt.finding.id": str(finding.id),
+        "vt.tier": job.tier,
+        "vt.notification.kind": job.kind,
+        "vt.outcome": outcome,
+    }
+    if error_code is not None:
+        attributes["vt.error.code"] = error_code
+    log_event("notification.deliver", attributes)
 
 
 class DeliveryWorker:
@@ -183,6 +208,7 @@ class DeliveryWorker:
                 set_span_attributes(
                     current, {"vt.outcome": "held", "vt.error.code": "mail_config"}
                 )
+                _log_delivery_outcome(job, finding, outcome="held", error_code="mail_config")
                 session.commit()
                 log.warning("notification job %s held: %s", job.id, exc)
                 return False
@@ -212,6 +238,7 @@ class DeliveryWorker:
                 metrics.notifications_total.add(
                     1, {"vt.notification.kind": job.kind, "vt.outcome": "held"}
                 )
+                _log_delivery_outcome(job, finding, outcome="held", error_code="sender_not_verified")
                 session.commit()
                 return False
             except HeaderInjectionError:
@@ -221,6 +248,7 @@ class DeliveryWorker:
                 set_span_attributes(
                     current, {"vt.outcome": "held", "vt.error.code": "header_injection"}
                 )
+                _log_delivery_outcome(job, finding, outcome="held", error_code="header_injection")
                 session.commit()
                 return False
             except Exception as exc:  # noqa: BLE001 - a transport failure retries
@@ -233,6 +261,7 @@ class DeliveryWorker:
                 metrics.notifications_total.add(
                     1, {"vt.notification.kind": job.kind, "vt.outcome": "failed"}
                 )
+                _log_delivery_outcome(job, finding, outcome="failed", error_code="send_failed")
                 session.commit()
                 log.warning("notification job %s failed to send: %s", job.id, exc)
                 return False
@@ -252,6 +281,7 @@ class DeliveryWorker:
             metrics.notification_delivery_seconds.record(
                 time.monotonic() - start, {"vt.notification.kind": job.kind}
             )
+            _log_delivery_outcome(job, finding, outcome="sent", error_code=None)
             session.commit()
             return True
 

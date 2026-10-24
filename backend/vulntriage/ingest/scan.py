@@ -27,6 +27,7 @@ from vulntriage.ingest.notifications import create_top_tier_jobs
 from vulntriage.ingest.osv import FeedUnavailable, OsvClientProtocol
 from vulntriage.ingest.ranking import rank_asset
 from vulntriage.ingest.signals import EpssClientProtocol, KevClientProtocol, enrich_asset
+from vulntriage.observability.logs import log_event
 from vulntriage.observability.tracing import current_trace_id_hex, span
 from vulntriage.ingest.models import (
     INCLUDE_NOT_FOUND,
@@ -302,6 +303,9 @@ def run_scan(
         asset.last_scan_at = now
         asset.last_commit_sha = sha
         session.commit()
+        # US-13 structured log inside scan.run, so it shares the journey trace id
+        # (#177). Ids and outcome codes only (allowlisted); no excluded data.
+        log_event("scan.finished", {"vt.scan.id": str(scan_id), "vt.scan.status": status.value})
 
 
 def _fail(session: Session, scan: Scan, asset: Asset, reason: FailureReason) -> None:
