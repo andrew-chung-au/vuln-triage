@@ -113,6 +113,35 @@ should not change.**
 - [ ] Also under `make verify` (no Docker): `tests/test_marker_hygiene.py` fails if the `compose` marker appears outside the allowed compose modules — the guard that stops an ordinary backend test being silently dropped from `make test`.
 - [ ] Close #157 when `make test-compose JOB=telemetry` (`T-REFUSE`) is green in CI (its acceptance criteria were narrowed to `T-REFUSE` + the selector on 2026-10-24; #172 carries the delivery cases and `T-JOURNEY-BE`).
 
+## #159 — the `alert` Compose test + CI `alert` job (task 27)
+
+Branch: `feat/159-alert-compose-job`. #159 adds the US-14 `alert` job: the
+firing-state seam (`backend/vulntriage/manage.py` `alert-*`), a stdlib stub
+webhook sink (`tests/alert_webhook_sink.py`), the alert helpers
+(`tests/compose_alert.py`), the `compose`-marked A-* cases
+(`tests/test_compose_alert.py`), the Compose override (`compose.alert.yaml`), and
+the `ci/test-compose.sh` `alert` branch. The job is **Docker-only** — it runs the
+app + observability + webhook-sink stack and drives firing from stored job state
+through the task-26 Grafana rule — so it is authored here and **verified by the
+human/CI under Docker**. `make verify` in the sandbox is unaffected: the cases are
+`compose`-marked and deselected, and the seam's own logic is covered under
+`make test` (`tests/test_manage.py`). The CI `alert` job for
+`.github/workflows/verify.yml` is **uncommitted pending human approval** (exact
+diff in the Engineer comment on #159). **No new dependency; `backend/uv.lock`
+unchanged.**
+
+- [ ] (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=alert` is green: it brings up `compose.yaml` + `compose.telemetry.yaml` + `compose.alert.yaml` under the `vt-alert` project, seeds an overdue top-tier job with the in-container seam, and passes the A-* cases; then the rule-absent negative pass passes. Wire the CI `alert` job (the proposed `.github/workflows/verify.yml` change) once approved and confirm it is green on the PR. Expect the `VERIFY:` shapes to need a fix on the first real run — that is normal.
+- [ ] `VERIFY:` the exact `GF_SMTP_*` keys on `grafana/grafana:11.3.0` and that `mailhog/mailhog:v1.0.1` accepts Grafana's SMTP with no auth / no TLS (the human-email alert is delivered by Grafana, not the backend; wired in `compose.alert.yaml`).
+- [ ] `VERIFY:` Grafana 11.3.0 `NoData` semantics for A-GAP part 2 — that stopping the Collector long enough makes `noDataState: Alerting` fire ONE instance with no `finding_id`, routed to the human email only (the `finding_id =~ ".+"` matcher excludes it) while the finding's own instance is unchanged; and the exact number of missing evaluations needed. Set `VT_COMPOSE_POLL_TIMEOUT` accordingly (default 240 here).
+- [ ] `VERIFY:` Grafana 11.3.0's webhook POST shape to the responder destination — that the body carries the `finding_id`/`tier` labels (and NOT advisory text, owner contact, URL or credential), and the top-level/per-alert `status: firing|resolved`. `compose_alert.webhook_finding_ids` / `test_compose_alert._is_firing` read the common shape and fall back to scanning the raw JSON; adjust if the shape differs.
+- [ ] `VERIFY:` end-to-end firing latency on the stack (gauge scrape + ≥ one 1-minute rule evaluation + notification); confirm the poll timeout has headroom, and that `repeat_interval: 8760h` does not re-send within a run (A-RESOLVE: one firing + at most one resolved, the resolved message not counted as a second alert, D1 option 1).
+- [ ] `VERIFY:` that overriding the imported `grafana` service (env + the provisioning/dashboards volumes) from `compose.alert.yaml` as a third `-f` file works on the pinned CI Compose version (compose-go PR #559 fixed the old "conflicts with imported resource" bug). If a pinned version still errors, move the Grafana SMTP override into `compose.telemetry.yaml` (it does the `include`), guarded by the `GF_SMTP_*`/`VT_ALERT_*` env being empty for the telemetry job.
+- [ ] `VERIFY:` the A-FIRE-negative toggle — that Grafana provisions cleanly with the rule file absent from the `VT_ALERT_PROVISIONING` copy (no rule = no firing, not an error), and that `up -d --force-recreate --no-deps grafana` reloads it mid-run.
+- [ ] Also under `make verify` (no Docker): `tests/test_manage.py` covers the seam (`alert-seed`/`alert-set`/`alert-rescore`/`alert-clear`) against `compute_overdue_series` on SQLite, and `tests/test_marker_hygiene.py` now allows `test_compose_alert.py` to carry `compose` (the two allowed modules).
+- [ ] Protected-file approval: the `.github/workflows/verify.yml` `alert` job (mirrors `telemetry`) is proposed in the Engineer comment and must be human-approved before it is committed (`HUMAN_APPROVED=1`) and before #159 closes. The `Makefile` already wires `COMPOSE_JOBS=alert` (no Makefile change).
+- [ ] Note: `I-OWNER-SENDER` MailHog form and `T-E6` stay follow-ups (Out of scope in #159).
+- [ ] Close #159 when `make test-compose JOB=alert` (both passes) is green in CI with the approved `alert` job.
+
 ---
 
 ## Convention

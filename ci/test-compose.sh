@@ -10,7 +10,7 @@
 #
 # Usage (via the Makefile): make test-compose JOB=<telemetry|alert|responder>
 #   JOB=telemetry  the cases #157 ships (see below)
-#   JOB=alert      task 27 / #159 (not implemented here; selector only)
+#   JOB=alert      task 27 / #159 (the US-14 A-* alert cases)
 #   JOB=responder  task 28 / #160 (not implemented here; selector only)
 #   no JOB         runs all three in turn (for the human's host)
 #
@@ -28,7 +28,6 @@
 set -uo pipefail
 
 JOB="${JOB:-}"
-PROJECT="vt-telemetry"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
@@ -53,6 +52,10 @@ fi
 # compose.yaml + the telemetry override are a -f merge (so the backend override
 # applies); the override `include`s observability/compose.yaml (so its bind
 # mounts resolve against observability/). See compose.telemetry.yaml's header.
+# The `alert` job adds compose.alert.yaml as a third -f override (Grafana SMTP,
+# the stub webhook sink, the alert env) under its own project name; run_alert
+# sets PROJECT and COMPOSE below. The telemetry job keeps vt-telemetry.
+PROJECT="vt-telemetry"
 COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml)
 
 # Env the host-side T-REFUSE driver reads (observability/settings.py). The
@@ -115,18 +118,73 @@ run_not_implemented() {
   return 3
 }
 
+# -- alert job (task 27, #159): the US-14 A-* cases ---------------------------
+#
+# Layers compose.alert.yaml (Grafana SMTP -> MailHog, the stub webhook sink, the
+# alert env) on the telemetry stack under its own project. The seam
+# (manage.py alert-*) runs in-container and writes the overdue job to the same
+# Postgres the gauge reads, so the alert fires from STORED job state. The
+# A-FIRE negative is a harness toggle: a second up/run with the task-26 rule
+# file removed from a provisioning COPY (the committed tree is never touched).
+run_alert() {
+  PROJECT="vt-alert"
+  COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml -f compose.alert.yaml)
+
+  # Alert env, all throwaway test-only values (never committed, never from .env).
+  # The host-side cases read VT_ALERT_HUMAN_EMAIL / VT_WEBHOOK_SINK_HOST_URL; the
+  # provisioning (us14-overdue.yaml) interpolates the VT_* values inside Grafana;
+  # ci exports the compose project + file list so the cases' seam runner can
+  # `docker compose run` against this same project.
+  export VT_ALERT_HUMAN_EMAIL="${VT_ALERT_HUMAN_EMAIL:-alert-human@alert.test}"
+  export VT_RESPONDER_WEBHOOK_URL="${VT_RESPONDER_WEBHOOK_URL:-http://webhook-sink:9099/responder}"
+  export VT_RESPONDER_WEBHOOK_TOKEN="${VT_RESPONDER_WEBHOOK_TOKEN:-alert-not-a-secret}"
+  export VT_WEBHOOK_SINK_HOST_URL="http://localhost:9099"
+  export VT_COMPOSE_PROJECT="$PROJECT"
+  export VT_COMPOSE_FILES="compose.yaml compose.telemetry.yaml compose.alert.yaml"
+  # The alert needs a gauge scrape + >= one 1-minute rule evaluation + delivery,
+  # so give the pollers headroom over the telemetry default.
+  export VT_COMPOSE_POLL_TIMEOUT="${VT_COMPOSE_POLL_TIMEOUT:-240}"
+
+  mkdir -p .scratch
+
+  echo "== [alert] starting the app + observability + webhook-sink stack (project $PROJECT) =="
+  "${COMPOSE[@]}" up -d --wait \
+    db migrations otel-collector prometheus tempo loki mailhog grafana webhook-sink backend || return 1
+
+  echo "== [alert] running the positive A-* cases (rule present) =="
+  # The seam clears any prior seeded state between cases (test fixture); -s so the
+  # per-case diagnostics show in the CI log even on a green run.
+  VT_ALERT_RULE_ABSENT=0 \
+    backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_alert.py || return 1
+
+  # -- A-FIRE negative: bring Grafana back up with the rule file removed -------
+  echo "== [alert] A-FIRE negative: provisioning the rule-absent copy =="
+  prov_copy=".scratch/alert-provisioning-no-rule"
+  rm -rf "$prov_copy"
+  cp -R observability/grafana/provisioning "$prov_copy"
+  rm -f "$prov_copy/alerting/us14-overdue.yaml"
+  export VT_ALERT_PROVISIONING="./$prov_copy"
+  # Recreate only Grafana so it reloads the rule-absent provisioning; the metric
+  # path (backend/Collector/Prometheus) and the sinks keep running.
+  "${COMPOSE[@]}" up -d --force-recreate --no-deps grafana || return 1
+
+  echo "== [alert] running the A-FIRE negative (rule absent) =="
+  VT_ALERT_RULE_ABSENT=1 \
+    backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_alert.py || return 1
+}
+
 case "$JOB" in
   telemetry) run_telemetry ;;
-  alert)     run_not_implemented alert 27 ;;
+  alert)     run_alert ;;
   responder) run_not_implemented responder 28 ;;
   "")
-    # No JOB: run all three in turn (the human's host). alert/responder are not
-    # implemented yet, so this reports them and fails overall until they land.
+    # No JOB: run all three in turn (the human's host). responder is not
+    # implemented yet, so this reports it and fails overall until it lands.
     rc=0
     run_telemetry || rc=$?
-    run_not_implemented alert 27 || true
+    run_alert || rc=$?
     run_not_implemented responder 28 || true
-    echo "note: only the telemetry job is implemented in #157; alert/responder are tasks 27/28." >&2
+    echo "note: the responder job is task 28 (#160), not implemented yet." >&2
     exit "$rc"
     ;;
   *)

@@ -31,6 +31,9 @@ pytestmark = pytest.mark.unit
 _ALLOWED_COMPOSE_MODULES = frozenset(
     {
         "test_compose_telemetry.py",
+        # The `alert` job's US-14 A-* cases (task 27, #159): compose-marked and
+        # deselected by make test/verify, like the telemetry module.
+        "test_compose_alert.py",
     }
 )
 
