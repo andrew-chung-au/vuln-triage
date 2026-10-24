@@ -139,3 +139,16 @@ def loki_lines(logql: str, since_s: int = 3600) -> list[str]:
         for _ts, line in stream.get("values", []):
             lines.append(line)
     return lines
+
+
+def wait_for_log_line(logql: str, contains: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[str]:
+    """Wait until at least one line matching ``logql`` contains ``contains``.
+
+    Returns the matching lines. Polling (rather than a single fetch) closes the
+    loophole where slow ingestion returns nothing and the caller's "no excluded
+    value in any matching line" check passes without inspecting anything.
+    """
+    return _poll(
+        lambda: [ln for ln in loki_lines(logql) if contains in ln] or False,
+        timeout_s,
+    )

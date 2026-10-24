@@ -17,10 +17,14 @@ refusal must come from the backend's guard). That containerized-backend-delivers
 harness is built with prerequisite #172, which carries those cases. See the
 ``telemetry`` job-table row in ``_docs/testing.md``.
 
-``T-REFUSE`` drives the backend's real span/log helpers through
-``tests/compose_driver.py`` (run as a subprocess in the backend venv so its OTLP
-export reaches the Collector), then confirms Tempo (and Loki) hold none of the
-excluded attribute keys or values.
+``T-REFUSE`` drives ``tests/compose_driver.py`` (a subprocess in the backend
+venv so its OTLP export reaches the Collector). The driver emits, in one trace,
+both an app-helper span/log (the code-level allowlist drops excluded attributes
+before export) AND a raw-OpenTelemetry-API span that bypasses the helper so the
+excluded attributes actually reach the Collector — which must strip them. The
+test then confirms Tempo holds none of the excluded keys (so a broken Collector
+config fails it, not just the code path) and Loki holds none of the excluded
+values, while the allowlisted ``vt.scan.id`` survives.
 """
 
 from __future__ import annotations
@@ -45,10 +49,16 @@ _DRIVER_PATH_DIRS = [str(_TESTS_DIR), str(_REPO_ROOT / "backend")]
 
 from compose_telemetry import (
     ComposeQueryError,
-    loki_lines,
     span_attribute_keys,
+    wait_for_log_line,
     wait_for_trace,
 )
+
+# Loki labels OTLP-ingested logs with the service name (service.name resource
+# attribute -> service_name label on Loki 3.x). The harness sets
+# OTEL_SERVICE_NAME=vulntriage-backend, so this selects the backend's logs.
+# VERIFY: the service_name label mapping on the pinned Loki 3.2.1 image.
+_LOKI_SELECTOR = '{service_name="vulntriage-backend"}'
 
 pytestmark = pytest.mark.compose
 
@@ -98,19 +108,21 @@ def test_t_refuse_excluded_attributes_never_leave_the_collector() -> None:
 
     trace = wait_for_trace(trace_id)
     keys = span_attribute_keys(trace)
-    # None of the excluded keys survive to Tempo.
+    # None of the excluded keys survive to Tempo. This covers BOTH spans the
+    # driver emits in this trace: the app-helper span (code-level allowlist) and
+    # the raw-API span whose excluded attributes are dropped only by the
+    # Collector — so a broken Collector config would fail this assertion.
     for forbidden in ("owner.email", "authorization", "url.full", "db.statement"):
         assert forbidden not in keys, f"{forbidden} leaked to Tempo: {keys}"
-    # The allowlisted vt.scan.id key does survive (the span was exported, so the
-    # drop is selective — it did not simply drop the whole span).
+    # The allowlisted vt.scan.id key does survive (the spans were exported, so
+    # the drop is selective — the Collector did not simply drop whole spans).
     assert any(k in keys for k in ("vt.scan.id", "vt.scan.status")), keys
 
-    # And no excluded *value* appears in any log line for this marker. The LogQL
-    # label selector that matches OTLP-ingested logs is VERIFY (it depends on how
-    # Loki labels the Collector's OTLP export), so fetch broadly and filter by
-    # the marker in Python.
-    lines = loki_lines("{}")  # VERIFY: the stream selector for OTLP logs on 3.2.1
+    # No excluded *value* appears in the backend's log lines. Poll until a line
+    # carrying this run's marker is present (so slow ingestion cannot let the
+    # check pass without inspecting anything), then assert none leaked.
+    lines = wait_for_log_line(_LOKI_SELECTOR, marker)
+    assert lines, "no Loki log line carried this run's marker"
     for line in lines:
-        if marker in line:
-            for banned in _EXCLUDED_MARKERS:
-                assert banned not in line, f"excluded value {banned!r} leaked to Loki: {line}"
+        for banned in _EXCLUDED_MARKERS:
+            assert banned not in line, f"excluded value {banned!r} leaked to Loki: {line}"
