@@ -2229,3 +2229,12 @@ Copy this template for each new entry:
 - files changed: `tests/conftest.py` (replace the single-shared-connection rollback with fresh-schema isolation: db_engine drop_all at setup/teardown on Postgres, each test's factory runs create_all as on SQLite; remove the Alembic _run_migrations helper and its call), `_session-summaries/issue-138-postgres-integration.md` (record the change and the reason), this log entry.
 - verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
 - human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
+
+- date: 2026-10-23
+- task/issue: #141 (task 17) — Terraform verification runbook (written before the Terraform itself)
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to write up the Terraform verification steps in _docs if not already there, before writing the Terraform. Running #141 in parallel with the other agent's #140 (no file overlap: #141 adds new terraform/ and a new deploy.yml; it does not touch Makefile or verify.yml).
+- files changed: `_docs/terraform-verify.md` (new: §1 static fmt/validate checks that need no AWS, §2 pre-apply security review checklist, §3 per-module apply verification, §4 the #141 dev-URL acceptance, §5 teardown verification; consolidates the Terraform checks that were scattered across architecture.md, aws-setup.md and the push-check guide), `README.md` (index link), this log entry.
+- verification (tests run, reviewer verdict): docs only; no code yet. The runbook references real commands (terraform fmt/validate as in push-check-image-guide.md) and the aws-setup.md apply order. The Terraform modules themselves are the next step.
+- human review (what I checked or corrected, or `none`): none yet; the runbook defines how the human verifies the modules that come next.
