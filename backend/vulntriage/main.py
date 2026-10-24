@@ -23,7 +23,9 @@ from vulntriage.api.findings import router as findings_router
 from vulntriage.api.security import LoginThrottle
 from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
-from vulntriage.ingest.github import GitHubReader, RepositoryReader
+from vulntriage.ingest.feeds import build_feed_clients
+from vulntriage.ingest.github import RepositoryReader
+from vulntriage.ingest.settings import get_feeds_mode, require_feeds_allowed
 from vulntriage.mail.delivery import DeliveryWorker
 from vulntriage.observability.logs import setup_logging
 from vulntriage.observability.metrics import set_overdue_source, setup_metrics
@@ -87,14 +89,29 @@ def create_app(
         # so the gauge emitted only the heartbeat until now. From here it reads
         # stored job state each time Prometheus scrapes.
         set_overdue_source(factory)
+        # Feed clients (task 40 / #172): build OSV/KEV/EPSS/GitHub from VT_FEEDS
+        # (live by default; fixtures replays the committed fixtures for Compose/
+        # CI). require_feeds_allowed validated the config at create_app time and
+        # fails closed outside dev/test, so this just reads the mode. A test that
+        # injected its own reader keeps it; otherwise the feeds' reader is used,
+        # so a deployed scan actually matches/enriches/ranks (the gap #172 fixes).
+        feeds = build_feed_clients(get_feeds_mode())
+        app.state.kev_client = feeds.kev
+        app.state.epss_client = feeds.epss
         worker: ScanWorker | None = None
         scheduler: Scheduler | None = None
         delivery: DeliveryWorker | None = None
         if run_worker:
-            worker = ScanWorker(factory, reader or GitHubReader())
+            worker = ScanWorker(
+                factory,
+                reader or feeds.reader,
+                osv_client=feeds.osv,
+                kev_client=feeds.kev,
+                epss_client=feeds.epss,
+            )
             worker.start()
             # The daily refresh + re-scan (task 38). It runs catch-up at start
-            # then ticks on a cadence; it uses app.state's feed clients when set.
+            # then ticks on a cadence; it uses app.state's feed clients.
             scheduler = Scheduler(
                 factory,
                 worker=worker,
@@ -132,6 +149,13 @@ def create_app(
     setup_tracing()
     setup_metrics()
     setup_logging()
+
+    # Validate the feed-source configuration at construction (task 40 / #172):
+    # VT_FEEDS must be live/fixtures (unknown value errors, no silent fall-back),
+    # and fixtures mode is refused unless DEPLOYMENT_ENVIRONMENT is explicitly
+    # dev/test (fail closed). A misconfiguration stops start-up here rather than
+    # quietly hitting live feeds or shipping fixtures to production.
+    require_feeds_allowed()
 
     # The app is served behind a reverse proxy at /api, which strips the prefix,
     # so routes stay mounted at /findings, /assets, etc. and the tests are
