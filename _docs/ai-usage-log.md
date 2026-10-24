@@ -2323,3 +2323,12 @@ Copy this template for each new entry:
 - files changed: new `observability/` (compose.yaml, otel-collector.yaml with the A32 keep_keys allowlist, prometheus.yml, tempo.yaml, loki-config.yaml, grafana provisioning + the us13-journey dashboard, README.md); new `_docs/pending-verification.md` (cross-issue checklist for #141/#140/#155); `README.md` (index link); session summary; this log entry. No backend/Makefile change, so make verify is unaffected.
 - verification (tests run, reviewer verdict): NOT run here — the stack needs Docker, absent in the agent sandbox. The dashboard JSON parses; the YAML/config are hand-checked. The task-24 db.statement drop from #154 is handled by the Collector keep_keys (in-code test already covers the exclusion; the Compose T-REFUSE assertion is task 25). The human runs the stack in a Codespace/cloud/Docker host per observability/README.md and _docs/pending-verification.md.
 - human review (what I checked or corrected, or `none`): none yet; Docker-dependent verification is listed in _docs/pending-verification.md.
+
+- date: 2026-10-24
+- task/issue: #162 (task 38) — backend scheduler for the daily refresh and scheduled re-scan
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human said work on #162.
+- files changed: `backend/vulntriage/scheduler.py` (new Scheduler: run_once/catch_up/tick/start/stop, injected now, last_scheduled_run from Scan rows), `backend/vulntriage/ingest/refresh.py` (new refresh_all helper extracted from the /signals/refresh handler), `backend/vulntriage/api/service.py` (handler calls refresh_all; imports trimmed), `backend/vulntriage/main.py` (lifespan starts/stops the Scheduler behind run_worker; app.state.scheduler), `tests/test_scheduler.py` (new I-SCHED cases), session summary, this log entry.
+- verification (tests run, reviewer verdict): NOT run here (sandbox has no PyPI). All files byte-compile; the scheduler time-logic (06:00 gate, 24h catch-up, once-per-day, no-prior-run) validated with a standalone simulation (all paths pass). No new dependency (clock-driven loop, per the issue's dependency note). The human runs make verify; I-SCHED is a make test case (SQLite + stubs, no Docker/network), so no cloud session is needed.
+- human review (what I checked or corrected, or `none`): none yet.

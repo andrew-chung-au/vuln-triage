@@ -26,6 +26,7 @@ from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.github import GitHubReader, RepositoryReader
 from vulntriage.observability.metrics import setup_metrics
 from vulntriage.observability.tracing import setup_tracing
+from vulntriage.scheduler import Scheduler
 from vulntriage.worker import ScanWorker
 
 
@@ -80,13 +81,26 @@ def create_app(
             factory = create_session_factory(engine)
         app.state.session_factory = factory
         worker: ScanWorker | None = None
+        scheduler: Scheduler | None = None
         if run_worker:
             worker = ScanWorker(factory, reader or GitHubReader())
             worker.start()
+            # The daily refresh + re-scan (task 38). It runs catch-up at start
+            # then ticks on a cadence; it uses app.state's feed clients when set.
+            scheduler = Scheduler(
+                factory,
+                worker=worker,
+                kev_client=getattr(app.state, "kev_client", None),
+                epss_client=getattr(app.state, "epss_client", None),
+            )
+            scheduler.start()
         app.state.worker = worker
+        app.state.scheduler = scheduler
         try:
             yield
         finally:
+            if scheduler is not None:
+                scheduler.stop()
             if worker is not None:
                 worker.stop()
             if engine is not None:
@@ -109,6 +123,7 @@ def create_app(
     FastAPIInstrumentor.instrument_app(app)
     app.state.session_factory = session_factory
     app.state.worker = None
+    app.state.scheduler = None
     app.state.login_throttle = LoginThrottle()
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(HTTPException, http_error_handler)
