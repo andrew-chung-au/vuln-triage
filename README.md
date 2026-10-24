@@ -66,6 +66,7 @@ Planning documents:
 - [_docs/tier-c-build.md](_docs/tier-c-build.md) — consolidated Tier C (S4) build sheet: observability, alert and on-call milestones, build order, and the open D4 / human prerequisites
 - [_docs/roadmap-showcase.md](_docs/roadmap-showcase.md) — showcase track: work built after the submission
 - [_docs/aws-setup.md](_docs/aws-setup.md) — human-side AWS and GitHub setup for the Tier B/C deployment
+- [_docs/terraform-verify.md](_docs/terraform-verify.md) — how to verify the `terraform/` modules (static checks, pre-apply review, per-module and acceptance checks)
 - [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work
 - [_docs/verify-locally.md](_docs/verify-locally.md) — step-by-step guide to install, run `make test`, and bring the app up locally for an end-to-end check
 

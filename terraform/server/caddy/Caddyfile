@@ -1,0 +1,27 @@
+# Caddy reverse proxy for the one-server dev+prod deployment (task 17 / #141).
+#
+# Caddy obtains and renews Let's Encrypt certificates automatically for each
+# hostname, terminates TLS on 443, redirects 80->443, and routes by hostname to
+# the right Compose project's frontend container (which itself proxies /api to
+# its backend). The {$VAR} placeholders are filled by the deploy workflow from
+# the server's Elastic IP.
+#
+# VERIFY at apply time: Let's Encrypt rate limits for the shared sslip.io name.
+# If issuance is refused, switch to the staging CA (uncomment the `acme_ca`
+# global option below) for the demo, then to a nip.io hostname (A36 fallback).
+
+{
+	email {$ACME_EMAIL}
+	# Fallback for the A36 demo path (not browser-trusted; accept once):
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Dev environment.
+dev.{$EIP_DASHED}.sslip.io {
+	reverse_proxy dev-frontend:8080
+}
+
+# Production environment.
+app.{$EIP_DASHED}.sslip.io {
+	reverse_proxy prod-frontend:8080
+}
