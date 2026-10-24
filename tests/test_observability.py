@@ -79,3 +79,60 @@ def test_notification_enqueue_span_gives_a_valid_non_zero_traceparent() -> None:
     assert len(trace_id) == 32 and int(trace_id, 16) != 0
     assert len(span_id) == 16 and int(span_id, 16) != 0
     assert flags in ("00", "01")
+
+
+def test_log_event_exports_otlp_record_with_allowlist_and_trace_id() -> None:
+    """#174: log_event emits an OTLP log record, filtered, with the span's trace id.
+
+    The original task-23 implementation only wrote stdout, so no log reached the
+    Collector/Loki. This asserts the export leg: an excluded attribute is dropped
+    and the exported record's trace id matches the active span. Uses an in-memory
+    log exporter on a SimpleLogRecordProcessor (synchronous, no flush timing),
+    attached to the dedicated telemetry logger — mirroring how the span tests
+    attach an in-memory span exporter to the live provider.
+    """
+    import logging as _logging
+
+    from opentelemetry import trace as _trace
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogRecordExporter,
+        SimpleLogRecordProcessor,
+    )
+
+    from vulntriage.observability import logs as logs_mod
+
+    # Make sure log_event's own (no-endpoint, no-op) setup has run, then attach a
+    # capturing handler to the same dedicated logger log_event emits on.
+    logs_mod.setup_logging()
+    exporter = InMemoryLogRecordExporter()
+    provider = LoggerProvider()
+    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    handler = LoggingHandler(level=_logging.NOTSET, logger_provider=provider)
+    logs_mod._otel_logger.addHandler(handler)
+    try:
+        setup_tracing()
+        with span("scan.run", {"vt.scan.id": "7"}):
+            expected_trace_id = _trace.format_trace_id(
+                _trace.get_current_span().get_span_context().trace_id
+            )
+            logs_mod.log_event(
+                "scan.run",
+                {"vt.scan.id": "7", "owner.email": "leak@example.com", "db.statement": "SELECT 1"},
+            )
+        records = exporter.get_finished_logs()
+    finally:
+        logs_mod._otel_logger.removeHandler(handler)
+        provider.shutdown()
+
+    assert len(records) == 1, f"expected exactly one exported log record, got {len(records)}"
+    lr = records[0].log_record
+    attrs = dict(lr.attributes or {})
+    # Excluded keys never reach the exported record (filtered in code).
+    assert "owner.email" not in attrs, attrs
+    assert "db.statement" not in attrs, attrs
+    # The allowlisted key and the event survive.
+    assert attrs.get("vt.scan.id") == "7", attrs
+    assert attrs.get("vt.event") == "scan.run" or lr.body == "scan.run", (attrs, lr.body)
+    # The exported record carries the active span's trace id (US-13 join).
+    assert _trace.format_trace_id(lr.trace_id) == expected_trace_id

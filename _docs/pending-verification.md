@@ -88,6 +88,31 @@ container, so no `observability/compose.yaml` change was needed).
 - [ ] Note: the `alert` Compose test and the `A-*` cases are **task 27 (#159)**; the responder webhook **receiver** is **task 28 (#160)** — both out of scope here.
 - [ ] Close #158 when the metric half is green under `make verify` and the Grafana rule behaviour above is confirmed on the running stack.
 
+## #157 — telemetry Compose test + `make test-compose` selector (task 25)
+
+PR: (this change). #157 ships the `make test-compose` + `JOB` selector (a
+protected `Makefile` change) and the single telemetry case **`T-REFUSE`**; the
+delivery-dependent cases move to #172 (they need the deployed backend container
+to deliver). The `telemetry` job is **Docker-only** — it runs the backend's
+span/log helpers against the `observability/` stack (Collector →
+Prometheus/Tempo/Loki) — so it is authored here and **verified by the human in a
+Codespace / Claude Code cloud / Docker host, or by CI (route 1)**. `make verify`
+in the sandbox is unaffected: the case is `compose`-marked and **deselected** by
+`make test` / `make verify` (so it never runs and never *skips* in the no-Docker
+gate), and `tests/test_marker_hygiene.py` guards against an ordinary test being
+silently tagged `compose`. The harness is `ci/test-compose.sh`; the case is
+`tests/test_compose_telemetry.py` (helpers in `tests/compose_telemetry.py`,
+driver in `tests/compose_driver.py`). **No new dependency; `backend/uv.lock`
+should not change.**
+
+- [ ] (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=telemetry` is green: it brings up the observability stack under the `vt-telemetry` project, runs the backend driver's `refuse` command against it, and passes `T-REFUSE` (the only telemetry case #157 ships). Wire the CI `telemetry` job (added to `.github/workflows/verify.yml`) and confirm it is green on the PR. Expect the `VERIFY:` query shapes to need a fix on the first real run — that is normal.
+- [ ] Confirm `T-REFUSE` fails when `owner.email` is added to the Collector allowlist (`observability/otel-collector.yaml`) — the task-25 acceptance negative check.
+- [ ] `VERIFY:` the external query shapes marked in `tests/compose_telemetry.py` on the pinned images: Tempo trace-by-id `/api/traces/{id}` and its span-attribute JSON nesting (2.6.1), and Loki `/loki/api/v1/query_range` with the stream selector for OTLP-ingested logs (3.2.1). Adjust the helpers if a shape differs. (Prometheus/MailHog helpers were trimmed out of #157; they return with the delivery cases in #172.)
+- [ ] `VERIFY:` a host pytest/driver process exports OTLP over the published Collector port (`localhost:4317` gRPC) and reaches Tempo/Loki on their published localhost ports. For `T-REFUSE` the driver runs on the host (no containerized delivery needed), so the two Compose projects do not need a shared network here; #172 adds that wiring for the containerized-backend-delivers cases.
+- [ ] Note: the delivery-dependent cases — `T-JOURNEY-BE`, the MailHog forms of `I-OWNER-NOAWS`/`I-OWNER-SENDER`, `T-E6` and `T-DELIVER-TRACE` — are **not** in #157; they need the deployed backend container to deliver and are prerequisite **#172**. The `alert` and `responder` jobs are tasks 27 (#159) and 28 (#160); `make test-compose JOB=alert|responder` exits 3 with a "not implemented in #157" message until those land.
+- [ ] Also under `make verify` (no Docker): `tests/test_marker_hygiene.py` fails if the `compose` marker appears outside the allowed compose modules — the guard that stops an ordinary backend test being silently dropped from `make test`.
+- [ ] Close #157 when `make test-compose JOB=telemetry` (`T-REFUSE`) is green in CI (its acceptance criteria were narrowed to `T-REFUSE` + the selector on 2026-10-24; #172 carries the delivery cases and `T-JOURNEY-BE`).
+
 ---
 
 ## Convention
