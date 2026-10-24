@@ -1,9 +1,10 @@
 name: deploy
 
 # Build once on a push to main, tag with the course image tag, push to GHCR and
-# record each digest (task 17 / #141). The automatic dev deploy on merge is
-# task 21 (#142) and is added as a later job; this workflow builds and publishes
-# the images and records their digests so a deploy can pull them by tag.
+# record each digest (task 17 / #141), then deploy the dev Compose project on
+# the server by image tag (task 21 / #142). The push-to-main event is already
+# gated: branch protection requires the verify.yml test jobs to be green before
+# a merge, so a red test leaves the previous version running (no deploy here).
 #
 # Pull requests never get an AWS role or push images (that stays on verify.yml).
 on:
@@ -24,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
+      backend_digest: ${{ steps.backend.outputs.digest }}
+      frontend_digest: ${{ steps.frontend.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,15 +70,154 @@ jobs:
             echo "- frontend: \`${{ steps.frontend.outputs.digest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # The automatic dev deploy runs here on a green build (task 21 / #142 fills in
-  # the SSM deploy step; task 17 provides the build above that it consumes). It
-  # is a separate job so the build can publish images even before task 21 lands.
-  # deploy-dev:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   environment: dev
-  #   steps:
-  #     - assume AWS_DEV_ROLE_ARN via OIDC
-  #     - SSM SendCommand to the project=vuln-triage server: pull the tag, write
-  #       the Caddyfile, docker compose up the dev project; skip-and-report when
-  #       the instance is stopped (nightly stop). See task 21 (#142).
+  # Automatic dev deploy (task 21 / #142). Runs only after a green build; branch
+  # protection already held a red test from merging, so reaching here means the
+  # tests passed. It assumes the dev OIDC role (scoped to this repo on `main`),
+  # reads the instance state FIRST, and:
+  #   - when the server is stopped (the nightly stop), does NOT call the server
+  #     and ends with a visible "dev deploy skipped: server stopped" summary
+  #     (not a pass-as-deployed and not a failure): the human starts the server
+  #     and re-runs this workflow (architecture.md Cost controls (2),
+  #     aws-setup.md step 10);
+  #   - when the server is running, delivers the dev project files and brings
+  #     the `dev` Compose project up on the pushed image tag via SSM Run Command,
+  #     then records the deployed tag and digests in the deploy log.
+  # The production promotion (prod project) is task 18 (#143), not here.
+  deploy-dev:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ needs.build-and-push.outputs.tag }}
+      BACKEND_DIGEST: ${{ needs.build-and-push.outputs.backend_digest }}
+      FRONTEND_DIGEST: ${{ needs.build-and-push.outputs.frontend_digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC: assume the dev deploy role. Its trust policy accepts only this
+      # repo on `main`; the role can SSM SendCommand to project=vuln-triage
+      # instances and read instance state, nothing else.
+      - name: Assume the dev deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEV_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Read the instance state FIRST (architecture.md Cost controls (2)). The
+      # server carries the provider default tag project=vuln-triage and the
+      # Name tag vuln-triage-server. A stopped instance (nightly stop) must not
+      # be called.
+      - name: Read the server's instance state
+        id: state
+        run: |
+          set -euo pipefail
+          read -r instance_id instance_state < <(
+            aws ec2 describe-instances \
+              --filters \
+                "Name=tag:project,Values=vuln-triage" \
+                "Name=tag:Name,Values=vuln-triage-server" \
+                "Name=instance-state-name,Values=pending,running,stopping,stopped" \
+              --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+              --output text | head -n1
+          )
+          if [ -z "${instance_id:-}" ]; then
+            echo "No instance tagged project=vuln-triage / Name=vuln-triage-server was found." >&2
+            echo "Has the server module been applied (aws-setup.md step 7)?" >&2
+            exit 1
+          fi
+          echo "instance_id=$instance_id" >> "$GITHUB_OUTPUT"
+          echo "instance_state=$instance_state" >> "$GITHUB_OUTPUT"
+          echo "Instance $instance_id is $instance_state."
+
+      # Stopped server: skip and report. No call to the server; the workflow
+      # ends with a visible summary (not a pass-as-deployed, not a failure).
+      - name: Skip and report (server stopped)
+        if: steps.state.outputs.instance_state != 'running'
+        run: |
+          {
+            echo "## dev deploy skipped: server stopped"
+            echo
+            echo "Instance \`${{ steps.state.outputs.instance_id }}\` is \`${{ steps.state.outputs.instance_state }}\`, not \`running\` (the nightly stop)."
+            echo "Nothing was deployed and the server was not called; the previously running version is unchanged."
+            echo "Start the server (EC2 → Instances → Start) and re-run this workflow to deploy tag \`${TAG}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "dev deploy skipped: server stopped"
+
+      # Running server: deploy the dev project by image tag via SSM Run Command.
+      # The committed terraform/server/deploy-dev.sh holds the server-side logic
+      # (write the image-pinned Compose override, the Caddyfile with the EIP and
+      # ACME email, and the project .env; pull the tagged GHCR images — public,
+      # no registry credential — and bring the dev project and Caddy up on the
+      # shared vt-edge network). We base64 that script and the committed
+      # compose.yaml so no quoting survives into the SSM payload, send one
+      # AWS-RunShellScript command that exports the inputs and runs the script,
+      # then wait and surface its result. A failed pull leaves the running
+      # containers in place (architecture.md Rollback).
+      - name: Deploy the dev Compose project (SSM Run Command)
+        if: steps.state.outputs.instance_state == 'running'
+        id: deploy
+        env:
+          INSTANCE_ID: ${{ steps.state.outputs.instance_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          eip="$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)"
+          eip_dashed="${eip//./-}"
+
+          script_b64="$(base64 -w0 terraform/server/deploy-dev.sh)"
+          app_b64="$(base64 -w0 compose.yaml)"
+
+          # The command the server runs: export the inputs, decode the deploy
+          # script and exec it. The app compose is passed through to the script
+          # as APP_COMPOSE_B64 (it decodes it itself).
+          remote="export IMAGE_TAG='${TAG}' GHCR_REPO='ghcr.io/${REPO}' EIP_DASHED='${eip_dashed}' APP_COMPOSE_B64='${app_b64}'; echo '${script_b64}' | base64 -d | bash"
+
+          cmd_id="$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --instance-ids "$INSTANCE_ID" \
+            --comment "dev deploy ${TAG}" \
+            --parameters "commands=[$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$remote")]" \
+            --query 'Command.CommandId' --output text)"
+          echo "SSM command: $cmd_id"
+          echo "cmd_id=$cmd_id" >> "$GITHUB_OUTPUT"
+
+          # Wait for completion, then surface output and fail on a non-Success
+          # final status.
+          aws ssm wait command-executed \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" || true
+          status="$(aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'Status' --output text)"
+          echo "--- remote stdout ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' --output text || true
+          echo "--- remote stderr ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardErrorContent' --output text || true
+          echo "final status: $status"
+          [ "$status" = "Success" ]
+
+      # Record the deployed tag and digests in the deploy log (the acceptance:
+      # "recording the tag and digest in the deploy log").
+      - name: Record the dev deploy
+        if: steps.state.outputs.instance_state == 'running'
+        run: |
+          {
+            echo "## dev deploy"
+            echo
+            echo "- environment: \`dev\`"
+            echo "- image tag: \`${TAG}\`"
+            echo "- backend digest: \`${BACKEND_DIGEST}\`"
+            echo "- frontend digest: \`${FRONTEND_DIGEST}\`"
+            echo "- SSM command: \`${{ steps.deploy.outputs.cmd_id }}\`"
+            echo "- instance: \`${{ steps.state.outputs.instance_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
