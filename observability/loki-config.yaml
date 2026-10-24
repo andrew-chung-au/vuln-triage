@@ -1,0 +1,33 @@
+# Loki config (issue #155, task 24): single-binary, filesystem storage, OTLP
+# ingest enabled (the Collector pushes logs to /otlp). Local Compose only.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Allow the OTLP log ingest path (VERIFY: the exact flag name on the pinned
+  # Loki version; recent Loki accepts OTLP at /otlp by default).
+  allow_structured_metadata: true

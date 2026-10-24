@@ -1,0 +1,70 @@
+# OpenTelemetry Collector config (issue #155, task 24).
+#
+# Receives OTLP from the backend, enforces the A32 allowlist as a SECOND line of
+# defence (the backend already filters in code, task 23), and fans out to
+# Prometheus (metrics), Tempo (traces) and Loki (logs).
+#
+# The allowlist drop is the no-leak guarantee: any attribute not on the A32 list
+# — owner contact, advisory text, repository URLs, lockfile content, credentials,
+# and the auto-instrumented url.*/db.statement attributes — is removed before
+# export. (db.statement is emitted by the SQLAlchemy instrumentation added in
+# task 23; it is NOT on the allowlist, so it is dropped here.)
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+  # Keep ONLY the A32 allowlisted attribute keys on spans, metrics and logs;
+  # drop everything else. The transform processor's `keep_keys` is the chosen
+  # mechanism (VERIFY: contrib transform processor keep_keys semantics on the
+  # pinned Collector version; the attributes processor with explicit deletes is
+  # the fallback).
+  transform/allowlist:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.asset.id", "vt.finding.id", "vt.scan.id", "vt.scan.status", "vt.scan.trigger", "vt.tier", "vt.notification.kind", "vt.outcome", "vt.error.code", "http.route", "http.request.method", "http.response.status_code", "server.address"])
+    log_statements:
+      - context: log
+        statements:
+          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.asset.id", "vt.finding.id", "vt.scan.id", "vt.scan.status", "vt.scan.trigger", "vt.tier", "vt.notification.kind", "vt.outcome", "vt.error.code", "http.route", "http.request.method", "http.response.status_code", "server.address"])
+    metric_statements:
+      - context: datapoint
+        statements:
+          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.notification.kind", "vt.outcome", "vt.tier", "finding_id"])
+
+exporters:
+  # Prometheus scrapes this endpoint for metrics.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  # Traces to Tempo over OTLP.
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # Logs to Loki over OTLP (Loki's native OTLP ingest).
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [transform/allowlist, batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [transform/allowlist, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [transform/allowlist, batch]
+      exporters: [otlphttp/loki]

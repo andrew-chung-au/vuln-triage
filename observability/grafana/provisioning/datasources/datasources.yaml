@@ -1,0 +1,31 @@
+# Grafana data sources (issue #155, task 24): Prometheus, Tempo, Loki, with a
+# Tempo -> Loki trace-to-logs link so a trace jumps to its logs by trace_id.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      # Jump from a trace to its logs in Loki by trace_id (VERIFY: the
+      # tracesToLogsV2 shape on the pinned Grafana version).
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
