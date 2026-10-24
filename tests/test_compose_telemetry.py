@@ -27,10 +27,16 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import subprocess
 import sys
 
 import pytest
+
+# The directory holding compose_driver.py (this file's own directory). The
+# driver is run as `python -m compose_driver` in a subprocess, which does not
+# inherit pytest's sys.path, so this dir is put on the child's PYTHONPATH.
+_TESTS_DIR = str(pathlib.Path(__file__).resolve().parent)
 
 from compose_telemetry import (
     ComposeQueryError,
@@ -49,14 +55,19 @@ def _run_driver(command: str) -> dict:
     """Run tests/compose_driver.py <command> and return its result JSON.
 
     The harness sets the backend venv and OTLP endpoint in the environment; this
-    inherits them. A non-JSON or failing run is a hard error (never a skip).
+    inherits them, and prepends the tests dir to PYTHONPATH so the subprocess
+    can import compose_driver (it does not inherit pytest's sys.path). A non-JSON
+    or failing run is a hard error (never a skip).
     """
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = _TESTS_DIR + (os.pathsep + existing if existing else "")
     proc = subprocess.run(
         [sys.executable, "-m", "compose_driver", command],
         capture_output=True,
         text=True,
         timeout=120,
-        env=os.environ.copy(),
+        env=env,
     )
     result = None
     for line in proc.stdout.splitlines():
