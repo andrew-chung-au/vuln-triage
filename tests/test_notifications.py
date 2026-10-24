@@ -310,12 +310,14 @@ def test_i_owner_hold_name_only_owner_sends_nothing(factory) -> None:  # type: i
 
 def test_s_notify_advisory_url_is_defanged_in_sent_body(factory) -> None:  # type: ignore[no-untyped-def]
     """The delivered body carries defanged advisory text (no live URL)."""
-    aid = _seed_p1_asset(factory)
-    # Give the P1 finding's advisory a URL-bearing summary.
+    _seed_p1_asset(factory)
+    # Edit the advisory of the exact finding the pending job points to, so the
+    # delivered body is the one we seeded regardless of row order (the SQLite
+    # and Postgres harnesses return findings in different orders).
+    job = _only_job(factory)
     with factory() as session:
-        finding = session.scalar(
-            select(Finding).where(Finding.asset_id == aid, Finding.tier == "P1")
-        )
+        lifecycle = session.get(Lifecycle, job.lifecycle_id)
+        finding = session.get(Finding, lifecycle.finding_id)
         advisory = session.scalar(
             select(Advisory).where(Advisory.vulnerability_id == finding.vulnerability_id)
         )
