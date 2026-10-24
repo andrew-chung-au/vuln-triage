@@ -2314,3 +2314,12 @@ Copy this template for each new entry:
 - files changed: filed 10 GitHub issues #154-#163 (tasks 23-29, 37, 38, 39) in build order; updated `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A/B convention. Task 28/#160's Constraints record its gates (D4, responder runtime, main branch protection).
 - human review (what I checked or corrected, or `none`): the human confirmed the grooming before filing.
+
+- date: 2026-10-24
+- task/issue: #155 (task 24) — observability stack + US-13 dashboard; plus a central pending-verification doc
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human said work on #155 (chosen over #162) and asked to centralize the open cloud/host verification steps in one place.
+- files changed: new `observability/` (compose.yaml, otel-collector.yaml with the A32 keep_keys allowlist, prometheus.yml, tempo.yaml, loki-config.yaml, grafana provisioning + the us13-journey dashboard, README.md); new `_docs/pending-verification.md` (cross-issue checklist for #141/#140/#155); `README.md` (index link); session summary; this log entry. No backend/Makefile change, so make verify is unaffected.
+- verification (tests run, reviewer verdict): NOT run here — the stack needs Docker, absent in the agent sandbox. The dashboard JSON parses; the YAML/config are hand-checked. The task-24 db.statement drop from #154 is handled by the Collector keep_keys (in-code test already covers the exclusion; the Compose T-REFUSE assertion is task 25). The human runs the stack in a Codespace/cloud/Docker host per observability/README.md and _docs/pending-verification.md.
+- human review (what I checked or corrected, or `none`): none yet; Docker-dependent verification is listed in _docs/pending-verification.md.

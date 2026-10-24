@@ -69,6 +69,7 @@ Planning documents:
 - [_docs/terraform-verify.md](_docs/terraform-verify.md) — how to verify the `terraform/` modules (static checks, pre-apply review, per-module and acceptance checks)
 - [_docs/human-cheatsheet.md](_docs/human-cheatsheet.md) — the human's commands for reviewing, pushing and merging agent work
 - [_docs/verify-locally.md](_docs/verify-locally.md) — step-by-step guide to install, run `make test`, and bring the app up locally for an end-to-end check
+- [_docs/pending-verification.md](_docs/pending-verification.md) — the cross-issue checklist of build steps left for a Codespace / cloud session / CI (Docker, network, AWS)
 
 AI workflow evidence:
 
