@@ -79,6 +79,23 @@ step 7); the ARN in `AWS_DEV_ROLE_ARN` is unchanged.
   file changed. The embedded workflow shell and `deploy-dev.sh` pass `bash -n`,
   and `deploy-dev.sh` was exercised end-to-end against a stub `docker`.)
 
+## Documentation
+
+- `_docs/terraform-verify.md` — new §6 "Re-apply for the automatic dev deploy
+  (task 21 / #142)" records the deploy-roles re-apply step and the end-to-end
+  deploy / red-test / stopped-server checks; the §2 dev-role checklist item and
+  the deploy-mechanism VERIFY note now include the read-only
+  `ec2:DescribeInstances` grant.
+
+## Unrelated flake found (filed)
+
+- #185 — `T-JOURNEY-BE` (`tests/test_compose_telemetry.py`, task 40 / #172) is
+  flaky: Tempo's search API returns `traceID` without leading-zero padding, so
+  `assert len(trace_id) == 32` fails ~1 in 16 runs. Hit once on this PR's first
+  `verify` run; passed on the push run and on re-run. Not caused by this task
+  (no telemetry/test code touched). Fix: zero-pad the id to 32 hex chars in the
+  harness helper.
+
 ## VERIFY (on the running stack, by the human)
 
 - SSM Run Command reaches the instance and `deploy-dev.sh` runs under the
