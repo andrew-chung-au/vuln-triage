@@ -2161,6 +2161,7 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the human approved the Makefile and AGENTS.md (protected) changes in this session before the commit.
 
 #### date: 2026-10-23 — task/issue: #31 (T3) — Compose-based dev container so Postgres runs as a sibling service
+
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to pick up #31 and approved: add psycopg[binary], keep the write/restart/read persistence test as #68, use a Compose dev container with a small app Dockerfile.
@@ -2169,6 +2170,7 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the human approved psycopg[binary], the #68 scope split, and the Compose-devcontainer + app Dockerfile approach before the build; the protected AGENTS.md diff is approved in-session before its HUMAN_APPROVED commit.
 
 #### date: 2026-10-23 — task/issue: Milestone B issues filed (#137-#144) after human confirmation of the grooming proposal
+
 - agent role: PM (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human confirmed the grooming proposal: file now, AWS account + Budgets ready so no D5 fallback date needed, security-scan tools and Terraform approved.
@@ -2176,8 +2178,8 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the Milestone A house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A convention.
 - human review (what I checked or corrected, or `none`): the human approved the grooming open points before filing.
 
-- date: 2026-10-23
-- task/issue: #137 (task 15) — one-command Compose stack, incl. the /api prefix move (Option B)
+#### date: 2026-10-23 — task/issue: #137 (task 15) — one-command Compose stack, incl. the /api prefix move (Option B
+ 
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start #137, then (on hitting the SPA/API path collision) preferred Option B and asked for an impact analysis + proposal before changes; then approved the recommendations (Option B, root_path=/api, /api/health).
@@ -2185,8 +2187,8 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT run here — the Kiro Web sandbox has no Docker/PyPI and a read-only uv dir, so `make compose-up` and `make verify` cannot run. main.py byte-compiles. The human runs `make verify` (frontend + conformance must stay green; backend/tests unchanged by the /api move) and `make compose-up`, then hard-refreshes /findings to confirm the SPA loads.
 - human review (what I checked or corrected, or `none`): the human approved Option B and D1/D2 after reading the impact proposal; the protected Makefile (compose targets) is approved in-session before its HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #137 follow-up — document the Compose stack in _docs/verify-locally.md
+#### date: 2026-10-23 — task/issue: #137 follow-up — document the Compose stack in _docs/verify-locally.md
+  
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked that the verify steps live in _docs/verify-locally.md.
@@ -2194,8 +2196,7 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): docs only; no code changed. Not run (sandbox has no Docker/PyPI).
 - human review (what I checked or corrected, or `none`): none yet; part of PR #147.
 
-- date: 2026-10-23
-- task/issue: #137 fixes from make verify (human-run on the branch)
+#### date: 2026-10-23 — task/issue: #137 fixes from make verify (human-run on the branch)
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human ran make verify on feat/137-compose-stack; it FAILED on a stale .env.example test and warned on a deprecated root_path.
@@ -2203,8 +2204,7 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): byte-compiled; the new env-example test logic validated standalone against the real .env.example (passes). Full pytest not runnable here (no venv/PyPI). The human re-runs make verify on the branch.
 - human review (what I checked or corrected, or `none`): the human's make verify run found both issues; this commit addresses them. No test was weakened — the env-example test now asserts a stronger, accurate contract.
 
-- date: 2026-10-23
-- task/issue: #138 (task 16) — real-Postgres integration tests
+#### date: 2026-10-23 — task/issue: #138 (task 16) — real-Postgres integration tests
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#138) and approved the design recommendations (transaction-rollback isolation, reuse compose.yaml's db under vt-test, integration-only via the existing sqlite_integration marker, E-GUARD = vt db + compose host check).
@@ -2212,8 +2212,7 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT fully run here — sandbox has no Docker/venv/PyPI. Python test files byte-compile; ci/test-integration.sh passes `bash -n`; the E-GUARD accept/reject decisions were cross-checked standalone (3 accept, 5 reject). The human runs `make verify` (SQLite + E-GUARD unit cases) and `make test-integration` (Postgres) on the host.
 - human review (what I checked or corrected, or `none`): the human approved the four design decisions before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #139 (task 19) — CI test pipeline
+#### date: 2026-10-23 — task/issue: #139 (task 19) — CI test pipeline
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to work the next task (#139) and chose Option B (thin make targets per marker, so every CI job runs through make).
@@ -2221,8 +2220,7 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): NOT run here (sandbox can't run GitHub Actions or the suite). Verified every `- run: make ...` maps to a real Makefile target, and that the unit/sqlite_integration markers partition the backend suite (no unmarked test). The human confirms on the first PR CI run.
 - human review (what I checked or corrected, or `none`): the human chose Option B over Option A (raw pytest in CI); the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
 
-- date: 2026-10-23
-- task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
+#### date: 2026-10-23 — task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the #139 CI run exercised make test-integration for the first time; the postgres-integration job FAILED with AttributeError: 'dict' object has no attribute 'transaction_status' on 155 tests.
@@ -2230,8 +2228,15 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
 - human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
 
-- date: 2026-10-23
-- task/issue: #141 (task 17) — Terraform verification runbook (written before the Terraform itself)
+#### date: 2026-10-23 — task/issue: Tier C build sheet (roadmapping document, like tier-b-build.md)
+- agent role: PM / doc (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to start roadmapping the Tier C build document.
+- files changed: `_docs/tier-c-build.md` (new; consolidated Tier C/S4 build sheet: per-milestone C2-C9 table with task, builds, depends-on, human step/decision, criterion and done-when; the showcase C1/C4 split; the task-37-built-inside-C3 build-order note; the dependency chain; the open D4 + responder-runtime + main-branch-protection prerequisites; the score checkpoints), `README.md` (index link), this log entry.
+- verification (tests run, reviewer verdict): docs only; no code. Grounded in roadmap.md § Tier C milestones, tasks.md tasks 23-29/37-39, architecture.md § Observability / § Responder agent / § Security boundaries, and testing.md. Points to the sources rather than restating design; adds no new precedence rule.
+- human review (what I checked or corrected, or `none`): none yet. Flags that D4 (responder false-positive rule, a protected specs.md change) is still open and blocks C6, and that the responder runtime and main branch protection are human prerequisites before task 28.
+
+#### date: 2026-10-23 — task/issue: #141 (task 17) — Terraform verification runbook (written before the Terraform itself)
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human asked to write up the Terraform verification steps in _docs if not already there, before writing the Terraform. Running #141 in parallel with the other agent's #140 (no file overlap: #141 adds new terraform/ and a new deploy.yml; it does not touch Makefile or verify.yml).
@@ -2239,8 +2244,7 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): docs only; no code yet. The runbook references real commands (terraform fmt/validate as in push-check-image-guide.md) and the aws-setup.md apply order. The Terraform modules themselves are the next step.
 - human review (what I checked or corrected, or `none`): none yet; the runbook defines how the human verifies the modules that come next.
 
-- date: 2026-10-23
-- task/issue: #141 (task 17) — Terraform modules + GHCR build workflow
+#### date: 2026-10-23 — task/issue: #141 (task 17) — Terraform modules + GHCR build workflow
 - agent role: Engineer (Kiro, Vibe session)
 - model: not recorded
 - prompt or instruction given (or link to a file in `_docs/prompts/`): human approved the recommendations for #141 (Caddy reverse proxy, region ap-southeast-2, Secrets Manager, t3.medium, OIDC-reuse as a variable, SES deferred) and asked that the Terraform verification runbook exist in _docs first (done: _docs/terraform-verify.md).
