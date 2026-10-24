@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
+.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration security-scan security-scan-selftest
 
 test: ## Run all tests (frontend, then backend)
 	@$(MAKE) frontend-test
@@ -236,3 +236,14 @@ test-integration: ## Run the integration cases against Postgres (vt-test Compose
 	@bash ci/test-integration.sh
 
 postgres-integration: test-integration ## CI alias for the postgres-integration job (task 19 wires it in)
+
+# --- Light security scan (issue #140, task 20) ---------------------------
+# Audit the application's own production dependencies; fail on high/critical,
+# report lower. Needs network and pip-audit==2.10.1 + npm (CI, a Codespace or a
+# Claude Code cloud session), not the agent sandbox. Not run by make verify.
+
+security-scan: ## Audit production deps; fail on high/critical, report lower (needs network)
+	@bash ci/security-scan.sh
+
+security-scan-selftest: ## Run the committed security fixtures through the scanner (needs network)
+	@bash ci/security-scan-selftest.sh

@@ -1,0 +1,4 @@
+# missing/ — expects the scan to exit non-zero (fail closed).
+# This directory deliberately has no backend/uv.lock or frontend/package-lock.json,
+# so ci/security-scan.sh errors out ("no lockfile under ...") rather than
+# silently passing. Keep this file so the empty directory is tracked.
