@@ -68,6 +68,24 @@ jobs:
       - run: make backend-install
       - run: make test-integration
 
+  # The telemetry Compose job (issue #157, task 25): the backend's span/log
+  # helpers against the observability stack (Collector -> Prometheus/Tempo/Loki).
+  # ubuntu-latest ships Docker + Docker Compose. Runs only the `compose`-marked
+  # telemetry case (T-REFUSE) via the JOB selector; no live feed or secret (the
+  # stack is local). The delivery-dependent cases and T-JOURNEY-BE land with
+  # prerequisite #172; the alert and responder jobs land with tasks 27 (#159)
+  # and 28 (#160).
+  telemetry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-compose JOB=telemetry
+
   # The full gate, kept so PRs still get the whitespace and weakened-test checks
   # that the split test jobs above do not cover; it also runs the suite as a
   # backstop. Needs both toolchains because make verify runs make test (frontend

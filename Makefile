@@ -124,7 +124,7 @@ backend-lock: ## Update backend/uv.lock after editing backend/pyproject.toml (uv
 
 backend-test: ## Run the backend pytest suite (needs make install first)
 	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
-	@backend/.venv/bin/pytest -c backend/pyproject.toml tests
+	@backend/.venv/bin/pytest -c backend/pyproject.toml -m "not compose" tests
 
 # Marker-scoped backend subsets for the CI jobs (issue #139, task 19). Each is a
 # slice of backend-test; `make test` still runs them all for the local gate.
@@ -236,3 +236,25 @@ test-integration: ## Run the integration cases against Postgres (vt-test Compose
 	@bash ci/test-integration.sh
 
 postgres-integration: test-integration ## CI alias for the postgres-integration job (task 19 wires it in)
+
+# --- Compose telemetry/alert/responder tests (issue #157, task 25) -------
+# Run the selected JOB's cases against the observability stack in Compose.
+# Needs Docker; runs in CI (the telemetry/alert/responder jobs) or on the
+# human's host, not the agent sandbox. JOB must be one of telemetry, alert,
+# responder (or empty: run all three, for the human's host). The cases are
+# `compose`-marked and deselected by `make test`/`make verify`.
+#
+# #157 implements the `telemetry` job (and this selector); `alert` and
+# `responder` are tasks 27 (#159) and 28 (#160) and exit with a clear
+# not-implemented message until then. `T-JOURNEY-BE` (the full scan journey)
+# needs the backend feed-fixture wiring of prerequisite #172.
+
+# JOB, when set, must be exactly one of these words; make checks it before any
+# shell command runs, mirroring the SOURCE/OPENAPI validation idiom above.
+COMPOSE_JOBS = telemetry alert responder
+
+.PHONY: test-compose
+
+test-compose: ## Run a Compose telemetry/alert/responder job: make test-compose [JOB=<telemetry|alert|responder>]
+	$(if $(value JOB),$(if $(or $(filter-out $(COMPOSE_JOBS),$(value JOB)),$(word 2,$(value JOB))),$(error JOB must be exactly one of: $(COMPOSE_JOBS); got '$(value JOB)')),)
+	@JOB="$(value JOB)" bash ci/test-compose.sh
