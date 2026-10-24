@@ -36,4 +36,5 @@ addopts = "--strict-markers"
 markers = [
     "unit: pure function or in-memory/SQLite case with no network",
     "sqlite_integration: case that exercises the SQLite integration harness",
+    "compose: case that needs the Compose observability stack (make test-compose; deselected by make test/verify)",
 ]
