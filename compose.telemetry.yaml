@@ -1,17 +1,22 @@
 # Telemetry-journey test stack (issue #172 PR 2, task 40 + task 25's
-# T-JOURNEY-BE). It `include`s the app compose.yaml AND the observability
-# observability/compose.yaml, so the backend, Postgres and the observability
-# services (Collector, Prometheus, Tempo, Loki, MailHog) share ONE Docker
-# network and reach each other by service name:
+# T-JOURNEY-BE). Brings the app stack (compose.yaml: db, migrations, backend)
+# and the observability stack (observability/compose.yaml: Collector,
+# Prometheus, Tempo, Loki, MailHog) up under ONE project, so they share one
+# Docker network and reach each other by service name.
 #
-#   docker compose -p vt-telemetry -f compose.telemetry.yaml up -d --wait ...
+# Run it with:
+#   docker compose -p vt-telemetry -f compose.yaml -f compose.telemetry.yaml \
+#     up -d --wait ...
 #
-# `include` (not `-f` merge) is deliberate: each included file is loaded with
-# ITS OWN project directory for relative-path resolution (Docker docs), so the
-# observability compose's `./prometheus.yml` etc. resolve against observability/
-# and compose.yaml's `./backend` against the repo root. A plain `-f a -f b`
-# merge resolves every relative path against the FIRST file's directory, which
-# breaks the observability bind mounts (the first real CI run hit exactly that).
+# Path resolution is the subtle part (the first two CI runs tripped on it):
+# - The observability stack is pulled in via a top-level `include` below, NOT a
+#   `-f` merge. `include` loads it with ITS OWN project directory, so its
+#   `./prometheus.yml` etc. resolve against observability/ (a `-f` merge would
+#   resolve them against the repo root and fail the bind mount).
+# - This file + compose.yaml ARE a `-f` merge (both passed with -f), so the
+#   `backend` override below merges onto compose.yaml's `backend` as usual.
+#   `backend` is NOT in any included file, so there is no "conflicts with
+#   imported resource" (include does not allow overriding an imported service).
 #
 # This runs the REAL stack configuration (Postgres, migrations, the backend
 # image) with only the deltas a no-live-feed journey test needs: fixtures mode,
@@ -23,7 +28,6 @@
 # the agent sandbox.
 
 include:
-  - path: compose.yaml
   - path: observability/compose.yaml
 
 services:

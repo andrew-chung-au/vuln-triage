@@ -50,9 +50,10 @@ fi
 # published port (127.0.0.1:8000) and query Prometheus/Tempo/Loki/MailHog on
 # their published localhost ports. T-REFUSE still runs its host-side driver
 # against the same Collector.
-# One compose file that `include`s compose.yaml + observability/compose.yaml
-# (each resolves its own relative paths — see compose.telemetry.yaml's header).
-COMPOSE=(docker compose -p "$PROJECT" -f compose.telemetry.yaml)
+# compose.yaml + the telemetry override are a -f merge (so the backend override
+# applies); the override `include`s observability/compose.yaml (so its bind
+# mounts resolve against observability/). See compose.telemetry.yaml's header.
+COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml)
 
 # Env the host-side T-REFUSE driver reads (observability/settings.py). The
 # containerized journey reads its env from compose.telemetry.yaml, not here.
