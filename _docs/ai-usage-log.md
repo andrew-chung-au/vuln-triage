@@ -2220,3 +2220,12 @@ Copy this template for each new entry:
 - files changed: `.github/workflows/verify.yml` (six jobs: unit, sqlite-integration, frontend, openapi-validation, postgres-integration, plus the retained verify gate), `Makefile` (test-unit / test-sqlite-integration / test-conformance; PROTECTED, human-approved), session summary, this log entry.
 - verification (tests run, reviewer verdict): NOT run here (sandbox can't run GitHub Actions or the suite). Verified every `- run: make ...` maps to a real Makefile target, and that the unit/sqlite_integration markers partition the backend suite (no unmarked test). The human confirms on the first PR CI run.
 - human review (what I checked or corrected, or `none`): the human chose Option B over Option A (raw pytest in CI); the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.
+
+- date: 2026-10-23
+- task/issue: #138 fix — Postgres isolation switched from shared-connection rollback to fresh schema
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the #139 CI run exercised make test-integration for the first time; the postgres-integration job FAILED with AttributeError: 'dict' object has no attribute 'transaction_status' on 155 tests.
+- files changed: `tests/conftest.py` (replace the single-shared-connection rollback with fresh-schema isolation: db_engine drop_all at setup/teardown on Postgres, each test's factory runs create_all as on SQLite; remove the Alembic _run_migrations helper and its call), `_session-summaries/issue-138-postgres-integration.md` (record the change and the reason), this log entry.
+- verification (tests run, reviewer verdict): conftest byte-compiles; the fix removes the pooled-connection-proxy misuse that caused the AttributeError. Confirmed every sqlite_integration module builds its own schema via create_all (so fresh-schema works), except test_network_guard whose one integration case needs no tables. The human re-runs make test-integration; CI's postgres-integration job on this fix proves it.
+- human review (what I checked or corrected, or `none`): none yet; follow-up fix to the merged #138, discovered by #139's CI.
