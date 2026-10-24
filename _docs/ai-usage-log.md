@@ -2314,3 +2314,12 @@ Copy this template for each new entry:
 - files changed: filed 10 GitHub issues #154-#163 (tasks 23-29, 37, 38, 39) in build order; updated `_session-summaries/planning-2026-10-23-tier-c-grooming.md` (status FILED with the numbers), `_docs/roadmap.md` (check-in log line), `_docs/ai-usage-log.md` (this entry).
 - verification (tests run, reviewer verdict): none; grooming/doc work only. Issue bodies follow the house style (Goal / Acceptance criteria / Out of scope / Constraints); no milestone or label set, matching the Milestone A/B convention. Task 28/#160's Constraints record its gates (D4, responder runtime, main branch protection).
 - human review (what I checked or corrected, or `none`): the human confirmed the grooming before filing.
+
+- date: 2026-10-24
+- task/issue: #140 (task 20) — light security scan; picked up after the other agent hit its limit
+- agent role: Engineer (Kiro, Vibe session)
+- model: not recorded
+- prompt or instruction given (or link to a file in `_docs/prompts/`): human said to verify/close #111 then pick up #140, and accepted the recommendations Q1=option 2 (post-process pip-audit OSV severity) and Q2=option 2 (fail closed on unknown severity); the human will run the live scan in a Codespace / Claude Code cloud session.
+- files changed: `ci/security-scan.sh` (new), `ci/security_severity.py` (new), `ci/security-scan-selftest.sh` (new), `tests/fixtures/security/**` (new README + per-fixture SPEC.md + missing/.gitkeep), `Makefile` (security-scan + security-scan-selftest; PROTECTED, human-approved), `.github/workflows/verify.yml` (security-scan job), `_docs/testing.md` (§ Light security scan + CI-jobs cell), session summary, this log entry. Also closed #111 (verified the merged fix: vite 8.1.6, make frontend-audit, AGENTS.md line).
+- verification (tests run, reviewer verdict): NOT fully run here — the scan needs network (public advisory services) and the fixture lockfiles need network to generate; the agent sandbox has neither. Offline-verified: bash -n on both scripts; security_severity.py compiles and was unit-exercised standalone (HIGH->FAIL, no-severity->HIGH/FAIL per Q2, MODERATE->reported, CVSS 9.8->CRITICAL/5.0->MODERATE, malformed->exit 2). The human/CI/Codespace generates the fixtures and runs make security-scan-selftest + make security-scan; the CI security-scan job runs them on the PR.
+- human review (what I checked or corrected, or `none`): the human accepted Q1=2 and Q2=2 before the build; the protected Makefile targets are approved in-session before the HUMAN_APPROVED commit.

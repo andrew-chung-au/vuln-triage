@@ -308,7 +308,7 @@ The responder reads logs from Loki with the Grafana/Loki viewer token, not from 
 
 ## Light security scan in CI
 
-`C-SCAN` runs on every PR in the `security-scan` job on `ubuntu-latest`; the command is `make security-scan` (planned). Its scope is the application's own lockfiles and manifests, not a live service. It fails on high and critical findings in production dependencies and reports lower ones. `C-FIXTURE-VULN` makes a deliberately vulnerable fixture non-zero; `C-FIXTURE-CLEAN` passes a clean fixture. `VERIFY:` the chosen tools (for example `pip-audit` and `npm audit --omit=dev`) and their licence and behaviour; adding either needs approval.
+`C-SCAN` runs on every PR in the `security-scan` job on `ubuntu-latest`; the job runs `make security-scan-selftest` then `make security-scan` (task 20, #140). Its scope is the application's own production lockfiles (`backend/uv.lock` via `uv export --no-dev`, `frontend/package-lock.json` via `npm audit --omit=dev`), not a live service. It fails on high and critical findings and reports lower ones. The npm threshold is `--audit-level=high`; the Python side derives severity by post-processing each advisory's OSV severity (`pip-audit`'s JSON carries no severity), failing on high/critical and reporting lower, with an advisory of unknown severity treated as high (fail closed). `C-FIXTURE-VULN` makes a deliberately vulnerable fixture non-zero; `C-FIXTURE-CLEAN` passes a clean fixture; `make security-scan-selftest` runs these and the `low/`, `dev-only/` and `missing/` fixtures under `tests/fixtures/security/` through the same scanner. The tools (`pip-audit==2.10.1` and `npm audit --omit=dev`) were approved 2026-10-23. The scan reaches public package advisory services (not the application's live feeds) and uses no secret; it is network-dependent, so it runs in CI, a Codespace or a Claude Code cloud session, never in `make verify`.
 
 "Light" means dependency auditing only. Secret scanning and SAST are explicitly out of scope (architecture Suggested additions / later work), so the scan has a limit.
 
@@ -322,7 +322,7 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | `sqlite-integration` | `ubuntu-latest` | `make test` | SQLite `I-*` cases, including `I-OWNER-SEND`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-OWNER-NOAWS` and `I-OWNER-SENDER` (in-process sink form) and `I-SCHED` |
 | `frontend` | `ubuntu-latest` | `make frontend-test`, `make frontend-typecheck` | `F-*` |
 | `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance, `I-CONTRACT` |
-| `security-scan` | `ubuntu-latest` | `make security-scan` (planned) | `C-*` |
+| `security-scan` | `ubuntu-latest` | `make security-scan-selftest` then `make security-scan` | `C-*` (reaches public advisory services, not a live app feed; no secret) |
 | Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
