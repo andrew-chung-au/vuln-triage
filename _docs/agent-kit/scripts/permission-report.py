@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 
 SUMMARY_DIR = "_session-summaries/"
 PROMPT_LOG = ".scratch/permission-prompts.jsonl"
@@ -186,18 +187,36 @@ def prompt_stats(lines):
         props = rec.get("properties") or {}
         if rec.get("type") == "permission.asked":
             cmd = (props.get("metadata") or {}).get("command") or " ".join(props.get("patterns") or [])
-            asked[props.get("id")] = (props.get("permission", "?"), cmd, props.get("sessionID"))
+            asked[props.get("id")] = (props.get("permission", "?"), cmd, props.get("sessionID"), rec.get("at"))
         elif rec.get("type") == "permission.replied":
-            replies[props.get("requestID")] = props.get("reply")
-    for rid, (perm, cmd, sid) in asked.items():
+            replies[props.get("requestID")] = (props.get("reply"), rec.get("at"))
+    for rid, (perm, cmd, sid, asked_at) in asked.items():
         keys = keys_of("`%s`" % cmd) if perm == "bash" else set()
         key = sorted(keys)[0] if keys else perm + ": " + " ".join(cmd.split()[:2])
-        row = stats.setdefault(key, {"prompts": 0, "sessions": set(), "replies": {}})
+        row = stats.setdefault(key, {"prompts": 0, "sessions": set(), "replies": {}, "wait_total": 0.0, "wait_max": 0.0})
         row["prompts"] += 1
         row["sessions"].add(sid)
-        reply = replies.get(rid, "no reply logged")
+        reply, replied_at = replies.get(rid, ("no reply logged", None))
         row["replies"][reply] = row["replies"].get(reply, 0) + 1
+        wait = seconds_between(asked_at, replied_at)
+        if wait is not None:
+            row["wait_total"] += wait
+            row["wait_max"] = max(row["wait_max"], wait)
     return stats
+
+
+def seconds_between(start, end):
+    """Seconds between two ISO-8601 UTC timestamps, or None when either is missing or unreadable."""
+    try:
+        t0 = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        t1 = datetime.fromisoformat(end.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        return None
+    return max((t1 - t0).total_seconds(), 0.0)
+
+
+def fmt_wait(seconds):
+    return "%dm%02ds" % divmod(int(round(seconds)), 60)
 
 
 def prompt_label(key, sessions):
@@ -212,11 +231,13 @@ def render_prompts(stats):
     out = ["", "Prompts logged by OpenCode (%s)" % PROMPT_LOG]
     if not stats:
         out.append("  (none)")
-    rows = sorted(stats.items(), key=lambda kv: (-kv[1]["prompts"], kv[0]))
+    rows = sorted(stats.items(), key=lambda kv: (-kv[1]["wait_total"], -kv[1]["prompts"], kv[0]))
     for key, row in rows:
         replies = ", ".join("%s %d" % (r, n) for r, n in sorted(row["replies"].items()))
-        out.append("  %d  %s  [%d sessions; %s]  [%s]" % (
-            row["prompts"], key, len(row["sessions"]), replies, prompt_label(key, len(row["sessions"]))))
+        out.append("  %d  %s  [%d sessions; %s; waited %s, longest %s]  [%s]" % (
+            row["prompts"], key, len(row["sessions"]), replies,
+            fmt_wait(row["wait_total"]), fmt_wait(row["wait_max"]),
+            prompt_label(key, len(row["sessions"]))))
     return "\n".join(out)
 
 
