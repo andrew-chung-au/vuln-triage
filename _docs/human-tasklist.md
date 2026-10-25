@@ -1,25 +1,32 @@
 # Human tasklist
 
-**For the human only.** One place that lists every action **you** must take —
-the things an agent cannot do: AWS applies and secrets, protected-file approvals,
-Docker/live-network verification runs, and the merges and sweeps that keep the
-repo moving. It is an **index**: each item links to the document that holds the
-exact commands and acceptance, so this file stays short and those docs stay the
-source of truth. Where this disagrees with a linked doc, the linked doc wins —
-fix this file.
+**For the human only.** One place that lists every action **you** must take:
+AWS applies and secrets, approvals of protected files, decisions, merges, and the
+recurring sweeps. It is an **index**: each item links to the document that holds
+the exact commands, so this file stays short and those docs stay the source of
+truth. Where this disagrees with a linked doc, the linked doc wins; fix this file.
+
+**What is not here.** Work a Claude Code cloud session can do without you
+(Docker and network verification runs, the Terraform static check, drafts,
+reviews, the re-audit) is in [`cloud-tasklist.md`](cloud-tasklist.md), with IDs
+`CC1`-`CC28`. Earlier versions of this file listed those items as yours only
+because the local sandbox has no Docker and no shell network. They are moved,
+not dropped: see "Moved to the cloud list" at the end. Rows below that a cloud
+task needs, or that follow one, name it in the *Cloud link* column; the cloud
+list names these rows back. If the two lists disagree, fix both.
 
 How the pieces fit:
 
 | Document | What it holds | Relationship to this file |
 |---|---|---|
+| `_docs/cloud-tasklist.md` | What Claude Code cloud sessions do, in order, with the human step each one needs | The other half of this list. Every cross-reference runs both ways. |
 | `_docs/aws-setup.md` | The ordered AWS/GitHub runbook (account, region, budget, bootstrap, secrets, SES, nightly stop, teardown). | The detail for §A. |
-| `_docs/terraform-verify.md` | How to statically check and apply/verify the `terraform/` modules (§1-§6). | The detail for the Terraform items in §A and §B. |
-| `_docs/pending-verification.md` | **Per-issue** checklist of every step the agent sandbox can't run (Docker/network/AWS), ticked off as each passes. | The per-issue detail for §B. This file is the prioritised roll-up; that file is the working checklist. |
+| `_docs/terraform-verify.md` | How to statically check and apply/verify the `terraform/` modules (§1-§6). | The detail for the Terraform items in §A. |
+| `_docs/pending-verification.md` | **Per-issue** checklist of every step a sandbox can't run (Docker/network/AWS), ticked off as each passes. | The per-issue commands behind the cloud verification runs and the AWS legs. |
 | `_docs/human-cheatsheet.md` | The git / review / merge workflow (branches, PRs, protected files, sweeps). | The detail for §C and §D. |
 
 **Status key:** ☐ to do · ◐ in progress / partly done · ☑ done. Update the box
-when you finish an item; when an issue's `pending-verification.md` items are all
-ticked, close the issue and set it ☑ here.
+when you finish an item.
 
 Last updated: 2026-10-25.
 
@@ -27,111 +34,123 @@ Last updated: 2026-10-25.
 
 ## A. One-time AWS + GitHub setup (do once, in order)
 
-The submission deployment. Full detail and timings in
-`_docs/aws-setup.md` (the "Checklist" table) and `_docs/terraform-verify.md`.
-**You** run every `terraform apply` and the first deploy; the agent holds no AWS
-credentials.
+The submission deployment. Full detail and timings in `_docs/aws-setup.md` (the
+"Checklist" table) and `_docs/terraform-verify.md`. **You** run every
+`terraform apply` and the first deploy; no agent holds AWS credentials. The IDs
+A1-A13 are kept because other documents cite them. A4 and A5 moved to the cloud
+list (CC9, CC10); the gaps in the numbering are those two.
 
-| # | Action | Where | Doc | Status |
+| # | Action | Where | Doc | Cloud link | Status |
+|---|---|---|---|---|---|
+| A1 | Account hygiene, pick the region, set a budget alert | AWS console | `aws-setup.md` §1-§3 | none | ☐ |
+| A2 | Decide the hostname form and how you reach the server (SSM, no SSH) | decision | `aws-setup.md` §4-§5 | none | ☐ |
+| A3 | GitHub: create the `dev` and `production` environments (you as required reviewer) | GitHub settings | `aws-setup.md` §6 | none | ☐ |
+| A6 | Apply in order `bootstrap/` → `deploy-roles/` → `server/`; copy the two role ARNs into the GitHub variables `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` and `AWS_REGION`; record the Elastic IP + hostnames. **Read first:** the Terraform static check (CC9) and the pre-apply review findings (CC10), and decide go / no-go | your machine (AWS) | `aws-setup.md` §6-§7, `terraform-verify.md` §3 | **Needs CC9, CC10** | ☐ |
+| A7 | Add the submission secrets to Secrets Manager (db password, read token, responder token, Grafana admin password) | AWS console | `aws-setup.md` §8 | none | ☐ |
+| A8 | **Re-apply `deploy-roles/`** after task 21 (#142): the dev role gained a read-only `ec2:DescribeInstances`. ARN unchanged; the 2nd plan shows "No changes". Can be folded into A6 | your machine (AWS) | `terraform-verify.md` §6 | none | ☐ |
+| A9 | First dev deploy; confirm `https://dev.<eip>.sslip.io` answers and the deploy log names an image digest → closes **#141** | push to `main` + AWS | `terraform-verify.md` §4 | **Unblocks CC2** (URL for the README) and CC11 (seed run) | ☐ |
+| A10 | Email route: verify the SES sender identity (and the demo recipient, SES sandbox); settle the SES `VERIFY:` items. Needed before task 37 delivers on AWS | AWS console | `aws-setup.md` §9, `pending-verification.md` #156 | The MailHog leg of #156 is CC14; only the SES leg is here | ☐ |
+| A11 | Nightly stop on by default; switch it **off** while graders may visit; activate the `project` cost-allocation tag | AWS console / Terraform var | `aws-setup.md` §10 | none | ☐ |
+| A12 | Add the **prod** secret `vuln-triage/prod` (at least `POSTGRES_PASSWORD`), then **promote to production** (task 18 / #143): Actions → deploy → Run workflow, approve the `production` environment, confirm `https://app.<eip>.sslip.io` answers and `dev`/`prod` share the digest; rollback = re-run with the previous tag → closes **#143** | AWS console + GitHub Actions | `aws-setup.md` §8 + "Production promotion and rollback", `terraform-verify.md` §7 | **Unblocks CC2** (rollback evidence for the README) | ☐ |
+| A13 | **Register the pilot seed data** (task 22 / #144): confirm the repos in `deploy/pilot-seed.json`, then `python deploy/seed-pilot.py --base-url https://dev.<eip>.sslip.io --username <security-lead>`; confirm each asset shows a scan status and ≥1 finding on the dev dashboard → closes **#144**. The `package-lock.json` pre-check and the draft seed file are CC11 | your machine → dev URL | `aws-setup.md` "Pilot seed data" | **Needs CC11** (draft) and A9 (URL) | ☐ |
+
+> **Dependency order:** A1-A3 need no repo code. A6 is the first apply and now
+> waits on CC9 and CC10 (both cloud, both safe: no AWS credentials). A8 can fold
+> into A6 if you apply after #142 is merged. A9 is the end-to-end gate for dev.
+> A12 needs A3's `production` environment, A6's `AWS_PROD_ROLE_ARN` and the
+> `vuln-triage/prod` secret; it needs **no** Terraform re-apply. A13 needs A9 and
+> a `security lead` account (the operator create-user command, #176).
+
+## B. Approvals that unblock Claude Code cloud tasks
+
+Small human steps whose only purpose is to let a cloud task run. Each names the
+cloud tasks it unblocks. Ask-before rules are in `AGENTS.md` (installs,
+system changes, protected files).
+
+| # | Action | Detail | Cloud link | Status |
 |---|---|---|---|---|
-| A1 | Account hygiene, pick the region, set a budget alert | AWS console | `aws-setup.md` §1-§3 | ☐ |
-| A2 | Decide the hostname form and how you reach the server (SSM, no SSH) | decision | `aws-setup.md` §4-§5 | ☐ |
-| A3 | GitHub: create the `dev` and `production` environments | GitHub settings | `aws-setup.md` §6 | ☐ |
-| A4 | Static-check the Terraform (`fmt -check`, `init -backend=false`, `validate`) in each module | your machine / push-check image | `terraform-verify.md` §1 | ☐ |
-| A5 | Pre-apply review of the module diff against the security checklist | reading the diff | `terraform-verify.md` §2 | ☐ |
-| A6 | Apply in order `bootstrap/` → `deploy-roles/` → `server/`; copy the two role ARNs into the GitHub variables `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` and `AWS_REGION`; record the Elastic IP + hostnames | your machine (AWS) | `aws-setup.md` §6-§7, `terraform-verify.md` §3 | ☐ |
-| A7 | Add the submission secrets to Secrets Manager (db password, read token, responder token, Grafana admin password) | AWS console | `aws-setup.md` §8 | ☐ |
-| A8 | **Re-apply `deploy-roles/`** after task 21 (#142): the dev role gained a read-only `ec2:DescribeInstances` so the deploy can read instance state. ARN unchanged; 2nd plan shows "No changes" | your machine (AWS) | `terraform-verify.md` §6 | ☐ |
-| A9 | First dev deploy; confirm `https://dev.<eip>.sslip.io` answers and the deploy log names an image digest → closes **#141** | push to `main` + AWS | `terraform-verify.md` §4 | ☐ |
-| A10 | Email route: verify the SES sender identity (and the demo recipient, SES sandbox); settle the SES `VERIFY:` items. Needed before task 37 delivers on AWS | AWS console | `aws-setup.md` §9, `pending-verification.md` #156 | ☐ |
-| A11 | Nightly stop on by default; switch it **off** while graders may visit; activate the `project` cost-allocation tag | AWS console / Terraform var | `aws-setup.md` §10 | ☐ |
-| A12 | Add the **prod** secret `vuln-triage/prod` (at least `POSTGRES_PASSWORD`), then **promote to production** (task 18 / #143): Actions → deploy → Run workflow, approve the `production` environment, confirm `https://app.<eip>.sslip.io` answers and `dev`/`prod` share the digest; rollback = re-run with the previous tag → closes **#143** | AWS console + GitHub Actions | `aws-setup.md` §8 + "Production promotion and rollback", `terraform-verify.md` §7 | ☐ |
-| A13 | **Register the pilot seed data** (task 22 / #144): fill `deploy/pilot-seed.json` with your repos (VERIFY Juice Shop's `package-lock.json`, else use the NodeGoat fallback), then `python deploy/seed-pilot.py --base-url https://dev.<eip>.sslip.io --username <security-lead>`; confirm each asset shows a scan status and ≥1 finding on the dev dashboard → closes **#144** | your machine → dev URL | `aws-setup.md` "Pilot seed data" | ☐ |
-
-> **Dependency order:** A1-A3 need no repo code. A4-A5 are safe anywhere (no
-> AWS). A6 is the first apply. A8 can be folded into A6 if you apply after #142
-> is merged; otherwise it is a quick re-apply of one module. A9 is the
-> end-to-end gate for the dev environment. A12 (prod promotion) needs A3's
-> `production` environment, A6's `AWS_PROD_ROLE_ARN`, and the `vuln-triage/prod`
-> secret; it needs **no** Terraform re-apply (task 18 adds no Terraform). A13
-> (pilot seed) needs A9's dev environment up and a `security lead` account
-> (the operator create-user command, #176).
-
-## B. Per-issue verification runs (code is merged; needs a real run to close)
-
-These issues' **code is on `main`**, but they stay **open** until you run the
-step the sandbox can't (Docker, live network, or AWS) and tick it off. The
-authoritative per-issue checklist — exact commands and acceptance — is
-`_docs/pending-verification.md`; run the smallest capable environment (CI →
-Codespace/cloud → your machine for AWS).
-
-| Issue | Task | What you must run | Environment | Status |
-|---|---|---|---|---|
-| **#140** | 20 security scan | Generate fixture lockfiles, `make security-scan-selftest`, `make security-scan`, commit lockfiles so the CI `security-scan` job goes green | Codespace / cloud / CI | ☐ |
-| **#155** | 24 observability stack | Bring up `observability/` and confirm the US-13 Grafana dashboard shows metric+trace+logs side by side; MailHog answers | Docker host / cloud | ☐ |
-| **#156** | 37 owner delivery | `make verify` lands the core cases; then the MailHog Compose run (`I-OWNER-NOAWS`/`I-OWNER-SENDER`); the SES/AWS leg is A10 | `make verify` + Docker host | ◐ (issue closed; AWS/SES leg = A10) |
-| **#157** | 25 telemetry job | `make test-compose JOB=telemetry` (`T-REFUSE`) green in CI; confirm it fails when `owner.email` is added to the allowlist | CI / Docker host | ☐ |
-| **#158** | 26 US-14 rule | `make verify` lands the metric half; confirm the provisioned Grafana rule fires once / resolves / NoData-human-only on a running stack | `make verify` + Docker host | ◐ (issue closed; Grafana-rule run pending) |
-| **#172** | 40 feed wiring | `T-JOURNEY-BE` + `I-OWNER-NOAWS` green on the containerized harness in the telemetry CI job | CI / Docker host | ☐ |
-| **#177 / #193** | 23/37 delivery outcome signals | No separate run: the end-to-end Loki leg is `T-JOURNEY-BE` (#172) for the `sent` log. A held-job log in Loki is not asserted (no held-job case in the journey test; see `pending-verification.md` #193). Best-effort, not a gate: when you run the telemetry job, optionally register an ownerless asset and confirm a `notification.deliver` log with `vt.outcome=held` carries its job's trace id. Post the result on #193 | CI / Docker host (via #172) | ◐ (unit/SQLite half on `main`; Loki leg pending, not a gate) |
-| **#174** | 23 OTLP log export | No separate run: the backend log-export leg is confirmed by the **#172 `T-JOURNEY-BE`** Loki assertion (and #157 `T-REFUSE`). Static-verified on `main` (commit `61837cb`); tick when that Loki leg passes | CI / Docker host (via #172) | ◐ (merged; Loki-leg run = #172) |
-
-> **Note on "closed but pending":** #156 and #158 were closed because their
-> `make verify`-able half landed; the Docker/AWS half is tracked in
-> `pending-verification.md` and rolled into A10 (SES) / B-#158 (Grafana rule).
-> #174 is the same shape — its code is on `main` but the only end-to-end proof
-> is the #172 `T-JOURNEY-BE` Loki leg, which the agent sandbox (no Docker)
-> cannot run; it is shown ◐ here until that Loki leg is green. #177 was folded
-> into #193 (held-delivery signals) and closed on 2026-10-25; its remaining
-> log-leg proof moves with #193.
-> If you want a single close gate per issue instead, re-open the others too until
-> the real-run halves pass — your call.
+| B1 | **Allow Docker in cloud sessions.** Either approve the protected `Makefile` and `AGENTS.md` change for #48 (`make docker-start` / `docker-stop`, gated on `CLAUDE_CODE_REMOTE=true`, no `sudo`; as a `HUMAN_APPROVED=1` commit and an approval record on #48), or tell the session it may run `sudo dockerd` by hand each time | `_docs/cloud-sessions.md` §5.1; `roadmap.md` item T2 | **Unblocks CC13**, then CC14-CC21 | ☐ |
+| B2 | **Approve installing Terraform** for the static check (into `.scratch/` or the session; not kept after the session), or choose the push-check image route (needs B1) | `terraform-verify.md` §1; `AGENTS.md` (installs need asking) | **Unblocks CC9** | ☐ |
+| B3 | **Approve protected `.github/` changes** as their own `HUMAN_APPROVED=1` commits: #159's `verify.yml` change (alert job to nightly + manual), and later #67 | `human-cheatsheet.md` §0, §5 | **Unblocks CC20**, CC22 | ☐ |
+| B4 | **Decide how #140's lockfiles reach PR #167.** A cloud session can push only its own `claude/*` branch, not `feat/140-security-scan`. Either merge or cherry-pick the session's lockfile commits into that branch, or start the session on it | `pending-verification.md` #140 | **Shapes CC12** | ☐ |
+| B5 | **Confirm and close the issues the cloud runs verify.** After a cloud task posts its result, check it and close the issue (or say close it): #140, #155, #157, #158 (Grafana leg), #159, #172, #174, #193, #181, #199, #201 | `pending-verification.md` (each issue's section) | **Follows CC12, CC14-CC20** | ☐ |
+| B6 | **Change the cloud environment's network policy** only if CC8 finds a needed host blocked (Terraform registry, `ghcr.io`, advisory sources) | `read_documentation` topic `environment.network`; Claude settings | **Follows CC8**, unblocks CC9, CC12 | ☐ |
 
 ## C. Merges and protected-file approvals (as PRs arrive)
 
-Every piece of agent work lands as a PR you review and merge. The full method —
-branches, reading the whole diff, protected-file approval with `HUMAN_APPROVED=1`,
-merge-commit only — is in `_docs/human-cheatsheet.md`.
+Every piece of agent work lands as a PR you review and merge. The method (branches,
+reading the whole diff, protected-file approval with `HUMAN_APPROVED=1`,
+merge-commit only) is in `_docs/human-cheatsheet.md`.
 
-- ☐ **Open PRs awaiting you now:** #184 (task 21 auto dev deploy — includes the
-  A8 Terraform re-apply note), #183 (task 27 alert job, another agent), #167
-  (task 20 security scan). Review and merge in dependency order
-  (`human-cheatsheet.md` §7 checklist).
-- ☐ **Protected-file approvals:** any PR touching `Makefile`, `.github/`,
-  `.claude/`, `AGENTS.md`, the spec, `agent-kit.conf` needs your explicit
-  approval as its own `HUMAN_APPROVED=1` commit + an approval record on the issue
-  (`human-cheatsheet.md` §0, §5; `_docs/agent-kit/procedures/asking-the-human.md`).
-- ☐ **Merge checklist before every click:** `human-cheatsheet.md` §7.
+| # | Action | Cloud link | Status |
+|---|---|---|---|
+| C1 | **Open PRs awaiting you:** #167 (task 20 security scan) at last check. Review and merge in dependency order (`human-cheatsheet.md` §7). The first-pass review is CC6; the merge click, and any protected-file approval, stay with you | **Follows CC6** | ☐ |
+| C2 | **Protected-file approvals:** any PR touching `Makefile`, `.github/`, `.claude/`, `AGENTS.md`, the spec, `agent-kit.conf` needs your explicit approval as its own `HUMAN_APPROVED=1` commit plus an approval record on the issue (`human-cheatsheet.md` §0, §5; `asking-the-human.md`). Specific known ones are B1, B3, F1 | See B1, B3, F1 | ☐ |
+| C3 | **Merge checklist before every click:** `human-cheatsheet.md` §7 | none | ☐ |
 
 ## D. Recurring / ongoing
 
-- ☐ **Permission sweeps:** periodically run `make permission-report SINCE=<commit>`
-  and approve/reject the proposed settings changes (first sweep: #65).
-  `_docs/agent-kit/procedures/permission-sweep.md`, `human-cheatsheet.md` §5.
-- ☐ **Keep the nightly stop off during grading windows** and back on afterwards
-  (A11). `aws-setup.md` §10.
-- ☐ **Deferred spec notes (#63):** four spec notes await your decision
-  (`human-cheatsheet.md` §5).
-- ☐ **Dev-container rebuilds** are a human step, not mid-issue
-  (`human-cheatsheet.md` §5b).
+| # | Action | Cloud link | Status |
+|---|---|---|---|
+| D1 | **Permission sweeps:** read the proposal (CC4), approve or reject the settings changes, and apply them. `settings` files are protected. `_docs/agent-kit/procedures/permission-sweep.md`, `human-cheatsheet.md` §5 | **Needs CC4** | ☐ |
+| D2 | **Deferred spec notes (#63):** four spec notes await your decision. CC5 drafts the exact diffs and a recommendation; the decision and the protected spec commit are yours | **Needs CC5** | ☐ |
+| D3 | **Keep the nightly stop off during grading windows** and back on afterwards (A11). `aws-setup.md` §10 | none | ☐ |
+| D4 | **Dev-container rebuilds** are a human step, not mid-issue (`human-cheatsheet.md` §5b) | none | ☐ |
 
 ## E. Later / scheduled (not blocking submission)
 
-- ☐ Showcase AWS steps (S1-S3) — after submission (`aws-setup.md` Showcase
-  steps, `roadmap-showcase.md`).
-- ☐ Teardown when you end the deployment — `aws-setup.md` §11,
+- ☐ Showcase AWS steps (S1-S3): after submission (`aws-setup.md` Showcase steps,
+  `roadmap-showcase.md`).
+- ☐ Teardown when you end the deployment: `aws-setup.md` §11,
   `terraform-verify.md` §5.
+- ☐ **Peer reviews:** the three peer reviews of other projects are required to
+  pass; the roadmap reserves time for them in S5. Only you can do them.
+- ☐ **Submit:** when to submit is yours, not an agent's (`roadmap.md`, after the
+  S5 close-out and the final re-audit, CC1 then a second pass).
+
+## F. Decisions that gate agent work
+
+These are open decisions only you can make. They gate **#160** (the responder,
+task 28), then #161, #182 and the recorded drill (task 39), which carry
+On-Call Agent 2 and the last of the Alerting and Observability points.
+
+| # | Decision | Detail | Cloud link | Status |
+|---|---|---|---|---|
+| F1 | **D4: add the US-15 false-positive rule** (on an alert with no reproducible defect the responder explains and changes nothing). `specs.md` is protected: approve a diff, then commit it as `HUMAN_APPROVED=1` | `roadmap.md` Open decisions #8 | **Needs CC5(a)** (draft diff); **gates CC7, CC21** | ☐ |
+| F2 | **Responder agent runtime** (architecture Open question 9; the recorded run of task 39 uses the real one). Adding it is a new dependency, so it needs your approval | `roadmap.md` Prerequisites | **Gates CC7, CC21** | ☐ |
+| F3 | **`main` branch protection** that refuses the responder's push (architecture D2 of #43) | `roadmap.md` Prerequisites | **Gates CC7, CC21** | ☐ |
+
+---
+
+## Moved to the cloud list
+
+So nothing is lost: every item that used to be on this list and is now a cloud
+task.
+
+| Old row | Now |
+|---|---|
+| A4 Terraform static check | CC9 (needs B2) |
+| A5 Pre-apply review of the module diff | CC10; you read the findings at A6 |
+| §B #140 security scan | CC12 (needs B4); you close at B5 |
+| §B #155 observability stack | CC15 (needs B1) |
+| §B #156 owner delivery, MailHog leg | CC14; the SES leg stays A10 |
+| §B #157 telemetry job | CC14 |
+| §B #158 Grafana rule | CC16 |
+| §B #172, #174, #177 / #193 | CC14 |
+| §C "review open PRs" first pass | CC6; the merge stays C1 |
+| §D permission sweep: the report and proposal | CC4; approval stays D1 |
+| §D #63 spec-note drafts | CC5; the decision stays D2 |
 
 ---
 
 ## Keeping this current
 
-- When you finish an item, tick its box here; when an issue's
-  `pending-verification.md` section is fully ticked, close the issue and set it
-  ☑ in §B.
+- When you finish an item, tick its box here. When a cloud task it depends on or
+  unblocks changes, update the cross-reference in both files.
 - When an agent adds a new human action (a new secret, a new `terraform apply`, a
-  new verification run), it should add a row here **and** the detail in the
-  linked doc — this file only indexes; the linked doc holds the commands.
+  new approval), it adds a row here **and** the detail in the linked doc, and names
+  the cloud task it affects. This file only indexes; the linked doc holds the
+  commands.
 - This is a roll-up, not a second source of truth: never copy commands here that
   would then drift from `aws-setup.md` / `terraform-verify.md` /
   `pending-verification.md`.

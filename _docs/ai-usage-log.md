@@ -2521,3 +2521,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran no tests. Read the workflows, compose files, Makefile targets, `ci/test-compose.sh` and `tests/test_compose_telemetry.py`; read GitHub Actions run and job records and job logs for runs 40188742150 (verify), 40188742170 (deploy) and 40160976080 (alert) through the GitHub API; checked with `git log` that the alert rule is unchanged since `79f9f47`. Test counts in this log were not re-counted. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: split the human tasklist into a human-only list and a Claude Code cloud tasklist, with cross-references both ways
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the user's request to move tasks the local sandbox could not do from the human list to a cloud-session list, keep only truly human tasks in the human list, and mark dependencies on both lists. No new key prompt saved.
+- files changed: `_docs/cloud-tasklist.md` (new, CC1-CC28); `_docs/human-tasklist.md` (rewritten: A4/A5 and section B verification runs moved out; new approval rows B1-B6 and decision rows F1-F3); `_docs/pending-verification.md` (header points at both lists); this log entry
+- verification (tests run, reviewer verdict): ran `make install` and `make verify` before the edits (PASS WITH WARNINGS: 88 frontend and 496 backend tests, type check pass; warning was BASE equal to HEAD). Docs-only edits afterwards; `make verify` not re-run. Confirmed the README overclaim and the missing `docs/images/` the re-audit reported by reading `README.md` and globbing. Did not check the re-audit's CI run records myself. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
