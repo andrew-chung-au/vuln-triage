@@ -1,0 +1,109 @@
+# Claude Code cloud tasklist
+
+Everything an agent can do in a **Claude Code cloud session** that moves the
+project toward submission. Many of these used to sit on the human's list only
+because the local sandbox has no Docker and no shell network; a cloud session
+has both (Docker installed, started by hand; HTTPS through the session proxy).
+The tasks that truly need the human (AWS, approvals, decisions, merges) stay in
+[`human-tasklist.md`](human-tasklist.md).
+
+**Cross-references.** Each row here has a *Needs (human)* column naming the
+`human-tasklist.md` row(s) that must happen first, or that the human does after.
+Each human row names the cloud tasks it unblocks or follows. If the two lists
+disagree, fix both. The per-issue commands and acceptance for the verification
+runs stay in [`pending-verification.md`](pending-verification.md); this file
+indexes and sequences them, it does not copy commands.
+
+**Status key:** ☐ to do · ◐ in progress / partly done · ☑ done · ⛔ blocked on a human row.
+
+Last updated: 2026-10-25.
+
+## Cloud-session rules that shape this list
+
+- Credit is limited (`_docs/cloud-sessions.md`): **one session per issue**, and
+  group tasks that share a Docker stack into the same session.
+- A cloud session pushes **only its own `claude/*` branch**. It cannot push to
+  another branch such as `feat/140-security-scan` (PR #167). Work for a PR whose
+  branch is not the session's lands as commits on the session branch for the
+  human to merge or cherry-pick (see CC12 and human B4).
+- Protected files (`Makefile`, `AGENTS.md`, `.github/`, `.claude/`, the spec,
+  `agent-kit.conf`) change only with the human's approval as a `HUMAN_APPROVED=1`
+  commit plus an approval record on the issue. Every such task is marked below.
+- Installs and starting the Docker daemon are system changes: ask first
+  (human B1, B2). Record in the session summary whether each was undone.
+- Docker is **not running at session start**. `sudo dockerd` in the background
+  works (`_docs/cloud-sessions.md` §5.1); #48 turns that into a `make` target.
+- Tool versions differ from the pins (cloud had Node 22.22 and uv 0.11.32 on
+  2026-10-25 against Node 24.22.0 and uv 0.13.1). `make verify` passed anyway;
+  treat a version-sensitive failure as a finding, not a test to loosen.
+
+## 1. Documentation and audit (no Docker, no AWS)
+
+| # | Task | Output | Needs (human) | Unblocks (human) | Status |
+|---|---|---|---|---|---|
+| CC1 | **Rubric re-audit** with the `rubric-auditor` at current HEAD; update `_docs/rubric-evidence.md`. Not credited: anything awaiting a real Docker/CI/AWS run | Per-criterion table, total, missing-evidence list ranked by points per effort. Resets the roadmap's "10 audited" score | none | Informs when to submit (the human's call) | ☑ 2026-10-25: **17/24** at `fb24904` (commit `be9f8bf`). Testing, Application and the four documentation criteria MET; Containerization, Deployment, CI/CD and Observability each 1; Alerting 1/1; On-Call Agent 0. Rerun after the Docker session (CC14-CC19) and again after A9/A12 |
+| CC2 | **Close-out doc drafts** (#163, #19): README sections for deployment, observability and the responder; the AI usage report. Placeholders for anything that needs a real run, URL or recording | Drafted sections with `TODO(human-run)` markers for the URL, recordings and rollback evidence | A9 and A12 (URL, rollback proof) and the recording fill the placeholders | C1 (review and merge) | ☐ |
+| CC3 | **Stale-doc sweep:** roadmap statuses against the tracker; check whether #68 is already covered by #138 and #201 and can close; check the leftover consistency items (roadmap "Open decisions" 8, `service.version` in the allowlist); append the roadmap check-in line for each session | Small doc PR; issue comments with evidence | none | none | ☐ |
+| CC4 | **Permission sweep** (#65): run `make permission-report SINCE=<commit>` and write the proposed `opencode.json` and `.claude/settings.json` changes | A proposal comment on #65 | D1 (the human approves and applies the settings changes; they are protected) | D1 | ☐ |
+| CC5 | **Spec-diff drafts:** (a) D4, the US-15 false-positive rule; (b) the four #63 spec notes. Exact diffs and a recommendation each; no spec edit | Draft diffs on #160 and #63 | F1 (D4) and D2 (#63): the human decides and approves the protected spec commit | F1, D2 | ☐ |
+| CC6 | **First-pass review of open PRs** (today #167): read the whole diff, flag defects, check the PR against the issue's acceptance criteria. The review comment ends with the attribution footer | Review comment on each PR | none | C1 (the merge click and any protected approval stay with the human) | ☐ |
+| CC7 | **Responder prep, stub mode only** (task 28 / #160): the webhook receiver with the bearer secret and repeat-fingerprint guard, `RESPONDER_MODE=stub`, `I-RESP-*` cases under `make verify`. No real agent runtime | Code and tests on the session branch | F1 (D4), F2 (runtime) and F3 (branch protection) are formal gates on #160. Ask the human before starting; the stub half may be agreed as ahead of them | F1-F3 | ⛔ |
+
+### Added from the 2026-10-25 re-audit (17/24)
+
+| # | Task | Output | Needs (human) | Unblocks (human) | Status |
+|---|---|---|---|---|---|
+| CC24 | **Fix the README overclaims.** Line 7 and the criterion 12 row say the on-call responder is implemented, but task 28 / #160 is not built. The Screenshots section links `docs/images/*.png`, which do not exist, and two demo links are `<URL>` placeholders. Reword to what is true now (responder: planned, `RESPONDER_MODE=stub` only when CC7 lands) and mark the images and recording as pending rather than linked. Do this before submission whatever else happens | README diff | none (README is not protected) | C1 | ☐ |
+| CC25 | **Tick the stale `pending-verification.md` boxes** for #172 and #193 (`T-JOURNEY-BE`, Loki leg): the CI `telemetry` job at `fb24904` ran them green (run 40188742150, 3 passed). Verify the run record yourself first, then link the run on each issue and remove the section. The held-job Loki case stays unproven | Doc edit; comments on #172, #174, #193 | B5 (the human confirms the closes) | B5 | ☐ |
+| CC26 | **Containerization evidence (+1 point):** `make compose-up` with all four services (db, migrations, backend, frontend) healthy, output posted on #137 and its acceptance boxes ticked; or add the frontend to a CI job. CI today never starts the frontend service | Output on #137 | B1 (done for this session) | B5 | ☐ |
+| CC27 | **Application evidence:** a recorded `make dev` run with a browser session (Playwright is pre-installed) to firm up the lowest-confidence MET | Screenshots or a short trace on #133 | none | none | ☐ |
+| CC28 | **Fix the stale "14 criteria" wording** in the auditor role files (issue #10). Those files are protected (`.claude/`, `.opencode/`), so draft the diff only | Proposed diff on #10 | C2 (approval) | C2 | ☐ |
+
+## 2. Needs network only (no Docker)
+
+| # | Task | Output | Needs (human) | Unblocks (human) | Status |
+|---|---|---|---|---|---|
+| CC8 | **Reachability probe (2026-10-25 result: npm, PyPI, Docker Hub image pulls OK; `registry.terraform.io` and `checkpoint-api.hashicorp.com` REFUSED by the proxy; `releases.hashicorp.com`, `ghcr.io`, advisory sources and GitHub raw not yet tested).** from the session, test the hosts later tasks need: `releases.hashicorp.com` / `registry.terraform.io`, `ghcr.io`, the OSV/advisory sources used by `pip-audit` and `npm audit`, GitHub raw/API for Juice Shop. (npm and PyPI already work, 2026-10-25.) | A table of reachable / blocked hosts in the session summary | none (if a host is blocked, the human changes the environment network policy: B6) | B6 | ◐ (finish the untested hosts after B6) |
+| CC9 | **A4 Terraform static check:** `terraform fmt -check`, `init -backend=false`, `validate` in each module (`terraform-verify.md` §1) | Pass/fail per module, with fixes for any defect | B2 (done: ran the pinned `hashicorp/terraform:1.17.0` image through Docker; nothing installed on the host) | A6 | ☑ 2026-10-25: `fmt -check`, `init -backend=false` and `validate` pass on all three modules (provider `aws` 5.100.0). `validate` found one defect (F7: an apostrophe in a security group description, which AWS rejects), now fixed in `terraform/server/network.tf`. `plan` was not run (needs AWS credentials). Container recipe: `--network host`, `HTTPS_PROXY`, `CHECKPOINT_DISABLE=1`, CA bundle as `SSL_CERT_FILE` |
+| CC10 | **A5 pre-apply review:** read the `terraform/` modules against the `terraform-verify.md` §2 security checklist (OIDC trust conditions, role scope, S3 state locking, SSM, security group, Elastic IP, nightly stop) and list findings | Review comment on #141 | none | A6 (the human reads the findings and decides to apply) | ☑ 2026-10-25: `_docs/reviews/2026-10-25-terraform-pre-apply-review.md`, comment 6397164959. Two High (dev trust `sub` mismatch F1; secrets looked up before they exist F2), three Medium (F3-F5). Fixes are CC29 |
+| CC29 | **Fix the Terraform findings F1-F4** from CC10 in `terraform/` (not a protected path): dev trust policy to `environment:dev` with a `dev_environment` variable; secret ARNs built from `data.aws_caller_identity` instead of data-source lookups; split the `ssm:SendCommand` statement in two; make `user-data.sh` wait for the data device. Update the docs that say `ref:refs/heads/main` (`terraform-verify.md` §2, `aws-setup.md` step 7). Run `fmt -check` (works now) and `validate` once B6 is done. F5 (shared policy) is decided: accepted for submission, custom SSM document parked as showcase X10, so CC29 does not build it | Terraform and doc commits on the session branch; a note on #141 | A3 (dev environment limited to `main`; only the first deploy depends on it) | A6, A8 (the re-apply can fold in), A9 | ☐ |
+| CC11 | **A13 pre-check:** confirm Juice Shop's `package-lock.json` exists and parses with the project's parser (else propose the NodeGoat fallback); draft `deploy/pilot-seed.json` | Draft seed file and the answer to A13's `VERIFY:` | A13 (the human confirms which repos; the seed run needs the dev URL from A9) | A13 | ☐ |
+| CC12 | **#140 security scan (PR #167):** generate the fixture lockfiles per each `tests/fixtures/security/*/SPEC.md` (`uv lock`, `npm install --package-lock-only`), record each advisory ID and severity, run `make security-scan-selftest` and `make security-scan`, report any high/critical. `make verify` must stay green | Lockfiles and results as commits on the **session branch** | B4 (the PR branch is not the session branch: the human merges or cherry-picks the commits into `feat/140-security-scan`, or opens the session on it) | B5 (close #140 when the CI `security-scan` job is green) | ☐ |
+
+## 3. Needs Docker (cloud session with `dockerd`)
+
+All of these wait on **CC13**. Group them so one session brings the stack up once.
+
+| # | Task | Output | Needs (human) | Unblocks (human) | Status |
+|---|---|---|---|---|---|
+| CC13 | **Docker in the cloud session:** either implement #48 (`make docker-start` / `docker-stop`, gated on `CLAUDE_CODE_REMOTE=true`, no `sudo`) or start `dockerd` by hand each session | Docker answers `docker info`; Compose works | B1 (done 2026-10-25, manual route: `dockerd` started by `.scratch/docker_start.sh`, undo with `.scratch/docker_stop.sh`. #48's protected `Makefile` and `AGENTS.md` targets are not made; needs their exact diff approved) | all of CC14-CC21 | ◐ Docker answers in this session only; a new session needs it started again until #48 lands |
+| CC14 | **Telemetry job:** `make test-compose JOB=telemetry` green with `T-JOURNEY-BE` (metric, trace and Loki log on one trace id), `I-OWNER-NOAWS` (email lands in MailHog) and `T-REFUSE`, plus the negative check (add `owner.email` to the allowlist, confirm `T-REFUSE` fails, revert). Covers #157, #172, #174, #193 (best-effort held-job case) and the MailHog leg of #156. Fix the `VERIFY:` query shapes on the first real run | Results on each issue; fixes as commits | B1 | B5 (the human confirms and closes #157, #172, #174, #193; #156's SES leg stays A10) | ☐ |
+| CC15 | **Observability stack check (#155):** `cd observability && docker compose up -d --wait`, run the backend against it, screenshot the US-13 dashboard with metric, trace and log side by side and the MailHog UI. A headless Chromium and Playwright are pre-installed | Screenshots plus the `VERIFY:` list from `observability/README.md` settled | B1 (done for this session) | B5 (close #155) | ☐ |
+| CC16 | **Grafana rule behaviour (#158):** provisioning loads clean; a failed top-tier job fires one instance with `finding_id` and `tier`; a sent job shows 0 and resolves; no-jobs fires nothing; `NoData` goes to the human email only; a finding reaches both contact points | Results against each bullet in `pending-verification.md` #158 | B1 (done for this session) | B5 (close the #158 Grafana leg) | ☐ |
+| CC17 | **T-E6 (#181):** telemetry backend down, delivery and alerts unaffected. PM decisions Q1-Q3 are answered (comment 6396530230) | Test and implementation | B1 (done for this session) | B5 | ☐ |
+| CC18 | **Live Grafana panel check (#199)**, sequenced with CC17 because they share the dashboard | Panel queries confirmed against the running stack | B1 (done for this session) | B5 | ☐ |
+| CC19 | **Postgres migrations (#201):** run the Alembic chain `0001`, `0002` on real Postgres (the `postgres_migration` check in the `postgres-integration` job); also the UI check of the `internal error` failure reason from #198 | CI job green; a screenshot | B1 (done for this session; the CI part needs the PR pushed from the session branch) | B5 | ☐ |
+| CC20 | **#159 alert job:** prepare the `.github/workflows/verify.yml` change that moves the `alert` job to nightly plus `workflow_dispatch`; after merge, trigger it once from Actions and confirm both passes are green | Workflow diff; a green run | B3 (protected `.github/` change needs the human's approval) and the merge | B5 (close #159) | ⛔ |
+| CC21 | **After #160:** `I-OWNER-SENDER` MailHog form (#182), the responder Compose test (#161) | Tests | F1-F3 gate #160 first | F1-F3 | ⛔ |
+
+## 4. Low priority, whenever there is spare credit
+
+| # | Task | Needs (human) | Status |
+|---|---|---|---|
+| CC22 | #67: CI passes a real `BASE` to `make verify` (protected `.github/`) | B3-style approval | ☐ |
+| CC23 | The other "Later, not scheduled" tooling issues (#33 and similar; see `roadmap.md`) | none, but they break the priority rule unless they block product work | ☐ |
+
+## Suggested order
+
+1. CC1 is done (17/24). Next, with no approvals needed: CC24 (README overclaims), CC25, CC8, CC3, CC10.
+2. Ask the human for B1 and B2; then CC9, CC12 and CC13.
+3. One Docker session: CC14, CC15, CC16, CC17, CC18, CC19 and CC26 together. The audit ranks CC26 and CC15 as the cheapest points (+1 Containerization, +1 Observability), no AWS needed.
+4. CC2, CC4, CC5, CC6 as spare capacity; CC7 only after the human agrees.
+
+## Keeping this current
+
+- When a cloud task finishes, tick it here, post the result on the issue, and
+  update the matching row in `pending-verification.md` (keep that file to open
+  items only). If the task unblocks a human row, tick the dependency there too.
+- When an agent finds a new job only the human can do, add it to
+  `human-tasklist.md` and reference it from the cloud row that needs it.

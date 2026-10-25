@@ -13,9 +13,12 @@ socket (`AGENTS.md` Project gotchas), so Compose stacks, live dependency scans,
 and AWS applies are authored by the agent and **verified by the human**. This
 file collects those hand-offs so a cloud session has one checklist.
 
-See `_docs/human-tasklist.md` for the prioritised roll-up of **all** human
-action (this file + the AWS setup, merges and sweeps); this file is the detailed
-per-issue checklist it links to for the verification runs.
+Who does each item: `_docs/cloud-tasklist.md` lists the verification runs a
+Claude Code cloud session can do (CC IDs, with the human step each needs), and
+`_docs/human-tasklist.md` lists what only the human can do (AWS, approvals,
+decisions, merges). This file is the detailed per-issue checklist both link to;
+the cloud-session queue below is superseded by the cloud list, which is the
+source for order and dependencies.
 
 Last updated: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 

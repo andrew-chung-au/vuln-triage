@@ -2511,3 +2511,33 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is the earlier #198 rewritten assertion). Not run on Postgres (no Docker here). A `pytest.skip` on the non-SQLite dialect was tried first and the verify gate failed it ("skip markers added"), so the PRAGMA test was moved to a `unit` module instead. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: rubric re-audit at `fb24904` (previous audit 2026-10-20 at `74e9cfc`, 10 of 24)
+- agent role: Rubric Evidence Auditor subagent (Claude Code cloud session, no Docker, no AWS credentials)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to re-audit against `_docs/rubric.md` on evidence in the repo and CI only, and not to credit runs that have not happened. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md` (rewritten: 17 of 24); this log entry
+- verification (tests run, reviewer verdict): ran no tests. Read the workflows, compose files, Makefile targets, `ci/test-compose.sh` and `tests/test_compose_telemetry.py`; read GitHub Actions run and job records and job logs for runs 40188742150 (verify), 40188742170 (deploy) and 40160976080 (alert) through the GitHub API; checked with `git log` that the alert rule is unchanged since `79f9f47`. Test counts in this log were not re-counted. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: split the human tasklist into a human-only list and a Claude Code cloud tasklist, with cross-references both ways
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the user's request to move tasks the local sandbox could not do from the human list to a cloud-session list, keep only truly human tasks in the human list, and mark dependencies on both lists. No new key prompt saved.
+- files changed: `_docs/cloud-tasklist.md` (new, CC1-CC28); `_docs/human-tasklist.md` (rewritten: A4/A5 and section B verification runs moved out; new approval rows B1-B6 and decision rows F1-F3); `_docs/pending-verification.md` (header points at both lists); this log entry
+- verification (tests run, reviewer verdict): ran `make install` and `make verify` before the edits (PASS WITH WARNINGS: 88 frontend and 496 backend tests, type check pass; warning was BASE equal to HEAD). Docs-only edits afterwards; `make verify` not re-run. Confirmed the README overclaim and the missing `docs/images/` the re-audit reported by reading `README.md` and globbing. Did not check the re-audit's CI run records myself. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC9 Terraform static check and CC10 pre-apply review (#141); started `dockerd` for the cloud session (human rows B1, B2)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the user's approval of B1 and B2 ("approved"). B1 was offered as either the protected #48 change or a manual `sudo dockerd`; I took the manual route because no exact diff for the protected files had been shown. No new key prompt saved.
+- files changed: `_docs/reviews/2026-10-25-terraform-pre-apply-review.md` (new); `_docs/cloud-tasklist.md`, `_docs/human-tasklist.md` (status and cross-references); this log entry. `.scratch/` helper scripts and a copy of `terraform/` (git-ignored). Comment 6397164959 posted on #141.
+- verification (tests run, reviewer verdict): ran `terraform fmt -check -recursive` on a copy of `terraform/` with `hashicorp/terraform:1.17.0`: pass. `terraform init -backend=false` and `validate` first failed because the session proxy refused `registry.terraform.io`; after the human added the allowed domains they ran: `bootstrap` and `deploy-roles` valid, `server` failed on an apostrophe in a security group description, which I fixed in `terraform/server/network.tf` (a one-word change) and re-validated: all three valid, `fmt -check` clean. Nothing was planned or applied. The review findings are from reading the code against `terraform-verify.md` §2 and `deploy.yml`; AWS and GitHub behaviour is from my knowledge, not tested, and is marked `VERIFY:` where uncertain. No reviewer verdict.
+- new dependencies: none. Pulled the `hashicorp/terraform:1.17.0` image into the session's Docker.
+- human review (what I checked or corrected, or `none`): none

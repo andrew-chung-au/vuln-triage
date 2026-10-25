@@ -29,7 +29,7 @@ resource "aws_security_group" "server" {
   }
 
   egress {
-    description = "All outbound (image pulls, Let's Encrypt, SES, SSM)"
+    description = "All outbound (image pulls, TLS certificates, SES, SSM)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
