@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "Local demo seed for reviewers. Four public repositories, one per lockfile",
+    "format, matching the recorded fixtures in tests/fixtures/github/ so they scan",
+    "with no network when the backend runs with VT_FEEDS=fixtures and",
+    "DEPLOYMENT_ENVIRONMENT=dev (see the README, 'Try it as a reviewer').",
+    "",
+    "Registered through the API by deploy/seed-pilot.py --seed-file",
+    "deploy/demo-seed.json. The owner names and emails are fictional. The last",
+    "entry has no owner on purpose, to show an ownerless asset."
+  ],
+  "assets": [
+    {
+      "name": "uv-docker-example",
+      "ownerName": "Platform team",
+      "ownerEmail": "platform@example.com",
+      "criticality": "high",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/astral-sh/uv-docker-example"
+    },
+    {
+      "name": "python-getting-started",
+      "ownerName": "Web team",
+      "ownerEmail": "web@example.com",
+      "criticality": "medium",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/heroku/python-getting-started"
+    },
+    {
+      "name": "pygoat",
+      "ownerName": "AppSec team",
+      "ownerEmail": "appsec@example.com",
+      "criticality": "critical",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/adeyosemanputra/pygoat"
+    },
+    {
+      "name": "nodejs-getting-started",
+      "ownerName": null,
+      "ownerEmail": null,
+      "criticality": "low",
+      "internetFacing": false,
+      "repositoryUrl": "https://github.com/heroku/nodejs-getting-started"
+    }
+  ]
+}

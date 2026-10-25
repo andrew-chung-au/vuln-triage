@@ -132,6 +132,40 @@ Both options serve the SPA and the API on one origin (the API lives under `/api`
 
 ---
 
+## Try it as a reviewer
+
+There is no sign-up, so these are the logins to use. They are **public demo accounts, meant to be shared**: the data behind them is fictional or public, and nothing sensitive should be entered.
+
+### Live demo
+
+| | |
+|---|---|
+| URL | `https://dev.<elastic-ip>.sslip.io` (the real address is in [Deployment](#deployment--rollback) once deployed) |
+| Username | `reviewer` |
+| Password | `vt-reviewer-demo` |
+| Role | security lead: sees every asset and finding, can register an asset, can accept a risk |
+
+The dashboard lists the registered demo repositories with their scan status and ranked findings. Registering an asset takes any public `https://github.com/<owner>/<repo>` that has a `uv.lock`, `requirements.txt` or `package-lock.json`. The live demo runs on a small server that may be stopped overnight to save cost; if it does not answer, try again later or use the local demo below.
+
+### Local demo (no Docker, no network, a few minutes)
+
+This runs the real app on its SQLite path against **recorded** copies of four public repositories and the OSV/KEV/EPSS feeds, so the KEV and EPSS values are fixture values, not live data.
+
+```sh
+make install
+make dev-start VT_FEEDS=fixtures DEPLOYMENT_ENVIRONMENT=dev   # migrates, then starts backend and frontend
+printf '%s\n' 'demo-password-local' | uv run --directory backend python -m vulntriage.manage create-user \
+  --username lead --display-name "Security Lead" --email lead@example.com --role "security lead"
+VT_SEED_PASSWORD='demo-password-local' python3 deploy/seed-pilot.py \
+  --base-url http://127.0.0.1:8000 --username lead --seed-file deploy/demo-seed.json --wait 60
+# open http://127.0.0.1:5173 and sign in as  lead / demo-password-local
+make dev-stop
+```
+
+Expected: four assets, one with two ranked findings (P1 `urllib3` CVE-2023-43804 and P2 `pyyaml` CVE-2020-14343), one scan marked incomplete, and one asset shown as ownerless. `VT_FEEDS=fixtures` is refused unless `DEPLOYMENT_ENVIRONMENT` is `dev` or `test`, so it can never run in production. Delete `backend/.scratch/vulntriage.db` to start over.
+
+---
+
 ## Screenshots & demo
 
 The app running on its one-command local path (`make dev`: SQLite, no Docker), signed in through the real login form against the real API. The data is **demo data**: four public repositories replayed from the committed recorded fixtures (`VT_FEEDS=fixtures`, no network), so the KEV/EPSS values are fixture values, not live feeds.

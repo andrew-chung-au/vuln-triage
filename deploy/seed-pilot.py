@@ -12,12 +12,18 @@ emits no spans, metrics or logs; it only prints to the console for the operator.
 Usage:
     # password is read from a prompt (never passed on the command line) or, for
     # non-interactive use, from the VT_SEED_PASSWORD environment variable.
+    # Behind the dashboard host (nginx/Caddy) the API lives under /api, so the
+    # base URL ends in /api. The bare host serves the single-page app, not the API.
     python deploy/seed-pilot.py \\
-        --base-url https://dev.<eip>.sslip.io \\
+        --base-url https://dev.<eip>.sslip.io/api \\
         --username <security-lead-username>
 
-    python deploy/seed-pilot.py --base-url http://localhost:8080 \\
+    python deploy/seed-pilot.py --base-url http://localhost:8080/api \\
         --username lead --seed-file deploy/pilot-seed.json --insecure
+
+    # Against `make dev` (the backend answers directly, no /api prefix):
+    python deploy/seed-pilot.py --base-url http://127.0.0.1:8000 \\
+        --username lead --seed-file deploy/demo-seed.json
 
 Only a `security lead` may register an asset (US-1); sign in as one. Each asset
 starts its first scan asynchronously; check the dashboard for the scan status
@@ -33,6 +39,7 @@ import os
 import re
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -85,6 +92,27 @@ def _request(
         raise SeedError(f"{method} {path} failed: {exc}") from exc
 
 
+def wait_ready(base_url: str, seconds: int, ctx: ssl.SSLContext | None) -> None:
+    """Poll GET /health until the backend answers 200, for at most `seconds`.
+
+    For a one-command start (`make dev-start`, then seed): the backend takes a
+    few seconds to listen, so the first request would otherwise be refused.
+    """
+    deadline = time.monotonic() + seconds
+    last = "no answer"
+    while True:
+        try:
+            status, _headers, _body = _request(base_url, "GET", "/health", ctx=ctx)
+            if status == 200:
+                return
+            last = f"status {status}"
+        except SeedError as exc:
+            last = str(exc)
+        if time.monotonic() >= deadline:
+            raise SeedError(f"the backend did not answer GET /health within {seconds}s ({last})")
+        time.sleep(1)
+
+
 def login(base_url: str, username: str, password: str, ctx: ssl.SSLContext | None) -> str:
     status, headers, body = _request(
         base_url, "POST", "/auth/login",
@@ -93,7 +121,10 @@ def login(base_url: str, username: str, password: str, ctx: ssl.SSLContext | Non
     if status != 200:
         raise SeedError(
             f"login failed ({status}). Use a `security lead` account; a wrong "
-            f"username/password returns 401. Body: {body[:200]!r}"
+            f"username/password returns 401. A 404 or 405 usually means the base "
+            f"URL points at the dashboard, not the API: behind the dashboard host "
+            f"the API is under /api (use --base-url https://<host>/api). "
+            f"Body: {body[:200]!r}"
         )
     match = re.search(rf"{_COOKIE_NAME}=([^;]+)", headers.get("set-cookie", ""))
     if not match:
@@ -158,10 +189,11 @@ def register_all(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Register the pilot seed assets through POST /assets.")
-    parser.add_argument("--base-url", required=True, help="Backend base URL, e.g. https://dev.<eip>.sslip.io")
+    parser.add_argument("--base-url", required=True, help="API base URL, e.g. https://dev.<eip>.sslip.io/api (under /api behind the dashboard host) or http://127.0.0.1:8000 for make dev")
     parser.add_argument("--username", required=True, help="A `security lead` username to sign in as")
     parser.add_argument("--seed-file", default="deploy/pilot-seed.json", help="Seed JSON (default: deploy/pilot-seed.json)")
     parser.add_argument("--insecure", action="store_true", help="Skip TLS verification (local/self-signed only)")
+    parser.add_argument("--wait", type=int, default=0, metavar="SECONDS", help="Wait up to this many seconds for GET /health before signing in (default: 0, do not wait)")
     args = parser.parse_args(argv)
 
     base_url = args.base_url.rstrip("/")
@@ -181,6 +213,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         assets = load_seed(args.seed_file)
+        if args.wait > 0:
+            wait_ready(base_url, args.wait, ctx)
         cookie = login(base_url, args.username, password, ctx)
         print(f"Signed in to {base_url}; registering {len(assets)} seed entr(y/ies)…")
         failed = register_all(base_url, cookie, assets, ctx)

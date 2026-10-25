@@ -2571,3 +2571,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran the new regression test red against the old page (stashed the two source files; 1 failed, 88 passed), then green after restoring the fix. `make verify`: PASS WITH WARNINGS, 89 frontend and 496 backend tests, type check pass; the only warning is that `BASE` equalled `HEAD` while the changes were uncommitted. Not checked in a browser after the change. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC31 reviewer access docs (README "Try it as a reviewer", demo seed, seeder `--wait`, A14 runbook), the A13 `/api` base-URL fix, and the `make demo` proposal
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "yes" to writing the demo recipe and README section, and their decision that a public password is acceptable because reviewers are anonymous. No new key prompt saved.
+- files changed: `README.md`, `deploy/seed-pilot.py`, `deploy/demo-seed.json` (new), `_docs/aws-setup.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`, `_docs/make-demo-proposal.md` (new); this log entry. Protected files (`Makefile`, `AGENTS.md`) are not changed.
+- verification (tests run, reviewer verdict): ran the README local recipe from an empty SQLite database in this session: user created, 4 repositories registered, scans finished, 4 assets and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Tested the new `--wait` option against a stopped backend (clean error after 3 s) and a just-started one (signed in). NOT run: the AWS server command in `aws-setup.md` (no server exists; marked `VERIFY:`), the `make demo` target (proposal only), and the README's `printf | uv run` line exactly as written (the test used an equivalent stdin file). The `/api` base-URL finding comes from reading `Caddyfile` and `frontend/nginx.conf`, not from a deployed run. `make verify` runs in the pre-push hook. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
