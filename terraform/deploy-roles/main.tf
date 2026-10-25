@@ -26,7 +26,10 @@ locals {
 
 # --- Trust policies ----------------------------------------------------------
 
-# Dev role: only tokens from this repo on the main branch.
+# Dev role: only tokens from this repo in the `dev` GitHub Environment. The
+# deploy-dev job declares `environment: dev`, so GitHub issues its token with an
+# environment-based `sub`, not the `ref:` form. The branch limit therefore lives
+# in the `dev` environment's deployment-branch setting (main only), not here.
 data "aws_iam_policy_document" "dev_trust" {
   statement {
     effect  = "Allow"
@@ -44,7 +47,7 @@ data "aws_iam_policy_document" "dev_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["${local.repo_sub_prefix}:ref:refs/heads/main"]
+      values   = ["${local.repo_sub_prefix}:environment:${var.dev_environment}"]
     }
   }
 }
@@ -78,20 +81,26 @@ data "aws_iam_policy_document" "prod_trust" {
 # server via SSM (VERIFY: SSM Run Command or an equivalent). It cannot touch
 # IAM, S3 state or secrets. Scoped to instances tagged project=vuln-triage.
 data "aws_iam_policy_document" "deploy" {
+  # SendCommand is authorised against two resources, the target instance and the
+  # document. The tag condition only applies to the instance (a document has no
+  # project tag), so they are separate statements: one combined statement would
+  # fail the condition on the document and deny the call.
   statement {
-    sid     = "SendDeployCommand"
-    effect  = "Allow"
-    actions = ["ssm:SendCommand"]
-    # The document that runs the deploy, plus instances carrying the project tag.
-    resources = [
-      "arn:aws:ssm:*::document/AWS-RunShellScript",
-      "arn:aws:ec2:*:*:instance/*",
-    ]
+    sid       = "SendDeployCommandToTaggedInstances"
+    effect    = "Allow"
+    actions   = ["ssm:SendCommand"]
+    resources = ["arn:aws:ec2:*:*:instance/*"]
     condition {
       test     = "StringEquals"
       variable = "ssm:resourceTag/project"
       values   = ["vuln-triage"]
     }
+  }
+  statement {
+    sid       = "UseRunShellScriptDocument"
+    effect    = "Allow"
+    actions   = ["ssm:SendCommand"]
+    resources = ["arn:aws:ssm:*::document/AWS-RunShellScript"]
   }
   statement {
     sid       = "ReadCommandResult"
