@@ -22,8 +22,12 @@
 # image when the human first runs the stack with Docker):
 #   - The file-provisioning schema below (apiVersion 1: groups/contactPoints/
 #     policies) loads clean on 11.3.0.
-#   - A classic-condition threshold (refId B, type `threshold`, evaluator `eq`
-#     param 1) fires one instance per {finding_id,tier} series returned by A.
+#   - A classic-condition threshold (refId B, type `threshold`, evaluator `gt`
+#     param 0) fires one instance per {finding_id,tier} series returned by A.
+#     CONFIRMED in the alert Compose CI job: 11.3.0 rejects evaluator `eq`
+#     ("expected threshold function to be one of [gt, lt, within_range,
+#     outside_range], got eq"); `gt 0` is the supported equivalent for a 0/1
+#     gauge ("overdue == 1" ⇔ "value > 0").
 #   - A single contact point with two receivers (email + webhook) delivers to
 #     both; and a policy `matcher` of the form `finding_id =~ ".+"` matches only
 #     alerts that carry a non-empty finding_id (so the NoData instance, which has
@@ -85,10 +89,22 @@ groups:
               type: threshold
               expression: A
               conditions:
+                # The metric is a 0/1 gauge, so "overdue == 1" is exactly
+                # "value > 0". Grafana 11.3.0 only accepts the threshold
+                # functions [gt, lt, within_range, outside_range] here; `eq`
+                # is REJECTED ("invalid condition: expected threshold function
+                # to be one of [gt, lt, within_range, outside_range], got eq"),
+                # which sent the rule to Error state and (with
+                # executionErrorState: Alerting) fired a bogus error alert while
+                # the real condition never evaluated. VERIFY (confirmed on the
+                # pinned grafana/grafana:11.3.0 image in the alert Compose CI
+                # job): `eq` is unsupported; `gt` with param 0 is the working
+                # form for this 0/1 gauge and fires one instance per
+                # {finding_id,tier} series returned by A.
                 - evaluator:
-                    type: eq
+                    type: gt
                     params:
-                      - 1
+                      - 0
                   operator:
                     type: and
                   query:

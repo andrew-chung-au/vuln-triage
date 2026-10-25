@@ -288,6 +288,73 @@ Two safety points:
   default and on Postgres only when `VT_TEST_DATABASE_URL` is set, which
   `make test-integration` does for you.
 
+## 7b. Run the Compose test jobs (`make test-compose`, phases S2-S4)
+
+Separate from the §7 app stack, `make test-compose` runs the **observability /
+alerting / responder** test jobs — the ones the agent sandbox cannot run because
+they need Docker (no socket in the sandbox). They are authored in the repo and
+verified here or in CI. A `JOB` selector picks one job; with no `JOB` it runs all
+three in turn (for your host).
+
+Needs Docker and `docker compose`. Run on a Docker-capable host or in CI, not in
+the agent sandbox. No live feed and no secret: each job sets throwaway test-only
+env in `ci/test-compose.sh` and runs the backend on `VT_FEEDS=fixtures`.
+
+```sh
+make test-compose JOB=telemetry   # US-13: T-REFUSE, T-JOURNEY-BE, I-OWNER-* (MailHog)
+make test-compose JOB=alert       # US-14: A-FIRE and its rule-absent negative
+make test-compose JOB=responder   # US-15: P-DEMO-BE, P-PROD-REFUSAL, I-RESP-* (task 28)
+make test-compose                 # all three in turn
+```
+
+What each job brings up and asserts:
+
+- **`telemetry`** (issue #157 + #172): the app stack (`compose.yaml`) and the
+  `observability/` stack under one project, with the backend exporting OTLP to
+  the Collector. It confirms the Collector drops the A32-excluded attributes
+  (`T-REFUSE`) and that one scan→notification journey shares a single trace id
+  across metric, trace and log with the owner email reaching MailHog
+  (`T-JOURNEY-BE`).
+- **`alert`** (issue #159, task 27): the app + observability + a **stub webhook
+  sink** under the `vt-alert` project. An in-container seam
+  (`manage.py alert-seed`/`alert-set`/`alert-rescore`/`alert-clear`) puts a
+  top-tier `NotificationJob` into a chosen state (and backdates `created_at`), so
+  the task-26 Grafana rule fires from **stored job state** — not a simulation —
+  to the human email (MailHog) and the stub responder sink. It covers `A-FIRE`
+  and its rule-removed negative. `A-HELD`, `A-TIER`, `A-GAP` part 1 and the
+  `sent` → 0 half of `A-RESOLVE` are unit/SQLite cases under `make test`; see
+  `_docs/testing.md`, "Where each case runs". CI runs this job nightly and on
+  demand (Actions → verify → Run workflow), not on every push or PR.
+
+  **Manual alert checks** (no automated test covers these; run them before a
+  release or after changing the rule, on the stack `make test-compose JOB=alert`
+  brings up, or the dev stack):
+  1. `A-GAP` part 2: with one finding alert firing, stop the Collector
+     (`docker compose -p vt-alert stop otel-collector`) for about 3 minutes, then
+     start it. MailHog gets one NoData email with no `finding_id`; the webhook
+     sink (`http://localhost:9099/__recorded`) gets no new request.
+  2. `A-RESOLVE`, Grafana half: drive the job to `sent`
+     (`manage.py alert-set --finding-id <id> --state sent`). Within a few minutes
+     the webhook sink records one `status: resolved` request for that finding
+     and no second `firing` request.
+- **`responder`** (issue #160, task 28): not implemented yet —
+  `make test-compose JOB=responder` prints a "not implemented, task 28" message
+  and exits non-zero until that task lands.
+
+These cases are `compose`-marked and **deselected** by `make test` / `make verify`
+(the default `-m "not compose"`), so a no-Docker `make verify` never runs them and
+never *skips* them; `tests/test_marker_hygiene.py` guards against an ordinary test
+being silently tagged `compose`.
+
+> **First-run `VERIFY:` items.** Each Compose job pins external images (Grafana,
+> Tempo, Loki, Prometheus, the Collector, MailHog) whose exact query shapes and
+> behaviours are marked `VERIFY:` in the code until a human confirms them on the
+> running stack. The **single consolidated checklist of every open
+> human/CI verification action**, per issue with the exact commands, is
+> `_docs/pending-verification.md` — work from there when you run these jobs, and
+> tick items off as they pass. Expect a `VERIFY:` shape to need a small fix on
+> the first real run; that is normal, not a defect.
+
 ## 8. Clean up
 
 ```sh

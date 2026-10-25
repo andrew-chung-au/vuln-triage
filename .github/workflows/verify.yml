@@ -86,6 +86,9 @@ jobs:
       - run: make backend-install
       - run: make test-compose JOB=telemetry
 
+  # The alert Compose job (#159) is in alert.yml: it runs nightly and on demand,
+  # not on every push/PR (human decision, 2026-10-25).
+
   # The full gate, kept so PRs still get the whitespace and weakened-test checks
   # that the split test jobs above do not cover; it also runs the suite as a
   # backstop. Needs both toolchains because make verify runs make test (frontend

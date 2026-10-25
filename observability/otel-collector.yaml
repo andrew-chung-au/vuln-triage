@@ -37,9 +37,18 @@ processors:
         statements:
           - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.asset.id", "vt.finding.id", "vt.scan.id", "vt.scan.status", "vt.scan.trigger", "vt.tier", "vt.notification.kind", "vt.outcome", "vt.error.code", "http.route", "http.request.method", "http.response.status_code", "server.address"])
     metric_statements:
+      # VERIFY (confirmed in the alert Compose CI job): the US-14 overdue gauge
+      # (backend/vulntriage/observability/metrics.py `_observe_overdue`) emits
+      # its datapoint attributes with PLAIN keys `finding_id` and `tier` (the
+      # documented metric labels, _docs/architecture.md:
+      # `vt_top_tier_notification_overdue{finding_id,tier}`), NOT the span key
+      # `vt.tier`. So both plain keys must be on the datapoint keep_keys list
+      # or the exported Prometheus series loses `tier` (A-TIER saw `{None}`
+      # instead of `{'P1'}`). `vt.tier` stays on the trace/log keep_keys lists
+      # above — it is the SPAN attribute key (mail/delivery.py, allowlist.py).
       - context: datapoint
         statements:
-          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.notification.kind", "vt.outcome", "vt.tier", "finding_id"])
+          - keep_keys(attributes, ["service.name", "service.version", "deployment.environment", "vt.notification.kind", "vt.outcome", "vt.tier", "finding_id", "tier"])
 
 exporters:
   # Prometheus scrapes this endpoint for metrics.

@@ -128,6 +128,20 @@ def wait_for_trace_spans(
         ) from exc
 
 
+def _normalize_trace_id(trace_id: str) -> str:
+    """Zero-pad a Tempo trace id to the canonical 32-char lowercase hex form (#185).
+
+    Tempo's search API (``traces[].traceID``) returns the id **without leading
+    zeros**, so a 128-bit id whose high-order nibble(s) are zero comes back as
+    fewer than 32 chars (31 roughly 1 run in 16). The backend's ids are valid
+    128-bit ids — only the search response strips the zeros — so left-pad to 32
+    hex digits and lowercase. This makes ``len(trace_id) == 32`` hold for every
+    id and keeps the subsequent ``GET /api/traces/{id}`` lookup on the canonical
+    form Tempo stored.
+    """
+    return trace_id.lower().rjust(32, "0")
+
+
 def tempo_search_trace_ids(span_name: str, lookback_s: int = 3600) -> list[str]:
     """Trace ids that contain a span named ``span_name`` (Tempo search API).
 
@@ -135,6 +149,9 @@ def tempo_search_trace_ids(span_name: str, lookback_s: int = 3600) -> list[str]:
     the result shape (``traces[].traceID``); the older ``tags=`` form is the
     fallback. Used to find the journey's trace id from the ``scan.run`` root span
     after a scan is driven over HTTP (the HTTP response does not expose it).
+
+    Ids are normalised to the canonical 32-hex form (#185): Tempo's search result
+    drops leading zeros, so the raw id can be shorter than 32 chars.
     """
     end = int(time.time())
     start = end - lookback_s
@@ -144,7 +161,7 @@ def tempo_search_trace_ids(span_name: str, lookback_s: int = 3600) -> list[str]:
     )
     payload = _get_json(url)
     traces = payload.get("traces") or []
-    return [t.get("traceID") for t in traces if t.get("traceID")]
+    return [_normalize_trace_id(t["traceID"]) for t in traces if t.get("traceID")]
 
 
 def wait_for_trace_with_span(span_name: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> str:
