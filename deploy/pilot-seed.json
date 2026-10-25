@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "Pilot seed list (task 22 / #144, architecture.md A38). Each entry is a",
+    "NewAssetInput body POSTed to /assets by deploy/seed-pilot.py — assets are",
+    "registered through the API (US-1), never written to the database. The file",
+    "lives in the repo (A38); its repository URLs never enter telemetry (the",
+    "seed script is a plain API client and emits no spans/metrics/logs).",
+    "",
+    "The HUMAN supplies the exact repository URLs before the first registration",
+    "(issue #144 constraint). Replace the REPLACE_ME entries below with a few of",
+    "your own GitHub repositories, keep or adjust the OWASP Juice Shop entry, and",
+    "set ownerName/ownerEmail/criticality/internetFacing per asset.",
+    "",
+    "repositoryUrl must be exactly https://github.com/<owner>/<repo> (no .git, no",
+    "extra path); criticality is one of low|medium|high|critical.",
+    "",
+    "VERIFY (A41): OWASP Juice Shop commits a supported package-lock.json. If it",
+    "does NOT (it may ship only a pnpm/yarn lock), drop the juice-shop entry and",
+    "use the juice-shop-fallback entry instead — an open-source repo pinned to",
+    "older versions with a committed package-lock.json, which yields findings. ",
+    "Confirm on github.com, then delete whichever of the two you are not using."
+  ],
+  "assets": [
+    {
+      "name": "REPLACE_ME — your repository 1",
+      "ownerName": "REPLACE_ME",
+      "ownerEmail": "replace-me@example.com",
+      "criticality": "medium",
+      "internetFacing": false,
+      "repositoryUrl": "https://github.com/REPLACE_ME/REPLACE_ME"
+    },
+    {
+      "name": "REPLACE_ME — your repository 2",
+      "ownerName": "REPLACE_ME",
+      "ownerEmail": "replace-me@example.com",
+      "criticality": "high",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/REPLACE_ME/REPLACE_ME"
+    },
+    {
+      "name": "OWASP Juice Shop",
+      "ownerName": "Security Team",
+      "ownerEmail": "security@example.com",
+      "criticality": "high",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/juice-shop/juice-shop"
+    },
+    {
+      "_use_only_if_juice_shop_has_no_package_lock": true,
+      "name": "OWASP NodeGoat (A41 fallback)",
+      "ownerName": "Security Team",
+      "ownerEmail": "security@example.com",
+      "criticality": "high",
+      "internetFacing": true,
+      "repositoryUrl": "https://github.com/OWASP/NodeGoat"
+    }
+  ]
+}

@@ -168,6 +168,21 @@ Notes:
 - The deploy log is the workflow run summary; keep the tag and digest from each promotion so a rollback has a previous tag to use.
 - The demo-defect gate `P-FLAG-GONE` (task 29) runs in this same production workflow; its step is added by task 29, not here.
 
+## Pilot seed data (task 22)
+
+Once the dev environment answers, register the pilot assets so real findings appear. They are registered **through the API** (`POST /assets`, US-1), never written to the database — so the dashboard, scan worker and audit trail all run as in production.
+
+1. **Fill in the seed list.** Edit `deploy/pilot-seed.json`: replace the `REPLACE_ME` entries with a few of your own GitHub repositories (set each `ownerName`/`ownerEmail`/`criticality`/`internetFacing`), keep the OWASP Juice Shop entry, and set `_use_only_if_juice_shop_has_no_package_lock` handling per the VERIFY below. `repositoryUrl` must be exactly `https://github.com/<owner>/<repo>`.
+2. **VERIFY Juice Shop's lockfile (A41).** Confirm `juice-shop/juice-shop` commits a supported `package-lock.json`. If it does not (it may ship only a pnpm/yarn lock), delete the Juice Shop entry and remove the `_use_only_if_...` flag from the NodeGoat fallback entry (an open-source repo with a committed `package-lock.json`). The script skips any entry still carrying that flag.
+3. **Run the seed script** against the dev URL, signed in as a `security lead` (only a security lead may register; the password is prompted or read from `VT_SEED_PASSWORD`, never passed on the command line):
+
+   ```
+   python deploy/seed-pilot.py --base-url https://dev.<eip>.sslip.io --username <security-lead>
+   ```
+
+   It is stdlib-only (no dependency to install) and prints each registered asset with its id and scan status. Re-running it registers the assets again, so run it once (or clear the earlier assets first).
+4. **Check (the acceptance):** on the dev dashboard each asset shows a scan status and, once its first scan finishes, at least one finding. The repository URLs stay out of telemetry (A38) — the seed script is a plain API client and emits no spans, metrics or logs.
+
 ## 11. Teardown
 
 Human-only. Follow `_docs/architecture.md` Deployment → Teardown, in this order:
