@@ -19,6 +19,21 @@ per-issue checklist it links to for the verification runs.
 
 Last updated: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 
+## Cloud-session queue (Docker work to hand to Claude Code cloud sessions)
+
+Added 2026-10-25 at the human's direction: work the local sandbox can't do for
+lack of Docker goes to a Claude Code cloud session (`_docs/cloud-sessions.md`;
+one session per issue, credit is limited). Each line is a candidate, not a
+started job.
+
+- **#181** (T-E6, telemetry backend down): groomed, PM decisions Q1-Q3 still open (see the #181 comments). Author and run it in the cloud.
+- **#182** (`I-OWNER-SENDER` MailHog form): follows #160 (task 28).
+- **#195** (US-13 dashboard label check): needs a running Grafana; shares the dashboard with #181, so sequence them.
+- **#172 / #174 / #193** (`T-JOURNEY-BE` Loki leg, plus the optional held-job case): run the `telemetry` job and add the held-job case.
+- **#157** (`T-REFUSE` run and negative check), **#155** (dashboard and MailHog check), **#158** (Grafana rule run): verification only.
+- **#140** (security scan, PR #167): needs network to generate the fixture lockfiles.
+- **Human machine, not cloud:** AWS applies and secrets (#141, `human-tasklist.md` §A).
+
 ## #141 — AWS infrastructure + dev environment (task 17)
 
 PR: #151 (merged). Run from the **human's machine** (AWS admin identity) and CI;
