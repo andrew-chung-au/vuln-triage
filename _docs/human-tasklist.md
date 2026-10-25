@@ -150,10 +150,33 @@ Secrets Manager value. The reviewer login is public by design and may appear.
 | G5 | **Branch protection** (screenshot) | Repo → Settings → Branches (or Rules → Rulesets): the rule on `main` that requires the CI checks (`verify`) to pass before merge. If there is no such rule, add it first, then capture. Tests gate the dev deploy only through this rule | CI/CD: tests run before a deploy | `docs/images/branch-protection.png` | ☐ |
 | G6 | **Production URL live** (screenshot) | A browser window with the address bar visible: `https://app.52-206-221-145.sslip.io` showing the VulnTriage sign-in page. Show the padlock and the date (a clock or the OS date in the shot) | Deployment (criterion 8): public URL | `docs/images/prod-live.png` | ☐ |
 | G7 | **Dev URL live, signed in** (screenshot) | `https://dev.52-206-221-145.sslip.io` after signing in as `reviewer`: the dashboard with ranked findings for the demo repositories, address bar visible | Deployment and Application (criteria 8 and 5): the deployed app works end to end | `docs/images/dev-live-dashboard.png` | ☐ |
-| G8 | **Deployed walkthrough** (video, 2 to 3 minutes) | Screen recording, no editing needed: (1) open the production URL, (2) open dev, sign in as `reviewer`, show the dashboard and one finding's rank reason, (3) in GitHub, show the deploy workflow run list with the dev auto-deploy, the production run waiting for approval and approved, and the rollback run. Say what you are showing as you go | Deployment: "a clear demo with the deployment", and a fallback if the server is off at grading | Upload (YouTube unlisted or similar), then give the agent the link for the README "Demo recording" line | ☐ |
+| G8 | **Deployed walkthrough** (video, 2 to 3 minutes) | Screen recording, no editing needed: (1) open the production URL, (2) open dev, sign in as `reviewer`, show the dashboard and one finding's rank reason, (3) in GitHub, show the deploy workflow run list with the dev auto-deploy, the production run waiting for approval and approved, and the rollback run. Say what you are showing as you go. Full script under the table ("G8 script") | Deployment: "a clear demo with the deployment", and a fallback if the server is off at grading | Upload (YouTube unlisted or similar), then give the agent the link for the README "Demo recording" line | ☐ (later) |
 | G9 | **Grafana dashboard with data** (screenshot) | The US-13 dashboard on a running observability stack after one journey: panels with data. Then one trace open in Grafana with the same trace id visible in a metric exemplar or a log line. Needs Docker, so run it on your machine: follow `observability/README.md` ("Run it", then "Point the backend at the Collector"), register an asset or re-scan, and open Grafana at `http://localhost:3000`. A cloud session can do it once B6 and B7 are done (CC15) | Observability (criterion 10): "viewable in a UI", the only missing clause | `docs/images/grafana-dashboard.png`, `docs/images/grafana-trace.png` | ☐ |
 | G10 | **Alert firing** (screenshot, optional) | Grafana alert list with the US-14 rule in Firing state, then Normal after resolving. Needs the alert test setup (`make test-compose JOB=alert`, CC14), not only the G9 stack; skip it if short of time | Alerting (criterion 11): already met by CI; this adds a visible picture | `docs/images/grafana-alert.png` | ☐ |
 | G11 | **On-call drill** (video) | Later, after the responder is built (#160): the metric reaches 1, the alert names the finding, the responder opens a PR with a fix and test, the owner email arrives, the alert resolves. Follows the script in the README placeholder | On-Call Agent (criterion 12), the only criterion at 0 | Upload, link in README | ☐ blocked on F1-F3 and #160 |
+
+### G8 script (deployed walkthrough video, about 3 minutes)
+
+What it is: one unedited screen recording with your voice, showing the deployed
+system working. The screenshots G1 to G7 are the still evidence; this video is the
+walk-through a grader can watch, and the fallback if the server is off at grading.
+
+How to record: Mac, QuickTime Player → File → New Screen Recording. Windows, `Win + G`
+(Game Bar) or the Snipping Tool's record option. Keep the browser address bar visible
+throughout. Upload to YouTube as **Unlisted** and give the agent the link, which goes
+in the README "Demo recording" line. Do not open the AWS console, email, other
+accounts or an `.env` file while recording. The `reviewer` login is the only
+credential that may appear.
+
+| Time | Do | Say (roughly) |
+|---|---|---|
+| 0:00 to 0:20 | **Production.** Open `https://app.52-206-221-145.sslip.io`. Show the address bar and the sign-in page | "This is production, deployed through a gated workflow." |
+| 0:20 to 1:20 | **Dev.** Open `https://dev.52-206-221-145.sslip.io`, sign in as `reviewer`, show the dashboard. Click one finding and show why it is ranked where it is | One sentence on what the app does: it ranks vulnerable dependencies by real-world exploit risk and routes each fix to its owner. Then read out the rank reason on the finding |
+| 1:20 to 2:50 | **GitHub deploys.** Repo → Actions → deploy. Show **run #30** (dev deployed automatically on merge). Show **run #33** (production, approved by you). Show **run #32, attempt 1** (use the attempt dropdown and pick #1): the rollback to an older tag | One line each: "#30 is the automatic deploy to dev after a merge." "#33 is the production deploy, approved by me." "#32 is the rollback rehearsal: production moved back to an older image tag, then forward again." |
+| 2:50 to 3:00 | **Finish.** Stay on the Actions page | "Dev updates on every merge. Production needs a manual run and an approval." |
+
+Run numbers: #30 = `push` run of PR 206, #32 = rollback (attempt 1 is the
+successful one), #33 = forward run. Run #34 is a cancelled duplicate and need not be shown.
 
 Order by value: G1, G5, G6 and G7 first (about 10 minutes, they protect points
 already scored), then G2 to G4, then G8, then G9 and G10. G11 waits.
