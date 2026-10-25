@@ -1,0 +1,32 @@
+name: alert
+# The US-14 alert Compose job (issue #159, task 27): A-FIRE and its rule-absent
+# negative through real Grafana. It takes several minutes of Grafana timing per
+# pass, so it runs nightly and on demand (Actions -> alert -> Run workflow), not
+# on every push/PR (human decision, 2026-10-25). The other A-* cases are
+# unit/SQLite cases in verify.yml; see _docs/testing.md, "Where each case runs".
+on:
+  schedule:
+    - cron: "0 17 * * *" # 17:00 UTC daily
+  workflow_dispatch:
+
+# No secret or live feed: the stack is local, with throwaway env set in
+# ci/test-compose.sh. A read-only token is all CI gets.
+permissions:
+  contents: read
+
+jobs:
+  # The app + observability + stub-webhook-sink stack (compose.yaml +
+  # compose.telemetry.yaml + compose.alert.yaml); the in-container seam puts a
+  # top-tier job into stored state, and the task-26 Grafana rule fires the alert
+  # to MailHog (human email) and the stub webhook sink (responder), then the
+  # rule-absent negative pass. ubuntu-latest ships Docker + Docker Compose.
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-compose JOB=alert
