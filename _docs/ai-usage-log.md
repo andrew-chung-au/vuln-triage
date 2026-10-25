@@ -2481,3 +2481,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): new tests written first and seen failing; `make verify` PASS (480 backend tests, 87 frontend tests). No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #195 (US-13 dashboard: align panel queries with exported metric labels)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #195 per the rewritten issue, the PM grooming comment (6396447910) and the human decisions of 2026-10-25 (live check split to #199; variables marked unverified; doc notes added). No new key prompt saved.
+- files changed: `tests/test_us13_dashboard.py` (new); `observability/grafana/dashboards/us13-journey.json` (panel 1 groups by and labels with `vt_notification_kind`, `vt_outcome`); `_docs/testing.md` and `_docs/architecture.md` (one "exported as" note each); this log entry
+- verification (tests run, reviewer verdict): test written first and seen failing against the old dashboard (2 failures), then passing after the fix; `make verify` PASS (487 backend tests, 87 frontend tests). The Prometheus label spelling was not checked against a live stack (#199). No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
