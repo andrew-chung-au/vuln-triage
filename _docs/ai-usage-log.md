@@ -2424,3 +2424,12 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): run 40160976080 (pull_request, 79f9f47) was green with both passes, the first CI proof of the rule-absent negative. The kept cases are unchanged apart from the fixture. `make verify` results are in the session's report. The `compose` cases were NOT run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the human chose the trim (A-FIRE + negative in Compose, nightly/on demand); the workflow diff awaits approval.
+
+- date: 2026-10-25
+- task/issue: #65 (permission sweep 1) — sweep analysis and OpenCode permission-prompt log
+- agent role: Orchestrator (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`); a `web-fetch` subagent read the OpenCode plugin and permission docs
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to review the permission records in the session summaries, then said agents must record permission detail themselves so the human does not have to note prompts, and that Claude Code did not need a hook but OpenCode did. No new key prompt saved.
+- files changed: new `.opencode/plugins/permission-log.js` (protected path, commit 4fa0674, human-approved in the session; it appends OpenCode `permission.asked` / `permission.replied` events to `.scratch/permission-prompts.jsonl`); `_docs/permission-sweeps.md`; this log entry
+- verification (tests run, reviewer verdict): the plugin has NOT been run. The OpenCode docs do not document the event payload, whether `node:fs` is available in a plugin, or whether subagent sessions emit the events (VERIFY). `make permission-report SINCE=1b37fd1` was run read-only: 68 summaries, 29 without a Permission review section (mostly Kiro Web and cloud sessions that did not use the template), no settings change supported by the counts. No reviewer verdict.
+- human review (what I checked or corrected, or `none`): the human approved the plugin commit; the first OpenCode session after it is the check.
