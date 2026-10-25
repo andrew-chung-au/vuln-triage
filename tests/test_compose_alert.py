@@ -100,6 +100,15 @@ _ALLOWED_LABEL_KEYS = frozenset({"finding_id", "tier", "alertname", "grafana_fol
 # alert label set only, not the envelope.
 _FORBIDDEN_IN_LABELS = ("owner", "@", "http", "bearer", "secret", "advisory")
 
+# Grafana's routing labels are fixed strings from the task-26 rule file (the
+# rule `title` and its `folder`), not job data, so they are pinned exactly
+# rather than substring-scanned: the title "Top-tier owner notification
+# overdue" legitimately contains "owner" (confirmed in the alert CI job).
+_FIXED_LABELS = {
+    "alertname": "Top-tier owner notification overdue",
+    "grafana_folder": "VulnTriage",
+}
+
 # How long past creation the firing job is backdated: just past the backend's
 # 30-minute W, so a `claimed` job reads 1 (A33; _OVERDUE_WINDOW is unchanged).
 _PAST_W_MINUTES = 31
@@ -176,14 +185,19 @@ def test_a_fire_one_overdue_job_fires_once_at_both_sinks() -> None:
     # legitimately carries externalURL/generatorURL/annotations.summary. Each
     # alert's labels must name the finding (finding_id + tier) plus only
     # Grafana's own standard routing keys, and must carry no owner/email/url/
-    # advisory/credential marker.
+    # advisory/credential marker. The fixed routing labels must equal the rule
+    # file's values exactly; every other label is scanned for forbidden markers.
     label_sets = webhook_alert_labels(webhook)
     assert label_sets, f"no per-alert labels in the responder payload: {webhook}"
     for labels in label_sets:
         assert "finding_id" in labels, f"alert labels do not name the finding: {labels}"
         extra = set(labels) - _ALLOWED_LABEL_KEYS
         assert not extra, f"responder alert carried unexpected label keys {extra}: {labels}"
+        for key, expected in _FIXED_LABELS.items():
+            assert labels.get(key) == expected, f"alert label {key!r} is not {expected!r}: {labels}"
         for key, value in labels.items():
+            if key in _FIXED_LABELS:
+                continue
             blob = f"{key}={value}".lower()
             for banned in _FORBIDDEN_IN_LABELS:
                 assert banned not in blob, f"responder alert label leaked {banned!r}: {labels}"

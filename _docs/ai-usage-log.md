@@ -2384,3 +2384,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the CI log of run 40094180389 (A-FIRE and A-RESOLVE timed out after 300s in `wait_for_overdue_value`; A-TIER and A-GAP part 2, which make the same wait, passed). Cause found by reading the code: the backend's DeliveryWorker polls every 30s and retries `failed` jobs, and the seeded asset has an owner email, so the seeded `failed` job was delivered to MailHog and set to `sent` (gauge 0), usually before the default 60s metric export reported it as 1. The worker never selects `claimed`, and #159's A-FIRE criterion allows "`pending`/`claimed` backdated past W". `make verify` passed (454 backend + 87 frontend). The `compose` alert cases were NOT run here (no Docker); the PR's CI `alert` job is the check.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none yet.
+
+- date: 2026-10-25
+- task/issue: #159 (task 27) — second failing `verify / alert` run on PR #183 (at e8cd932)
+- agent role: Engineer (Claude Code, local sandbox, branch `feat/159-alert-compose-job`)
+- model: Claude Opus 5.5 (`claude-opus-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human pasted the PR #183 checks page again after pushing e8cd932.
+- files changed: `tests/test_compose_alert.py` (A-FIRE no-leak check: the fixed routing labels `alertname`/`grafana_folder` must equal the rule file's title/folder exactly and are skipped by the forbidden-substring scan); this log entry.
+- verification (tests run, reviewer verdict): read the CI log of run 40142529529: 1 failed, 5 passed, 1 skipped. The claimed-job fix worked (A-TIER, A-GAP part 2 and A-RESOLVE passed; A-FIRE reached both sinks). A-FIRE failed only on `responder alert label leaked 'owner'`, because the rule title "Top-tier owner notification overdue" is the `alertname` label; the labels were exactly `{alertname, finding_id: 1, grafana_folder: VulnTriage, tier: P1}`. `make verify` passed (1 assertion added, 0 removed). The rule-absent negative pass has not run in CI yet (the harness stops after a positive failure). The `compose` cases were NOT run here (no Docker).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none yet.
