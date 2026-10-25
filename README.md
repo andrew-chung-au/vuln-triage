@@ -181,7 +181,21 @@ The app running on its one-command local path (`make dev`: SQLite, no Docker), s
 |---|---|
 | ![Findings dashboard](docs/images/dashboard.png) | ![Assets](docs/images/assets.png) |
 
-_Not captured yet: the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
+### Deployment evidence
+
+Captured 2026-10-25 and 2026-10-26 from the live deployment and the GitHub settings pages.
+
+| What it shows | Screenshot |
+|---|---|
+| **Production needs a reviewer.** The `production` environment has Required reviewers on and "Allow administrators to bypass" off; only `main` can deploy | ![production environment rules](docs/images/g1-github-settings-environments-production.png) |
+| **A production deploy waiting for approval** (run #33): the job stops at "waiting for review" until the reviewer approves | ![deploy #33 waiting for review](docs/images/g2-github-actions-deploy33-review.png) |
+| **Dev deploys automatically on merge** (run #30, triggered by a push to `main`): build and dev deploy run, production is skipped | ![deploy #30, automatic dev deploy](docs/images/g3-github-actions-deploy30-auto-dev-deploy.png) |
+| **Rollback rehearsal** (run #32, attempt 1): production was deployed from an earlier image tag through the approval gate, approved by the owner | ![deploy #32, rollback rehearsal](docs/images/g4-github-actions-deploy32-rollback-rehearsal.png) |
+| **`main` is protected** by the `protect-main` ruleset: pull request required, status checks required, no force pushes, no deletion | ![protect-main ruleset](docs/images/g5-github-settings-rulesets-protect-main.png) |
+| **Dev only deploys from `main`** (no reviewer, since dev deploys automatically) | ![dev environment rules](docs/images/g5-github-settings-environments-dev.png) |
+| **The live dev site**, signed in as the public reviewer, showing ranked findings for the demo repositories | ![live dev findings](docs/images/g7-vuln-triage-dev-findings.png) |
+
+_Not captured yet: the production sign-in page, the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
 
 <!-- PLACEHOLDER: add the Grafana and responder images under docs/images/ and link them here when they exist. Do not link files that are not committed. -->
 
