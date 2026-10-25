@@ -21,7 +21,7 @@ How the pieces fit:
 when you finish an item; when an issue's `pending-verification.md` items are all
 ticked, close the issue and set it ☑ here.
 
-Last updated: 2026-10-24.
+Last updated: 2026-10-25.
 
 ---
 
@@ -73,12 +73,18 @@ Codespace/cloud → your machine for AWS).
 | **#157** | 25 telemetry job | `make test-compose JOB=telemetry` (`T-REFUSE`) green in CI; confirm it fails when `owner.email` is added to the allowlist | CI / Docker host | ☐ |
 | **#158** | 26 US-14 rule | `make verify` lands the metric half; confirm the provisioned Grafana rule fires once / resolves / NoData-human-only on a running stack | `make verify` + Docker host | ◐ (issue closed; Grafana-rule run pending) |
 | **#172** | 40 feed wiring | `T-JOURNEY-BE` + `I-OWNER-NOAWS` green on the containerized harness in the telemetry CI job | CI / Docker host | ☐ |
+| **#174** | 23 OTLP log export | No separate run: the backend log-export leg is confirmed by the **#172 `T-JOURNEY-BE`** Loki assertion (and #157 `T-REFUSE`). Static-verified on `main` (commit `61837cb`); tick when that Loki leg passes | CI / Docker host (via #172) | ◐ (merged; Loki-leg run = #172) |
+| **#177** | 23 journey log calls | No separate run: the `scan.finished` / `notification.deliver` log calls are confirmed by the same **#172 `T-JOURNEY-BE`** Loki assertion. Static-verified on `main` (commit `970cdbf`); tick when that Loki leg passes | CI / Docker host (via #172) | ◐ (merged; Loki-leg run = #172) |
 
 > **Note on "closed but pending":** #156 and #158 were closed because their
 > `make verify`-able half landed; the Docker/AWS half is tracked in
 > `pending-verification.md` and rolled into A10 (SES) / B-#158 (Grafana rule).
-> If you want a single close gate per issue instead, re-open them until the
-> real-run halves pass — your call.
+> #174 and #177 are the same shape — their code is on `main` but the only
+> end-to-end proof is the #172 `T-JOURNEY-BE` Loki leg, which the agent sandbox
+> (no Docker) cannot run; they were closed on **static** verification, so they
+> are shown ◐ here and re-opened until that Loki leg is green.
+> If you want a single close gate per issue instead, re-open the others too until
+> the real-run halves pass — your call.
 
 ## C. Merges and protected-file approvals (as PRs arrive)
 
