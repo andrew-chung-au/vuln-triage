@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The live public deployment is a human-run AWS step that has not happened yet (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io (deployed by the GitHub workflow on 2026-10-25); the production promotion has not been done yet (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
 
 ---
 
@@ -140,7 +140,7 @@ There is no sign-up, so these are the logins to use. They are **public demo acco
 
 | | |
 |---|---|
-| URL | `https://dev.<elastic-ip>.sslip.io` (the real address is in [Deployment](#deployment--rollback) once deployed) |
+| URL | https://dev.52-206-221-145.sslip.io |
 | Username | `reviewer` |
 | Password | `vt-reviewer-demo` |
 | Role | security lead: sees every asset and finding, can register an asset, can accept a risk |
@@ -210,15 +210,13 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 
 ## Deployment & rollback
 
-- **How it deploys.** `terraform/` (bootstrap, deploy-roles, server) provisions one AWS server that runs the `dev` and `prod` Compose projects behind a reverse proxy, with images in GHCR. Hostnames come from the Elastic IP via `sslip.io` (no domain to buy): dev at `https://dev.<elastic-ip>.sslip.io`, prod at `https://app.<elastic-ip>.sslip.io`.
-- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) (written and in CI; the first dev deploy and the first production promotion have not run yet).
+- **How it deploys.** `terraform/` (bootstrap, deploy-roles, server) provisions one AWS server that runs the `dev` and `prod` Compose projects behind a reverse proxy, with images in GHCR. Hostnames come from the Elastic IP via `sslip.io` (no domain to buy): dev at https://dev.52-206-221-145.sslip.io (live), prod at `https://app.52-206-221-145.sslip.io` (**not promoted yet**: it will not answer until the first manual production promotion).
+- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) (the dev deploy has run on a real server; the first production promotion has not).
 - **Rollback.** Re-run the production workflow with the previous image tag; the deploy log records every tag and digest.
 
 > The first live deploy is a human-run AWS step (account, secrets, `terraform apply`), tracked in [`_docs/aws-setup.md`](_docs/aws-setup.md). The Deployment criterion accepts *a public URL **or** a clear demo of the deployment.*
 
-<!-- PLACEHOLDER: at submission, replace the <elastic-ip> forms above with the real URLs if the deploy is live, e.g.:
-**Live:** dev → https://dev.203-0-113-10.sslip.io · prod → https://app.203-0-113-10.sslip.io
-If not deploying live, link the demo recording instead (see Screenshots & demo) and delete this note. -->
+<!-- PLACEHOLDER: after the first production promotion (human tasklist A12), confirm prod answers at the address above and remove "not promoted yet". If the deployment is not kept live at submission, link the demo recording instead (see Screenshots & demo). -->
 
 ---
 
