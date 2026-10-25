@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Milestones A–C are implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI/CD, OpenTelemetry→Grafana observability, a US-14 alert and an on-call responder. The live public deployment is a human-run AWS step (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The live public deployment is a human-run AWS step that has not happened yet (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
 
 ---
 
@@ -42,7 +42,7 @@ The 12 criteria, what we did for each, and where to see it. Links go straight to
 | 9 | **CI/CD** | CI on every PR; auto-deploy to dev on merge; manual prod promotion | [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) |
 | 10 | **Observability** | Scan→notification journey: metric, trace & log share one trace ID in Grafana; no PII/secrets in telemetry | [Observability](#observability) · [`observability/`](observability/) |
 | 11 | **Alerting on User Impact** | An undelivered top-priority finding fires exactly one alert | [Alerting & on-call](#alerting--on-call-agent) |
-| 12 | **On-Call Agent** | A responder agent wakes on the alert and opens a fix PR | [Alerting & on-call](#alerting--on-call-agent) |
+| 12 | **On-Call Agent** | Planned, not built yet: a responder agent that wakes on the alert and opens a fix PR | [Alerting & on-call](#alerting--on-call-agent) |
 
 <!-- PLACEHOLDER: if you record a demo video / drill, link it here and in Deployment:
 ### Demo recording
@@ -73,7 +73,7 @@ The submission path runs end to end: inventory → match → enrich → rank →
 4. **Rank.** Give every finding a deterministic, explainable rank with a reason. No AI.
 5. **Route.** The backend refreshes KEV/EPSS daily on its own scheduler, re-scores findings, and notifies the owner of a new top-priority finding.
 6. **Re-scan.** Close a finding automatically when a re-scan shows the fixed version is in place.
-7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent wakes on it, opens a fix PR, and logs its actions (promotion to production stays manual). No customer data, advisory text or credentials go to telemetry.
+7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent (planned, not built yet) is meant to wake on it, open a fix PR, and log its actions (promotion to production stays manual). No customer data, advisory text or credentials go to telemetry.
 
 A **web dashboard** lists findings per asset with status (`open`, `risk accepted`, `fixed`, `withdrawn`) and an audit trail; only a human can set `risk accepted`.
 
@@ -89,7 +89,7 @@ VulnTriage does **not** actively scan networks/applications, does **not** patch 
 - An ownerless asset's findings are still recorded and ranked; the notification is held and the dashboard flags the asset as ownerless.
 - If an OSV/KEV/EPSS feed is unavailable, last-known data is kept and marked stale, the scheduled run retries, and no findings are deleted.
 - Only a human can set `risk accepted`; the audit trail records who, when and the previous value.
-- An undelivered top-priority finding fires **exactly one** alert; the responder agent's actions are logged and production promotion stays manual.
+- An undelivered top-priority finding fires **exactly one** alert. Once the responder agent exists (planned), its actions will be logged; production promotion stays manual.
 
 ---
 
@@ -134,11 +134,16 @@ Both options serve the SPA and the API on one origin (the API lives under `/api`
 
 ## Screenshots & demo
 
-<!-- PLACEHOLDER: drop images into docs/images/ and update these, or delete this section if you have no screenshots at submission. -->
+The app running on its one-command local path (`make dev`: SQLite, no Docker), signed in through the real login form against the real API. The data is **demo data**: four public repositories replayed from the committed recorded fixtures (`VT_FEEDS=fixtures`, no network), so the KEV/EPSS values are fixture values, not live feeds.
 
-| Dashboard — ranked findings per asset | Grafana — one trace ID across metric/trace/log | Alert → responder PR |
-|---|---|---|
-| ![Dashboard](docs/images/dashboard.png) | ![Grafana journey](docs/images/grafana-journey.png) | ![Responder PR](docs/images/responder-pr.png) |
+| Findings — ranked, with the reason for each rank | Assets — scan status, owner, and an ownerless asset |
+|---|---|
+| ![Findings dashboard](docs/images/dashboard.png) | ![Assets](docs/images/assets.png) |
+
+_Not captured yet: the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
+
+<!-- PLACEHOLDER: add the Grafana and responder images under docs/images/ and link them here when they exist. Do not link files that are not committed. -->
+
 
 <!-- PLACEHOLDER: link the recorded drill here if you have one:
 📹 **Demo recording:** [end-to-end drill](<URL>) — shows the metric at 1, one alert naming the finding, the responder opening a PR, the owner email arriving in MailHog, and the alert resolving.
@@ -148,7 +153,7 @@ Both options serve the SPA and the API on one origin (the API lives under `/api`
 
 ## Architecture
 
-The backend ingests assets, reads their lockfiles with a read-only GitHub token, matches against OSV, enriches with KEV/EPSS, ranks deterministically, and delivers owner notifications. A background scheduler runs the daily refresh and re-scan. Telemetry flows from the backend over OTLP to an OpenTelemetry Collector, then to Prometheus (metrics), Tempo (traces) and Loki (logs), surfaced in Grafana. For submission the observability stack, the alert and the responder run in local Docker Compose; the app itself (frontend + backend + Postgres) also deploys to AWS via Terraform.
+The backend ingests assets, reads their lockfiles with a read-only GitHub token, matches against OSV, enriches with KEV/EPSS, ranks deterministically, and delivers owner notifications. A background scheduler runs the daily refresh and re-scan. Telemetry flows from the backend over OTLP to an OpenTelemetry Collector, then to Prometheus (metrics), Tempo (traces) and Loki (logs), surfaced in Grafana. For submission the observability stack and the alert run in local Docker Compose (the responder is planned to join them); the app itself (frontend + backend + Postgres) also deploys to AWS via Terraform.
 
 Full detail: [`_docs/architecture.md`](_docs/architecture.md) · API contract: [`_docs/openapi.yaml`](_docs/openapi.yaml) ([endpoint table](_docs/api.md)).
 
@@ -157,7 +162,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
                                                              │
    OpenTelemetry (trace id shared) ──▶ Collector ──▶ Prometheus / Tempo / Loki ──▶ Grafana
                                                              │
-                               undelivered top-tier finding ─▶ alert ─▶ responder agent ─▶ fix PR
+                               undelivered top-tier finding ─▶ alert ─▶ (planned) responder agent ─▶ fix PR
 ```
 
 ---
@@ -165,7 +170,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 ## Deployment & rollback
 
 - **How it deploys.** `terraform/` (bootstrap, deploy-roles, server) provisions one AWS server that runs the `dev` and `prod` Compose projects behind a reverse proxy, with images in GHCR. Hostnames come from the Elastic IP via `sslip.io` (no domain to buy): dev at `https://dev.<elastic-ip>.sslip.io`, prod at `https://app.<elastic-ip>.sslip.io`.
-- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) — satisfying the 3-point CI/CD level.
+- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) (written and in CI; the first dev deploy and the first production promotion have not run yet).
 - **Rollback.** Re-run the production workflow with the previous image tag; the deploy log records every tag and digest.
 
 > The first live deploy is a human-run AWS step (account, secrets, `terraform apply`), tracked in [`_docs/aws-setup.md`](_docs/aws-setup.md). The Deployment criterion accepts *a public URL **or** a clear demo of the deployment.*
@@ -190,7 +195,7 @@ The key journey — a scan through to the owner notification — is instrumented
 ## Alerting & on-call agent
 
 - **Alert (US-14).** When a top-priority finding is not delivered within the window, a provisioned Grafana rule fires **exactly one** alert naming the finding — to the owner's email and the responder — from real stored job state (not a simulation). Held jobs are exempt. Rule: [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/).
-- **On-call agent (US-15).** A responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions. Promotion to production stays manual.
+- **On-call agent (US-15) — planned, not built yet.** The design: a responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
 
 ---
 

@@ -2541,3 +2541,23 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran `terraform fmt -check -recursive` on a copy of `terraform/` with `hashicorp/terraform:1.17.0`: pass. `terraform init -backend=false` and `validate` first failed because the session proxy refused `registry.terraform.io`; after the human added the allowed domains they ran: `bootstrap` and `deploy-roles` valid, `server` failed on an apostrophe in a security group description, which I fixed in `terraform/server/network.tf` (a one-word change) and re-validated: all three valid, `fmt -check` clean. Nothing was planned or applied. The review findings are from reading the code against `terraform-verify.md` §2 and `deploy.yml`; AWS and GitHub behaviour is from my knowledge, not tested, and is marked `VERIFY:` where uncertain. No reviewer verdict.
 - new dependencies: none. Pulled the `hashicorp/terraform:1.17.0` image into the session's Docker.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC29, the Terraform fixes from the pre-apply review (#141): dev trust policy to `environment:dev`, secret ARNs without a lookup, `SendCommand` split in two statements, `user-data.sh` waits for the data volume
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's go-ahead after setting the `dev` environment's deployment branch to `main` and accepting the shared deploy policy (F0). No new key prompt saved.
+- files changed: `terraform/deploy-roles/main.tf` and `variables.tf`; `terraform/server/iam.tf` and `user-data.sh`; `_docs/terraform-verify.md`, `_docs/aws-setup.md`, `_docs/cloud-tasklist.md`, `_docs/human-tasklist.md`; this log entry
+- verification (tests run, reviewer verdict): `terraform fmt -check -recursive` clean, `terraform validate` passes on `deploy-roles` and `server` (`hashicorp/terraform:1.17.0`, aws provider 5.100.0), `bash -n` on `user-data.sh`. Nothing planned or applied. The IAM behaviour (F1, F3) and the `-??????` secret ARN pattern are `VERIFY:` items proven only by a real apply and deploy. `user-data.sh` was not run on an instance. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC24 (README overclaims), CC25 (CI evidence), CC19 partly (Postgres integration run), CC27 (app evidence screenshots); CC14 attempted and blocked
+- agent role: orchestrator (Claude Code cloud session), while the human was away
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction to do the remaining tasks consecutively, in the order I judged best. No new key prompt saved.
+- files changed: `README.md` (responder marked planned and not built, CI/CD level claim softened, screenshots section); `docs/images/dashboard.png` and `docs/images/assets.png` (new); `_docs/cloud-tasklist.md`, `_docs/human-tasklist.md`, `_docs/pending-verification.md`; `_session-summaries/planning-2026-10-25-cloud-tasklist.md`; this log entry. Comments on #172 and #157.
+- verification (tests run, reviewer verdict): `make test-integration`: 232 passed against Postgres 16.4 in the cloud session. `make test-compose JOB=telemetry` FAILED at the backend image build (`ghcr.io` blob host refused by the network policy); not re-run. The CI telemetry result (run 40188742150, 3 passed) was read from the Actions job log, not produced here. The CC27 run signed in through the real login form on `make dev-start` with recorded fixtures (`POST /api/auth/login` 200); the screenshots show fixture data, and the README says so. `make verify` was not re-run after these edits (README, images and docs only); the pre-push hook runs it. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

@@ -27,16 +27,22 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 
 # Read only the named secrets (one JSON secret per environment). The role gets
 # no broader Secrets Manager access.
-data "aws_secretsmanager_secret" "env" {
-  for_each = toset(var.secret_names)
-  name     = each.value
-}
+#
+# The ARNs are built from the names, not looked up: a data source would fail the
+# plan when a secret does not exist yet, and the human adds the prod secret only
+# before the first production deploy. Secrets Manager appends a random six-
+# character suffix to every secret ARN, so each name is followed by "-??????"
+# (the six wildcard characters IAM documents for this).
+data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "secrets_read" {
   statement {
-    effect    = "Allow"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = [for s in data.aws_secretsmanager_secret.env : s.arn]
+    effect  = "Allow"
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      for name in var.secret_names :
+      "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${name}-??????"
+    ]
   }
 }
 

@@ -126,7 +126,7 @@ silently tagged `compose`. The harness is `ci/test-compose.sh`; the case is
 driver in `tests/compose_driver.py`). **No new dependency; `backend/uv.lock`
 should not change.**
 
-- [ ] (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=telemetry` is green: it brings up the observability stack under the `vt-telemetry` project, runs the backend driver's `refuse` command against it, and passes `T-REFUSE` (the only telemetry case #157 ships). Wire the CI `telemetry` job (added to `.github/workflows/verify.yml`) and confirm it is green on the PR. Expect the `VERIFY:` query shapes to need a fix on the first real run — that is normal.
+- [x] (Done in CI: run 40188742150 at `fb24904`, `T-REFUSE` passed in the `telemetry` job.) (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=telemetry` is green: it brings up the observability stack under the `vt-telemetry` project, runs the backend driver's `refuse` command against it, and passes `T-REFUSE` (the only telemetry case #157 ships). Wire the CI `telemetry` job (added to `.github/workflows/verify.yml`) and confirm it is green on the PR. Expect the `VERIFY:` query shapes to need a fix on the first real run — that is normal.
 - [ ] Confirm `T-REFUSE` fails when `owner.email` is added to the Collector allowlist (`observability/otel-collector.yaml`) — the task-25 acceptance negative check.
 - [ ] `VERIFY:` the external query shapes marked in `tests/compose_telemetry.py` on the pinned images: Tempo trace-by-id `/api/traces/{id}` and its span-attribute JSON nesting (2.6.1), and Loki `/loki/api/v1/query_range` with the stream selector for OTLP-ingested logs (3.2.1). Adjust the helpers if a shape differs. (Prometheus/MailHog helpers were trimmed out of #157; they return with the delivery cases in #172.)
 - [ ] `VERIFY:` a host pytest/driver process exports OTLP over the published Collector port (`localhost:4317` gRPC) and reaches Tempo/Loki on their published localhost ports. For `T-REFUSE` the driver runs on the host (no containerized delivery needed), so the two Compose projects do not need a shared network here; #172 adds that wiring for the containerized-backend-delivers cases.
@@ -177,10 +177,10 @@ PRs: #175, #178 (merged). Run in **CI (telemetry job) or a Codespace / Claude
 Code cloud / Docker host** (Docker). This is the containerized-backend-delivers
 harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
 
-- [ ] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog.
+- [x] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog. **Done in CI:** run 40188742150 at `fb24904`, job `telemetry`, 3 passed in 55.02s (checked from the job log, 2026-10-25).
 - [ ] **Also confirms #174 and the log half of #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`; #177 was folded into #193 and closed on 2026-10-25). If this Loki leg does **not** carry the journey trace id, re-open #174 or #193 rather than only #172.
 - [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
-- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`.
+- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`. The criterion is met (run above); closing is the human's call (tasklist B5).
 
 ## #177 / #193 — delivery outcome signals on every branch (Loki leg)
 

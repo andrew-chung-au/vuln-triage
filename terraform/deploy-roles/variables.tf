@@ -31,6 +31,12 @@ variable "existing_oidc_provider_arn" {
   default     = ""
 }
 
+variable "dev_environment" {
+  description = "The GitHub Environment name the dev role's trust policy requires. The deploy-dev job declares it, so its token's sub claim is environment-based, not branch-based; limit that environment's deployment branches to main in GitHub (aws-setup.md step 6.1)."
+  type        = string
+  default     = "dev"
+}
+
 variable "production_environment" {
   description = "The GitHub Environment name the prod role's trust policy requires."
   type        = string

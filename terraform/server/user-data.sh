@@ -19,13 +19,33 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # --- Mount the data volume at /data ----------------------------------------
+# The data volume is a separate Terraform resource attached after the instance
+# is created, so it may not exist yet when this script starts. Wait for it
+# instead of formatting a missing device.
 # VERIFY: the device name AL2023 presents for /dev/sdf (often /dev/nvme1n1).
-DATA_DEV="$(readlink -f /dev/sdf || echo /dev/nvme1n1)"
+DATA_DEV=""
+for _ in $(seq 1 60); do
+  if [ -e /dev/sdf ]; then
+    DATA_DEV="$(readlink -f /dev/sdf)"
+    break
+  fi
+  if [ -b /dev/nvme1n1 ]; then
+    DATA_DEV=/dev/nvme1n1
+    break
+  fi
+  sleep 5
+done
+if [ -z "$DATA_DEV" ] || [ ! -b "$DATA_DEV" ]; then
+  echo "data volume did not attach within 5 minutes" >&2
+  exit 1
+fi
 if ! blkid "$DATA_DEV"; then
   mkfs -t xfs "$DATA_DEV"
 fi
 mkdir -p /data
-grep -q "/data" /etc/fstab || echo "$DATA_DEV /data xfs defaults,nofail 0 2" >> /etc/fstab
+# Mount by UUID: NVMe device names can change across a stop and start.
+DATA_UUID="$(blkid -s UUID -o value "$DATA_DEV")"
+grep -q "/data" /etc/fstab || echo "UUID=$DATA_UUID /data xfs defaults,nofail 0 2" >> /etc/fstab
 mount -a
 
 # --- Caddy (reverse proxy; automatic Let's Encrypt) -------------------------
