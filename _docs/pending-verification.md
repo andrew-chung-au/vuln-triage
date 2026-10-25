@@ -207,6 +207,19 @@ not wait on it.
   `vt.error.code="ownerless"` carries the trace id of that job's
   `notification.enqueue` span in Tempo. Post the result on #193.
 
+## #210 and #211 — Grafana start-up and the US-13 metric panel (observability)
+
+PRs: #211 (stack starts without an override file) and #210 (metric panel plots a
+running total). Both merged 2026-10-25; neither was run against a live stack by an
+agent (no Docker daemon in the cloud session). Run on a Docker host, **not** in the
+clean clone (the app steps use `make`; see `_docs/agent-kit/environments.md`).
+
+- [ ] **#211:** from `observability/`, `docker compose --env-file ../.env up -d --wait` with **no** override file (`.scratch/obs-override.yaml` removed or not passed). All six containers (Collector, Prometheus, Tempo, Loki, Grafana, MailHog) become healthy, and the Grafana log has no "could not find addresses in settings" error. The placeholders went through an override file on the owner's machine on 2026-10-25; the committed defaults are the same values.
+- [ ] **#211:** `make test-compose JOB=alert` still passes (the alert test's real `VT_ALERT_HUMAN_EMAIL` / `VT_RESPONDER_WEBHOOK_URL` must override the new defaults; checked statically only).
+- [ ] **#210:** after a fresh demo run **with the stack already up** (start the stack, delete `backend/.scratch/vulntriage.db`, then `make demo OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 SERVICE_VERSION=local`), the US-13 journey dashboard's first panel ("Notifications (metric) ... running total") shows a line that steps up on **Last 1 hour**. The owner saw no improvement on 2026-10-26, so the cause may be the data: check Prometheus (`http://localhost:9090`, query `vt_notifications_total`). No rows means no notification was recorded after the stack came up; a row with a value means the panel query needs another look.
+- [ ] If the panel still shows nothing while Prometheus has the series, file an issue; the panel query is in `observability/grafana/dashboards/us13-journey.json` and is checked statically by `tests/test_us13_dashboard.py`.
+- [ ] On success: retake `g9-grafana-dashboard.png` (full dashboard, view mode) and `g9-grafana-trace.png` (one `scan.run` trace, single full-width Explore pane), link them in the README, and tick `#155` and `#199` above if the panels also show data there.
+
 ---
 
 ## Convention
