@@ -33,6 +33,7 @@ class FailureReason(StrEnum):
     LOCKFILE_PARSE_ERROR = "lockfile parse error"
     REPOSITORY_UNAVAILABLE = "repository unavailable"
     NO_DEPENDENCY_FILES = "no dependency files"
+    INTERNAL_ERROR = "internal error"  # #198: an unexpected exception inside run_scan
 
 
 class KevValue(StrEnum):

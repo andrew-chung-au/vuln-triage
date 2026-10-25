@@ -412,4 +412,7 @@ def test_worker_survives_an_unexpected_error(factory) -> None:  # type: ignore[n
     worker = ScanWorker(factory, Boom())
     worker.start()
     worker.stop()
-    assert len(unfinished_scan_ids(factory)) == 1  # left unfinished, re-queued at next start-up
+    # #198: the scan no longer stays unfinished; it ends as scan failed / internal error.
+    assert unfinished_scan_ids(factory) == []
+    assert asset_of(factory, aid).scan_status == "scan failed"
+    assert asset_of(factory, aid).scan_failure_reason == "internal error"

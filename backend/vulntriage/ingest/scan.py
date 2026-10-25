@@ -11,11 +11,11 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from vulntriage.db.enums import FailureReason, ScanStatus, ScanTrigger
-from vulntriage.db.models import Asset, Dependency, FindingDependency, Scan
+from vulntriage.db.models import Asset, Dependency, Finding, FindingDependency, Scan
 from vulntriage.ingest.github import (
     RepositoryReader,
     RepositoryUnavailable,
@@ -229,86 +229,131 @@ def run_scan(
         # Scan row joins the journey trace (replaces the enqueue-time placeholder).
         scan.trace_id = current_trace_id_hex()
         try:
-            with span("repository.read", {"vt.asset.id": str(asset.id)}):
-                sha, entries, warnings = _read_and_parse(reader, asset.repository_url)
-        except RepositoryUnavailable:
-            _fail(session, scan, asset, FailureReason.REPOSITORY_UNAVAILABLE)
-            return
-        except ScanFailure as failure:
-            _fail(session, scan, asset, failure.reason)
-            return
-        except LockfileParseError:
-            _fail(session, scan, asset, FailureReason.LOCKFILE_PARSE_ERROR)
-            return
+            _execute(session, reader, scan, asset, osv_client, kev_client, epss_client)
+        except Exception:
+            # #198: any exception the known failure paths do not handle ends the
+            # scan as scan failed / internal error. Nothing about the exception
+            # (message, stack, class) is stored or logged.
+            _fail_unexpected(session, scan_id)
+            # A failure in recovery (or the one below) propagates: the scan stays
+            # unfinished and is retried at the next worker start-up.
 
-        now = _now()
-        # Drop the links to the old dependency rows before replacing the set, so
-        # the delete does not trip the finding_dependencies foreign key on a
-        # re-scan; match_asset re-links the still-vulnerable entries afterward.
-        session.execute(
-            delete(FindingDependency).where(
-                FindingDependency.dependency_id.in_(
-                    select(Dependency.id).where(Dependency.asset_id == asset.id)
-                )
+
+def _fail_unexpected(session: Session, scan_id: int) -> None:
+    session.rollback()
+    scan = session.get(Scan, scan_id)
+    if scan is None:
+        raise
+    if scan.finished_at is not None:
+        # The scan was already committed as finished (a later step, such as the
+        # log write, raised); do not rewrite a finished scan, keep the failure.
+        raise
+    asset = session.get(Asset, scan.asset_id)
+    if asset is None:
+        raise
+    # The rollback undid the trace id set earlier; the failed scan row still
+    # joins the journey trace.
+    scan.trace_id = current_trace_id_hex()
+    _fail(session, scan, asset, FailureReason.INTERNAL_ERROR)
+
+
+def _execute(
+    session: Session,
+    reader: RepositoryReader,
+    scan: Scan,
+    asset: Asset,
+    osv_client: OsvClientProtocol | None,
+    kev_client: KevClientProtocol | None,
+    epss_client: EpssClientProtocol | None,
+) -> None:
+    scan_id = scan.id
+    try:
+        with span("repository.read", {"vt.asset.id": str(asset.id)}):
+            sha, entries, warnings = _read_and_parse(reader, asset.repository_url)
+    except RepositoryUnavailable:
+        _fail(session, scan, asset, FailureReason.REPOSITORY_UNAVAILABLE)
+        return
+    except ScanFailure as failure:
+        _fail(session, scan, asset, failure.reason)
+        return
+    except LockfileParseError:
+        _fail(session, scan, asset, FailureReason.LOCKFILE_PARSE_ERROR)
+        return
+
+    now = _now()
+    # Drop the links to the old dependency rows before replacing the set, so
+    # the delete does not trip the finding_dependencies foreign key on a
+    # re-scan; match_asset re-links the still-vulnerable entries afterward.
+    session.execute(
+        delete(FindingDependency).where(
+            FindingDependency.dependency_id.in_(
+                select(Dependency.id).where(Dependency.asset_id == asset.id)
             )
         )
-        session.execute(delete(Dependency).where(Dependency.asset_id == asset.id))
-        for entry in entries:
-            session.add(
-                Dependency(
-                    asset_id=asset.id,
-                    ecosystem=entry.ecosystem,
-                    name=entry.name,
-                    version=entry.version,
-                    source_file=entry.source_file,
-                    direct=entry.direct,
-                )
+    )
+    session.execute(delete(Dependency).where(Dependency.asset_id == asset.id))
+    for entry in entries:
+        session.add(
+            Dependency(
+                asset_id=asset.id,
+                ecosystem=entry.ecosystem,
+                name=entry.name,
+                version=entry.version,
+                source_file=entry.source_file,
+                direct=entry.direct,
             )
-        session.flush()  # dependency ids are needed for the finding links
+        )
+    session.flush()  # dependency ids are needed for the finding links
 
-        has_findings = False
-        if osv_client is not None:
-            try:
-                with span("osv.query", {"vt.asset.id": str(asset.id)}):
-                    has_findings = match_asset(session, asset.id, osv_client)
-            except FeedUnavailable:
-                # E3: OSV unavailable on a scan is a feed failure, not a clean
-                # result. On a first scan there are no findings to keep yet.
-                session.rollback()
-                scan = session.get(Scan, scan_id)
-                asset = session.get(Asset, scan.asset_id)
-                # The rollback undid the trace id set above; set it again so the
-                # failed scan row still joins the journey trace.
-                scan.trace_id = current_trace_id_hex()
-                _fail(session, scan, asset, FailureReason.FEED_UNAVAILABLE)
-                return
-            # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
-            # and never raises, so it does not change the OSV scan status.
-            with span("signals.enrich", {"vt.asset.id": str(asset.id)}):
-                enrich_asset(session, asset.id, kev_client, epss_client)
-            # Deterministic ranking (task 7): score every finding from the
-            # signals and asset context, replacing the placeholder rank fields.
-            with span("prioritise", {"vt.asset.id": str(asset.id)}):
-                rank_asset(session, asset.id)
-            # US-8 (task 10a): create one top-tier notification job per lifecycle
-            # for each finding now in P1. Idempotent, so a re-scan adds no
-            # duplicate. Delivery is the task-37 worker. This opens the
-            # notification.enqueue span (task 23) and stores its traceparent.
-            create_top_tier_jobs(session, asset.id)
+    has_findings = False
+    if osv_client is not None:
+        try:
+            with span("osv.query", {"vt.asset.id": str(asset.id)}):
+                has_findings = match_asset(session, asset.id, osv_client)
+        except FeedUnavailable:
+            # E3: OSV unavailable on a scan is a feed failure, not a clean
+            # result. On a first scan there are no findings to keep yet.
+            session.rollback()
+            scan = session.get(Scan, scan_id)
+            asset = session.get(Asset, scan.asset_id)
+            # The rollback undid the trace id set above; set it again so the
+            # failed scan row still joins the journey trace.
+            scan.trace_id = current_trace_id_hex()
+            _fail(session, scan, asset, FailureReason.FEED_UNAVAILABLE)
+            return
+        # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
+        # and never raises, so it does not change the OSV scan status.
+        with span("signals.enrich", {"vt.asset.id": str(asset.id)}):
+            enrich_asset(session, asset.id, kev_client, epss_client)
+        # Deterministic ranking (task 7): score every finding from the
+        # signals and asset context, replacing the placeholder rank fields.
+        with span("prioritise", {"vt.asset.id": str(asset.id)}):
+            rank_asset(session, asset.id)
+        # US-8 (task 10a): create one top-tier notification job per lifecycle
+        # for each finding now in P1. Idempotent, so a re-scan adds no
+        # duplicate. Delivery is the task-37 worker. This opens the
+        # notification.enqueue span (task 23) and stores its traceparent.
+        create_top_tier_jobs(session, asset.id)
 
-        status = status_for_result(warnings, has_findings)
-        scan.warnings = [w.as_dict() for w in warnings]
-        scan.scan_status = status.value
-        scan.failure_reason = None
-        scan.finished_at = now
-        asset.scan_status = status.value
-        asset.scan_failure_reason = None
-        asset.last_scan_at = now
-        asset.last_commit_sha = sha
-        session.commit()
-        # US-13 structured log inside scan.run, so it shares the journey trace id
-        # (#177). Ids and outcome codes only (allowlisted); no excluded data.
-        log_event("scan.finished", {"vt.scan.id": str(scan_id), "vt.scan.status": status.value})
+    status = status_for_result(warnings, has_findings)
+    scan.warnings = [w.as_dict() for w in warnings]
+    scan.scan_status = status.value
+    scan.failure_reason = None
+    scan.finished_at = now
+    asset.scan_status = status.value
+    asset.scan_failure_reason = None
+    asset.last_scan_at = now
+    asset.last_commit_sha = sha
+    # A successful scan clears the stale mark a failed one set (#198).
+    session.execute(
+        update(Finding)
+        .where(Finding.asset_id == asset.id, Finding.stale.is_(True))
+        .values(stale=False, stale_since=None)
+    )
+    session.commit()
+    # US-13 structured log inside scan.run, so it shares the journey trace id
+    # (#177). Ids and outcome codes only (allowlisted); no excluded data.
+    log_event("scan.finished", {"vt.scan.id": str(scan_id), "vt.scan.status": status.value})
 
 
 def _fail(session: Session, scan: Scan, asset: Asset, reason: FailureReason) -> None:
@@ -320,6 +365,12 @@ def _fail(session: Session, scan: Scan, asset: Asset, reason: FailureReason) -> 
     asset.scan_status = ScanStatus.SCAN_FAILED.value
     asset.scan_failure_reason = reason.value
     asset.last_scan_at = now
+    # Previous findings are kept and marked stale (spec, Asset scan status).
+    session.execute(
+        update(Finding)
+        .where(Finding.asset_id == asset.id, Finding.stale.is_(False))
+        .values(stale=True, stale_since=now)
+    )
     scan_id = scan.id
     session.commit()
     # #194: a failed scan is a terminal outcome too. Logged after the commit and

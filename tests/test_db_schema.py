@@ -253,7 +253,7 @@ def test_enum_values_are_exactly_the_data_model() -> None:
     ]
     assert values(enums.FailureReason) == [
         "feed unavailable", "lockfile parse error", "repository unavailable",
-        "no dependency files",
+        "no dependency files", "internal error",
     ]
     assert values(enums.KevValue) == ["KEV: listed", "KEV: not listed", "KEV: n/a (no CVE)"]
     assert values(enums.Tier) == ["P1", "P2", "P3", "P4"]
