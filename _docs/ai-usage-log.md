@@ -2561,3 +2561,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make test-integration`: 232 passed against Postgres 16.4 in the cloud session. `make test-compose JOB=telemetry` FAILED at the backend image build (`ghcr.io` blob host refused by the network policy); not re-run. The CI telemetry result (run 40188742150, 3 passed) was read from the Actions job log, not produced here. The CC27 run signed in through the real login form on `make dev-start` with recorded fixtures (`POST /api/auth/login` 200); the screenshots show fixture data, and the README says so. `make verify` was not re-run after these edits (README, images and docs only); the pre-push hook runs it. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC30, remove the leftover mock "Demo credentials" box from the real sign-in page (frontend; found during CC27)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction "do CC30 and remove the demo credentials box". No new key prompt saved.
+- files changed: `frontend/src/routes/login.tsx`, `frontend/src/services/index.ts`, `frontend/src/test/vulntriage.test.tsx`, `frontend/README.md`; `_docs/cloud-tasklist.md`; this log entry
+- verification (tests run, reviewer verdict): ran the new regression test red against the old page (stashed the two source files; 1 failed, 88 passed), then green after restoring the fix. `make verify`: PASS WITH WARNINGS, 89 frontend and 496 backend tests, type check pass; the only warning is that `BASE` equalled `HEAD` while the changes were uncommitted. Not checked in a browser after the change. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

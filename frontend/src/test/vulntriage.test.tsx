@@ -8,7 +8,7 @@ import { FindingsTable } from "@/components/vt/FindingsTable";
 import { getUser, setUser } from "@/lib/auth";
 import { validateRiskReason } from "@/lib/validation";
 import { routeTree } from "@/routeTree.gen";
-import { ServiceError, demoCredentials, isOwnerless } from "@/services";
+import { ServiceError, isOwnerless } from "@/services";
 import { DEMO_CREDENTIALS, DEMO_OWNER_CREDENTIALS, DEMO_OWNER_USER, DEMO_USER, seedFindings } from "@/services/mockData";
 import { mockServices, resetMockData, resetMockSession } from "@/services/mockService";
 import type { FindingWithAsset, NewAssetInput } from "@/services/types";
@@ -448,13 +448,22 @@ describe("affected range display", () => {
 describe("screens", () => {
   it("shows the service error message when sign-in fails", async () => {
     renderApp("/login");
-    await screen.findByText("Demo credentials (fictional)");
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: demoCredentials.username } });
+    await screen.findByRole("button", { name: "Sign in" });
+    fireEvent.change(screen.getByLabelText("Username"), { target: { value: DEMO_CREDENTIALS.username } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "wrong" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Incorrect username or password.");
     expect(getUser()).toBeNull();
+  });
+
+  it("does not show demo credentials on the sign-in screen", async () => {
+    renderApp("/login");
+    await screen.findByRole("button", { name: "Sign in" });
+
+    expect(screen.queryByText(/demo credentials/i)).toBeNull();
+    expect(screen.queryByText(DEMO_CREDENTIALS.username)).toBeNull();
+    expect(screen.queryByText(DEMO_CREDENTIALS.password)).toBeNull();
   });
 
   it("shows a validation message for a whitespace-only reason submitted through the accept form", async () => {

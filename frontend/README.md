@@ -83,9 +83,10 @@ this file when it runs from `frontend/`; the make targets do that with
 
 Every backend call goes through the `Services` interface in
 `src/services/types.ts`. `src/services/index.ts` exports `services`, which is
-the in-memory mock (`src/services/mockService.ts`, data in
-`src/services/mockData.ts`), plus `demoCredentials` for the login screen. No
-method makes a network call today.
+the real backend-backed service (`src/services/httpService.ts`). The in-memory
+mock (`src/services/mockService.ts`, data in `src/services/mockData.ts`) is
+exported as `mockServices` for the test suite only, and the sign-in screen
+shows no credentials hint.
 
 Every method is async and returns a `Promise`. Rejections are `ServiceError`
 instances exported from `src/services/index.ts`; the mock never throws a plain

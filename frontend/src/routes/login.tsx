@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setUser } from "@/lib/auth";
-import { ServiceError, demoCredentials, services } from "@/services";
+import { ServiceError, services } from "@/services";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -59,11 +59,6 @@ function Login() {
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy}>Sign in</Button>
         </form>
-        <div className="rounded-md border border-dashed p-3 text-sm">
-          <p className="font-medium">Demo credentials (fictional)</p>
-          <p className="font-mono">{demoCredentials.username}</p>
-          <p className="font-mono">{demoCredentials.password}</p>
-        </div>
       </div>
     </main>
   );
