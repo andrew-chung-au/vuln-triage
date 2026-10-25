@@ -60,7 +60,7 @@ owner contact detail enters telemetry (the US-13 no-leak guarantee). For future 
 parity a **non-PII** owner/team annotation (e.g. the asset's team name, never an
 email) could be added — a deliberate, bounded choice, recorded here so it is not
 an accidental omission. Default for submission: keep the alert minimal (no owner
-field); revisit as a later enrichment (see X10 in `roadmap-showcase.md` for
+field); revisit as a later enrichment (see X10 in `roadmap-future.md` for
 the related host/RPS metrics).
 
 ### Future development (built after S5, not submission)
