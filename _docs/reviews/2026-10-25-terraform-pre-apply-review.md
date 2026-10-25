@@ -45,6 +45,8 @@ Proposed fix, either: (a) build the ARNs without a lookup, `arn:aws:secretsmanag
 
 Both roles use the same policy (`main.tf:125-135`). `AWS-RunShellScript` runs any shell command as root on the one server, which hosts dev and prod and holds the instance role that reads `vuln-triage/prod`. The checklist line "Dev role can run only the dev deploy; prod role only the production deploy" (`terraform-verify.md:59`) cannot be met with IAM alone on a shared server. This is a consequence of decision H3 (one server for both). Mitigations that are available: keep `main` branch protection on, restrict the `dev` environment to `main`, require reviewers on `production` (A3), and use a custom SSM document that runs only the deploy script instead of `AWS-RunShellScript`. Record it as an accepted risk or change the checklist wording; do not leave it unticked silently.
 
+**Decision (human, 2026-10-25): accepted for submission.** The protection is process, not IAM: only merged `main` can assume the dev role (with the `dev` environment limited to `main`, human tasklist A3), `production` needs the human's approval, and `main` is protected. The custom-document fix is parked as showcase item X10 (`roadmap-showcase.md`). The checklist line is therefore recorded as an accepted risk, not a pass.
+
 ### F6 (Low)
 
 - `user-data.sh:17` downloads the Compose plugin from `releases/latest` with no checksum (it has a `VERIFY:` to pin).
