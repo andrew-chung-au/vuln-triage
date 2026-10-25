@@ -15,6 +15,18 @@ variable "github_repo" {
   default     = "vuln-triage"
 }
 
+variable "github_owner_id" {
+  description = "The numeric GitHub id of the repository owner. GitHub puts it in the OIDC sub claim (repo:<owner>@<owner id>/<repo>@<repo id>:...), so the trust policies must match it. Not a secret."
+  type        = string
+  default     = "177896104"
+}
+
+variable "github_repo_id" {
+  description = "The numeric GitHub id of the repository (stays the same if the repository is renamed). Part of the OIDC sub claim; not a secret. If the repository is deleted and recreated, update it."
+  type        = string
+  default     = "1414634852"
+}
+
 variable "create_oidc_provider" {
   description = <<-EOT
     Whether to create the GitHub OIDC provider. An account may hold only one

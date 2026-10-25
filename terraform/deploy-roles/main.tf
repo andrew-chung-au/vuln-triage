@@ -21,7 +21,9 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 locals {
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : var.existing_oidc_provider_arn
-  repo_sub_prefix   = "repo:${var.github_owner}/${var.github_repo}"
+  # GitHub's OIDC sub claim carries immutable ids: repo:<owner>@<owner id>/<repo>@<repo id>:environment:<name>
+  # (seen in CloudTrail for this repository on 2026-10-25). The trust must match that exact form.
+  repo_sub_prefix = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}"
 }
 
 # --- Trust policies ----------------------------------------------------------
