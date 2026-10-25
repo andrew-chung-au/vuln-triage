@@ -2581,3 +2581,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran the README local recipe from an empty SQLite database in this session: user created, 4 repositories registered, scans finished, 4 assets and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Tested the new `--wait` option against a stopped backend (clean error after 3 s) and a just-started one (signed in). NOT run: the AWS server command in `aws-setup.md` (no server exists; marked `VERIFY:`), the `make demo` target (proposal only), and the README's `printf | uv run` line exactly as written (the test used an equivalent stdin file). The `/api` base-URL finding comes from reading `Caddyfile` and `frontend/nginx.conf`, not from a deployed run. `make verify` runs in the pre-push hook. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC32, apply `make demo` and `make demo-reset` (protected `Makefile` and `AGENTS.md`)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "approve make demo", approving the diff in `_docs/make-demo-proposal.md`. No new key prompt saved.
+- files changed: `Makefile` (commit `7beafd9`, `HUMAN_APPROVED=1`); `AGENTS.md` (commit `936ca53`, `HUMAN_APPROVED=1`); `README.md`, `_docs/make-demo-proposal.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`; this log entry
+- verification (tests run, reviewer verdict): ran `make demo-reset` then `make demo` from an empty dev database, then a read-only API check: 4 assets (clean, incomplete, findings, clean) and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Ran `make dev-stop`. The pre-push `make verify` follows. Not tested: a second `make demo` on a non-empty database (documented as registering the repositories twice), and `make demo` on a machine other than this cloud session (Python 3.13, uv 0.11). No reviewer verdict, no QA run. No GitHub issue exists for this change, so there is no approval record on an issue; the record is in `_docs/make-demo-proposal.md`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the human approved the exact diff before it was applied; the applied Makefile text is the proposed text, unchanged.

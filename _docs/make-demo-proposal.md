@@ -1,6 +1,8 @@
 # Proposal: `make demo` (protected files; needs the human's approval)
 
-Status: **proposed 2026-10-25, not applied.** `Makefile` and `AGENTS.md` are protected, so neither is edited until you approve this exact diff. Nothing else in the demo depends on it: the README already gives the same steps as plain commands.
+Status: **approved by the human and applied, 2026-10-25.** The human approved this diff in the session ("approve make demo"). Applied as two separate `HUMAN_APPROVED=1` commits: `Makefile` `7beafd9` and the `AGENTS.md` line `936ca53`. Tested before the commit: `make demo-reset`, then `make demo` from an empty database registered 4 assets and produced 2 findings (P1 `urllib3` CVE-2023-43804, P2 `pyyaml` CVE-2020-14343). There is no issue for this change, so the protected-change approval record lives here and in the session summary; if you want one on a GitHub issue, say so and I will file it.
+
+(The text below is the proposal as approved; the "not applied" wording in the Approval section is superseded by this status.)
 
 ## Why
 

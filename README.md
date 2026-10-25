@@ -153,6 +153,13 @@ This runs the real app on its SQLite path against **recorded** copies of four pu
 
 ```sh
 make install
+make demo          # everything below in one command; then sign in as  lead / demo-password-local
+make dev-stop      # stop it;  make demo-reset  stops it and deletes the dev database
+```
+
+The same thing step by step, if you want to see what `make demo` does:
+
+```sh
 make dev-start VT_FEEDS=fixtures DEPLOYMENT_ENVIRONMENT=dev   # migrates, then starts backend and frontend
 printf '%s\n' 'demo-password-local' | uv run --directory backend python -m vulntriage.manage create-user \
   --username lead --display-name "Security Lead" --email lead@example.com --role "security lead"
@@ -162,7 +169,7 @@ VT_SEED_PASSWORD='demo-password-local' python3 deploy/seed-pilot.py \
 make dev-stop
 ```
 
-Expected: four assets, one with two ranked findings (P1 `urllib3` CVE-2023-43804 and P2 `pyyaml` CVE-2020-14343), one scan marked incomplete, and one asset shown as ownerless. `VT_FEEDS=fixtures` is refused unless `DEPLOYMENT_ENVIRONMENT` is `dev` or `test`, so it can never run in production. Delete `backend/.scratch/vulntriage.db` to start over.
+Expected: four assets, one with two ranked findings (P1 `urllib3` CVE-2023-43804 and P2 `pyyaml` CVE-2020-14343), one scan marked incomplete, and one asset shown as ownerless. `VT_FEEDS=fixtures` is refused unless `DEPLOYMENT_ENVIRONMENT` is `dev` or `test`, so it can never run in production. Run `make demo-reset` (or delete `backend/.scratch/vulntriage.db`) to start over; running `make demo` twice registers the four repositories twice.
 
 ---
 
