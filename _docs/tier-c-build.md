@@ -21,8 +21,8 @@ ahead of the AWS deployment work (`roadmap.md` § "Ordering if AWS is slow").
 
 ## Settled, and NOT settled, before Tier C starts
 
-- **Observability stack is local Compose only (H6).** Deploying Grafana/responder on AWS is **showcase** (X3 / milestone C4), not submission.
-- **The backend sends the owner notification itself (H7).** n8n routing/reminders/digest are **showcase** (X6 / milestone C1). Task 37 (backend delivery) is the submission path and is built inside C3.
+- **Observability stack is local Compose only (H6).** Deploying Grafana/responder on AWS is **future development** (X3 / milestone C4), not submission.
+- **The backend sends the owner notification itself (H7).** n8n routing/reminders/digest are **future development** (X6 / milestone C1). Task 37 (backend delivery) is the submission path and is built inside C3.
 - **⚠️ Open decision D4 (blocks C6):** the responder's false-positive rule ("on an alert with no reproducible defect, explain and change nothing") is an addition to US-15 in `specs.md`, which is **protected** — it needs a proposed diff and human approval **before** C6/task 28 is filed. Status: open (`roadmap.md` § Open decisions, row 8).
 - **⚠️ Human prerequisites (see the table at the end):** the responder's agent **runtime** must be chosen before task 28 is filed, and `main` **branch protection** that refuses the responder's push must be active before C6. Both are the human's.
 
@@ -37,7 +37,7 @@ order is **not** the numeric order:
 
 ## Milestones
 
-Submission milestones only. C1 and C4 are **showcase** (built after S5) and are
+Submission milestones only. C1 and C4 are **future development** (built after S5) and are
 listed at the end for completeness.
 
 | # | Task(s) | Builds | Depends on | Human step / decision | Criterion | Done when (test) |
@@ -56,16 +56,16 @@ The course (Part 4) includes **owner** in the alert payload (service, environmen
 version, owner, dashboard URL). Our C5 alert (task 26) carries the dashboard
 link, environment and version but **not an owner**, on purpose: the alert's only
 identifying label is the opaque finding id (tier is the one other label), so no
-owner contact detail enters telemetry (the US-13 no-leak guarantee). For showcase
+owner contact detail enters telemetry (the US-13 no-leak guarantee). For future development
 parity a **non-PII** owner/team annotation (e.g. the asset's team name, never an
 email) could be added — a deliberate, bounded choice, recorded here so it is not
 an accidental omission. Default for submission: keep the alert minimal (no owner
-field); revisit as a showcase enrichment (see X10 in `roadmap-showcase.md` for
+field); revisit as a later enrichment (see X10 in `roadmap-showcase.md` for
 the related host/RPS metrics).
 
-### Showcase (built after S5, not submission)
+### Future development (built after S5, not submission)
 
-| # | Task(s) | Builds | Why showcase |
+| # | Task(s) | Builds | Why future development |
 |---|---|---|---|
 | C1 | 33-36 | n8n routing, reminders, digest and workflow export | H7: the backend sends the notification for submission (task 37); n8n is item X6 |
 | C4 | — | Deploy observability + responder on AWS, Grafana behind a login | H6: local Compose for submission; AWS is item X3 |
@@ -87,7 +87,7 @@ C9 (task 38) ── any time after task 10 ────────────�
 | Item | Needed by | Owner | Notes |
 |---|---|---|---|
 | **D4** — the responder false-positive rule added to US-15 | C6 (before task 28 is filed) | human | `specs.md` is protected: propose the diff, get approval. Status: **open** (`roadmap.md` § Open decisions) |
-| **Responder agent runtime** (Open question 9; the brief's LLM provider is the separate showcase X4) | C6, and before task 28 is filed | human | A new dependency: ask before adding. CI uses `RESPONDER_MODE=stub`; the recorded C7 drill uses the real runtime |
+| **Responder agent runtime** (Open question 9; the brief's LLM provider is the separate future-development item X4) | C6, and before task 28 is filed | human | A new dependency: ask before adding. CI uses `RESPONDER_MODE=stub`; the recorded C7 drill uses the real runtime |
 | **`main` branch protection** that refuses the responder's push | C6 | human | The responder may open PRs, never push to `main`; already required by the architecture |
 | OTel SDK, Collector, Grafana, Prometheus, Loki, Tempo, MailHog images | C2, C3 | agent asks, human approves | New dependencies; none exists for submission yet |
 | The recorded drill, the merge, teardown and the three peer reviews | C7, C8 | human | Agents write the runbook; the human performs the run and records it |

@@ -141,7 +141,7 @@ tiers from Stage 2. The scoring
 path comes first (app, tests, Compose, deployment, CI/CD with dev and prod,
 observability, alert, on-call agent) with the backend's own notification and
 schedule (tasks 37, 38) and the close-out (task 39); the LLM brief, MCP server
-and n8n are Showcase (post-submission, tasks 30-36).
+and n8n are future development (after submission, tasks 30-36).
 Checklist: no cycles; every user story is covered by a task; every criterion in
 `_docs/rubric.md` is covered by a task.
 
