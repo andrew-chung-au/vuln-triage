@@ -28,7 +28,7 @@ started job.
 
 - **#181** (T-E6, telemetry backend down): groomed, PM decisions Q1-Q3 still open (see the #181 comments). Author and run it in the cloud.
 - **#182** (`I-OWNER-SENDER` MailHog form): follows #160 (task 28).
-- **#198** (`internal error` scan reason): run migration `0002` on real Postgres (`make test-integration` or the `postgres-integration` CI job; upgrade, downgrade, bad-value rejection), and look at the failure reason on the dashboard in a running UI.
+- **#198** (`internal error` scan reason): look at the failure reason on the dashboard in a running UI. Running migration `0002` on real Postgres is now **#201** (a `postgres_migration` check in the `postgres-integration` job; Docker-only, verified in CI).
 - **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): needs a running Grafana; shares the dashboard with #181, so sequence them. #195 is now the static fix and test, done locally.
 - **#172 / #174 / #193** (`T-JOURNEY-BE` Loki leg, plus the optional held-job case): run the `telemetry` job and add the held-job case.
 - **#157** (`T-REFUSE` run and negative check), **#155** (dashboard and MailHog check), **#158** (Grafana rule run): verification only.
