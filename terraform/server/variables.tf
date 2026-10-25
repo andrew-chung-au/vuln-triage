@@ -1,6 +1,6 @@
 variable "aws_region" {
   type    = string
-  default = "ap-southeast-2"
+  default = "us-east-1"
 }
 
 variable "instance_type" {
@@ -24,7 +24,7 @@ variable "nightly_stop_enabled" {
 variable "nightly_stop_cron" {
   description = "EventBridge Scheduler cron (UTC) for stopping the server each night. VERIFY the expression."
   type        = string
-  default     = "cron(0 14 * * ? *)" # 14:00 UTC; the human adjusts to their timezone
+  default     = "cron(0 4 * * ? *)" # 04:00 UTC: after the US evening, before the EU morning (reviewers are in both); turn the stop off while graders may visit
 }
 
 variable "secret_names" {

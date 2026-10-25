@@ -267,7 +267,7 @@ Record each answer in the task 17 issue before it starts:
 
 | # | Decision | Recommendation |
 |---|---|---|
-| 1 | Region | The region your earlier EC2 work used, or `ap-southeast-2` if none |
+| 1 | Region | **Decided 2026-10-25: `us-east-1`** (lowest prices; reviewers are in the US and EU). The Terraform defaults and examples now say so |
 | 2 | Existing GitHub OIDC provider in the account | Tell the agent; reuse it if present |
 | 3 | Secrets store | Secrets Manager with one JSON secret per environment, as planned |
 | 4 | Verified sender address and demo recipient addresses (step 9) | One sender address you control; the route itself is settled |
