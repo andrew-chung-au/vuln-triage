@@ -44,9 +44,9 @@ list (CC9, CC10); the gaps in the numbering are those two.
 |---|---|---|---|---|---|
 | A1 | Account hygiene, pick the region, set a budget alert | AWS console | `aws-setup.md` §1-§3 | none | ☐ |
 | A2 | Decide the hostname form and how you reach the server (SSM, no SSH) | decision | `aws-setup.md` §4-§5 | none | ☐ |
-| A3 | GitHub: create the `dev` and `production` environments (you as required reviewer) | GitHub settings | `aws-setup.md` §6 | none | ☐ |
-| A6 | Apply in order `bootstrap/` → `deploy-roles/` → `server/`; copy the two role ARNs into the GitHub variables `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` and `AWS_REGION`; record the Elastic IP + hostnames. **Read first:** the Terraform static check (CC9) and the pre-apply review findings (CC10), and decide go / no-go | your machine (AWS) | `aws-setup.md` §6-§7, `terraform-verify.md` §3 | **Needs CC9, CC10** | ☐ |
-| A7 | Add the submission secrets to Secrets Manager (db password, read token, responder token, Grafana admin password) | AWS console | `aws-setup.md` §8 | none | ☐ |
+| A3 | GitHub: create the `dev` and `production` environments (you as required reviewer on `production`). **Also limit `dev` deployments to the `main` branch** (deployment branches setting): the dev role's trust policy moves from the branch to the environment (CC29, review finding F1), so this setting becomes the branch limit | GitHub settings | `aws-setup.md` §6 | **Pairs with CC29** | ☐ |
+| A6 | Apply in order `bootstrap/` → `deploy-roles/` → `server/`; copy the two role ARNs into the GitHub variables `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN` and `AWS_REGION`; record the Elastic IP + hostnames. **Read first:** the pre-apply review (CC10, done: `_docs/reviews/2026-10-25-terraform-pre-apply-review.md`) and the Terraform static check (CC9: `fmt` passes, `validate` waits on B6). The review found two High defects (dev trust `sub` mismatch; both secrets must exist before the server apply). **Do not apply until CC29 has fixed them**, then decide go / no-go | your machine (AWS) | `aws-setup.md` §6-§7, `terraform-verify.md` §3 | **Needs CC9, CC10 (done), CC29** | ☐ |
+| A7 | Add the submission secrets to Secrets Manager (db password, read token, responder token, Grafana admin password). **Ordering:** as the Terraform stands, `vuln-triage/dev` and `vuln-triage/prod` must exist before the server apply (A6); CC29 removes this requirement, otherwise create both first | AWS console | `aws-setup.md` §8 | **Pairs with CC29** (review finding F2) | ☐ |
 | A8 | **Re-apply `deploy-roles/`** after task 21 (#142): the dev role gained a read-only `ec2:DescribeInstances`. ARN unchanged; the 2nd plan shows "No changes". Can be folded into A6 | your machine (AWS) | `terraform-verify.md` §6 | none | ☐ |
 | A9 | First dev deploy; confirm `https://dev.<eip>.sslip.io` answers and the deploy log names an image digest → closes **#141** | push to `main` + AWS | `terraform-verify.md` §4 | **Unblocks CC2** (URL for the README) and CC11 (seed run) | ☐ |
 | A10 | Email route: verify the SES sender identity (and the demo recipient, SES sandbox); settle the SES `VERIFY:` items. Needed before task 37 delivers on AWS | AWS console | `aws-setup.md` §9, `pending-verification.md` #156 | The MailHog leg of #156 is CC14; only the SES leg is here | ☐ |
@@ -69,12 +69,12 @@ system changes, protected files).
 
 | # | Action | Detail | Cloud link | Status |
 |---|---|---|---|---|
-| B1 | **Allow Docker in cloud sessions.** Either approve the protected `Makefile` and `AGENTS.md` change for #48 (`make docker-start` / `docker-stop`, gated on `CLAUDE_CODE_REMOTE=true`, no `sudo`; as a `HUMAN_APPROVED=1` commit and an approval record on #48), or tell the session it may run `sudo dockerd` by hand each time | `_docs/cloud-sessions.md` §5.1; `roadmap.md` item T2 | **Unblocks CC13**, then CC14-CC21 | ☐ |
-| B2 | **Approve installing Terraform** for the static check (into `.scratch/` or the session; not kept after the session), or choose the push-check image route (needs B1) | `terraform-verify.md` §1; `AGENTS.md` (installs need asking) | **Unblocks CC9** | ☐ |
+| B1 | **Allow Docker in cloud sessions.** Either approve the protected `Makefile` and `AGENTS.md` change for #48 (`make docker-start` / `docker-stop`, gated on `CLAUDE_CODE_REMOTE=true`, no `sudo`; as a `HUMAN_APPROVED=1` commit and an approval record on #48), or tell the session it may run `sudo dockerd` by hand each time | `_docs/cloud-sessions.md` §5.1; `roadmap.md` item T2 | **Unblocks CC13**, then CC14-CC21 | ◐ Approved 2026-10-25 for the manual route; `dockerd` runs in the current session only (`.scratch/docker_start.sh`, undo `.scratch/docker_stop.sh`). #48's protected targets still need their exact diff approved so a new session does not need this again |
+| B2 | **Approve installing Terraform** for the static check (into `.scratch/` or the session; not kept after the session), or choose the push-check image route (needs B1) | `terraform-verify.md` §1; `AGENTS.md` (installs need asking) | **Unblocks CC9** | ☑ Approved 2026-10-25. Used the pinned `hashicorp/terraform:1.17.0` image through Docker, so nothing was installed on the host |
 | B3 | **Approve protected `.github/` changes** as their own `HUMAN_APPROVED=1` commits: #159's `verify.yml` change (alert job to nightly + manual), and later #67 | `human-cheatsheet.md` §0, §5 | **Unblocks CC20**, CC22 | ☐ |
 | B4 | **Decide how #140's lockfiles reach PR #167.** A cloud session can push only its own `claude/*` branch, not `feat/140-security-scan`. Either merge or cherry-pick the session's lockfile commits into that branch, or start the session on it | `pending-verification.md` #140 | **Shapes CC12** | ☐ |
 | B5 | **Confirm and close the issues the cloud runs verify.** After a cloud task posts its result, check it and close the issue (or say close it): #140, #155, #157, #158 (Grafana leg), #159, #172, #174, #193, #181, #199, #201 | `pending-verification.md` (each issue's section) | **Follows CC12, CC14-CC20** | ☐ |
-| B6 | **Change the cloud environment's network policy** only if CC8 finds a needed host blocked (Terraform registry, `ghcr.io`, advisory sources) | `read_documentation` topic `environment.network`; Claude settings | **Follows CC8**, unblocks CC9, CC12 | ☐ |
+| B6 | **Change the cloud environment's network policy** only if CC8 finds a needed host blocked (Terraform registry, `ghcr.io`, advisory sources) | `read_documentation` topic `environment.network`; Claude settings | **Follows CC8**, unblocks CC9, CC12 | ☐ **Needed now.** The proxy refused `registry.terraform.io` and `checkpoint-api.hashicorp.com`. In the cloud environment's settings (title bar menu, Edit, Network access) add `registry.terraform.io` and `releases.hashicorp.com` under Allowed domains, or use a broader level. Then CC9 can run `init` and `validate`. Steps: https://code.claude.com/docs/en/cloud-environments#network-access |
 
 ## C. Merges and protected-file approvals (as PRs arrive)
 
@@ -110,7 +110,13 @@ merge-commit only) is in `_docs/human-cheatsheet.md`.
 
 ## F. Decisions that gate agent work
 
-These are open decisions only you can make. They gate **#160** (the responder,
+F0 shapes a Terraform fix and so the first AWS apply. F1-F3 gate the responder.
+
+| # | Decision | Detail | Cloud link | Status |
+|---|---|---|---|---|
+| F0 | **Accept or fix the shared deploy policy** (Terraform review finding F5). The dev and prod roles can both run any shell command as root on the one server through `AWS-RunShellScript`, so "the dev role can run only the dev deploy" cannot be met with IAM alone on a shared server. Either accept it in writing (mitigations: `main` branch protection, `dev` limited to `main`, `production` reviewers) or have CC29 add a custom SSM document that runs only the deploy script | `_docs/reviews/2026-10-25-terraform-pre-apply-review.md` F5 | **Shapes CC29** | ☐ |
+
+F1-F3 are open decisions only you can make. They gate **#160** (the responder,
 task 28), then #161, #182 and the recorded drill (task 39), which carry
 On-Call Agent 2 and the last of the Alerting and Observability points.
 

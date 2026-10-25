@@ -2531,3 +2531,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran `make install` and `make verify` before the edits (PASS WITH WARNINGS: 88 frontend and 496 backend tests, type check pass; warning was BASE equal to HEAD). Docs-only edits afterwards; `make verify` not re-run. Confirmed the README overclaim and the missing `docs/images/` the re-audit reported by reading `README.md` and globbing. Did not check the re-audit's CI run records myself. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC9 Terraform static check and CC10 pre-apply review (#141); started `dockerd` for the cloud session (human rows B1, B2)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the user's approval of B1 and B2 ("approved"). B1 was offered as either the protected #48 change or a manual `sudo dockerd`; I took the manual route because no exact diff for the protected files had been shown. No new key prompt saved.
+- files changed: `_docs/reviews/2026-10-25-terraform-pre-apply-review.md` (new); `_docs/cloud-tasklist.md`, `_docs/human-tasklist.md` (status and cross-references); this log entry. `.scratch/` helper scripts and a copy of `terraform/` (git-ignored). Comment 6397164959 posted on #141.
+- verification (tests run, reviewer verdict): ran `terraform fmt -check -recursive` on a copy of `terraform/` with `hashicorp/terraform:1.17.0`: pass. `terraform init -backend=false` and `validate` did not run because the session proxy refused `registry.terraform.io`. Nothing was planned or applied. The review findings are from reading the code against `terraform-verify.md` §2 and `deploy.yml`; AWS and GitHub behaviour is from my knowledge, not tested, and is marked `VERIFY:` where uncertain. No reviewer verdict.
+- new dependencies: none. Pulled the `hashicorp/terraform:1.17.0` image into the session's Docker.
+- human review (what I checked or corrected, or `none`): none
