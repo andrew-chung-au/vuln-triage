@@ -4,7 +4,7 @@ Drives ``run_scan`` against in-memory SQLite with a fake reader and an OSV stub
 that raises an unexpected exception. Covers the stored end state, the rollback
 of the half-written scan, the single ``scan.finished`` log, secret hygiene, a
 failing recovery commit, the worker surviving, and a later success clearing the
-failure. The migration cases are at the end.
+failure. The migration cases are in ``test_migration_0002.py``.
 """
 
 from __future__ import annotations
@@ -16,17 +16,14 @@ from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import pytest
-from alembic import command
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from sqlalchemy import inspect, select, text
-from sqlalchemy.engine import Engine
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
-from test_db_migration import alembic_config
 from test_ingest import NPM, UV, FakeReader, make_asset
 from vulntriage.api.assets import asset_to_wire
 from vulntriage.db.enums import FailureReason, ScanStatus, ScanTrigger
@@ -297,59 +294,3 @@ def test_exception_after_the_scan_is_committed_is_not_rewritten(
         scan = session.get(Scan, scan_id)
         assert scan.scan_status == ScanStatus.SCANNED_CLEAN.value
         assert scan.failure_reason is None
-
-
-# --- migration -------------------------------------------------------------
-
-
-def _insert_asset(engine: Engine, reason: str | None) -> None:
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                "INSERT INTO assets (name, criticality, internet_facing, repository_url,"
-                " scan_status, scan_failure_reason) VALUES ('n', 'low', 0, 'u', 'scan failed', :r)"
-            ),
-            {"r": reason},
-        )
-
-
-def test_migration_adds_internal_error_and_still_rejects_other_values(sqlite_engine: Engine) -> None:
-    with sqlite_engine.connect() as connection:
-        command.upgrade(alembic_config(connection), "0001")
-        connection.commit()
-    with pytest.raises(IntegrityError):
-        _insert_asset(sqlite_engine, "internal error")
-
-    with sqlite_engine.connect() as connection:
-        command.upgrade(alembic_config(connection), "head")
-        connection.commit()
-    _insert_asset(sqlite_engine, "internal error")
-    _insert_asset(sqlite_engine, "feed unavailable")
-    with pytest.raises(IntegrityError):
-        _insert_asset(sqlite_engine, "something else")
-    inspector = inspect(sqlite_engine)
-    for table, name in (("assets", "ck_assets_scan_failure_reason"), ("scans", "ck_scans_failure_reason")):
-        checks = {c["name"]: c["sqltext"] for c in inspector.get_check_constraints(table)}
-        assert "internal error" in checks[name]
-
-    # The scans constraint widened too.
-    with sqlite_engine.begin() as conn:
-        asset_id = conn.execute(text("SELECT id FROM assets LIMIT 1")).scalar_one()
-        insert = (
-            "INSERT INTO scans (asset_id, trigger, started_at, scan_status, failure_reason,"
-            " warnings, trace_id) VALUES (:a, 'person', '2026-01-01', 'scan failed', :r, '[]', 't')"
-        )
-        conn.execute(text(insert), {"a": asset_id, "r": "internal error"})
-    with pytest.raises(IntegrityError), sqlite_engine.begin() as conn:
-        conn.execute(text(insert), {"a": asset_id, "r": "nope"})
-
-
-def test_migration_downgrades_cleanly(sqlite_engine: Engine) -> None:
-    with sqlite_engine.connect() as connection:
-        command.upgrade(alembic_config(connection), "head")
-        connection.commit()
-        command.downgrade(alembic_config(connection), "0001")
-        connection.commit()
-    with pytest.raises(IntegrityError):
-        _insert_asset(sqlite_engine, "internal error")
-    _insert_asset(sqlite_engine, "feed unavailable")

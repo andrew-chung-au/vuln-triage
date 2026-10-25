@@ -16,7 +16,6 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from test_ingest import NPM, UV, FakeReader, make_asset
@@ -199,17 +198,5 @@ def test_missing_scan_logs_nothing(factory, capsys) -> None:  # type: ignore[no-
     run_scan(factory, FakeReader({"uv.lock": UV}), 9999, CleanOsv())
     assert _finished(capsys.readouterr().out) == []
 
-
-def test_scan_with_missing_asset_logs_nothing(factory, capsys) -> None:  # type: ignore[no-untyped-def]
-    aid = make_asset(factory)
-    scan_id = _enqueue(factory, aid)
-    with factory() as session:
-        # The foreign key is enforced, so switch it off for this connection
-        # (before any write opens a transaction) to orphan the scan.
-        session.execute(text("PRAGMA foreign_keys=OFF"))
-        session.execute(text("DELETE FROM assets WHERE id = :id"), {"id": aid})
-        session.commit()
-        session.execute(text("PRAGMA foreign_keys=ON"))
-    capsys.readouterr()
-    run_scan(factory, FakeReader({"uv.lock": UV}), scan_id, CleanOsv())
-    assert _finished(capsys.readouterr().out) == []
+# test_scan_with_missing_asset_logs_nothing is in test_scan_orphaned_scan.py: it
+# needs SQLite's PRAGMA, so it is unit-only (not run by the Postgres job).

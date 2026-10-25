@@ -2501,3 +2501,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): tests written first; `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is one rewritten assertion in `test_worker_survives_an_unexpected_error`, which asserted the superseded "left unfinished" behaviour); `make openapi-validate` OK. The migration ran on SQLite only, not on Postgres. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CI fix on PR #200 (`verify / postgres-integration` failed on three SQLite-only tests from #198 and #194)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to move the two Migration 0002 tests to a `unit`-only module and keep the PRAGMA test off Postgres. No new key prompt saved.
+- files changed: `tests/test_migration_0002.py` (new, `unit`; the two migration tests moved unchanged); `tests/test_scan_orphaned_scan.py` (new, `unit`; the PRAGMA test moved unchanged); `tests/test_scan_internal_error.py` and `tests/test_scan_finished_log.py` (the moved tests and their unused imports removed); this log entry
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is the earlier #198 rewritten assertion). Not run on Postgres (no Docker here). A `pytest.skip` on the non-SQLite dialect was tried first and the verify gate failed it ("skip markers added"), so the PRAGMA test was moved to a `unit` module instead. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
