@@ -25,7 +25,11 @@ from vulntriage.api.service import router as service_router
 from vulntriage.db.session import create_db_engine, create_session_factory
 from vulntriage.ingest.feeds import build_feed_clients
 from vulntriage.ingest.github import RepositoryReader
-from vulntriage.ingest.settings import get_feeds_mode, require_feeds_allowed
+from vulntriage.ingest.settings import (
+    get_feeds_mode,
+    require_demo_defect_allowed,
+    require_feeds_allowed,
+)
 from vulntriage.mail.delivery import DeliveryWorker
 from vulntriage.observability.logs import setup_logging
 from vulntriage.observability.metrics import set_overdue_source, setup_metrics
@@ -156,6 +160,9 @@ def create_app(
     # dev/test (fail closed). A misconfiguration stops start-up here rather than
     # quietly hitting live feeds or shipping fixtures to production.
     require_feeds_allowed()
+    # The demo defect (task 28a / #218, A35) is refused by the same fail-closed
+    # environment test: set outside explicit dev/test, start-up stops.
+    require_demo_defect_allowed()
 
     # The app is served behind a reverse proxy at /api, which strips the prefix,
     # so routes stay mounted at /findings, /assets, etc. and the tests are

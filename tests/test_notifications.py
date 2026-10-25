@@ -680,3 +680,65 @@ def test_pre_send_hold_with_empty_traceparent_emits_local_trace_and_does_not_rai
     assert len(logs) == 1
     assert logs[0].trace_id == spans[0].context.trace_id
     assert [v for _, v in captured_counter()] == [1]
+
+
+# -- #218: VT_DEMO_DEFECT=notify_no_fix (the deliberate US-15 bug) --------------
+
+
+def _set_fixed_version(factory: sessionmaker[Session], value: str | None) -> None:
+    with factory() as session:
+        for finding in session.scalars(select(Finding)):
+            finding.fixed_version = value
+        session.commit()
+
+
+def test_demo_defect_no_fix_finding_fails_sends_nothing_and_logs_no_advisory_text(
+    factory, monkeypatch, captured_logs
+) -> None:  # type: ignore[no-untyped-def]
+    _seed_p1_asset(factory)
+    _taint_advisory(factory)
+    _set_fixed_version(factory, None)
+    monkeypatch.setenv("VT_DEMO_DEFECT", "notify_no_fix")
+    monkeypatch.setenv("DEPLOYMENT_ENVIRONMENT", "dev")
+
+    sink = RecordingTransport(VERIFIED_SENDER)
+    sent = _worker(factory, sink).deliver_pending()
+
+    assert sent == 0
+    assert sink.sent == []  # nothing is sent
+    job = _only_job(factory)
+    assert job.state == NotificationState.FAILED.value
+    assert job.last_error_code == "format_failed"
+    logs = _deliver_logs(captured_logs())
+    assert len(logs) == 1
+    attrs = dict(logs[0].attributes or {})
+    assert attrs.get("vt.outcome") == "failed" and attrs.get("vt.error.code") == "format_failed"
+    assert "SECRETADVISORYTEXT" not in repr(logs[0].body) + repr(attrs)
+
+
+def test_demo_defect_finding_with_fixed_version_still_delivers(
+    factory, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _seed_p1_asset(factory)
+    _set_fixed_version(factory, "9.9.9")
+    monkeypatch.setenv("VT_DEMO_DEFECT", "notify_no_fix")
+    monkeypatch.setenv("DEPLOYMENT_ENVIRONMENT", "dev")
+
+    sink = RecordingTransport(VERIFIED_SENDER)
+    assert _worker(factory, sink).deliver_pending() == 1
+    assert len(sink.sent) == 1
+    assert _only_job(factory).state == NotificationState.SENT.value
+
+
+def test_demo_defect_unset_no_fix_finding_still_delivers(
+    factory, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """The tests that miss the bug: a no-fix finding with the variable unset."""
+    _seed_p1_asset(factory)
+    _set_fixed_version(factory, None)
+    monkeypatch.delenv("VT_DEMO_DEFECT", raising=False)
+
+    sink = RecordingTransport(VERIFIED_SENDER)
+    assert _worker(factory, sink).deliver_pending() == 1
+    assert "Fixed version: none" in sink.sent[0].body
+    assert _only_job(factory).state == NotificationState.SENT.value

@@ -92,3 +92,58 @@ def require_feeds_allowed(environ: object = None) -> str:
             f"'dev' or 'test' (got {shown!r}); fixtures must never run in production"
         )
     return mode
+
+
+# --- Demo defect (VT_DEMO_DEFECT, task 28a / #218, A35) ---------------------
+# The deliberate US-15 bug: with VT_DEMO_DEFECT=notify_no_fix the owner-
+# notification formatter fails for a finding with no fixed version. Unset = off.
+# An unknown value stops start-up (no silent ignore). The defect is refused
+# unless DEPLOYMENT_ENVIRONMENT is explicitly dev/test, by the SAME fail-closed
+# test as VT_FEEDS=fixtures (is_non_production_environment), so there is one
+# gate, not two. Removed by the cleanup commit (#161, P-FLAG-GONE).
+
+DEMO_DEFECT_NOTIFY_NO_FIX = "notify_no_fix"
+_DEMO_DEFECT_VALUES = (DEMO_DEFECT_NOTIFY_NO_FIX,)
+
+
+class DemoDefectConfigurationError(RuntimeError):
+    """VT_DEMO_DEFECT is an unknown value, or is set outside dev/test.
+
+    Raised at start-up so the demo defect can never run in production.
+    """
+
+
+def get_demo_defect(environ: object = None) -> str | None:
+    """Return the validated demo defect name, or None when unset or empty.
+
+    Pure when ``environ`` is passed. Any value other than ``notify_no_fix``
+    raises :class:`DemoDefectConfigurationError` (no silent ignore).
+    """
+    env = os.environ if environ is None else environ
+    raw = env.get("VT_DEMO_DEFECT")
+    if not raw or not raw.strip():
+        return None
+    value = raw.strip()
+    if value not in _DEMO_DEFECT_VALUES:
+        raise DemoDefectConfigurationError(
+            f"VT_DEMO_DEFECT={raw!r} is not valid; use one of {_DEMO_DEFECT_VALUES} (or leave it unset)"
+        )
+    return value
+
+
+def require_demo_defect_allowed(environ: object = None) -> str | None:
+    """Validate VT_DEMO_DEFECT and the environment gate at start-up.
+
+    Raises :class:`DemoDefectConfigurationError` when the value is unknown, or
+    when a defect is set while DEPLOYMENT_ENVIRONMENT is not explicitly dev/test
+    (unset/prod/production/unknown refuse). Returns the defect name or None.
+    """
+    defect = get_demo_defect(environ)
+    if defect is not None and not is_non_production_environment(environ):
+        env = os.environ if environ is None else environ
+        shown = env.get("DEPLOYMENT_ENVIRONMENT")
+        raise DemoDefectConfigurationError(
+            f"VT_DEMO_DEFECT={defect} is refused unless DEPLOYMENT_ENVIRONMENT is explicitly "
+            f"'dev' or 'test' (got {shown!r}); the demo defect must never run in production"
+        )
+    return defect

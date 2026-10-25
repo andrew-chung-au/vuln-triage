@@ -2611,3 +2611,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the GitHub Actions run and job records and job logs for deploy runs #30, #31, #32, #33, #34 and the verify run 40214720806 through the GitHub API; read `deploy.yml`, `deploy-env.sh`, README, tasklist rows A6 to A14 and the session summary. Result 21 of 24 (was 17). NOT verified: the live dev and production URLs (the session proxy refused `*.sslip.io`), the `production` environment's reviewer rule, branch protection, any approver identity. Ran no tests and no Docker. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #218 (task 28a): `VT_DEMO_DEFECT=notify_no_fix` and its production refusal
+- agent role: Software Engineer (Claude Code cloud session, subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to implement #218, leaving `responder/` alone and keeping the `_docs/testing.md` edit small. No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/settings.py`, `backend/vulntriage/mail/message.py`, `backend/vulntriage/mail/delivery.py`, `backend/vulntriage/main.py`, `tests/test_demo_defect.py`, `tests/test_compose_responder.py`, `tests/test_notifications.py`, `tests/test_marker_hygiene.py`, `_docs/testing.md`; this log entry.
+- verification (tests run, reviewer verdict): `make verify` ran: frontend 89 passed, backend 515 passed (7 deselected), type check and whitespace passed; the only warning was that BASE equals HEAD. NOT run: the container form of `P-PROD-REFUSAL` (`tests/test_compose_responder.py`; no Docker or ghcr.io here), so its `docker compose run` flags are unverified. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
