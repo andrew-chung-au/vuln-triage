@@ -453,3 +453,230 @@ def test_s_notify_log_failed_outcome_is_logged(factory) -> None:  # type: ignore
     attrs = dict(records[-1].attributes or {})
     assert attrs.get("vt.outcome") == "failed", attrs
     assert attrs.get("vt.error.code") == "send_failed", attrs
+
+
+# -- #193: every outcome emits the span, the log and one counter increment ------
+
+_LEAK_OWNER_NAME = "Leaky Ownername"
+_LEAK_OWNER_EMAIL = "leaky.owner@team.example"
+_LEAK_ADVISORY = "SECRETADVISORYTEXT https://evil.example/leak"
+
+
+@pytest.fixture()
+def captured_counter(monkeypatch):  # type: ignore[no-untyped-def]
+    """Route ``vt_notifications_total`` to a local in-memory reader.
+
+    The global MeterProvider can be installed once per process, so a throwaway
+    provider's counter replaces the module-level instrument for one test.
+    Returns a getter for ``(attributes, value)`` points.
+    """
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+    from vulntriage.observability import metrics as metrics_mod
+
+    metrics_mod.setup_metrics()
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    counter = provider.get_meter("vulntriage-test").create_counter("vt_notifications_total")
+    monkeypatch.setattr(metrics_mod, "notifications_total", counter)
+
+    def points() -> list[tuple[dict, float]]:
+        out: list[tuple[dict, float]] = []
+        data = reader.get_metrics_data()
+        if data is None:
+            return out
+        for rm in data.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "vt_notifications_total":
+                        for dp in metric.data.data_points:
+                            out.append((dict(dp.attributes), dp.value))
+        return out
+
+    try:
+        yield points
+    finally:
+        provider.shutdown()
+
+
+class _RaisingTransport:
+    verified_sender = VERIFIED_SENDER
+
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    def send(self, message):  # type: ignore[no-untyped-def]
+        raise self._exc
+
+
+def _taint_advisory(factory: sessionmaker[Session]) -> None:
+    job = _only_job(factory)
+    with factory() as session:
+        lifecycle = session.get(Lifecycle, job.lifecycle_id)
+        finding = session.get(Finding, lifecycle.finding_id)
+        for advisory in session.scalars(
+            select(Advisory).where(Advisory.vulnerability_id == finding.vulnerability_id)
+        ):
+            advisory.summary = _LEAK_ADVISORY
+        session.commit()
+
+
+def _deliver_case(factory, monkeypatch, case: str) -> DeliveryWorker:  # type: ignore[no-untyped-def]
+    """Seed a job that will end in ``case`` and return the worker to poll."""
+    from vulntriage.mail import delivery as delivery_mod
+    from vulntriage.mail.message import HeaderInjectionError
+    from vulntriage.mail.transport import MailConfigurationError, SenderNotVerifiedError
+
+    owner = {"owner_name": _LEAK_OWNER_NAME, "owner_email": _LEAK_OWNER_EMAIL}
+    if case == "ownerless":
+        owner = {"owner_name": None, "owner_email": None}
+    elif case == "owner_email_missing":
+        owner = {"owner_name": _LEAK_OWNER_NAME, "owner_email": None}
+    _seed_p1_asset(factory, **owner)
+    _taint_advisory(factory)
+
+    transport: object = RecordingTransport(VERIFIED_SENDER)
+    if case == "no_target":
+        with factory() as session:
+            job = session.scalar(select(NotificationJob))
+            job.lifecycle_id = None
+            session.commit()
+    elif case == "sender_not_verified":
+        transport = _RaisingTransport(SenderNotVerifiedError("refused"))
+    elif case == "header_injection":
+        transport = _RaisingTransport(HeaderInjectionError("crlf"))
+    elif case == "failed":
+        transport = _RaisingTransport(RuntimeError("smtp down"))
+    elif case == "mail_config":
+        def _boom() -> object:
+            raise MailConfigurationError("MAIL_SENDER is not set")
+
+        monkeypatch.setattr(delivery_mod, "build_transport", _boom)
+        return DeliveryWorker(factory, transport=None)
+    return DeliveryWorker(factory, transport=transport)  # type: ignore[arg-type]
+
+
+def _deliver_logs(records) -> list:  # type: ignore[no-untyped-def]
+    return [
+        lr.log_record
+        for lr in records
+        if (lr.log_record.attributes or {}).get("vt.event") == "notification.deliver"
+        or lr.log_record.body == "notification.deliver"
+    ]
+
+
+_OUTCOME_CASES = [
+    # (case, vt.outcome, vt.error.code, has a finding id)
+    ("sent", "sent", None, True),
+    ("failed", "failed", "send_failed", True),
+    ("sender_not_verified", "held", "sender_not_verified", True),
+    ("header_injection", "held", "header_injection", True),
+    ("mail_config", "held", "mail_config", True),
+    ("ownerless", "held", "ownerless", True),
+    ("owner_email_missing", "held", "owner_email_missing", True),
+    ("no_target", "held", "no_target", False),
+]
+
+
+@pytest.mark.parametrize("case,outcome,code,has_finding", _OUTCOME_CASES)
+def test_every_outcome_emits_span_log_and_one_counter_in_the_job_trace(
+    factory, monkeypatch, captured_spans, captured_logs, captured_counter,
+    case, outcome, code, has_finding,
+) -> None:  # type: ignore[no-untyped-def]
+    worker = _deliver_case(factory, monkeypatch, case)
+    job = _only_job(factory)
+    expected_trace_id = job.traceparent.split("-")[1]
+    stored_state, stored_code = None, None
+
+    worker.deliver_pending()
+
+    spans = [s for s in captured_spans() if s.name == "notification.deliver"]
+    assert len(spans) == 1, f"{case}: expected one span, got {len(spans)}"
+    span = spans[0]
+    assert trace.format_trace_id(span.context.trace_id) == expected_trace_id
+    assert span.parent is not None
+    assert trace.format_span_id(span.parent.span_id) == job.traceparent.split("-")[2]
+    assert span.attributes.get("vt.outcome") == outcome
+    assert span.attributes.get("vt.error.code") == code
+    assert ("vt.finding.id" in span.attributes) is has_finding
+
+    logs = _deliver_logs(captured_logs())
+    assert len(logs) == 1, f"{case}: expected one log, got {len(logs)}"
+    record = logs[0]
+    attrs = dict(record.attributes or {})
+    assert attrs.get("vt.outcome") == outcome, attrs
+    assert attrs.get("vt.error.code") == code, attrs
+    assert ("vt.finding.id" in attrs) is has_finding, attrs
+    assert attrs.get("vt.tier") == job.tier and attrs.get("vt.notification.kind") == job.kind
+    # The journey join: equality with the stored traceparent's trace id.
+    assert trace.format_trace_id(record.trace_id) == expected_trace_id
+
+    assert captured_counter() == [
+        ({"vt.notification.kind": job.kind, "vt.outcome": outcome}, 1)
+    ], f"{case}: counter must increment once with kind and outcome labels only"
+
+    # Allowlist leak check: no owner name/email, advisory text or URL anywhere.
+    blob = repr((dict(span.attributes), attrs, captured_counter()))
+    for secret in (_LEAK_OWNER_NAME, _LEAK_OWNER_EMAIL, "SECRETADVISORYTEXT", "evil.example"):
+        assert secret not in blob, f"{case}: {secret} leaked into telemetry"
+
+    # Job state and last_error_code are unchanged by telemetry (existing codes).
+    with factory() as session:
+        row = session.get(NotificationJob, job.id)
+        stored_state, stored_code = row.state, row.last_error_code
+    expected_state = {
+        "sent": NotificationState.SENT.value,
+        "failed": NotificationState.FAILED.value,
+        "ownerless": NotificationState.HELD_OWNERLESS.value,
+        "owner_email_missing": NotificationState.HELD_OWNER_EMAIL_MISSING.value,
+    }.get(case, NotificationState.HELD_CONFIGURATION_ERROR.value)
+    assert stored_state == expected_state
+    expected_stored_code = {
+        "sent": None,
+        "failed": "send_failed",
+        "ownerless": "held: ownerless",
+        "owner_email_missing": "held: owner email missing",
+    }.get(case, case)
+    assert stored_code == expected_stored_code
+
+
+@pytest.mark.parametrize("case", ["ownerless", "owner_email_missing", "no_target"])
+def test_held_job_second_poll_emits_nothing_more(
+    factory, monkeypatch, captured_spans, captured_logs, captured_counter, case
+) -> None:  # type: ignore[no-untyped-def]
+    worker = _deliver_case(factory, monkeypatch, case)
+    worker.deliver_pending()
+    first = (
+        len([s for s in captured_spans() if s.name == "notification.deliver"]),
+        len(_deliver_logs(captured_logs())),
+        captured_counter(),
+    )
+    assert first[0] == 1 and first[1] == 1
+
+    worker.deliver_pending()
+
+    assert len([s for s in captured_spans() if s.name == "notification.deliver"]) == 1
+    assert len(_deliver_logs(captured_logs())) == 1
+    assert captured_counter() == first[2]
+
+
+def test_pre_send_hold_with_empty_traceparent_emits_local_trace_and_does_not_raise(
+    factory, monkeypatch, captured_spans, captured_logs, captured_counter
+) -> None:  # type: ignore[no-untyped-def]
+    worker = _deliver_case(factory, monkeypatch, "ownerless")
+    with factory() as session:
+        job = session.scalar(select(NotificationJob))
+        job.traceparent = ""
+        session.commit()
+
+    worker.deliver_pending()
+
+    spans = [s for s in captured_spans() if s.name == "notification.deliver"]
+    assert len(spans) == 1
+    assert spans[0].context.trace_id != 0
+    assert spans[0].parent is None  # a fresh local root, not a crash
+    logs = _deliver_logs(captured_logs())
+    assert len(logs) == 1
+    assert logs[0].trace_id == spans[0].context.trace_id
+    assert [v for _, v in captured_counter()] == [1]

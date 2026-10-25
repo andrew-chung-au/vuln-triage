@@ -41,6 +41,7 @@ import threading
 import time
 from collections.abc import Callable
 
+from opentelemetry.trace import Span
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -77,7 +78,7 @@ def _now() -> dt.datetime:
 
 
 def _log_delivery_outcome(
-    job: NotificationJob, finding: Finding, *, outcome: str, error_code: str | None
+    job: NotificationJob, finding: Finding | None, *, outcome: str, error_code: str | None
 ) -> None:
     """Emit the US-13 structured delivery-outcome log (#177).
 
@@ -87,17 +88,47 @@ def _log_delivery_outcome(
     through the allowlist in ``log_event``, so no advisory text, contact, URL or
     credential can leak. Every outcome is logged (``sent``, ``failed``,
     ``held``); the ``failed`` log is what the US-15 responder reads from Loki to
-    find the failing finding (task 28 / #160).
+    find the failing finding (task 28 / #160). ``finding`` is None for a
+    ``no_target`` hold (#193): ``vt.finding.id`` is then omitted, not invented.
     """
     attributes: dict[str, str] = {
-        "vt.finding.id": str(finding.id),
         "vt.tier": job.tier,
         "vt.notification.kind": job.kind,
         "vt.outcome": outcome,
     }
+    if finding is not None:
+        attributes["vt.finding.id"] = str(finding.id)
     if error_code is not None:
         attributes["vt.error.code"] = error_code
     log_event("notification.deliver", attributes)
+
+
+def _span_attributes(job: NotificationJob, finding: Finding | None) -> dict[str, str]:
+    attributes = {"vt.tier": job.tier, "vt.notification.kind": job.kind}
+    if finding is not None:
+        attributes["vt.finding.id"] = str(finding.id)
+    return attributes
+
+
+def _emit_held(
+    current: Span, job: NotificationJob, finding: Finding | None, error_code: str
+) -> None:
+    """Span outcome, one ``vt_notifications_total`` increment and the log (#193).
+
+    The counter carries only ``vt.notification.kind`` and ``vt.outcome`` so its
+    cardinality stays flat. Call INSIDE the ``notification.deliver`` span.
+    """
+    set_span_attributes(current, {"vt.outcome": "held", "vt.error.code": error_code})
+    metrics.notifications_total.add(1, {"vt.notification.kind": job.kind, "vt.outcome": "held"})
+    _log_delivery_outcome(job, finding, outcome="held", error_code=error_code)
+
+
+# Telemetry `vt.error.code` for the pre-send holds; `last_error_code` on the job
+# keeps the stored `held: ...` values (the dashboard and existing tests read it).
+_HOLD_TELEMETRY_CODES = {
+    NotificationState.HELD_OWNERLESS: "ownerless",
+    NotificationState.HELD_OWNER_EMAIL_MISSING: "owner_email_missing",
+}
 
 
 class DeliveryWorker:
@@ -159,19 +190,28 @@ class DeliveryWorker:
             if context is None:
                 # No lifecycle/finding/asset: nothing deliverable; hold as a
                 # configuration error so it is visible, not silently retried.
-                self._mark_held(
-                    session, job, NotificationState.HELD_CONFIGURATION_ERROR, "no_target"
-                )
-                session.commit()
+                # No finding exists, so vt.finding.id is omitted (#193).
+                with span_from_traceparent(
+                    "notification.deliver", job.traceparent, _span_attributes(job, None)
+                ) as current:
+                    self._mark_held(
+                        session, job, NotificationState.HELD_CONFIGURATION_ERROR, "no_target"
+                    )
+                    _emit_held(current, job, None, "no_target")
+                    session.commit()
                 return False
 
             asset, finding, advisory = context
             hold = self._hold_reason(asset)
             if hold is not None:
-                self._mark_held(session, job, hold, hold.value)
-                if hold == NotificationState.HELD_OWNERLESS:
-                    _set_ownerless_flag(asset)
-                session.commit()
+                with span_from_traceparent(
+                    "notification.deliver", job.traceparent, _span_attributes(job, finding)
+                ) as current:
+                    self._mark_held(session, job, hold, hold.value)
+                    if hold == NotificationState.HELD_OWNERLESS:
+                        _set_ownerless_flag(asset)
+                    _emit_held(current, job, finding, _HOLD_TELEMETRY_CODES[hold])
+                    session.commit()
                 return False
 
             # Claim, then send, then record. The stored traceparent makes
@@ -205,10 +245,7 @@ class DeliveryWorker:
                 self._mark_held(
                     session, job, NotificationState.HELD_CONFIGURATION_ERROR, "mail_config"
                 )
-                set_span_attributes(
-                    current, {"vt.outcome": "held", "vt.error.code": "mail_config"}
-                )
-                _log_delivery_outcome(job, finding, outcome="held", error_code="mail_config")
+                _emit_held(current, job, finding, "mail_config")
                 session.commit()
                 log.warning("notification job %s held: %s", job.id, exc)
                 return False
@@ -231,24 +268,14 @@ class DeliveryWorker:
                 self._mark_held(
                     session, job, NotificationState.HELD_CONFIGURATION_ERROR, "sender_not_verified"
                 )
-                set_span_attributes(
-                    current,
-                    {"vt.outcome": "held", "vt.error.code": "sender_not_verified"},
-                )
-                metrics.notifications_total.add(
-                    1, {"vt.notification.kind": job.kind, "vt.outcome": "held"}
-                )
-                _log_delivery_outcome(job, finding, outcome="held", error_code="sender_not_verified")
+                _emit_held(current, job, finding, "sender_not_verified")
                 session.commit()
                 return False
             except HeaderInjectionError:
                 self._mark_held(
                     session, job, NotificationState.HELD_CONFIGURATION_ERROR, "header_injection"
                 )
-                set_span_attributes(
-                    current, {"vt.outcome": "held", "vt.error.code": "header_injection"}
-                )
-                _log_delivery_outcome(job, finding, outcome="held", error_code="header_injection")
+                _emit_held(current, job, finding, "header_injection")
                 session.commit()
                 return False
             except Exception as exc:  # noqa: BLE001 - a transport failure retries

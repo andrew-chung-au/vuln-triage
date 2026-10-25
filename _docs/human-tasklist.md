@@ -73,6 +73,7 @@ Codespace/cloud → your machine for AWS).
 | **#157** | 25 telemetry job | `make test-compose JOB=telemetry` (`T-REFUSE`) green in CI; confirm it fails when `owner.email` is added to the allowlist | CI / Docker host | ☐ |
 | **#158** | 26 US-14 rule | `make verify` lands the metric half; confirm the provisioned Grafana rule fires once / resolves / NoData-human-only on a running stack | `make verify` + Docker host | ◐ (issue closed; Grafana-rule run pending) |
 | **#172** | 40 feed wiring | `T-JOURNEY-BE` + `I-OWNER-NOAWS` green on the containerized harness in the telemetry CI job | CI / Docker host | ☐ |
+| **#177 / #193** | 23/37 delivery outcome signals | No separate run: the end-to-end Loki leg is `T-JOURNEY-BE` (#172) for the `sent` log. A held-job log in Loki is not asserted (no held-job case in the journey test; see `pending-verification.md` #193). Best-effort, not a gate: when you run the telemetry job, optionally register an ownerless asset and confirm a `notification.deliver` log with `vt.outcome=held` carries its job's trace id. Post the result on #193 | CI / Docker host (via #172) | ◐ (unit/SQLite half on `main`; Loki leg pending, not a gate) |
 | **#174** | 23 OTLP log export | No separate run: the backend log-export leg is confirmed by the **#172 `T-JOURNEY-BE`** Loki assertion (and #157 `T-REFUSE`). Static-verified on `main` (commit `61837cb`); tick when that Loki leg passes | CI / Docker host (via #172) | ◐ (merged; Loki-leg run = #172) |
 
 > **Note on "closed but pending":** #156 and #158 were closed because their

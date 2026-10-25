@@ -2461,3 +2461,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS (87 frontend tests, 459 backend tests, typecheck, whitespace, weakened-test checks). QA PASS on #180 (criteria 1-3) at `a4926ce`, with two note fixes applied afterwards (the stale "none is filed" line and the dashboard-label citation). The Docker/Compose cases were not run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): approved all four decisions at the #180 decision point; corrected two process points: never propose allowing `python3 .scratch/*` (the right answer is a make target), and the two modified docs were the human's #65 work, committed as `0e9af39` (the interim "not mine" report was wrong).
+
+- date: 2026-10-25
+- task/issue: #193 (delivery worker: outcome span/log/counter on every held branch; folds #177)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #193 per the issue, the PM grooming comment (6395175402) and the human decisions (comment 6395603152). No new key prompt saved.
+- files changed: `backend/vulntriage/mail/delivery.py` (span, log and one counter increment on the ownerless, owner-email-missing and no_target holds; counter added to mail_config and header_injection; `vt.finding.id` omitted for no_target); `tests/test_notifications.py` (new cases for all eight outcomes, second poll, empty traceparent, leak check); `_docs/pending-verification.md` and `_docs/human-tasklist.md` (#177/#193 Loki leg recorded); this log entry
+- verification (tests run, reviewer verdict): `make backend-test` passed (471 passed). `make verify` result is in the #193 Engineer comment. The Loki leg was not run (no Docker) and no held-job case was added to `T-JOURNEY-BE`; the reason is in `_docs/pending-verification.md`. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
