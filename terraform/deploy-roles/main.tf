@@ -9,19 +9,21 @@
 
 # --- OIDC provider: reuse the account's existing one, or create it -----------
 
-# GitHub's current OIDC thumbprint list is maintained by AWS for this well-known
-# provider; VERIFY the thumbprint requirement for your provider/region (recent
-# AWS no longer pins a thumbprint for IAM OIDC with GitHub).
+# No thumbprint_list: AWS verifies GitHub's OIDC provider against its own library
+# of trusted root CAs and no longer uses a pinned thumbprint for it (the argument
+# is optional in the AWS provider 5.x; VERIFY at apply time that the plan shows no
+# thumbprint error).
 resource "aws_iam_openid_connect_provider" "github" {
-  count           = var.create_oidc_provider ? 1 : 0
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["ffffffffffffffffffffffffffffffffffffffff"] # VERIFY: current thumbprint, or omit per AWS guidance
+  count          = var.create_oidc_provider ? 1 : 0
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
 }
 
 locals {
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : var.existing_oidc_provider_arn
-  repo_sub_prefix   = "repo:${var.github_owner}/${var.github_repo}"
+  # GitHub's OIDC sub claim carries immutable ids: repo:<owner>@<owner id>/<repo>@<repo id>:environment:<name>
+  # (seen in CloudTrail for this repository on 2026-10-25). The trust must match that exact form.
+  repo_sub_prefix = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}"
 }
 
 # --- Trust policies ----------------------------------------------------------
