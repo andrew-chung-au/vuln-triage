@@ -17,9 +17,7 @@ See `_docs/human-tasklist.md` for the prioritised roll-up of **all** human
 action (this file + the AWS setup, merges and sweeps); this file is the detailed
 per-issue checklist it links to for the verification runs.
 
-Last updated: 2026-10-24 (#159 alert job: CI job committed; cross-ref to verify-locally.md §7b).
-
----
+Last updated: 2026-10-25 (#159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 
 ## #141 — AWS infrastructure + dev environment (task 17)
 
@@ -146,6 +144,17 @@ dependency; `backend/uv.lock` unchanged.** How to run the job locally:
 - [x] Protected-file approval: the `.github/workflows/verify.yml` `alert` job (mirrors `telemetry`) was human-approved and committed (`HUMAN_APPROVED=1`, commit `adf3733`). The `Makefile` already wires `COMPOSE_JOBS=alert` (no Makefile change).
 - [ ] Note: `I-OWNER-SENDER` MailHog form and `T-E6` stay follow-ups (Out of scope in #159).
 - [ ] Close #159 when `make test-compose JOB=alert` (both passes) is green in CI with the approved `alert` job.
+
+## #172 — feed-client wiring + VT_FEEDS fixture mode (task 40)
+
+PRs: #175, #178 (merged). Run in **CI (telemetry job) or a Codespace / Claude
+Code cloud / Docker host** (Docker). This is the containerized-backend-delivers
+harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
+
+- [ ] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog.
+- [ ] **Also confirms #174 and #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`). Both were static-verified on `main` and closed; if this Loki leg does **not** carry the journey trace id, re-open #174/#177 rather than only #172.
+- [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
+- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`.
 
 ---
 
