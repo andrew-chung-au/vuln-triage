@@ -2491,3 +2491,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): test written first and seen failing against the old dashboard (2 failures), then passing after the fix; `make verify` PASS (487 backend tests, 87 frontend tests). The Prometheus label spelling was not checked against a live stack (#199). No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #198 (finish a scan that dies from an unexpected exception: `scan failed` / `internal error`)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #198 under option C, with the human's decision (comment 6396530035), the PM list (6396549653) and the approved spec commit 543c87d (record 6396589596). No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/scan.py` (catch-all in `run_scan` reusing `_fail`; `_fail` marks kept findings stale, success clears the mark); `backend/vulntriage/db/enums.py`; `backend/migrations/versions/0002_internal_error_failure_reason.py` (new); `backend/vulntriage/observability/tracing.py` (`span` no longer records exception messages); `tests/test_scan_internal_error.py` (new); `tests/test_db_schema.py`; `tests/test_ingest.py`; `_docs/architecture.md`, `_docs/api.md`, `_docs/openapi.yaml`; `frontend/src/services/types.ts`; `frontend/src/test/vulntriage.test.tsx`; this log entry
+- verification (tests run, reviewer verdict): tests written first; `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is one rewritten assertion in `test_worker_survives_an_unexpected_error`, which asserted the superseded "left unfinished" behaviour); `make openapi-validate` OK. The migration ran on SQLite only, not on Postgres. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
