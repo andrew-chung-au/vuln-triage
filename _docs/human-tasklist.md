@@ -102,7 +102,7 @@ merge-commit only) is in `_docs/human-cheatsheet.md`.
 
 ## E. Later / scheduled (not blocking submission)
 
-- ☐ Future-development AWS steps (S1-S3): after submission (`aws-setup.md` Showcase steps,
+- ☐ Future-development AWS steps (S1-S3): after submission (`aws-setup.md` future-development steps,
   `roadmap-showcase.md`).
 - ☐ Teardown when you end the deployment: `aws-setup.md` §11,
   `terraform-verify.md` §5.

@@ -5,7 +5,7 @@
 # Loki (logs); Grafana shows the US-13 journey side by side. MailHog catches the
 # owner notification email (used by task 37).
 #
-# Submission: local Compose only. Deploying this on AWS is showcase item X3.
+# Submission: local Compose only. Deploying this on AWS is future-development item X3.
 # Grafana is behind authentication (GRAFANA_ADMIN_PASSWORD from the .env).
 #
 #   cd observability && docker compose up -d --wait

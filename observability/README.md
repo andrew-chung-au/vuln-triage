@@ -5,7 +5,7 @@ A **separate** Docker Compose project from the application stack
 emits (task 23) and shows the trace, metric and logs side by side in Grafana.
 
 For submission this runs in **local Compose only**; deploying it on AWS is
-showcase item X3 (`_docs/roadmap-showcase.md`). Needs Docker — run it in a
+future-development item X3 (`_docs/roadmap-showcase.md`). Needs Docker — run it in a
 GitHub Codespace, a Claude Code cloud session, CI, or any Docker host, not the
 agent sandbox.
 
