@@ -9,14 +9,14 @@
 
 # --- OIDC provider: reuse the account's existing one, or create it -----------
 
-# GitHub's current OIDC thumbprint list is maintained by AWS for this well-known
-# provider; VERIFY the thumbprint requirement for your provider/region (recent
-# AWS no longer pins a thumbprint for IAM OIDC with GitHub).
+# No thumbprint_list: AWS verifies GitHub's OIDC provider against its own library
+# of trusted root CAs and no longer uses a pinned thumbprint for it (the argument
+# is optional in the AWS provider 5.x; VERIFY at apply time that the plan shows no
+# thumbprint error).
 resource "aws_iam_openid_connect_provider" "github" {
-  count           = var.create_oidc_provider ? 1 : 0
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["ffffffffffffffffffffffffffffffffffffffff"] # VERIFY: current thumbprint, or omit per AWS guidance
+  count          = var.create_oidc_provider ? 1 : 0
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
 }
 
 locals {
