@@ -4,8 +4,10 @@
 Usage: python3 permission-report.py <SINCE>   (run as: make permission-report SINCE=<commit>)
 
 Read-only by construction:
-- reads only files under _session-summaries/ (paths come from `git log` and are
+- reads files under _session-summaries/ (paths come from `git log` and are
   filtered to that folder), and reads them with `git show HEAD:<path>`;
+- also reads the git-ignored OpenCode prompt log .scratch/permission-prompts.jsonl
+  (written by .opencode/plugins/permission-log.js), opened read-only, if it exists;
 - runs only `git log`, `git show` and `git rev-parse`;
 - opens no file for writing, makes no network call, prints to stdout only.
 
@@ -13,11 +15,15 @@ SINCE is exclusive (the range is SINCE..HEAD): pass the last-sweep commit.
 SINCE must be 7 to 40 lowercase hex characters and a commit; anything else is
 refused before any other command runs.
 """
+import json
+import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 
 SUMMARY_DIR = "_session-summaries/"
+PROMPT_LOG = ".scratch/permission-prompts.jsonl"
 FLOOR_COMMIT = "1b37fd1"  # 2026-10-21 rule change; older summaries used "none" differently
 SINCE_RE = re.compile(r"[0-9a-f]{7,40}")
 USAGE = "Usage: make permission-report SINCE=<commit>  (7 to 40 lowercase hex characters, a commit)"
@@ -40,7 +46,7 @@ def git(*args):
     return p.returncode, p.stdout
 
 
-# ---- parsing (pure functions; the regression script imports these) ----------
+# ---- parsing (pure functions) -------------------------------------------------
 
 def section(text):
     """Return the lines of '## Permission review', or None when it is absent."""
@@ -170,6 +176,71 @@ def label_for(group, key, count):
     return "deny proposal"
 
 
+def prompt_stats(lines):
+    """JSONL lines from the OpenCode plugin -> {key: {prompts, sessions, replies}}."""
+    asked, replies, stats = {}, {}, {}
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        props = rec.get("properties") or {}
+        if rec.get("type") == "permission.asked":
+            cmd = (props.get("metadata") or {}).get("command") or " ".join(props.get("patterns") or [])
+            asked[props.get("id")] = (props.get("permission", "?"), cmd, props.get("sessionID"), rec.get("at"))
+        elif rec.get("type") == "permission.replied":
+            replies[props.get("requestID")] = (props.get("reply"), rec.get("at"))
+    for rid, (perm, cmd, sid, asked_at) in asked.items():
+        keys = keys_of("`%s`" % cmd) if perm == "bash" else set()
+        key = sorted(keys)[0] if keys else perm + ": " + " ".join(cmd.split()[:2])
+        row = stats.setdefault(key, {"prompts": 0, "sessions": set(), "replies": {}, "wait_total": 0.0, "wait_max": 0.0})
+        row["prompts"] += 1
+        row["sessions"].add(sid)
+        reply, replied_at = replies.get(rid, ("no reply logged", None))
+        row["replies"][reply] = row["replies"].get(reply, 0) + 1
+        wait = seconds_between(asked_at, replied_at)
+        if wait is not None:
+            row["wait_total"] += wait
+            row["wait_max"] = max(row["wait_max"], wait)
+    return stats
+
+
+def seconds_between(start, end):
+    """Seconds between two ISO-8601 UTC timestamps, or None when either is missing or unreadable."""
+    try:
+        t0 = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        t1 = datetime.fromisoformat(end.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        return None
+    return max((t1 - t0).total_seconds(), 0.0)
+
+
+def fmt_wait(seconds):
+    return "%dm%02ds" % divmod(int(round(seconds)), 60)
+
+
+def prompt_label(key, sessions):
+    if key == SCRATCH_KEY:
+        return "make target, never allow"
+    if key.startswith(("gh ", "make issue-", "HUMAN_APPROVED", "git push", "GitHub MCP")):
+        return "keep asking"
+    return "unlisted: candidate for an allow rule or a make target" if sessions >= 3 else "unlisted: below the 3-session threshold"
+
+
+def render_prompts(stats):
+    out = ["", "Prompts logged by OpenCode (%s)" % PROMPT_LOG]
+    if not stats:
+        out.append("  (none)")
+    rows = sorted(stats.items(), key=lambda kv: (-kv[1]["wait_total"], -kv[1]["prompts"], kv[0]))
+    for key, row in rows:
+        replies = ", ".join("%s %d" % (r, n) for r, n in sorted(row["replies"].items()))
+        out.append("  %d  %s  [%d sessions; %s; waited %s, longest %s]  [%s]" % (
+            row["prompts"], key, len(row["sessions"]), replies,
+            fmt_wait(row["wait_total"]), fmt_wait(row["wait_max"]),
+            prompt_label(key, len(row["sessions"]))))
+    return "\n".join(out)
+
+
 def analyse(named_texts, floor_excluded=()):
     """named_texts: {name: text}. Return a dict describing the counts."""
     counts = {g[0]: {} for g in GROUPS}
@@ -278,15 +349,20 @@ def main(argv):
     names = summaries_in_range(since)
     if not names:
         print("no summaries changed since %s" % since)
-        return 0
-    excluded = floor_excluded(names)
-    texts = {}
-    for path in names:
-        code, text = git("show", "HEAD:" + path)
-        if code == 0:
-            texts[path[len(SUMMARY_DIR):]] = text
-    excluded_short = {p[len(SUMMARY_DIR):] for p in excluded}
-    print(render(analyse(texts, excluded_short), since, len(texts)))
+    else:
+        excluded = floor_excluded(names)
+        texts = {}
+        for path in names:
+            code, text = git("show", "HEAD:" + path)
+            if code == 0:
+                texts[path[len(SUMMARY_DIR):]] = text
+        excluded_short = {p[len(SUMMARY_DIR):] for p in excluded}
+        print(render(analyse(texts, excluded_short), since, len(texts)))
+    if os.path.exists(PROMPT_LOG):
+        with open(PROMPT_LOG, encoding="utf-8") as f:
+            print(render_prompts(prompt_stats(f)))
+    else:
+        print("\nno prompt log (%s; the OpenCode plugin has not run here yet)" % PROMPT_LOG)
     return 0
 
 

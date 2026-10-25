@@ -2424,3 +2424,30 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): run 40160976080 (pull_request, 79f9f47) was green with both passes, the first CI proof of the rule-absent negative. The kept cases are unchanged apart from the fixture. `make verify` results are in the session's report. The `compose` cases were NOT run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the human chose the trim (A-FIRE + negative in Compose, nightly/on demand); the workflow diff awaits approval.
+
+- date: 2026-10-25
+- task/issue: #65 (permission sweep 1) — sweep analysis and OpenCode permission-prompt log
+- agent role: Orchestrator (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`); a `web-fetch` subagent read the OpenCode plugin and permission docs
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to review the permission records in the session summaries, then said agents must record permission detail themselves so the human does not have to note prompts, and that Claude Code did not need a hook but OpenCode did. No new key prompt saved.
+- files changed: new `.opencode/plugins/permission-log.js` (protected path, commit 4fa0674, human-approved in the session; it appends OpenCode `permission.asked` / `permission.replied` events to `.scratch/permission-prompts.jsonl`); `_docs/permission-sweeps.md`; this log entry
+- verification (tests run, reviewer verdict): the plugin has NOT been run. The OpenCode docs do not document the event payload, whether `node:fs` is available in a plugin, or whether subagent sessions emit the events (VERIFY). `make permission-report SINCE=1b37fd1` was run read-only: 68 summaries, 29 without a Permission review section (mostly Kiro Web and cloud sessions that did not use the template), no settings change supported by the counts. No reviewer verdict.
+- human review (what I checked or corrected, or `none`): the human approved the plugin commit; the first OpenCode session after it is the check.
+
+- date: 2026-10-25
+- task/issue: #65 (permission sweep 1) — `make permission-report` reads the OpenCode prompt log
+- agent role: Orchestrator (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human saw `.scratch/permission-prompts.jsonl` appear after resuming an OpenCode session, and approved a described diff to `permission-report.py`. No new key prompt saved.
+- files changed: `_docs/agent-kit/scripts/permission-report.py` (protected path, commit 5fd93d4: `prompt_stats`, `prompt_label`, `render_prompts`; `main` reads `.scratch/permission-prompts.jsonl` when present and no longer returns early when no summaries changed); `.scratch/agent-kit-issue-permission-log.md` (git-ignored draft of an agent-kit issue, not filed by the agent); this log entry
+- verification (tests run, reviewer verdict): ran `make permission-report SINCE=9eb4071` against the live log: it listed `gh issue edit` (1 prompt, no reply logged) and `python3|bash .scratch/*` (1 prompt, once). No automated tests were added: the regression script the old docstring mentioned is not tracked in the repo. Subagent coverage of the log is not yet checked. No reviewer verdict. The approval record is on #65 (comment 6394523862) and lists three differences between the approved description and the committed diff.
+- human review (what I checked or corrected, or `none`): the human approved the described change before the commit; the three differences were disclosed afterwards in the approval record.
+
+- date: 2026-10-25
+- task/issue: #65 (permission sweep 1) — wait time per OpenCode prompt pattern in `make permission-report`
+- agent role: Orchestrator (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human pasted the prompt log, which now had replies, and said "let's make the change" after the agent proposed ranking prompts by wait time. No new key prompt saved.
+- files changed: `_docs/agent-kit/scripts/permission-report.py` (protected path, commit 3265553: `seconds_between`, `fmt_wait`, total and longest wait per pattern, rows sorted by total wait); this log entry
+- verification (tests run, reviewer verdict): ran `make permission-report SINCE=9eb4071` against the live log: `gh issue edit` waited 8m24s, the `.scratch` script 17s, `make issue-close` 1s, matching the log timestamps. No automated tests. Subagent coverage of the log is still not checked. No reviewer verdict. Approval record on #65 (comment 6394566984). The agent had said it would show the diff before committing and did not; the record says so.
+- human review (what I checked or corrected, or `none`): the human approved the change from a verbal description; the diff was not shown before the commit.
