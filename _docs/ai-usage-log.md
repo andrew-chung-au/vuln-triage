@@ -2601,3 +2601,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` passed before each push (last: 89 frontend, 496 backend tests, type check). The human ran `terraform apply` and the GitHub Actions deploys; deploy runs #31 (production), #32 (gated rollback to `20261025-152518-37baad0`) and #33 (forward run) succeeded, read from the Actions job logs and pages the human pasted. The human reported that the dev and production URLs load. Not verified by an agent: the live URLs themselves (no outbound access to them), run #33's digests, the `production` environment settings, `GITHUB_READ_TOKEN`. No reviewer verdict, no QA run, no rubric re-audit after the deployment.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the human ran every AWS and GitHub settings step themselves and checked the OSV records for the demo findings by hand. Corrected during the session: a wrong claim of "no findings on KEV" for one demo repo (I had read the first rows only); the trust-policy `sub` claim (found from CloudTrail); the ACME placeholder email.
+
+- date: 2026-10-25
+- task/issue: rubric re-audit after the first AWS deployment (`_docs/rubric-evidence.md`)
+- agent role: Rubric Evidence Auditor (Claude Code cloud session, subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to re-audit at `234cccf` against `_docs/rubric.md`, counting only repo and Actions records and marking the human's say-so as human-reported. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md`; this log entry. Nothing committed.
+- verification (tests run, reviewer verdict): read the GitHub Actions run and job records and job logs for deploy runs #30, #31, #32, #33, #34 and the verify run 40214720806 through the GitHub API; read `deploy.yml`, `deploy-env.sh`, README, tasklist rows A6 to A14 and the session summary. Result 21 of 24 (was 17). NOT verified: the live dev and production URLs (the session proxy refused `*.sslip.io`), the `production` environment's reviewer rule, branch protection, any approver identity. Ran no tests and no Docker. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

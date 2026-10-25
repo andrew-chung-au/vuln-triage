@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io (deployed by the GitHub workflow on 2026-10-25); the production promotion has not been done yet (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
 
 ---
 
