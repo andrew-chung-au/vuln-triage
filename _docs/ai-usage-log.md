@@ -2591,3 +2591,23 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): ran `make demo-reset` then `make demo` from an empty dev database, then a read-only API check: 4 assets (clean, incomplete, findings, clean) and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Ran `make dev-stop`. The pre-push `make verify` follows. Not tested: a second `make demo` on a non-empty database (documented as registering the repositories twice), and `make demo` on a machine other than this cloud session (Python 3.13, uv 0.11). No reviewer verdict, no QA run. No GitHub issue exists for this change, so there is no approval record on an issue; the record is in `_docs/make-demo-proposal.md`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the human approved the exact diff before it was applied; the applied Makefile text is the proposed text, unchanged.
+
+- date: 2026-10-25
+- task/issue: first AWS deployment (human tasklist A6-A14, #141/#143/#144): guided the human through the Terraform apply, dev deploy, reviewer access and the production promotion with a rehearsed rollback; fixed the deploy code found wrong along the way
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's step-by-step requests during the session ("walk me through...", "open the PR"). No new key prompt saved.
+- files changed: `terraform/deploy-roles/`, `terraform/server/` (trust `sub`, secret policy, security group, data-volume wait, ACME email handling), `deploy/seed-pilot.py`, `deploy/demo-seed.json`, `README.md`, `_docs/human-tasklist.md`, `_docs/aws-setup.md`, `_session-summaries/planning-2026-10-25-aws-deployment.md`, `_docs/roadmap.md`; this log entry (PRs 204, 205, 206 merged; the rest on the session branch)
+- verification (tests run, reviewer verdict): `make verify` passed before each push (last: 89 frontend, 496 backend tests, type check). The human ran `terraform apply` and the GitHub Actions deploys; deploy runs #31 (production), #32 (gated rollback to `20261025-152518-37baad0`) and #33 (forward run) succeeded, read from the Actions job logs and pages the human pasted. The human reported that the dev and production URLs load. Not verified by an agent: the live URLs themselves (no outbound access to them), run #33's digests, the `production` environment settings, `GITHUB_READ_TOKEN`. No reviewer verdict, no QA run, no rubric re-audit after the deployment.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the human ran every AWS and GitHub settings step themselves and checked the OSV records for the demo findings by hand. Corrected during the session: a wrong claim of "no findings on KEV" for one demo repo (I had read the first rows only); the trust-policy `sub` claim (found from CloudTrail); the ACME placeholder email.
+
+- date: 2026-10-25
+- task/issue: rubric re-audit after the first AWS deployment (`_docs/rubric-evidence.md`)
+- agent role: Rubric Evidence Auditor (Claude Code cloud session, subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to re-audit at `234cccf` against `_docs/rubric.md`, counting only repo and Actions records and marking the human's say-so as human-reported. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md`; this log entry. Nothing committed.
+- verification (tests run, reviewer verdict): read the GitHub Actions run and job records and job logs for deploy runs #30, #31, #32, #33, #34 and the verify run 40214720806 through the GitHub API; read `deploy.yml`, `deploy-env.sh`, README, tasklist rows A6 to A14 and the session summary. Result 21 of 24 (was 17). NOT verified: the live dev and production URLs (the session proxy refused `*.sslip.io`), the `production` environment's reviewer rule, branch protection, any approver identity. Ran no tests and no Docker. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

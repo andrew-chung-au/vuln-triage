@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io (deployed by the GitHub workflow on 2026-10-25); the production promotion has not been done yet (see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
 
 ---
 
@@ -210,13 +210,13 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 
 ## Deployment & rollback
 
-- **How it deploys.** `terraform/` (bootstrap, deploy-roles, server) provisions one AWS server that runs the `dev` and `prod` Compose projects behind a reverse proxy, with images in GHCR. Hostnames come from the Elastic IP via `sslip.io` (no domain to buy): dev at https://dev.52-206-221-145.sslip.io (live), prod at `https://app.52-206-221-145.sslip.io` (**not promoted yet**: it will not answer until the first manual production promotion).
-- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) (the dev deploy has run on a real server; the first production promotion has not).
-- **Rollback.** Re-run the production workflow with the previous image tag; the deploy log records every tag and digest.
+- **How it deploys.** `terraform/` (bootstrap, deploy-roles, server) provisions one AWS server that runs the `dev` and `prod` Compose projects behind a reverse proxy, with images in GHCR. Hostnames come from the Elastic IP via `sslip.io` (no domain to buy): dev at https://dev.52-206-221-145.sslip.io (live), prod at `https://app.52-206-221-145.sslip.io` (live, promoted manually).
+- **CI/CD.** Every PR runs the test jobs ([`verify.yml`](.github/workflows/verify.yml)). A merge to `main` **auto-deploys to dev** when tests pass; **production is a manual promotion** the human approves ([`deploy.yml`](.github/workflows/deploy.yml)) (both the dev deploy and a production promotion have run on a real server).
+- **Rollback.** Re-run the production workflow with the previous image tag; the deploy log records every tag and digest. This was rehearsed: production was rolled back to an earlier tag through the approval gate, then promoted forward again.
 
 > The first live deploy is a human-run AWS step (account, secrets, `terraform apply`), tracked in [`_docs/aws-setup.md`](_docs/aws-setup.md). The Deployment criterion accepts *a public URL **or** a clear demo of the deployment.*
 
-<!-- PLACEHOLDER: after the first production promotion (human tasklist A12), confirm prod answers at the address above and remove "not promoted yet". If the deployment is not kept live at submission, link the demo recording instead (see Screenshots & demo). -->
+<!-- If the deployment is not kept live at submission, link the demo recording instead (see Screenshots & demo). -->
 
 ---
 
