@@ -243,6 +243,44 @@ def webhook_alert_labels(recorded: list[dict[str, Any]]) -> list[dict[str, str]]
     return out
 
 
+def wait_for_resolution(finding_id: int, *, emails: int, timeout_s: float = DEFAULT_TIMEOUT_S) -> None:
+    """Wait until a fired finding's RESOLVED notification has reached both sinks.
+
+    Grafana resolves a finding's alert only after its series has been missing
+    for about two 1-minute evaluations (``grafana_state_reason=MissingSeries``),
+    then sends ``status: resolved`` to the webhook and a ``[RESOLVED]`` email to
+    the human. That is minutes after the series leaves Prometheus, so a case's
+    teardown waits for it here; otherwise it lands in the NEXT case's "nothing
+    reached either sink" checks (A-HELD / A-GAP part 1 in the CI run at c055c84).
+
+    ``emails`` is how many ``[RESOLVED]`` messages MailHog must hold (one per
+    finding the case fired; MailHog is reset at each case boundary).
+    """
+
+    def _resolved() -> bool:
+        webhook_done = any(
+            isinstance(r.get("json"), dict)
+            and str(r["json"].get("status", "")).lower() == "resolved"
+            and str(finding_id) in _finding_ids_in(r["json"])
+            for r in webhook_recorded()
+        )
+        resolved_emails = [
+            m
+            for m in mailhog_alert_messages(ALERT_HUMAN_EMAIL)
+            if _subject(m).startswith("[RESOLVED]")
+        ]
+        return webhook_done and len(resolved_emails) >= emails
+
+    _poll(lambda: _resolved() or False, timeout_s)
+
+
+def _subject(message: dict[str, Any]) -> str:
+    """A MailHog v2 message's Subject header (empty if absent)."""
+    headers = (message.get("Content") or {}).get("Headers") or {}
+    values = headers.get("Subject") or [""]
+    return str(values[0])
+
+
 def _finding_ids_in(payload: Any) -> set[str]:
     out: set[str] = set()
     if isinstance(payload, dict):

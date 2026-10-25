@@ -66,6 +66,7 @@ from compose_alert import (
     wait_for_alert_email,
     wait_for_no_finding_series,
     wait_for_overdue_value,
+    wait_for_resolution,
     wait_for_webhook_health,
     wait_for_webhook_requests,
     webhook_alert_labels,
@@ -124,8 +125,17 @@ def _seed_firing_job() -> dict:
     a `claimed` job, so it stays overdue until the case changes it. The #159
     A-FIRE criterion allows either form ("failed, or pending/claimed backdated
     past the 30-min window W").
+
+    The finding is recorded in ``_FIRING_FINDINGS`` so the case's teardown can
+    wait for its alert to resolve before the next case starts.
     """
-    return seed_overdue_job(state="claimed", tier="P1", age_minutes=_PAST_W_MINUTES)
+    result = seed_overdue_job(state="claimed", tier="P1", age_minutes=_PAST_W_MINUTES)
+    _FIRING_FINDINGS.append(result["finding_id"])
+    return result
+
+
+# The findings the current case seeded to fire (see _seed_firing_job).
+_FIRING_FINDINGS: list[int] = []
 
 
 @pytest.fixture(autouse=True)
@@ -149,15 +159,25 @@ def _clean_between_cases():  # type: ignore[no-untyped-def]
     clear_seed()
     webhook_reset()
     mailhog_reset()
+    _FIRING_FINDINGS.clear()
     yield
     clear_seed()
-    mailhog_reset()
     # The OTLP→Prometheus exporter keeps the last-observed finding series for a
     # scrape window after clear_seed() drops the DB row, so a later case could
     # otherwise inherit a stale finding_id series. Wait for the empty state to
     # actually be visible before the next case starts (a hard failure if it
     # never clears — never a weakening of any "empty system" assertion).
     wait_for_no_finding_series()
+    # Grafana resolves each fired finding minutes after its series goes, and
+    # sends the resolution to both sinks. Wait for it here, so it is not counted
+    # by the next case's "nothing reached either sink" checks. With the rule
+    # absent nothing fires, so there is nothing to resolve.
+    if not _RULE_ABSENT:
+        for count, finding_id in enumerate(_FIRING_FINDINGS, start=1):
+            wait_for_resolution(finding_id, emails=count)
+    _FIRING_FINDINGS.clear()
+    webhook_reset()
+    mailhog_reset()
 
 
 # -- A-FIRE: fires once, names the finding, both sinks ------------------------

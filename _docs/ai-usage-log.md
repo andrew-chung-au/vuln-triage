@@ -2403,4 +2403,14 @@ Copy this template for each new entry:
 - files changed: `ci/test-compose.sh` (`run_alert` starts Grafana last, after a bounded wait for the overdue-gauge heartbeat in Prometheus; new `wait_for_heartbeat`); this log entry; then a merge of `origin/main` into the branch.
 - verification (tests run, reviewer verdict): read the CI log of run 40145258781: 1 failed, 5 passed, 1 skipped; A-FIRE passed. A-HELD failed on a `[RESOLVED]` email sent at 00:11:51 whose labels were `alertname`, `datasource_uid=prometheus`, `grafana_folder`, `ref_id=A` (no `finding_id`): the rule's start-up NoData instance, which fired because Grafana evaluated before the backend's first 60s metric export, and resolved after the default route's 5m group_interval, after A-FIRE's MailHog reset. `bash -n ci/test-compose.sh` passed. The `compose` cases were NOT run here (no Docker).
 - new dependencies: none (`curl` is on the CI runner).
+- human review (what I checked or corrected, or `none`): the human approved committing the `main` merge with `HUMAN_APPROVED=1`; the agent-kit hook still refused it (protected files must be committed alone, which a merge cannot do), so the merge was aborted here and done on GitHub instead (c055c84).
+
+- date: 2026-10-25
+- task/issue: #159 (task 27) — fourth `verify / alert` result on PR #183 (at c055c84): the `push` run passed, the `pull_request` run failed
+- agent role: Engineer (Claude Code, local sandbox, branch `feat/159-alert-compose-job`)
+- model: Claude Opus 5.5 (`claude-opus-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human pasted the PR page and a GitHub summary of job 121038402739, and asked whether anything is wrong with verify.
+- files changed: `tests/compose_alert.py` (new `wait_for_resolution`, `_subject`); `tests/test_compose_alert.py` (`_seed_firing_job` records its finding; the fixture teardown waits for each fired finding's resolved webhook and `[RESOLVED]` email before resetting both sinks, skipped in the rule-absent pass); `_docs/pending-verification.md` (removed a stray `feat/159-alert-compose-job` line and a duplicate "Last updated" line left by the GitHub merge); this log entry.
+- verification (tests run, reviewer verdict): read the log of run 40149690798 (pull_request): 2 failed, 4 passed, 1 skipped. A-HELD's unexpected webhook and the A-GAP part 1 failure were `status: resolved` notifications for finding 1 (A-FIRE's; startsAt 01:15:20, endsAt 01:21:20, `grafana_state_reason=MissingSeries`): Grafana resolves a missing series about two evaluations after it leaves Prometheus, after the old teardown had already finished. The `push` run at the same commit passed because the timing was different. `make verify` passed (0 assertion lines added or removed). The `compose` cases were NOT run here (no Docker).
+- new dependencies: none.
 - human review (what I checked or corrected, or `none`): none yet.
