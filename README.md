@@ -194,8 +194,9 @@ Captured 2026-10-25 and 2026-10-26 from the live deployment and the GitHub setti
 | **`main` is protected** by the `protect-main` ruleset: pull request required, status checks required, no force pushes, no deletion | ![protect-main ruleset](docs/images/g5-github-settings-rulesets-protect-main.png) |
 | **Dev only deploys from `main`** (no reviewer, since dev deploys automatically) | ![dev environment rules](docs/images/g5-github-settings-environments-dev.png) |
 | **The live dev site**, signed in as the public reviewer, showing ranked findings for the demo repositories | ![live dev findings](docs/images/g7-vuln-triage-dev-findings.png) |
+| **The live production site**: the sign-in page at `app.52-206-221-145.sslip.io` over HTTPS (production has no public account) | ![live production sign-in page](docs/images/g6-vuln-triage-production-login.png) |
 
-_Not captured yet: the production sign-in page, the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
+_Not captured yet: the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
 
 <!-- PLACEHOLDER: add the Grafana and responder images under docs/images/ and link them here when they exist. Do not link files that are not committed. -->
 
