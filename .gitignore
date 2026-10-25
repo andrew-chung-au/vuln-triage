@@ -5,6 +5,12 @@
 !.env.example
 .scratch/
 
+# Live OpenCode permission-prompt log (written by .opencode/plugins/permission-log.js).
+# Not in .scratch/ because `make clean-scratch` empties that. Snapshots for review are
+# committed under _docs/permission-sweeps/ at each sweep.
+.agent-logs/*
+!.agent-logs/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
