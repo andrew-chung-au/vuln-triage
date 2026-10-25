@@ -290,6 +290,12 @@ Grouping: one alert instance per `finding_id`/`tier` label set; the notification
 
 Held jobs (`held: ownerless`, `held: owner email missing`, `held: configuration error`) never set the metric and never fire the alert (A39); `A-HELD` covers at least the ownerless case. To avoid waiting the full 30-minute W, the test backdates the job's `created_at` in the test database; production W stays 30 minutes (A33).
 
+Where each case runs (human decision, 2026-10-25, #159). Running every case through Grafana took about 30 minutes a run and was flaky on Grafana's own timing (resolutions arrive minutes after a series goes, and leaked into the next case), so the cases are split by what each needs to prove:
+
+- Compose `alert` job, through real Grafana: `A-FIRE` and its rule-absent negative only, one case per pass (`tests/test_compose_alert.py`).
+- Unit/SQLite cases under `make test`, on the same stored state the gauge reads: `A-HELD` (`tests/test_manage.py::test_alert_seed_held_ownerless_never_emits`, `tests/test_metrics_overdue.py::test_held_jobs_never_emit`), `A-TIER` (`test_alert_seed_recorded_tier_wins_over_rescore`), `A-GAP` part 1 (`test_empty_system_has_no_finding_series`, `test_callback_empty_system_emits_only_heartbeat`) and the `sent` → 0 half of `A-RESOLVE` (`test_alert_set_drives_job_to_sent_resolves`). These check the metric, not Grafana's delivery: that the rule does not fire on a 0 or absent finding series rests on the rule being a `> 0` threshold.
+- Manual, on a Docker host: `A-GAP` part 2 (the NoData gap) and the Grafana half of `A-RESOLVE` (a resolution is not counted as a second alert), in `_docs/verify-locally.md` §7b. No automated test covers these two.
+
 ## Responder: US-15
 
 This section is final, not a placeholder: #50 is closed, its contract is `6ff10d9`, and QA posted PASS at `9a03ba9`. The responder uses the two GET operations `responderGetFinding` (`GET /responder/findings/{id}`) and `responderListNotificationJobs` (`GET /responder/notification-jobs?findingId=...`) with `responderAuth`; `ResponderNotificationJob` carries no recipient, owner contact, advisory summary or embedded finding. Logs come from Loki, not the API.
@@ -327,7 +333,7 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
 | Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
 | `telemetry` | `ubuntu-latest` with Compose | `make test-compose JOB=telemetry` | `T-REFUSE`, `T-JOURNEY-BE`, and the MailHog form of `I-OWNER-NOAWS` (#172 PR 2); `I-OWNER-SENDER` MailHog form and `T-E6` pending #159/PR 3 |
-| `alert` | `ubuntu-latest` with Compose | `make test-compose JOB=alert` (planned) | `A-FIRE`, `A-TIER`, `A-GAP`, `A-RESOLVE`, `A-HELD` |
+| `alert` | `ubuntu-latest` with Compose; nightly and on demand, not on push/PR (2026-10-25) | `make test-compose JOB=alert` | `A-FIRE` and its rule-absent negative (the other A-* cases: see Alerting: US-14, "Where each case runs") |
 | `responder` | `ubuntu-latest` with Compose | `make test-compose JOB=responder` (planned) | `P-DEMO-BE`, `P-PROD-REFUSAL`, `I-RESP-*` |
 
 `make test-compose` takes a `JOB` selector (`telemetry`, `alert` or `responder`; with no `JOB` it runs all three, for the human's host), so each CI job runs only its own cases and the job table shows which job covers which case (the Makefile is protected, so the selector is part of its own human-approved commit in task 25). `P-FLAG-GONE` is in no job in this table: it runs only in the production-promotion workflow (task 18's workflow, step added in task 29).

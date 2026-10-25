@@ -2414,3 +2414,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the log of run 40149690798 (pull_request): 2 failed, 4 passed, 1 skipped. A-HELD's unexpected webhook and the A-GAP part 1 failure were `status: resolved` notifications for finding 1 (A-FIRE's; startsAt 01:15:20, endsAt 01:21:20, `grafana_state_reason=MissingSeries`): Grafana resolves a missing series about two evaluations after it leaves Prometheus, after the old teardown had already finished. The `push` run at the same commit passed because the timing was different. `make verify` passed (0 assertion lines added or removed). The `compose` cases were NOT run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none yet.
+
+- date: 2026-10-25
+- task/issue: #159 (task 27) — trim the alert Compose job and move it off push/PR
+- agent role: Engineer (Claude Code, local sandbox, branch `feat/159-alert-compose-job`)
+- model: Claude Opus 5.5 (`claude-opus-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): at 79f9f47 the pull_request alert run passed and the push run failed (A-FIRE teardown, `wait_for_no_finding_series` timed out at 300s against the Collector's 5m expiry). The human said the testing is onerous and asked to rethink whether it adds value; the agent recommended trimming, and the human chose "Trim + run off-PR".
+- files changed: `tests/test_compose_alert.py` (only A-FIRE and the rule-absent negative remain; A-HELD, A-TIER, A-GAP part 1+2 and A-RESOLVE removed by the human's decision; the fixture no longer waits between cases); `tests/compose_alert.py` (removed the helpers only those cases used); `_docs/testing.md` ("Where each case runs": which unit/SQLite test covers each removed case, and that A-GAP part 2 and A-RESOLVE's Grafana half are manual only; the CI-jobs row); `_docs/verify-locally.md` §7b (the manual alert checks); `_docs/pending-verification.md` #159 (scope change; the VERIFY items CI confirmed are ticked); this log entry. Prepared, not committed until the human approves the diff: `.github/workflows/verify.yml` (alert job removed) and a new `.github/workflows/alert.yml` (nightly at 17:00 UTC + `workflow_dispatch`).
+- verification (tests run, reviewer verdict): run 40160976080 (pull_request, 79f9f47) was green with both passes, the first CI proof of the rule-absent negative. The kept cases are unchanged apart from the fixture. `make verify` results are in the session's report. The `compose` cases were NOT run here (no Docker).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the human chose the trim (A-FIRE + negative in Compose, nightly/on demand); the workflow diff awaits approval.

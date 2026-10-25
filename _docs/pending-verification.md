@@ -133,17 +133,24 @@ human/CI under Docker**. `make verify` in the sandbox is unaffected: the cases a
 dependency; `backend/uv.lock` unchanged.** How to run the job locally:
 `_docs/verify-locally.md` §7b.
 
-- [ ] (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=alert` is green: it brings up `compose.yaml` + `compose.telemetry.yaml` + `compose.alert.yaml` under the `vt-alert` project, seeds an overdue top-tier job with the in-container seam, and passes the A-* cases; then the rule-absent negative pass passes. Wire the CI `alert` job (the proposed `.github/workflows/verify.yml` change) once approved and confirm it is green on the PR. Expect the `VERIFY:` shapes to need a fix on the first real run — that is normal.
-- [ ] `VERIFY:` the exact `GF_SMTP_*` keys on `grafana/grafana:11.3.0` and that `mailhog/mailhog:v1.0.1` accepts Grafana's SMTP with no auth / no TLS (the human-email alert is delivered by Grafana, not the backend; wired in `compose.alert.yaml`).
-- [ ] `VERIFY:` Grafana 11.3.0 `NoData` semantics for A-GAP part 2 — that stopping the Collector long enough makes `noDataState: Alerting` fire ONE instance with no `finding_id`, routed to the human email only (the `finding_id =~ ".+"` matcher excludes it) while the finding's own instance is unchanged; and the exact number of missing evaluations needed. Set `VT_COMPOSE_POLL_TIMEOUT` accordingly (default 240 here).
-- [ ] `VERIFY:` Grafana 11.3.0's webhook POST shape to the responder destination — that the body carries the `finding_id`/`tier` labels (and NOT advisory text, owner contact, URL or credential), and the top-level/per-alert `status: firing|resolved`. `compose_alert.webhook_finding_ids` / `test_compose_alert._is_firing` read the common shape and fall back to scanning the raw JSON; adjust if the shape differs.
-- [ ] `VERIFY:` end-to-end firing latency on the stack (gauge scrape + ≥ one 1-minute rule evaluation + notification); confirm the poll timeout has headroom, and that `repeat_interval: 8760h` does not re-send within a run (A-RESOLVE: one firing + at most one resolved, the resolved message not counted as a second alert, D1 option 1).
-- [ ] `VERIFY:` that overriding the imported `grafana` service (env + the provisioning/dashboards volumes) from `compose.alert.yaml` as a third `-f` file works on the pinned CI Compose version (compose-go PR #559 fixed the old "conflicts with imported resource" bug). If a pinned version still errors, move the Grafana SMTP override into `compose.telemetry.yaml` (it does the `include`), guarded by the `GF_SMTP_*`/`VT_ALERT_*` env being empty for the telemetry job.
-- [ ] `VERIFY:` the A-FIRE-negative toggle — that Grafana provisions cleanly with the rule file absent from the `VT_ALERT_PROVISIONING` copy (no rule = no firing, not an error), and that `up -d --force-recreate --no-deps grafana` reloads it mid-run.
+Scope change (human decision, 2026-10-25): the Compose job now runs only
+`A-FIRE` and its rule-absent negative, nightly and on demand rather than on every
+push/PR. `A-HELD`, `A-TIER`, `A-GAP` part 1 and `A-RESOLVE`'s `sent` → 0 are
+unit/SQLite cases; `A-GAP` part 2 and `A-RESOLVE`'s Grafana half are manual
+checks. See `_docs/testing.md`, "Where each case runs".
+
+- [x] `make test-compose JOB=alert` green in CI with both passes, including the rule-absent negative: run 40160976080 (pull_request, at `79f9f47`), with the full A-* list before the trim.
+- [x] `GF_SMTP_*` keys on `grafana/grafana:11.3.0` and MailHog accepting Grafana's SMTP with no auth / no TLS: confirmed (A-FIRE's human email reached MailHog in CI).
+- [x] Grafana 11.3.0 webhook POST shape: confirmed. Per-alert `labels` are exactly `alertname`, `finding_id`, `grafana_folder`, `tier`; the top-level `status` is `firing`/`resolved`. A missing series resolves with `grafana_state_reason=MissingSeries` about two evaluations after it leaves Prometheus.
+- [x] Overriding the imported `grafana` service from `compose.alert.yaml` as a third `-f` file works on the CI Compose version.
+- [x] The A-FIRE-negative toggle: Grafana provisions cleanly with the rule absent and nothing fires (run 40160976080).
+- [x] Grafana 11.3.0 `NoData` for a Collector gap: fires one human-only instance with no `finding_id` (A-GAP part 2 passed in CI before the trim; now a manual check, `_docs/verify-locally.md` §7b).
+- [ ] Protected-file approval: the `.github/workflows/verify.yml` change that moves the `alert` job to nightly + `workflow_dispatch` (not on push/PR).
+- [ ] After merge: run the alert job once from Actions (verify → Run workflow) and confirm it is green with the trimmed cases.
 - [ ] Also under `make verify` (no Docker): `tests/test_manage.py` covers the seam (`alert-seed`/`alert-set`/`alert-rescore`/`alert-clear`) against `compute_overdue_series` on SQLite, and `tests/test_marker_hygiene.py` now allows `test_compose_alert.py` to carry `compose` (the two allowed modules).
 - [x] Protected-file approval: the `.github/workflows/verify.yml` `alert` job (mirrors `telemetry`) was human-approved and committed (`HUMAN_APPROVED=1`, commit `adf3733`). The `Makefile` already wires `COMPOSE_JOBS=alert` (no Makefile change).
 - [ ] Note: `I-OWNER-SENDER` MailHog form and `T-E6` stay follow-ups (Out of scope in #159).
-- [ ] Close #159 when `make test-compose JOB=alert` (both passes) is green in CI with the approved `alert` job.
+- [ ] Close #159 when the trimmed `alert` job (both passes) is green from a manual or nightly run.
 
 ## #172 — feed-client wiring + VT_FEEDS fixture mode (task 40)
 

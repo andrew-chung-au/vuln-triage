@@ -302,7 +302,7 @@ env in `ci/test-compose.sh` and runs the backend on `VT_FEEDS=fixtures`.
 
 ```sh
 make test-compose JOB=telemetry   # US-13: T-REFUSE, T-JOURNEY-BE, I-OWNER-* (MailHog)
-make test-compose JOB=alert       # US-14: A-FIRE, A-HELD, A-TIER, A-GAP, A-RESOLVE
+make test-compose JOB=alert       # US-14: A-FIRE and its rule-absent negative
 make test-compose JOB=responder   # US-15: P-DEMO-BE, P-PROD-REFUSAL, I-RESP-* (task 28)
 make test-compose                 # all three in turn
 ```
@@ -321,8 +321,22 @@ What each job brings up and asserts:
   top-tier `NotificationJob` into a chosen state (and backdates `created_at`), so
   the task-26 Grafana rule fires from **stored job state** — not a simulation —
   to the human email (MailHog) and the stub responder sink. It covers `A-FIRE`
-  (and its rule-removed negative), `A-HELD`, `A-TIER`, `A-GAP` (empty system, and
-  the metric-gap `NoData`→human-only case) and `A-RESOLVE`.
+  and its rule-removed negative. `A-HELD`, `A-TIER`, `A-GAP` part 1 and the
+  `sent` → 0 half of `A-RESOLVE` are unit/SQLite cases under `make test`; see
+  `_docs/testing.md`, "Where each case runs". CI runs this job nightly and on
+  demand (Actions → verify → Run workflow), not on every push or PR.
+
+  **Manual alert checks** (no automated test covers these; run them before a
+  release or after changing the rule, on the stack `make test-compose JOB=alert`
+  brings up, or the dev stack):
+  1. `A-GAP` part 2: with one finding alert firing, stop the Collector
+     (`docker compose -p vt-alert stop otel-collector`) for about 3 minutes, then
+     start it. MailHog gets one NoData email with no `finding_id`; the webhook
+     sink (`http://localhost:9099/__recorded`) gets no new request.
+  2. `A-RESOLVE`, Grafana half: drive the job to `sent`
+     (`manage.py alert-set --finding-id <id> --state sent`). Within a few minutes
+     the webhook sink records one `status: resolved` request for that finding
+     and no second `firing` request.
 - **`responder`** (issue #160, task 28): not implemented yet —
   `make test-compose JOB=responder` prints a "not implemented, task 28" message
   and exits non-zero until that task lands.

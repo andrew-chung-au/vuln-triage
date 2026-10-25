@@ -131,32 +131,9 @@ def seed_overdue_job(
     return run_seam(args)
 
 
-def set_job_state(finding_id: int, state: str, *, sent_age_hours: float | None = None) -> dict[str, Any]:
-    """Drive a finding's top-tier job(s) to ``state`` (A-RESOLVE: to ``sent``)."""
-    args = ["alert-set", "--finding-id", str(finding_id), "--state", state]
-    if sent_age_hours is not None:
-        args += ["--sent-age-hours", str(sent_age_hours)]
-    return run_seam(args)
-
-
-def rescore_finding(finding_id: int, tier: str) -> dict[str, Any]:
-    """Re-score a finding's current tier (A-TIER: the recorded job tier must win)."""
-    return run_seam(["alert-rescore", "--finding-id", str(finding_id), "--tier", tier])
-
-
 def clear_seed() -> dict[str, Any]:
     """Delete every row the alert seam created (each A-* case starts from zero)."""
     return run_seam(["alert-clear"])
-
-
-def stop_service(service: str) -> None:
-    """Stop a running Compose service (A-GAP part 2: open a metric gap)."""
-    subprocess.run([*_compose_base(), "stop", service], check=True, timeout=_SEAM_TIMEOUT_S)
-
-
-def start_service(service: str) -> None:
-    """Start a previously-stopped Compose service (A-GAP part 2: restore it)."""
-    subprocess.run([*_compose_base(), "start", service], check=True, timeout=_SEAM_TIMEOUT_S)
 
 
 # -- the stub webhook sink (the responder destination) -----------------------
@@ -243,44 +220,6 @@ def webhook_alert_labels(recorded: list[dict[str, Any]]) -> list[dict[str, str]]
     return out
 
 
-def wait_for_resolution(finding_id: int, *, emails: int, timeout_s: float = DEFAULT_TIMEOUT_S) -> None:
-    """Wait until a fired finding's RESOLVED notification has reached both sinks.
-
-    Grafana resolves a finding's alert only after its series has been missing
-    for about two 1-minute evaluations (``grafana_state_reason=MissingSeries``),
-    then sends ``status: resolved`` to the webhook and a ``[RESOLVED]`` email to
-    the human. That is minutes after the series leaves Prometheus, so a case's
-    teardown waits for it here; otherwise it lands in the NEXT case's "nothing
-    reached either sink" checks (A-HELD / A-GAP part 1 in the CI run at c055c84).
-
-    ``emails`` is how many ``[RESOLVED]`` messages MailHog must hold (one per
-    finding the case fired; MailHog is reset at each case boundary).
-    """
-
-    def _resolved() -> bool:
-        webhook_done = any(
-            isinstance(r.get("json"), dict)
-            and str(r["json"].get("status", "")).lower() == "resolved"
-            and str(finding_id) in _finding_ids_in(r["json"])
-            for r in webhook_recorded()
-        )
-        resolved_emails = [
-            m
-            for m in mailhog_alert_messages(ALERT_HUMAN_EMAIL)
-            if _subject(m).startswith("[RESOLVED]")
-        ]
-        return webhook_done and len(resolved_emails) >= emails
-
-    _poll(lambda: _resolved() or False, timeout_s)
-
-
-def _subject(message: dict[str, Any]) -> str:
-    """A MailHog v2 message's Subject header (empty if absent)."""
-    headers = (message.get("Content") or {}).get("Headers") or {}
-    values = headers.get("Subject") or [""]
-    return str(values[0])
-
-
 def _finding_ids_in(payload: Any) -> set[str]:
     out: set[str] = set()
     if isinstance(payload, dict):
@@ -334,40 +273,6 @@ def wait_for_overdue_value(finding_id: int, value: int, timeout_s: float = DEFAU
         return False
 
     _poll(lambda: _match() or False, timeout_s)
-
-
-def _has_finding_series() -> bool:
-    """True while any ``vt_top_tier_notification_overdue`` series carries a finding_id.
-
-    The label-less ``0`` heartbeat series never carries a finding_id, so this is
-    True only while a real per-finding series is still present on the exporter.
-    """
-    for s in overdue_series():
-        if "finding_id" in (s.get("metric") or {}):
-            return True
-    return False
-
-
-def wait_for_no_finding_series(timeout_s: float = DEFAULT_TIMEOUT_S) -> None:
-    """Wait until NO overdue series carries a ``finding_id`` (only the heartbeat).
-
-    The OTLP→Prometheus exporter at ``otel-collector:8889`` retains a
-    last-observed series for a scrape window after the gauge stops observing a
-    finding (``clear_seed()`` deletes the DB row, so the gauge callback drops the
-    series, but Prometheus has not yet marked the old sample stale). This is an
-    eventual-consistency gap, not a product defect: the "empty system shows no
-    finding series" assertions must WAIT for that staleness window to pass before
-    they run, rather than racing it.
-
-    A hard failure (``ComposeQueryError``) if a finding series never clears
-    within ``timeout_s`` — the empty-system guarantee is still proven, it is just
-    not asserted before the exporter has caught up. VERIFY (confirmed on the
-    running stack in the alert Compose CI job): the actual staleness window at
-    ``otel-collector:8889`` is well within ``VT_COMPOSE_POLL_TIMEOUT``; if it ever
-    exceeds that, restarting Prometheus (or a longer bounded wait) is the lever,
-    never weakening the assertion.
-    """
-    _poll(lambda: (not _has_finding_series()) or False, timeout_s)
 
 
 def mailhog_reset() -> None:
