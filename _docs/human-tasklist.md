@@ -131,6 +131,33 @@ On-Call Agent 2 and the last of the Alerting and Observability points.
 
 ---
 
+## G. Screenshots and videos to capture
+
+Evidence a grader can see without relying on anyone's say-so. An agent cannot take
+these: the cloud session cannot open the live URLs or your GitHub settings pages.
+Save images under `docs/images/` with the names given, then tell the agent, which
+links them in the README and the rubric evidence. The P rows move the audit
+(`_docs/rubric-evidence.md`) from "owner-confirmed" to "visible". Do not capture
+anything with a password you use elsewhere, a secret value, an `.env` file, or a
+Secrets Manager value. The reviewer login is public by design and may appear.
+
+| # | Capture | What the picture must show | Backs | Save as | Status |
+|---|---|---|---|---|---|
+| G1 | **Production environment rules** (screenshot) | Repo → Settings → Environments → `production`. In one image: **Required reviewers** ticked with the reviewer named, **Allow administrators to bypass configured protection rules** unticked, and the deployment-branch rule | CI/CD (criterion 9): the manual, gated production deploy | `docs/images/production-environment.png` | ☐ |
+| G2 | **Approval on a real run** (screenshot) | Actions → deploy → run #33 summary (the forward run). Show the "production" deployment shown as approved by you, with the run number and date visible | CI/CD: the gate was used, not just configured | `docs/images/production-approval.png` | ☐ |
+| G3 | **Dev deploys automatically** (screenshot) | Actions → deploy → run #30 (`push` event, merge of PR 206): `build-and-push` and `deploy-dev` green, and `deploy-prod` skipped | CI/CD: CD to dev on merge | `docs/images/dev-auto-deploy.png` | ☐ |
+| G4 | **Rollback rehearsal** (screenshot) | Run #32. Open the **attempt dropdown** and pick **attempt 1** (the successful one; the latest attempt shows cancelled). Show the input tag `20261025-152518-37baad0` and the green `deploy-prod` job with its 58 s wait | Deployment: a rehearsed rollback | `docs/images/rollback-run.png` | ☐ |
+| G5 | **Branch protection** (screenshot) | Repo → Settings → Branches (or Rules → Rulesets): the rule on `main` that requires the CI checks (`verify`) to pass before merge. If there is no such rule, add it first, then capture. Tests gate the dev deploy only through this rule | CI/CD: tests run before a deploy | `docs/images/branch-protection.png` | ☐ |
+| G6 | **Production URL live** (screenshot) | A browser window with the address bar visible: `https://app.52-206-221-145.sslip.io` showing the VulnTriage sign-in page. Show the padlock and the date (a clock or the OS date in the shot) | Deployment (criterion 8): public URL | `docs/images/prod-live.png` | ☐ |
+| G7 | **Dev URL live, signed in** (screenshot) | `https://dev.52-206-221-145.sslip.io` after signing in as `reviewer`: the dashboard with ranked findings for the demo repositories, address bar visible | Deployment and Application (criteria 8 and 5): the deployed app works end to end | `docs/images/dev-live-dashboard.png` | ☐ |
+| G8 | **Deployed walkthrough** (video, 2 to 3 minutes) | Screen recording, no editing needed: (1) open the production URL, (2) open dev, sign in as `reviewer`, show the dashboard and one finding's rank reason, (3) in GitHub, show the deploy workflow run list with the dev auto-deploy, the production run waiting for approval and approved, and the rollback run. Say what you are showing as you go | Deployment: "a clear demo with the deployment", and a fallback if the server is off at grading | Upload (YouTube unlisted or similar), then give the agent the link for the README "Demo recording" line | ☐ |
+| G9 | **Grafana dashboard with data** (screenshot) | The US-13 dashboard on a running observability stack after one journey: panels with data. Then one trace open in Grafana with the same trace id visible in a metric exemplar or a log line. Needs Docker, so run it on your machine: follow `observability/README.md` ("Run it", then "Point the backend at the Collector"), register an asset or re-scan, and open Grafana at `http://localhost:3000`. A cloud session can do it once B6 and B7 are done (CC15) | Observability (criterion 10): "viewable in a UI", the only missing clause | `docs/images/grafana-dashboard.png`, `docs/images/grafana-trace.png` | ☐ |
+| G10 | **Alert firing** (screenshot, optional) | Grafana alert list with the US-14 rule in Firing state, then Normal after resolving. Needs the alert test setup (`make test-compose JOB=alert`, CC14), not only the G9 stack; skip it if short of time | Alerting (criterion 11): already met by CI; this adds a visible picture | `docs/images/grafana-alert.png` | ☐ |
+| G11 | **On-call drill** (video) | Later, after the responder is built (#160): the metric reaches 1, the alert names the finding, the responder opens a PR with a fix and test, the owner email arrives, the alert resolves. Follows the script in the README placeholder | On-Call Agent (criterion 12), the only criterion at 0 | Upload, link in README | ☐ blocked on F1-F3 and #160 |
+
+Order by value: G1, G5, G6 and G7 first (about 10 minutes, they protect points
+already scored), then G2 to G4, then G8, then G9 and G10. G11 waits.
+
 ## Moved to the cloud list
 
 So nothing is lost: every item that used to be on this list and is now a cloud
