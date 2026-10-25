@@ -2511,3 +2511,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is the earlier #198 rewritten assertion). Not run on Postgres (no Docker here). A `pytest.skip` on the non-SQLite dialect was tried first and the verify gate failed it ("skip markers added"), so the PRAGMA test was moved to a `unit` module instead. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: rubric re-audit at `fb24904` (previous audit 2026-10-20 at `74e9cfc`, 10 of 24)
+- agent role: Rubric Evidence Auditor subagent (Claude Code cloud session, no Docker, no AWS credentials)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to re-audit against `_docs/rubric.md` on evidence in the repo and CI only, and not to credit runs that have not happened. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md` (rewritten: 17 of 24); this log entry
+- verification (tests run, reviewer verdict): ran no tests. Read the workflows, compose files, Makefile targets, `ci/test-compose.sh` and `tests/test_compose_telemetry.py`; read GitHub Actions run and job records and job logs for runs 40188742150 (verify), 40188742170 (deploy) and 40160976080 (alert) through the GitHub API; checked with `git log` that the alert rule is unchanged since `79f9f47`. Test counts in this log were not re-counted. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
