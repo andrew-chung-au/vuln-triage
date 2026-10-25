@@ -25,7 +25,9 @@
 #   GHCR_REPO         ghcr.io/<owner>/<repo> (the image name prefix)
 #   EIP_DASHED        the Elastic IP with dots turned to dashes (for the hostname)
 #   APP_COMPOSE_B64   base64 of the committed compose.yaml
-#   ACME_EMAIL        the Let's Encrypt contact email (optional)
+#   ACME_EMAIL        the Let's Encrypt contact email (optional; if unset, an
+#                     ACME_EMAIL key in the Secrets Manager secret is used, and
+#                     if that is absent too no contact is given)
 #   AWS_REGION        the region holding the Secrets Manager secret (optional;
 #                     falls back to the instance's region)
 #
@@ -48,7 +50,10 @@ set -euo pipefail
 : "${GHCR_REPO:?GHCR_REPO is required}"
 : "${EIP_DASHED:?EIP_DASHED is required}"
 : "${APP_COMPOSE_B64:?APP_COMPOSE_B64 is required}"
-ACME_EMAIL="${ACME_EMAIL:-admin@example.com}"
+# Optional. Let's Encrypt refuses contact addresses on example.com, so there is no
+# placeholder default: with no email the global `email` option is left out and
+# the certificate is still issued (the contact is only for expiry notices).
+ACME_EMAIL="${ACME_EMAIL:-}"
 
 case "$DEPLOY_ENV" in
   dev)  HOST_PREFIX=dev ;;   # dev.<eip>.sslip.io
@@ -86,6 +91,7 @@ if v is not None:
 ' "$1"
 }
 
+[ -n "$ACME_EMAIL" ] || ACME_EMAIL="$(secret_get ACME_EMAIL)"
 POSTGRES_PASSWORD="$(secret_get POSTGRES_PASSWORD)"
 GITHUB_READ_TOKEN="$(secret_get GITHUB_READ_TOKEN)"
 RESPONDER_API_TOKEN="$(secret_get RESPONDER_API_TOKEN)"
@@ -170,7 +176,9 @@ SITE
 # Assemble the shared Caddyfile: the global block, then every site snippet.
 {
   echo "{"
-  echo "	email ${ACME_EMAIL}"
+  if [ -n "$ACME_EMAIL" ]; then
+    echo "	email ${ACME_EMAIL}"
+  fi
   echo "}"
   echo
   cat "$EDGE_DIR"/caddy/sites/*.caddy
