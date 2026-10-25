@@ -4,15 +4,17 @@ Status: planning document for #56. It names the tests; it adds no application, t
 
 `VERIFY:` marks an external detail not confirmed. `ASSUMPTION:` (or `T-A<n>`) marks a judgement needed to continue. Test IDs (`U-*`, `I-*`, `E-*`, `L-*`, `R-*`, `S-*`, `T-*`, `A-*`, `P-*`, `C-*`, `W-*`, `F-*`) are stable handles for the traceability matrix.
 
-## Showcase scope and counts
+## Future-development scope and counts
 
-Following the spec's [Showcase (post-submission)](specs.md) section, the n8n workflows, the LLM brief (US-6), reminders, escalation and the weekly digest (US-9), the MCP server (US-12) and the workflow export (US-16) are built after submission. The cases for them stay in full in this document and are marked "Showcase". They are not counted in the submission test totals. The backend-delivered owner notification (US-8), the backend's daily refresh and scheduled re-scan (US-7, US-10) and the other submission cases are unchanged.
+In this document, "Future" marks a case that belongs to future development, planned for after submission (earlier versions of this file said "Showcase").
 
-Showcase cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `I-SIGNALS-NOTICE`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`, `S-SIGNALS`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
+Following the spec's [Future development (after submission)](specs.md) section, the n8n workflows, the LLM brief (US-6), reminders, escalation and the weekly digest (US-9), the MCP server (US-12) and the workflow export (US-16) are built after submission. The cases for them stay in full in this document and are marked "Future". They are not counted in the submission test totals. The backend-delivered owner notification (US-8), the backend's daily refresh and scheduled re-scan (US-7, US-10) and the other submission cases are unchanged.
+
+Future cases: `E-DELIVER` and `E-GUARD`, `W-EXPORT`, `I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`, `I-REMIND`, `I-DIGEST`, `I-CONFIG`, `I-BRIEF`, `I-MCP`, `I-AUTH-MCP`, `I-AUTH-N8N`, `I-SIGNALS-NOTICE`, `U-GUARD`, `L-EVAL`, `R-*`, `S-LLM`, `S-REMIND`, `S-DIGEST`, `S-ISSUE`, `S-MCP`, `S-SIGNALS`; the `workflow-export` and `e2e` CI jobs; `make test-brief-eval`, `make test-e2e` and `make test-workflows`; the `tests/fixtures/llm/` fixtures.
 
 Counts of named case IDs, recounted from this document with a script (each handle in code font counts once; the sample rows `L1`-`L9`, the reject-reason rows and the `R-*` family are not counted separately; `R-*` counts as one):
 
-| Prefix | Submission | Showcase |
+| Prefix | Submission | Future |
 |---|---|---|
 | `U-*` unit | 12 | 1 |
 | `I-*` integration | 24 | 12 |
@@ -21,24 +23,24 @@ Counts of named case IDs, recounted from this document with a script (each handl
 | `T-*`, `A-*`, `P-*`, `C-*`, `F-*` | 16 | 2 |
 | Total | 56 | 26 |
 
-Method: a read-only script reads this document (each handle in code font once, prefix wildcards such as `U-*` and the `I-RESP-*` family not counted, `R-*` counted once); the Showcase set is the "Showcase cases" list above. Six existing cases moved from submission to Showcase and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24). The E8 decision of 2026-10-22 then moved `S-SIGNALS` to Showcase and added the Showcase case `I-SIGNALS-NOTICE` (55 - 1 = 54; 24 + 2 = 26). The asset update and the `/health` exclusion then added two submission cases, `I-ASSET-UPDATE` and `I-CONTRACT` (54 + 2 = 56).
+Method: a read-only script reads this document (each handle in code font once, prefix wildcards such as `U-*` and the `I-RESP-*` family not counted, `R-*` counted once); the Future set is the "Future cases" list above. Six existing cases moved from submission to Future (future development) and eight new submission cases were added (53 - 6 + 8 = 55; 18 + 6 = 24). The E8 decision of 2026-10-22 then moved `S-SIGNALS` to Future and added the Future case `I-SIGNALS-NOTICE` (55 - 1 = 54; 24 + 2 = 26). The asset update and the `/health` exclusion then added two submission cases, `I-ASSET-UPDATE` and `I-CONTRACT` (54 + 2 = 56).
 
-CI jobs: 9 submission jobs (`unit`, `sqlite-integration`, `frontend`, `openapi-validation`, `security-scan`, `postgres-integration`, `telemetry`, `alert`, `responder`) and 2 Showcase jobs (`workflow-export`, `e2e`). The `postgres-integration` job runs `I-*` cases; its Showcase cases are not counted in the submission totals.
+CI jobs: 9 submission jobs (`unit`, `sqlite-integration`, `frontend`, `openapi-validation`, `security-scan`, `postgres-integration`, `telemetry`, `alert`, `responder`) and 2 Future jobs (`workflow-export`, `e2e`). The `postgres-integration` job runs `I-*` cases; its Future cases are not counted in the submission totals.
 
-The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`) keep their IDs and text and are marked Showcase. The new submission cases cover the backend path (tasks 37 and 38): `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-SCHED`, `T-JOURNEY-BE` and `P-DEMO-BE`. The scheduler of task 38 calls the refresh and re-scan code in-process, so `POST /signals/refresh` and `POST /scans` keep the n8n credential and the contract does not change for that. The E8 "signals changed" notice and the security-lead contact (A28) are Showcase (human decision, 2026-10-22): `I-SIGNALS` keeps the rank and flag assertion in submission, and the new Showcase case `I-SIGNALS-NOTICE` holds the notice assertion.
+The existing n8n claim/report cases (`I-JOBS`, `I-LIFECYCLE`, `I-IDEMPOTENCY`, `I-HOLD`, `T-JOURNEY`, `P-DEMO`) keep their IDs and text and are marked Future. The new submission cases cover the backend path (tasks 37 and 38): `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `I-OWNER-ONCE`, `I-OWNER-HOLD`, `I-SCHED`, `T-JOURNEY-BE` and `P-DEMO-BE`. The scheduler of task 38 calls the refresh and re-scan code in-process, so `POST /signals/refresh` and `POST /scans` keep the n8n credential and the contract does not change for that. The E8 "signals changed" notice and the security-lead contact (A28) are Future (human decision, 2026-10-22): `I-SIGNALS` keeps the rank and flag assertion in submission, and the new Future case `I-SIGNALS-NOTICE` holds the notice assertion.
 
 ## Test levels and where they run
 
 | Level | Tests | Runs on | Command |
 |---|---|---|---|
-| Backend unit | Parsers, version ordering, fixed version, tiers/tie-breaks, brief guardrail (Showcase), status rules; SQLite/in-memory, stubs, `LLM_MODE=stub` | Local sandbox, no Docker | `make test` (planned to include backend unit; today it runs the frontend suite) |
+| Backend unit | Parsers, version ordering, fixed version, tiers/tie-breaks, brief guardrail (Future), status rules; SQLite/in-memory, stubs, `LLM_MODE=stub` | Local sandbox, no Docker | `make test` (planned to include backend unit; today it runs the frontend suite) |
 | Frontend unit/integration | The existing vitest suite in `frontend/src/test/` | Local sandbox, no Docker | `make frontend-test` |
 | SQLite integration | API and database through the app on SQLite, stubbed externals | Local sandbox, no Docker | `make test` |
 | Real-Postgres integration | API and database through the app on Postgres in Compose, committed fixtures | GitHub Actions `ubuntu-latest` Compose job; optional codespace or human host via `_docs/docker-runbook.md` | `make test-integration` (planned) |
-| Showcase: Compose E2E | Full stack, API-driven journey, local mail sink | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-e2e` (planned) |
+| Future: Compose E2E | Full stack, API-driven journey, local mail sink | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-e2e` (planned) |
 | Compose telemetry, alert and responder | US-13, US-14 and US-15 journeys | GitHub Actions `ubuntu-latest`; optional codespace or human host via `_docs/docker-runbook.md` | `make test-compose JOB=<telemetry|alert|responder>` (planned) |
 | OpenAPI validation | Validates `_docs/openapi.yaml`; conformance is planned in the backend suite | Local sandbox and CI, no Docker | `make openapi-validate`; conformance planned as part of `make test` |
-| Showcase: LLM brief evaluation | Human-scored sample with the pinned model | A human machine or scheduled runner, not PR CI | `make test-brief-eval` (planned) |
+| Future: LLM brief evaluation | Human-scored sample with the pinned model | A human machine or scheduled runner, not PR CI | `make test-brief-eval` (planned) |
 | Light security scan | Dependency audit of the app's own lockfiles/manifests | GitHub Actions `ubuntu-latest` PR job | `make security-scan` (planned) |
 | Gate | Tests, frontend type check, whitespace and weakened-test checks | Local sandbox | `make verify` |
 
@@ -79,7 +81,7 @@ Version, fixed-version and prioritisation unit cases:
 | Tie-breaks (`U-TIE`) | EPSS higher first, criticality order, older `first_detected_at`, finding id | Total order; no two findings tie. |
 | Special signals | No EPSS, no fixed version (E1), no CVE (E11), stale KEV/EPSS signal | Sort and tier as architecture § Prioritisation; `KEV: n/a (no CVE)` and EPSS `n/a`; stale marker shown. |
 
-Showcase (US-6): brief guardrail unit cases (`U-GUARD`), in this order; the first failure rejects:
+Future (US-6): brief guardrail unit cases (`U-GUARD`), in this order; the first failure rejects:
 
 | Order | Rule | At least one reject case |
 |---|---|---|
@@ -100,7 +102,7 @@ Data model unit cases (issue #26, in-memory SQLite, `unit`, network guard on):
 | `U-CONSTRAINT` | Keys, unique and foreign-key constraints; `identity_key`; duplicate finding; foreign keys enforced (`PRAGMA foreign_keys=ON`) | `IntegrityError` for each violation; exactly one row after a duplicate finding |
 | `U-AUDIT` | Audit entry round trip (actor, time, previous value, restore link); one target only; `risk accepted` needs a reason unless it restores; append-only | `IntegrityError` for the refused entries; `AppendOnlyError` on ORM update or delete, row unchanged |
 
-Other IDs used in the matrix: `U-UV`, `U-REQ` and `U-NPM` are the parser rows above; `U-ALIAS` (alias/merge lookup); `U-WITHDRAW` (withdrawal and restore); `U-KEV` and `U-EPSS` (signal derivation); `U-FEED` (feed failure and stale marker); `U-GUARD` (the brief guardrail, Showcase); `U-GITHUB` (the GitHub reader's unit cases in `tests/test_github_reader.py`: GET only, `api.github.com` only, owner/repo/path validated before any request, no redirects, token never in errors or logs, `read_file` and the scan's include check agreeing on supported paths; added by #76); `I-SCAN` (scan status and fixtures); `I-MCP` (the four MCP tools, Showcase); `F-ASSET` and `F-STATUS` (frontend vitest).
+Other IDs used in the matrix: `U-UV`, `U-REQ` and `U-NPM` are the parser rows above; `U-ALIAS` (alias/merge lookup); `U-WITHDRAW` (withdrawal and restore); `U-KEV` and `U-EPSS` (signal derivation); `U-FEED` (feed failure and stale marker); `U-GUARD` (the brief guardrail, Future); `U-GITHUB` (the GitHub reader's unit cases in `tests/test_github_reader.py`: GET only, `api.github.com` only, owner/repo/path validated before any request, no redirects, token never in errors or logs, `read_file` and the scan's include check agreeing on supported paths; added by #76); `I-SCAN` (scan status and fixtures); `I-MCP` (the four MCP tools, Future); `F-ASSET` and `F-STATUS` (frontend vitest).
 
 ## Integration tests: real Postgres and stored fixtures
 
@@ -117,7 +119,7 @@ Fixture inventory (all external calls use committed responses; paths are the pla
 | `tests/fixtures/kev/known_exploited_vulnerabilities.json` | CISA KEV catalogue slice | CISA feed | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/epss/epss.json` | EPSS scores for fixture CVEs | FIRST EPSS API | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/github/<owner>__<repo>/contents/<path>` (raw bodies; see the layout note below) | Contents API responses for `uv.lock`, `requirements.txt` and `package-lock.json` | GitHub contents API | 2026-10-22 planned baseline; recorder writes the actual date |
-| `tests/fixtures/llm/brief-*.json` (Showcase) | LLM outputs: valid, wrong version, URL, timeout, error, refusal | `LLM_MODE=stub` or pinned-model capture | 2026-10-22 planned baseline; recorder writes the actual date |
+| `tests/fixtures/llm/brief-*.json` (Future) | LLM outputs: valid, wrong version, URL, timeout, error, refusal | `LLM_MODE=stub` or pinned-model capture | 2026-10-22 planned baseline; recorder writes the actual date |
 | `tests/fixtures/malicious/advisory.json` | The `S-FIXTURE` malicious advisory | Project-authored fixture | 2026-10-22 planned baseline; recorder writes the actual date |
 
 Raw GitHub fixture layout (#76): the file captures are raw response bodies at `tests/fixtures/github/<owner>__<repo>/contents/<path>` (the path may include subfolders, for example `fixture-owner__pip-app/contents/dev/extra.txt`), with `repo.json` and `commit.txt` beside `contents/` (not the `*.json` wrappers in the row above); see `tests/fixtures/MANIFEST.md`.
@@ -134,7 +136,7 @@ Integration cases through the app and database:
 | `I-ASSET-UPDATE` | `PATCH /assets/{id}`, `GET /assets/{id}`, `GET /findings`, the backend delivery worker, in-process fake mail sink | Only a `security lead` may update (an `asset owner` gets `403`, an unknown id `404`, an empty body, an extra field or a bad email `422`, each with no change); a changed field writes one audit entry (user, time, previous value, new value) and an unchanged value writes none; a criticality or exposure change re-scores the findings; setting an owner email on an ownerless asset releases its `held: ownerless` job and the delivery sends exactly one email, and a name-only owner's `held: owner email missing` job is released the same way, while a `held: configuration error` job stays held. |
 | `I-FINDINGS` | `GET /findings`, `GET /findings/{id}` | Findings, aliases, fixed version, KEV/EPSS and asset context. |
 | `I-RANK` | `GET /findings` | Server rank order and rank reason. |
-| `I-BRIEF` (Showcase) | `GET /findings/{id}` | Brief states `available`, `unavailable` and `pending`; no mismatched version. |
+| `I-BRIEF` (Future) | `GET /findings/{id}` | Brief states `available`, `unavailable` and `pending`; no mismatched version. |
 | `I-RISK` | `POST /findings/{id}/risk-acceptance`, `GET /findings/{id}` | Risk acceptance, non-empty reason, owner match, audit trail (who, when, previous value) and no automated acceptance. |
 | `I-RESCAN` | `POST /assets/{id}/rescan`, `POST /scans`, `GET /findings` | `fixed`, `withdrawn`, E4 restore and E7 reopen. |
 | `I-OWNER-SEND` | Backend delivery worker (task 37), `GET /responder/notification-jobs`, in-process fake mail sink | A new `P1` finding creates one `top tier` job; the backend sends exactly one plain-text labelled-field message to the owner; `notification.enqueue` and `notification.deliver` are recorded, `notification.deliver` as a child of the job's stored `traceparent`; the job state is `sent`. The stored `traceparent` is a valid non-zero W3C value although the test sets no Collector endpoint (A40: only export is a no-op; the SDK always creates real span contexts, with an in-memory exporter in the test). No call to an n8n job endpoint. The case asserts through an in-process fake mail sink, not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). The sink's form is decided (task 37): an injected mail transport that implements the same interface as the SES and MailHog transports and records the messages it is given. |
@@ -142,24 +144,24 @@ Integration cases through the app and database:
 | `I-OWNER-SENDER` | Backend delivery worker, the in-process sink under `make test` and MailHog under `make test-compose` | A send from an address other than the configured verified sender is refused, the job is not `sent`, and nothing arrives at the sink or at MailHog. Enforced by the sender check in the mail-transport setting (task 37). `VERIFY:` the SES sandbox allows only verified recipients; the SES route is not exercised in CI. |
 | `I-OWNER-ONCE` | Backend delivery worker, `POST /signals/refresh`, `POST /assets/{id}/rescan`, `GET /responder/notification-jobs` | A second refresh and a retry after a partial failure send no second email for the same finding lifecycle; a finding that leaves and re-enters `P1` sends no second email; a withdrawn (E4) advisory that is reinstated sends no second email; merged aliases (E9) send at most one email; an E7 reappearance starts a new lifecycle with at most one new email. |
 | `I-OWNER-HOLD` | Backend delivery worker, `POST /assets`, `GET /assets/{id}`, in-process fake mail sink | The notification is held and nothing arrives at the sink in both cases, but the state and flag differ (specs § ASSUMPTION owner, A21; human decision 2026-10-22): ownerless (E2, both name and email unset) is held `held: ownerless` and the asset is flagged ownerless; a name-only owner (A21, name set, email missing) is held `held: owner email missing`, is **not** flagged ownerless, and the dashboard shows the missing email field. The case asserts through the same in-process fake mail sink (an injected transport that records messages), not MailHog, so it stays in the `sqlite-integration` job under `make test` (no Docker). |
-| `I-JOBS` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | Job creation, idempotency, claim, report and traceparent round-trip. |
-| `I-LIFECYCLE` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/report` | A leave/re-enter produces no second job or issue; E7 starts a new lifecycle. |
-| `I-IDEMPOTENCY` (Showcase) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | A second refresh or a retry after a partial failure makes no duplicate. |
-| `I-HOLD` (Showcase) | `GET /notification-jobs`, `POST /assets`, `GET /assets/{id}` | Held notification and the issue still opened once in both cases; ownerless (E2, both unset) is `held: ownerless` and flagged ownerless, while a name-only owner (A21, email missing) is `held: owner email missing` and **not** flagged ownerless (A21; human decision 2026-10-22). |
-| `I-REMIND` (Showcase) | `GET /notification-jobs`, `GET /reports/weekly-digest` | US-9 reminder and escalation jobs, due date and weekly digest. |
-| `I-DIGEST` (Showcase) | `GET /reports/weekly-digest` | One digest per week, open findings by rank. |
-| `I-CONFIG` (Showcase, US-9b) | `GET /assets/{id}`, `GET /notification-jobs` | Missing security-lead contact is visible, not silent; jobs are held. |
+| `I-JOBS` (Future) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | Job creation, idempotency, claim, report and traceparent round-trip. |
+| `I-LIFECYCLE` (Future) | `GET /notification-jobs`, `POST /notification-jobs/{id}/report` | A leave/re-enter produces no second job or issue; E7 starts a new lifecycle. |
+| `I-IDEMPOTENCY` (Future) | `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report` | A second refresh or a retry after a partial failure makes no duplicate. |
+| `I-HOLD` (Future) | `GET /notification-jobs`, `POST /assets`, `GET /assets/{id}` | Held notification and the issue still opened once in both cases; ownerless (E2, both unset) is `held: ownerless` and flagged ownerless, while a name-only owner (A21, email missing) is `held: owner email missing` and **not** flagged ownerless (A21; human decision 2026-10-22). |
+| `I-REMIND` (Future) | `GET /notification-jobs`, `GET /reports/weekly-digest` | US-9 reminder and escalation jobs, due date and weekly digest. |
+| `I-DIGEST` (Future) | `GET /reports/weekly-digest` | One digest per week, open findings by rank. |
+| `I-CONFIG` (Future, US-9b) | `GET /assets/{id}`, `GET /notification-jobs` | Missing security-lead contact is visible, not silent; jobs are held. |
 | `I-SIGNALS` | `POST /signals/refresh`, `GET /findings` | Changed feed data updates signals and ranks, and a `risk accepted` finding whose signals escalate keeps its status and carries `signalsChanged: true` (E8, the dashboard flag). No `signals changed` job is created in submission scope. |
-| `I-SIGNALS-NOTICE` (Showcase) | `POST /signals/refresh`, `GET /notification-jobs` | The E8 "signals changed" notice: one `signals changed` job per lifecycle to the owner and one to the security lead, sent once (human decision, 2026-10-22: the notice and the security-lead contact are Showcase). |
+| `I-SIGNALS-NOTICE` (Future) | `POST /signals/refresh`, `GET /notification-jobs` | The E8 "signals changed" notice: one `signals changed` job per lifecycle to the owner and one to the security lead, sent once (human decision, 2026-10-22: the notice and the security-lead contact are Future). |
 | `I-SCHED` | Backend scheduler (task 38), `GET /findings` | With a fake clock and stubbed feeds, the daily refresh and the scheduled re-scan of every asset (trigger `schedule`) start from the backend's own scheduler: no external workflow tool, no HTTP call from outside the backend, no outbound call outside the stubs; signals and ranks change; a second run the same day creates no second notification job. Catch-up (A37): a backend start with the last completed run more than 24 hours old (or none) runs the refresh and then the re-scan at once; a start with the last run less than 24 hours old runs nothing before 06:00 UTC. |
-| `I-AUTH-N8N` (Showcase) | `POST /signals/refresh`, `POST /scans`, `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `GET /reports/weekly-digest` | The n8n allowlist; wrong consumer is `403`; no risk acceptance. |
-| `I-AUTH-MCP` (Showcase) | `GET /mcp/top-exposures`, `GET /mcp/vulnerabilities/{vulnerabilityId}/assets`, `GET /mcp/findings/{id}`, `GET /assets/{id}`, every write | The MCP token is GET-only; a write is `403` and changes no state. |
+| `I-AUTH-N8N` (Future) | `POST /signals/refresh`, `POST /scans`, `GET /notification-jobs`, `POST /notification-jobs/{id}/claim`, `POST /notification-jobs/{id}/report`, `GET /reports/weekly-digest` | The n8n allowlist; wrong consumer is `403`; no risk acceptance. |
+| `I-AUTH-MCP` (Future) | `GET /mcp/top-exposures`, `GET /mcp/vulnerabilities/{vulnerabilityId}/assets`, `GET /mcp/findings/{id}`, `GET /assets/{id}`, every write | The MCP token is GET-only; a write is `403` and changes no state. |
 | `I-AUTH-SESSION` | `GET /findings`, `GET /assets`, `POST /assets`, `PATCH /assets/{id}`, `POST /assets/{id}/rescan`, `POST /findings/{id}/risk-acceptance` | The session allowlist, CSRF, and a service token is `403`; no credential is `401`. Role rules: an `asset owner` gets `403` on `POST /assets` and `PATCH /assets/{id}` and on `POST /assets/{id}/rescan` for an asset they do not own, and `202` for one they own; a `security lead` may re-scan any asset. |
 | `I-CONTRACT` | The backend's generated OpenAPI document, `_docs/openapi.yaml`, `GET /health` | The conformance test compares all 22 operations. `GET /health` answers `200` without a credential and is excluded from the comparison by name; a test-only route that is not in the contract still fails the comparison, so the exclusion hides nothing else. |
 
 OpenAPI conformance is assigned to the backend suite: FastAPI's generated document is compared with `_docs/openapi.yaml` for path, method, parameter, request schema, response schema and security; `make openapi-validate` also runs. `GET /health` is infrastructure outside the contract and is excluded by name; `I-CONTRACT` tests that exclusion. The test itself is #24's job (task 14); it runs in the `openapi-validation` PR job.
 
-Showcase: `W-EXPORT` is the US-16 check: every `n8n/workflows/*.json` parses, its workflow name matches the file name, and the exported file is the one the Compose n8n imports. It runs in the `workflow-export` PR job.
+Future: `W-EXPORT` is the US-16 check: every `n8n/workflows/*.json` parses, its workflow name matches the file name, and the exported file is the one the Compose n8n imports. It runs in the `workflow-export` PR job.
 
 Responder credential refused cases from the closed #50 contract (`_docs/api.md` § Responder, `_docs/openapi.yaml`):
 
@@ -175,7 +177,7 @@ Responder credential refused cases from the closed #50 contract (`_docs/api.md` 
 
 ## End-to-end tests
 
-Showcase: `E-DELIVER` is the full-stack Compose journey (not counted in the submission totals). It is API-driven, not a browser; the UI stays with vitest, and this API-level journey satisfies the Stage 4 bullet.
+Future: `E-DELIVER` is the full-stack Compose journey (not counted in the submission totals). It is API-driven, not a browser; the UI stays with vitest, and this API-level journey satisfies the Stage 4 bullet.
 
 1. Start the test Compose project `vt-e2e` with committed fixtures and a local mail catcher.
 2. Register fixture asset `e2e-juice-shop` from fixture repo `vuln-triage-fixtures/juice-shop-pinned` through `POST /assets`.
@@ -186,11 +188,11 @@ Showcase: `E-DELIVER` is the full-stack Compose journey (not counted in the subm
 
 The E2E environment uses no live feeds, no real SMTP, no real GitHub and no production secrets: committed fixtures, MailHog as the local mail catcher (dependency, ask before adding), the test-owned `vt-e2e` project and its ephemeral volumes. It cleans up only its own resources; no human destructive step is needed. `E-GUARD` fails before starting if the target database or host is not the test one (project name or database name mismatch).
 
-US-8's submission delivery path is `I-OWNER-SEND` (backend alone, in-process fake mail sink); the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-OWNER-HOLD`, so no US-8 acceptance case is unassigned. Showcase: the n8n journey `E-DELIVER` and `I-HOLD` cover the same behaviour through the n8n claim/report path.
+US-8's submission delivery path is `I-OWNER-SEND` (backend alone, in-process fake mail sink); the ownerless and name-only-owner hold (E2/A21) is assigned to integration `I-OWNER-HOLD`, so no US-8 acceptance case is unassigned. Future: the n8n journey `E-DELIVER` and `I-HOLD` cover the same behaviour through the n8n claim/report path.
 
-## LLM brief evaluation (Showcase, US-6)
+## LLM brief evaluation (Future, US-6)
 
-Showcase: `L-EVAL` uses a small fixed sample of nine cases and a human-scored rubric. The sample covers P1–P4, E1 no fixed version, E11 no CVE, E9 merged aliases, conflicting ranges and E12 malicious text.
+Future: `L-EVAL` uses a small fixed sample of nine cases and a human-scored rubric. The sample covers P1–P4, E1 no fixed version, E11 no CVE, E9 merged aliases, conflicting ranges and E12 malicious text.
 
 | Sample | Covers | Expected facts (human-scored) |
 |---|---|---|
@@ -208,9 +210,9 @@ Human scoring per sample: correct fix version, no invented facts, no URL, plain 
 
 The sample lives under `tests/eval/briefs/cases/` and scored results under `tests/eval/briefs/results/<date>-<model>.md`, committed as the evaluation record. A model or prompt change re-runs `make test-brief-eval` with the pinned model and a fresh scored result. This is not a per-PR CI job: the pinned model runs manually or on a schedule, while PR CI uses the deterministic `LLM_MODE=stub` and the guardrail unit tests. `VERIFY:` provider, endpoint, schema-constrained output support, data retention and pricing (architecture Open question 9).
 
-## Rejected-brief path (Showcase, US-6)
+## Rejected-brief path (Future, US-6)
 
-Showcase: `R-*` covers the rejected-brief path. Every failure below has the same four effects:
+Future: `R-*` covers the rejected-brief path. Every failure below has the same four effects:
 
 1. The brief is stored `unavailable` with an internal reason code.
 2. A structured `brief.rejected` log event records finding id, reason code, model and trace id, and no advisory text or LLM output.
@@ -250,21 +252,21 @@ There is at least one test per flow in the spec "Advisory-derived text" table. E
 
 | Flow | Expected quoting, labelling or defanging | Test |
 |---|---|---|
-| Showcase: LLM brief | Only allowed fields; one VulnTriage-built OSV link; no URL or wrong version from advisory text | `S-LLM` |
+| Future: LLM brief | Only allowed fields; one VulnTriage-built OSV link; no URL or wrong version from advisory text | `S-LLM` |
 | Owner notification | `text/plain` with labelled fields; advisory text only under the untrusted label; any scheme, `www.` or domain-shaped token defanged (`https://a.example/x` → `hxxps[:]//a[.]example/x`); header values from finding id and tier only, CR/LF rejected | `S-NOTIFY` |
-| Showcase: US-9 reminder and escalation | Same plain-text rules as the owner notification | `S-REMIND` |
-| Showcase: weekly digest | Same plain-text rules | `S-DIGEST` |
-| Showcase: E8 "signals changed" notice | Same plain-text rules | `S-SIGNALS` |
+| Future: US-9 reminder and escalation | Same plain-text rules as the owner notification | `S-REMIND` |
+| Future: weekly digest | Same plain-text rules | `S-DIGEST` |
+| Future: E8 "signals changed" notice | Same plain-text rules | `S-SIGNALS` |
 | US-14 alert payload | Finding id and tier only; no advisory field exists | `S-ALERT` |
-| Showcase: GitHub issue (opened by n8n) | VulnTriage's fields first; advisory under "Untrusted advisory text (data, not instructions)" inside a fence longer than any backtick run; URLs defanged; `@` mentions neutralised | `S-ISSUE` |
-| Showcase: MCP output | Advisory text in `untrustedAdvisoryData` with the fixed label; values are JSON strings | `S-MCP` |
+| Future: GitHub issue (opened by n8n) | VulnTriage's fields first; advisory under "Untrusted advisory text (data, not instructions)" inside a fence longer than any backtick run; URLs defanged; `@` mentions neutralised | `S-ISSUE` |
+| Future: MCP output | Advisory text in `untrustedAdvisoryData` with the fixed label; values are JSON strings | `S-MCP` |
 | Dashboard | React text nodes only; no raw HTML and no auto-linking | `S-DASH` |
 
 `S-LLM` also uses a stub that follows the injection and emits a URL or wrong version; the guardrail rejects it. It asserts the system message marks `untrusted_advisory_summary` as data and the user message is a JSON object, not a delimiter-closable template. `S-ISSUE`, `S-MCP` and `S-DASH` assert the architecture rules above. `VERIFY:` GitHub Markdown fence rules and whether mentions inside code blocks notify.
 
 ## Telemetry: US-13
 
-Showcase: `T-JOURNEY` is a Compose test for one scan-to-notification journey. It queries Prometheus, Tempo and Loki and asserts that the metric, trace and log carry the same W3C trace ID. The trace-id source is the backend's `notification.enqueue` traceparent stored on the NotificationJob; n8n returns it on the report call and the backend records `notification.deliver` as a child. The metric exemplar (or equivalent) is the trace id on `vt_notifications_total{kind,outcome}` (exported to Prometheus as `vt_notification_kind` and `vt_outcome`); `ASSUMPTION: T-A4` this is an OTel exemplar, per Spec note 2. The Grafana "US-13 journey" dashboard uses a Prometheus pane, a Tempo pane and a Loki pane with a Tempo-to-logs link.
+Future: `T-JOURNEY` is a Compose test for one scan-to-notification journey. It queries Prometheus, Tempo and Loki and asserts that the metric, trace and log carry the same W3C trace ID. The trace-id source is the backend's `notification.enqueue` traceparent stored on the NotificationJob; n8n returns it on the report call and the backend records `notification.deliver` as a child. The metric exemplar (or equivalent) is the trace id on `vt_notifications_total{kind,outcome}` (exported to Prometheus as `vt_notification_kind` and `vt_outcome`); `ASSUMPTION: T-A4` this is an OTel exemplar, per Spec note 2. The Grafana "US-13 journey" dashboard uses a Prometheus pane, a Tempo pane and a Loki pane with a Tempo-to-logs link.
 
 The test asserts the spans `scan.run` and its children (`repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate`, `notification.enqueue`, `notification.deliver`), the notification job's traceparent round-trip, and structured JSON logs with event names and allowlisted attributes only. It asserts Grafana shows the three signals side by side. `VERIFY:` OTel Prometheus exemplar support and Tempo-to-Loki/Grafana linking.
 
@@ -306,7 +308,7 @@ The defect is removed before production by a cleanup commit/PR that removes the 
 
 `P-DEMO-BE` is the submission version of `P-DEMO`, with the backend delivery of task 37 and no n8n: the demo defect makes the backend delivery fail for the no-fixed-version finding; metric 1 and one alert; the responder wakes (`RESPONDER_MODE=stub` in CI); a fix with a test; the local stack is restarted on the merged code (the human in the manual run, the test harness in CI; there is no dev deploy, because pull-request workflows hold no AWS role); the backend delivery retries on its next poll; the notification arrives at MailHog; metric 0 and the alert resolves. Production promotion stays manual; no AWS credential. It runs in the `responder` job. A stub run proves the wiring only; the recorded run of task 39 uses the real responder runtime.
 
-Showcase: `P-DEMO` is the US-15 demo/E2E: create the no-fixed-version finding, let its job fail, assert metric 1 and one alert, wake the responder (Grafana webhook; `RESPONDER_MODE=stub` in CI), reproduce with a failing test, open a PR (fake GitHub in CI; a real token/App only in the manual demo), have the human merge, let CI deploy to dev, let n8n retry, and assert the notification succeeds, metric 0, the alert resolves and the actions are logged. Production promotion stays manual; no AWS credential.
+Future: `P-DEMO` is the US-15 demo/E2E: create the no-fixed-version finding, let its job fail, assert metric 1 and one alert, wake the responder (Grafana webhook; `RESPONDER_MODE=stub` in CI), reproduce with a failing test, open a PR (fake GitHub in CI; a real token/App only in the manual demo), have the human merge, let CI deploy to dev, let n8n retry, and assert the notification succeeds, metric 0, the alert resolves and the actions are logged. Production promotion stays manual; no AWS credential.
 
 The responder refused cases from the closed #50 contract are tested in integration `I-RESP-*`: responder token GET-only; `403` on every write; n8n, MCP and session tokens `403` on the two responder operations; no credential `401`; unknown ids and unknown `findingId` behave as the contract says. The responder cannot push to `main`, merge, change settings or touch AWS; the GitHub token/App and branch protection are checked and documented. `VERIFY:` the GitHub App/token scope and branch-protection details.
 
@@ -329,9 +331,9 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 | `frontend` | `ubuntu-latest` | `make frontend-test`, `make frontend-typecheck` | `F-*` |
 | `openapi-validation` | `ubuntu-latest` | `make openapi-validate` and the backend conformance test | OpenAPI conformance, `I-CONTRACT` |
 | `security-scan` | `ubuntu-latest` | `make security-scan` (planned) | `C-*` |
-| Showcase: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
+| Future: `workflow-export` | `ubuntu-latest` | `make test-workflows` (planned) | `W-EXPORT` |
 | `postgres-integration` | `ubuntu-latest` with Compose | `make test-integration` (planned) | `I-*` on Postgres (the MailHog form of `I-OWNER-NOAWS` and `I-OWNER-SENDER` runs in `make test-compose`, the `telemetry` job, because MailHog is a Compose container of the observability stack) |
-| Showcase: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
+| Future: `e2e` | `ubuntu-latest` with Compose | `make test-e2e` (planned) | `E-*` |
 | `telemetry` | `ubuntu-latest` with Compose | `make test-compose JOB=telemetry` | `T-REFUSE`, `T-JOURNEY-BE`, and the MailHog form of `I-OWNER-NOAWS` (#172 PR 2); `I-OWNER-SENDER` MailHog form and `T-E6` pending #159/PR 3 |
 | `alert` | `ubuntu-latest` with Compose; nightly and on demand, not on push/PR (2026-10-25) | `make test-compose JOB=alert` | `A-FIRE` and its rule-absent negative (the other A-* cases: see Alerting: US-14, "Where each case runs") |
 | `responder` | `ubuntu-latest` with Compose | `make test-compose JOB=responder` (planned) | `P-DEMO-BE`, `P-PROD-REFUSAL`, `I-RESP-*` |
@@ -341,7 +343,7 @@ Every job runs on a pull request and on a review-branch push; a push to `main` r
 Task 25 (#157) ships the `JOB` selector and **`T-REFUSE`** only: the backend's real span/log helpers emit excluded attributes through the Collector and the exported signals carry none of them. #157's acceptance criteria were narrowed to that case (human decision, 2026-10-24, "Option C done right").
 
 The other telemetry cases are built on the **containerized-backend-delivers harness of #172** (the backend runs as a container on `VT_FEEDS=fixtures`, drives a scan over HTTP, and the assertions read what actually arrived at MailHog/Prometheus/Tempo/Loki) — not a host-side test process:
-- `T-JOURNEY-BE` (#172 PR 2): the **submission journey is 7 spans** — `scan.run` → `repository.read` → `osv.query` → `signals.enrich` → `prioritise` → `notification.enqueue` → `notification.deliver`. `brief.generate` (the 8th span in the `T-JOURNEY` list above) is **Showcase** (the LLM brief is not built for submission), so it is not emitted or asserted. All 7 share one trace id; the `vt_notifications_total` metric and the structured `notification.deliver` JSON log carry the same id (the delivery worker logs every outcome — `sent`/`failed`/`held` — via `log_event`, #177), and the owner email reaches MailHog.
+- `T-JOURNEY-BE` (#172 PR 2): the **submission journey is 7 spans** — `scan.run` → `repository.read` → `osv.query` → `signals.enrich` → `prioritise` → `notification.enqueue` → `notification.deliver`. `brief.generate` (the 8th span in the `T-JOURNEY` list above) is **future development** (the LLM brief is not built for submission), so it is not emitted or asserted. All 7 share one trace id; the `vt_notifications_total` metric and the structured `notification.deliver` JSON log carry the same id (the delivery worker logs every outcome — `sent`/`failed`/`held` — via `log_event`, #177), and the owner email reaches MailHog.
 - The MailHog form of `I-OWNER-NOAWS` (#172 PR 2) is only meaningful when the *container* delivers: it proves the deployed container (no AWS credential) sends the owner email to MailHog.
 - The MailHog form of `I-OWNER-SENDER` is **deferred to #159/PR 3**: the backend always sends From = `MAIL_SENDER`, so there is no product path to make it attempt a wrong-From send at container level, and a test-constructed wrong-From send would test the transport class in isolation, not the deployed guard. The verified-sender refusal is already covered by the unit case `tests/test_notifications.py::test_i_owner_sender_*`; the MailHog form lands with task 28's demo defect (#160/#159), which gives a real in-container held/refused-delivery path.
 - `T-E6` (telemetry backend down, delivery unaffected, **and alerts unaffected**) is **deferred to #159/PR 3**: its "alerts unaffected" clause needs the US-14 alert rule and the `alert` job (task 27 / #159), which do not exist yet, so it lands with — or after — them rather than asserting less than the case says.
@@ -364,43 +366,43 @@ Every acceptance bullet of US-1..US-16 maps to at least one test type or named c
 | US-3 | Finding shows primary id, all aliases and fixed version when one exists; clean dependency shows no finding | `U-FIXED`, `U-ALIAS`, `I-FINDINGS` |
 | US-4 | Exactly one KEV value (listed / not listed / n/a) with stale marker, EPSS or n/a, and asset context | `U-KEV`, `U-EPSS`, `I-FINDINGS` |
 | US-5 | Re-scoring the same inputs gives the same order; each finding shows its rank reason | `U-TIER`, `U-TIE`, `I-RANK`, `E-DELIVER` |
-| US-6 (Showcase) | Brief version matches the fixed version, or structured finding with "brief unavailable"; pending marker; never a mismatched version | `U-GUARD`, `I-BRIEF`, `L-EVAL`, `R-*` |
+| US-6 (Future) | Brief version matches the fixed version, or structured finding with "brief unavailable"; pending marker; never a mismatched version | `U-GUARD`, `I-BRIEF`, `L-EVAL`, `R-*` |
 | US-7 | Changed feed data updates signals and ranks without manual action | `I-SIGNALS` (`POST /signals/refresh`, `GET /findings`), `I-SCHED` (backend scheduler) |
-| US-8a | A new top-priority finding produces exactly one owner notification and, Showcase, one GitHub issue | `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `S-NOTIFY`; Showcase: `I-JOBS`, `E-DELIVER`, `S-ISSUE` |
-| US-8b | Leaving and re-entering the top tier gives no second issue or notification; a `fixed` and reappearing finding (E7) starts a new lifecycle with at most one new of each | `I-OWNER-ONCE`, `I-RESCAN`; Showcase: `I-LIFECYCLE` |
-| US-8c | Exactly one notification and one issue per lifecycle even if the refresh runs twice or retries after a partial failure | `I-OWNER-ONCE`; Showcase: `I-IDEMPOTENCY` |
-| US-8d | Ownerless asset: notification held and asset flagged ownerless, while the GitHub issue is still opened once | `I-OWNER-HOLD`, `A-HELD`; Showcase: `I-HOLD` |
-| US-9a (Showcase) | Open finding past due produces an owner reminder and a security-lead escalation; weekly digest delivered once per week | `I-REMIND`, `I-DIGEST`, `E-DELIVER` |
-| US-9b (Showcase) | Missing security-lead contact is a visible configuration error, not a silent drop | `I-CONFIG` |
+| US-8a | A new top-priority finding produces exactly one owner notification and, Future, one GitHub issue | `I-OWNER-SEND`, `I-OWNER-NOAWS`, `I-OWNER-SENDER`, `S-NOTIFY`; Future: `I-JOBS`, `E-DELIVER`, `S-ISSUE` |
+| US-8b | Leaving and re-entering the top tier gives no second issue or notification; a `fixed` and reappearing finding (E7) starts a new lifecycle with at most one new of each | `I-OWNER-ONCE`, `I-RESCAN`; Future: `I-LIFECYCLE` |
+| US-8c | Exactly one notification and one issue per lifecycle even if the refresh runs twice or retries after a partial failure | `I-OWNER-ONCE`; Future: `I-IDEMPOTENCY` |
+| US-8d | Ownerless asset: notification held and asset flagged ownerless, while the GitHub issue is still opened once | `I-OWNER-HOLD`, `A-HELD`; Future: `I-HOLD` |
+| US-9a (Future) | Open finding past due produces an owner reminder and a security-lead escalation; weekly digest delivered once per week | `I-REMIND`, `I-DIGEST`, `E-DELIVER` |
+| US-9b (Future) | Missing security-lead contact is a visible configuration error, not a silent drop | `I-CONFIG` |
 | US-10 | Upgrade outside every affected range gives `fixed` with timestamp; still inside stays `open`; withdrawn advisory gives `withdrawn`; manual re-scan works | `I-RESCAN`, `U-WITHDRAW` |
 | US-11a | Dashboard lists findings per asset with current status; changes record who, when and previous value; no automated component sets `risk accepted` | `F-STATUS`, `I-RISK` |
 | US-11b | Risk acceptance requires a non-empty reason; empty or whitespace-only is rejected and status does not change | `I-RISK` (`POST /findings/{id}/risk-acceptance`) |
-| US-12a (Showcase) | Known CVE returns the affected assets | `I-MCP` (`GET /mcp/vulnerabilities/{vulnerabilityId}/assets`) |
-| US-12b (Showcase) | A finding stored under a GHSA id with a CVE alias is returned by the CVE lookup | `I-MCP` |
-| US-12c (Showcase) | Known CVE with no asset returns empty and states known; unknown CVE returns empty and states unknown; results are distinguishable | `I-MCP` |
-| US-12d (Showcase) | `list_top_exposures` returns ranked open findings | `I-MCP` (`GET /mcp/top-exposures`) |
-| US-12e (Showcase) | `which_assets_affected` returns affected assets for a known CVE, in any status, each with its status | `I-MCP` |
-| US-12f (Showcase) | `get_finding` returns one finding by id | `I-MCP` (`GET /mcp/findings/{id}`) |
-| US-12g (Showcase) | `get_asset` returns one asset by id | `I-MCP` (`GET /assets/{id}`) |
-| US-12h (Showcase) | MCP output marks advisory-derived text as quoted, labelled untrusted data in `get_finding` and `which_assets_affected`; no instructions presented | `S-MCP` |
-| US-12i (Showcase) | A write with the MCP token is rejected 4xx and changes no state; the MCP server exposes no write tools | `I-AUTH-MCP` (every write operation) |
-| US-13 | One scan-to-notification journey emits a metric, trace and structured log with one trace ID, viewable side by side; no excluded data | `T-JOURNEY-BE`, `T-REFUSE`; Showcase: `T-JOURNEY` |
+| US-12a (Future) | Known CVE returns the affected assets | `I-MCP` (`GET /mcp/vulnerabilities/{vulnerabilityId}/assets`) |
+| US-12b (Future) | A finding stored under a GHSA id with a CVE alias is returned by the CVE lookup | `I-MCP` |
+| US-12c (Future) | Known CVE with no asset returns empty and states known; unknown CVE returns empty and states unknown; results are distinguishable | `I-MCP` |
+| US-12d (Future) | `list_top_exposures` returns ranked open findings | `I-MCP` (`GET /mcp/top-exposures`) |
+| US-12e (Future) | `which_assets_affected` returns affected assets for a known CVE, in any status, each with its status | `I-MCP` |
+| US-12f (Future) | `get_finding` returns one finding by id | `I-MCP` (`GET /mcp/findings/{id}`) |
+| US-12g (Future) | `get_asset` returns one asset by id | `I-MCP` (`GET /assets/{id}`) |
+| US-12h (Future) | MCP output marks advisory-derived text as quoted, labelled untrusted data in `get_finding` and `which_assets_affected`; no instructions presented | `S-MCP` |
+| US-12i (Future) | A write with the MCP token is rejected 4xx and changes no state; the MCP server exposes no write tools | `I-AUTH-MCP` (every write operation) |
+| US-13 | One scan-to-notification journey emits a metric, trace and structured log with one trace ID, viewable side by side; no excluded data | `T-JOURNEY-BE`, `T-REFUSE`; Future: `T-JOURNEY` |
 | US-14 | A top-priority finding not delivered in the window fires exactly one alert naming it; a successful notification fires none | `A-FIRE`, `A-TIER`, `A-GAP`, `A-RESOLVE` |
-| US-15 | The undelivered finding reaches its owner, the alert resolves, actions are logged, production promotion stays manual | `P-DEMO-BE`, `I-RESP-*`, `P-PROD-REFUSAL`; Showcase: `P-DEMO` |
-| US-16 (Showcase) | Each workflow has a committed JSON file under `n8n/workflows/`, named after the workflow, and the exported file is the workflow the repo runs | `W-EXPORT` |
+| US-15 | The undelivered finding reaches its owner, the alert resolves, actions are logged, production promotion stays manual | `P-DEMO-BE`, `I-RESP-*`, `P-PROD-REFUSAL`; Future: `P-DEMO` |
+| US-16 (Future) | Each workflow has a committed JSON file under `n8n/workflows/`, named after the workflow, and the exported file is the workflow the repo runs | `W-EXPORT` |
 
 Every edge case E1..E12 maps to at least one test type or named case.
 
 | Edge case | Expected behaviour | Test types or named cases |
 |---|---|---|
 | E1 | No fixed version: finding stays `open`, shows "no fixed version", is ranked by signals; any brief naming a version is rejected and the structured finding is delivered | `U-FIXED`, `U-GUARD`, `I-BRIEF`, `L-EVAL` |
-| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless; setting an owner releases the held notification | `I-OWNER-HOLD`, `I-ASSET-UPDATE`, `A-HELD`; Showcase: `I-HOLD` |
+| E2 | Asset with no owner: finding recorded and ranked, notification held, asset flagged ownerless; setting an owner releases the held notification | `I-OWNER-HOLD`, `I-ASSET-UPDATE`, `A-HELD`; Future: `I-HOLD` |
 | E3 | Feed unavailable: OSV first scan gives `scan failed`/`feed unavailable` with no findings; a later scan keeps last-known findings and marks them stale; KEV/EPSS failure keeps the OSV scan status and stale signals; the scheduled run retries | `U-FEED`, `I-SCAN` |
-| E4 | Advisory withdrawn or CVE drops out: `withdrawn`, not `fixed`; `risk accepted` also becomes `withdrawn`; no notification; only when every merged advisory is withdrawn; a reinstated advisory restores the previous status or `fixed`, with no second issue or notification; a CVE dropping out of KEV or EPSS changes only signals and rank, not status | `U-WITHDRAW`, `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `E-DELIVER` |
+| E4 | Advisory withdrawn or CVE drops out: `withdrawn`, not `fixed`; `risk accepted` also becomes `withdrawn`; no notification; only when every merged advisory is withdrawn; a reinstated advisory restores the previous status or `fixed`, with no second issue or notification; a CVE dropping out of KEV or EPSS changes only signals and rank, not status | `U-WITHDRAW`, `I-RESCAN`, `I-OWNER-ONCE`; Future: `E-DELIVER` |
 | E5 | Lockfile parse error: `scan failed`/`lockfile parse error`, previous findings kept and marked stale, visible in the dashboard | `U-NPM`, `I-SCAN`, `F-STATUS` |
 | E6 | Telemetry backend unavailable: buffer and retry; findings, notifications and alerts unaffected; gap visible in Grafana | `T-E6` |
-| E7 | Fixed finding's vulnerable version returns: `open` with audit entry and a new notification lifecycle, at most one new issue and notification | `I-RESCAN`, `I-OWNER-ONCE`; Showcase: `I-LIFECYCLE` |
-| E8 | `risk accepted` finding's signals escalate: status stays `risk accepted`, flagged "signals changed"; re-scan may still close it. Showcase: owner and security lead notified once | `I-SIGNALS`; Showcase: `I-SIGNALS-NOTICE`, `S-SIGNALS` |
+| E7 | Fixed finding's vulnerable version returns: `open` with audit entry and a new notification lifecycle, at most one new issue and notification | `I-RESCAN`, `I-OWNER-ONCE`; Future: `I-LIFECYCLE` |
+| E8 | `risk accepted` finding's signals escalate: status stays `risk accepted`, flagged "signals changed"; re-scan may still close it. Future: owner and security lead notified once | `I-SIGNALS`; Future: `I-SIGNALS-NOTICE`, `S-SIGNALS` |
 | E9 | One vulnerability under two ids: alias sets intersect gives one finding keyed by CVE else primary id; all ids and ranges attached; fixed version derived from all; at most one US-8 notification per lifecycle | `U-FIXED`, `U-ALIAS`, `I-FINDINGS`, `I-OWNER-ONCE`, `L-EVAL` |
 | E10 | `requirements.txt` without an exact version: "version unknown", warning, no OSV match, and `scanned, incomplete` when nothing matched; `-r` inside the repo only; outside or remote refused and never fetched; lockfile entry without a version behaves the same | `U-REQ`, `I-SCAN` |
 | E11 | No CVE alias: `KEV: n/a (no CVE)`, EPSS `n/a`, finding still recorded and ranked; no advisory dropped for lacking a CVE | `U-KEV`, `U-EPSS`, `I-FINDINGS`, `L-EVAL` |
@@ -415,7 +417,7 @@ Every edge case E1..E12 maps to at least one test type or named case.
 | `N3` | #43 leftover 1: the US-14 gauge's `tier` label is the job's tier, not the finding's current tier | `A-TIER` |
 | `N4` | #43 leftover 2: no resolve and re-fire after a metric gap | `A-GAP` |
 | `N5` | #43 leftover 3 / D1: a resolved message is not a second alert | `A-RESOLVE` |
-| `N6` | Showcase: exact rejected-brief case: F = `1.2.5`, stub returns `1.2.6` | `R1` |
+| `N6` | Future: exact rejected-brief case: F = `1.2.5`, stub returns `1.2.6` | `R1` |
 | `N7` | Telemetry refused case: excluded attributes never reach the backend | `T-REFUSE` |
 | `N8` | Demo defect refused in production | `P-PROD-REFUSAL` |
 

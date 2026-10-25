@@ -5,7 +5,7 @@ project is on track. It sequences the work; it is not part of the build plan
 that the plan review checks (`_docs/planning-process.md` Stages 1-6).
 
 - Adopted: 2026-10-19, from a review of opencode's status analysis (Claude Code, claude-opus-5-5); see `_docs/ai-usage-log.md`.
-- Goal: 24/24, built as Tier A → B → C milestones (human decision of 2026-10-17; tiers in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5), in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). This file is the submission track, phases S0-S5 (human decision H1, 2026-10-22). Anything that scores nothing goes to the showcase track, [`roadmap-showcase.md`](roadmap-showcase.md), which stays a separate file and starts only after the submission is in.
+- Goal: 24/24, built as Tier A → B → C milestones (human decision of 2026-10-17; tiers in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5), in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). This file is the submission track, phases S0-S5 (human decision H1, 2026-10-22). Anything that scores nothing goes to the future-development track, [`roadmap-showcase.md`](roadmap-showcase.md), which stays a separate file and starts only after the submission is in.
 - Timing and scope trade-offs are the human's. "On track" here means steps are done in order and the audited score meets the checkpoint for the steps done.
 - Source of truth for status: the GitHub tracker and `_docs/rubric-evidence.md`. The status column here is a snapshot taken at each check-in, not live state.
 
@@ -77,7 +77,7 @@ a score checkpoint for each. The plan is from the Tier B/C draft merged into
 this file on 2026-10-22 (commit `1edc468`), reshaped by the human's decisions
 H1-H7 of 2026-10-22 (see "Open decisions"): Terraform, one server for dev and
 prod, GHCR, `sslip.io` hostnames, observability, the alert and the responder in
-local Compose, and the n8n and other committed-scope features in the showcase
+local Compose, and the n8n and other committed-scope features in future development
 track.
 
 Sources: `_docs/rubric.md`; the course's Module 3 (containerize and deploy) and
@@ -107,7 +107,7 @@ this (decision D1 below).
 |---|---|---|
 | Image tag `YYYYMMDD-HHMMSS-shortsha`, sortable and traceable | The course tag; record each digest (architecture Deployment, pipeline step 2) | D2, resolved: the tag works with GHCR; the digest is still recorded |
 | Telemetry carries service name, environment and deployed version | Allowlist has `service.name`, `deployment.environment`; no version yet (A32) | D2, kept: add `service.version` (= the image tag) to the allowlist so an incident maps to a release; made in `architecture.md` A32 by #107 |
-| `observability/` as its own Compose project, deployed apart from the app | Local Compose project for submission (H6); an AWS server for it is showcase item X3 | Use `observability/` as the repository folder |
+| `observability/` as its own Compose project, deployed apart from the app | Local Compose project for submission (H6); an AWS server for it is future-development item X3 | Use `observability/` as the repository folder |
 | Alert payload names service, environment, version, owner and dashboard URL | Labels: `finding_id`, `tier` only (no excluded data) | Add the dashboard link and environment/version as annotations, not labels, so the one-alert-per-finding grouping stays |
 | Responder: on a false positive, explain and change nothing; smallest fix; tests must pass | Responder opens a PR with a failing test and a fix | D4: add the false-positive rule (spec change, protected) |
 | A deliberate bug that existing tests miss, to prove the loop | `VT_DEMO_DEFECT=notify_no_fix`, refused in production | Consistent; the flag is the safer form |
@@ -125,7 +125,7 @@ are the human's. The human-side AWS and GitHub steps for B4-B6 are in
 | Domain name and TLS approach (architecture Open question 7) | B5 | none | Closed by H5: `sslip.io` hostnames from the server's Elastic IP, HTTPS from Let's Encrypt (VERIFY: rate limits) |
 | GitHub `production` environment with the human as required reviewer | B6 | human | VERIFY: available on this repository's plan |
 | `main` branch protection that refuses the responder's push (D2 of #43) | C6 | human | Already required by the architecture |
-| The responder's agent runtime (the brief's LLM provider, Open question 9, is showcase item X4) | C6, and before task 28 is filed | human | The responder runtime is a dependency: ask before adding; the recorded run of task 39 uses the real one |
+| The responder's agent runtime (the brief's LLM provider, Open question 9, is future-development item X4) | C6, and before task 28 is filed | human | The responder runtime is a dependency: ask before adding; the recorded run of task 39 uses the real one |
 
 ### Tier B: deployment path (target 19 of 24)
 
@@ -146,14 +146,14 @@ of the server (architecture Deployment, Cost controls; A37).
 ### Tier C: observability, alert, on-call (target 24 of 24)
 
 For submission every Tier C milestone runs on the local Compose stack (H6), so
-none waits for B4-B6. C1 and C4 are showcase items, not submission milestones.
+none waits for B4-B6. C1 and C4 are future-development items, not submission milestones.
 
 | # | Milestone | Tasks | Depends on | Done when | Criteria | Size |
 |---|---|---|---|---|---|---|
-| C1 | Showcase (X6): n8n routing, reminders, digest and workflow export (tasks 33-36). For submission the backend sends the top-tier notification itself (task 37, in C3) | 33-36 (Showcase) | submission done | Not a submission milestone; built after S5 | none for submission | M |
+| C1 | Future development (X6): n8n routing, reminders, digest and workflow export (tasks 33-36). For submission the backend sends the top-tier notification itself (task 37, in C3) | 33-36 (future development) | submission done | Not a submission milestone; built after S5 | none for submission | M |
 | C2 | Backend instrumentation: OpenTelemetry SDK and FastAPI auto-instrumentation; the US-13 spans, `vt_notifications_total`, `vt_notification_delivery_seconds`, `vt_top_tier_notification_overdue`; JSON logs with `trace_id`; the allowlist helper; `service.name`, `deployment.environment`, `service.version`; export is a no-op without a Collector, real span contexts always (A40) | 23 | S1 (the `notification.deliver` span comes from task 37, in C3) | With a console exporter, one scan shows a span, a metric and a log line with the same trace ID and no excluded data | Observability | M |
 | C3 | Observability stack in `observability/` (local Compose) and the backend's top-tier notification: Collector with the allowlist processor, Prometheus, Loki, Tempo, Grafana with provisioned data sources and the "US-13 journey" dashboard, filterable by environment and version; MailHog; the backend delivery worker (task 37, built after task 24 and before task 25); the backend feed-client wiring + `VT_FEEDS=fixtures` (task 40, refused outside dev/test) so the Compose journey runs | 24 (Compose half), 37, 25, 40 | C2 | `T-REFUSE` passes in Compose (task 25); task 40 wires the feed clients + `VT_FEEDS=fixtures` so `T-JOURNEY-BE` passes and the deployed scan actually matches; the three signals show side by side in local Grafana; a top-tier finding's owner email reaches MailHog from the backend; auditor marks Observability 2 | Observability, Application | L |
-| C4 | Showcase (X3): deploy observability and the responder in AWS, Grafana behind a login; dev and prod export to it. Not a submission milestone | none (the AWS half of task 24 is no longer in the task) | C3, B5, B6, submission done | Not a submission milestone; built after S5 | none for submission | M |
+| C4 | Future development (X3): deploy observability and the responder in AWS, Grafana behind a login; dev and prod export to it. Not a submission milestone | none (the AWS half of task 24 is no longer in the task) | C3, B5, B6, submission done | Not a submission milestone; built after S5 | none for submission | M |
 | C5 | US-14 alert as code: the provisioned rule, notification policy and contact points (email and responder webhook); annotations with dashboard link, environment, version | 26, 27 | C3 | `A-FIRE`, `A-HELD`, `A-TIER`, `A-GAP`, `A-RESOLVE` pass; auditor marks Alerting 1 | Alerting on User Impact | S |
 | C6 | Responder in local Compose: webhook receiver (bearer secret, repeat-fingerprint guard) that starts one headless agent run per alert in a fresh checkout; `RESPONDER_MODE=stub` in CI; read-only API and Loki tokens; branch `responder/<fingerprint>` and a pull request; every action logged; false-positive rule if D4 is approved | 28 | C5, #50's contract (closed) | `I-RESP-*` and the stubbed `P-DEMO-BE` pass in CI; a test alert with no incident ends with "no change" and an explanation | On-Call Agent | M |
 | C7 | End-to-end drill, run locally: `VT_DEMO_DEFECT=notify_no_fix` → job fails → metric 1 → one alert → responder PR → human merges → local check → delivered to MailHog → alert resolves; recorded (screenshots or a short video) as review evidence with the real responder runtime (task 39); then the cleanup commit removes the flag and `P-FLAG-GONE` passes in the production workflow before any prod promotion | 28 (live drill), 29, 39 | The drill is recorded and linked from the README; the flag is gone; auditor marks On-Call Agent 2 | On-Call Agent, Alerting, Observability | M |
@@ -172,10 +172,10 @@ milestone boundary; this table is input to that filing, not a second backlog.
 | B4 | 17 (Terraform modules: state bucket, deploy roles, server; build once and push to GHCR) | Image tag format (D2); the milestone covers the first half of task 17 |
 | B5 | 17 (the `dev` project and hostname), 21, then 22 (pilot seed data) | Task 21 depends on 17 and 19 only; the production promotion is part of task 18 (D7), so dev auto-deploy does not wait for prod |
 | B6 | 18 | Task 18 is the second Compose project and hostname on the same server plus the manual production workflow and the rollback; D7 |
-| C1 | 33-36 (Showcase) | Not a submission milestone (X6); the backend sends the top-tier notification (task 37) |
+| C1 | 33-36 (future development) | Not a submission milestone (X6); the backend sends the top-tier notification (task 37) |
 | C2 | 23 | `service.version` in the allowlist (D2) |
 | C3 | 24 (Compose half), 37, 25, 40 | Task 24 depends on 23 only (no wait for AWS; D7); task 37 is numbered last but built after task 24 and before task 25 (`tasks.md` Build order). Task 40 (#172) added 2026-10-24: feed-client wiring + `VT_FEEDS=fixtures` mode + `T-JOURNEY-BE`; found during task 25 (a deployed scan matched nothing). Prod must set `DEPLOYMENT_ENVIRONMENT=prod` (task 18/#143). |
-| C4 | none (Showcase) | The AWS half of task 24 moved to showcase item X3; not a submission milestone |
+| C4 | none (future development) | The AWS half of task 24 moved to future-development item X3; not a submission milestone |
 | C5 | 26, 27 | Annotations with dashboard link, environment, version |
 | C6 | 28 | False-positive rule (D4); the responder runs in local Compose (H6) |
 | C7 | 28 (live drill), 29, 39 | Task 29 is the local-run demo with MailHog; no dev deploy in the drill; task 39 holds the recorded run with the real responder runtime |
@@ -184,7 +184,7 @@ milestone boundary; this table is input to that filing, not a second backlog.
 
 Not in these milestones: tasks 30-36 (LLM brief, brief evaluation, MCP server and
 the n8n tasks: workflows, reminders, digest, export check). They are in the
-showcase track (items X4-X6 in [`roadmap-showcase.md`](roadmap-showcase.md)), and
+future-development track (items X4-X6 in [`roadmap-showcase.md`](roadmap-showcase.md)), and
 none of them scores a Tier B or C criterion.
 
 **Ordering if AWS is slow.** If AWS setup holds up B4-B6, do B1 → B2 → B3 → C2 →
@@ -215,15 +215,15 @@ before the first production deploy.
 | 7 | D3: domain name and TLS approach for the public URL (Open question 7) | Human's choice; needed before B5 | resolved (human, 2026-10-22, via the draft): answered by H5 (`sslip.io` hostnames, no domain) |
 | 8 | D4: add to US-15 that on an alert with no reproducible defect (false positive or test alert) the responder explains and changes nothing | Yes; `specs.md` is protected, so a proposed diff and approval first | open |
 | 9 | D5: fallback if AWS is not available in time: a kind cluster or local Compose deployment with a recorded demo (a clear demo with the deployment scores Deployment 2, but CI/CD 3 then needs a deploy target CI can reach) | Keep AWS as the plan; name the fallback date at B4 | open |
-| 10 | D6: move n8n tasks 33 and 34 ahead of task 25, and add 34 to the `Depends on:` of tasks 25 and 28 (`T-JOURNEY` asserts the `notification.deliver` span n8n's report call creates, and `P-DEMO` needs n8n's retry) | Yes; keep n8n out of task 15's Compose file, so Containerization still scores first | resolved (human, 2026-10-22, via the draft): moot, the n8n tasks moved to the showcase track (H7) |
-| 11 | D7: when filing the Milestone B and C issues, split task 21 (dev auto-deploy depends on 17 and 19 only; prod promotion on 18) and task 24 (Compose stack depends on 23 only; `vt-observability` on 17) | Yes; Deployment 2 and CI/CD 2 no longer wait for the prod stack, and the observability work no longer waits for AWS | resolved (human, 2026-10-22, via the draft): task 21 split (dev auto-deploy in task 21, promotion in task 18); task 24's AWS half moved to the showcase track (X3) |
-| 12 | H1: two tracks, submission (this file) and showcase (`roadmap-showcase.md`, kept separate) | replaces steps 15-17 as one sequence | resolved (human, 2026-10-22) |
+| 10 | D6: move n8n tasks 33 and 34 ahead of task 25, and add 34 to the `Depends on:` of tasks 25 and 28 (`T-JOURNEY` asserts the `notification.deliver` span n8n's report call creates, and `P-DEMO` needs n8n's retry) | Yes; keep n8n out of task 15's Compose file, so Containerization still scores first | resolved (human, 2026-10-22, via the draft): moot, the n8n tasks moved to the future-development track (H7) |
+| 11 | D7: when filing the Milestone B and C issues, split task 21 (dev auto-deploy depends on 17 and 19 only; prod promotion on 18) and task 24 (Compose stack depends on 23 only; `vt-observability` on 17) | Yes; Deployment 2 and CI/CD 2 no longer wait for the prod stack, and the observability work no longer waits for AWS | resolved (human, 2026-10-22, via the draft): task 21 split (dev auto-deploy in task 21, promotion in task 18); task 24's AWS half moved to the future-development track (X3) |
+| 12 | H1: two tracks, submission (this file) and future development (`roadmap-showcase.md`, kept separate) | replaces steps 15-17 as one sequence | resolved (human, 2026-10-22) |
 | 13 | H2: infrastructure as code with Terraform (or OpenTofu), not CloudFormation | replaces the 2026-10-17 decision's CloudFormation | resolved (human, 2026-10-22) |
 | 14 | H3: one server runs dev and prod as two Compose projects behind two hostnames; a deploy pulls and restarts by image tag on the server; rollback runs the production deploy again with the previous tag | replaces (A36) one instance per environment | resolved (human, 2026-10-22) |
 | 15 | H4: images in GitHub's container registry (GHCR), public | replaces ECR | resolved (human, 2026-10-22) |
 | 16 | H5: no domain; hostnames from the server's IP via `sslip.io`, HTTPS from Let's Encrypt (VERIFY: rate limits) | replaces Open question 7 / D3 | resolved (human, 2026-10-22) |
 | 17 | H6: observability, the US-14 alert and the responder run in local Compose for submission, with a recorded alert-to-fix run as evidence | replaces deployed observability (C4) and the C7 drill on dev | resolved (human, 2026-10-22) |
-| 18 | H7: n8n and the other committed-scope features (LLM brief, its evaluation, MCP server, reminders and digest) move to the showcase track; the backend sends the top-tier notification itself | replaces tasks 30-36 in submission scope | resolved (human, 2026-10-22) |
+| 18 | H7: n8n and the other committed-scope features (LLM brief, its evaluation, MCP server, reminders and digest) move to the future-development track; the backend sends the top-tier notification itself | replaces tasks 30-36 in submission scope | resolved (human, 2026-10-22) |
 
 ## Score checkpoints
 
@@ -240,7 +240,7 @@ Evidenced points come only from `_docs/rubric-evidence.md`; estimates are labell
 | After B2 | 14 | Estimate: + Containerization 2; S2 (B1-B3) ends at 14 |
 | After B5 | 17 | Estimate: + Deployment 2, CI/CD 2 (from 1) |
 | After B6 (S3) | 19 | Estimate: CI/CD 3 |
-| After C3 | 21 | Estimate: + Observability 2 (moved up from the deployed-observability milestone, now showcase) |
+| After C3 | 21 | Estimate: + Observability 2 (moved up from the deployed-observability milestone, now future development) |
 | After C5 | 22 | Estimate: + Alerting 1 |
 | After C7 (S4) | 24 | Estimate: + On-Call Agent 2 |
 | After C8 (S5) | 24 | Full rubric re-audit |
