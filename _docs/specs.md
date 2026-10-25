@@ -193,6 +193,10 @@ and a test; once merged, CI deploys it to dev.
 - Acceptance: the undelivered finding then reaches its owner, the alert
   resolves, and the agent's actions are logged. Production promotion stays
   manual.
+- Acceptance: on an alert with no reproducible defect (a false positive or a
+  test alert), the responder logs an explanation of what it checked and why
+  it found no defect, and changes nothing: no branch, no commit, no pull
+  request.
 
 ### US-16: n8n workflows are exported into the repo (moved to future development)
 Moved unchanged to the "Future development (after submission)" section below.
