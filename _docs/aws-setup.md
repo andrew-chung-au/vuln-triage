@@ -190,6 +190,7 @@ Once the dev environment answers, register the pilot assets so real findings app
 Peer reviewers are anonymous and cannot be contacted, so the README publishes one shared login for the **dev** URL (`reviewer` / `vt-reviewer-demo`, a `security lead`). That is a decision the human made on 2026-10-25: a public password is accepted so reviewers can use the live app at all. Create it once the dev environment answers (after step A9), from a Session Manager session on the server (no SSH). `VERIFY:` the command; it has not been run on the server.
 
 ```
+sudo -i
 cd /opt/vuln-triage/dev
 printf '%s\n' 'vt-reviewer-demo' | docker compose -f /opt/vuln-triage/app/compose.yaml -f compose.deploy.yaml --project-name dev --env-file .env exec -T backend python -m vulntriage.manage create-user --username reviewer --display-name "Public reviewer (demo)" --email reviewer@example.com --role "security lead"
 ```
