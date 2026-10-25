@@ -6,7 +6,7 @@ Usage: python3 permission-report.py <SINCE>   (run as: make permission-report SI
 Read-only by construction:
 - reads files under _session-summaries/ (paths come from `git log` and are
   filtered to that folder), and reads them with `git show HEAD:<path>`;
-- also reads the git-ignored OpenCode prompt log .scratch/permission-prompts.jsonl
+- also reads the git-ignored OpenCode prompt log .agent-logs/permission-prompts.jsonl
   (written by .opencode/plugins/permission-log.js), opened read-only, if it exists;
 - runs only `git log`, `git show` and `git rev-parse`;
 - opens no file for writing, makes no network call, prints to stdout only.
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime
 
 SUMMARY_DIR = "_session-summaries/"
-PROMPT_LOG = ".scratch/permission-prompts.jsonl"
+PROMPT_LOG = ".agent-logs/permission-prompts.jsonl"
 FLOOR_COMMIT = "1b37fd1"  # 2026-10-21 rule change; older summaries used "none" differently
 SINCE_RE = re.compile(r"[0-9a-f]{7,40}")
 USAGE = "Usage: make permission-report SINCE=<commit>  (7 to 40 lowercase hex characters, a commit)"

@@ -1,4 +1,6 @@
-// Logs every OpenCode permission prompt (and its reply) as one JSON line, so
+// Logs every OpenCode permission prompt (and its reply) as one JSON line to
+// .agent-logs/permission-prompts.jsonl (git-ignored; not .scratch/, which
+// `make clean-scratch` empties), so
 // `make permission-report` can count real prompts instead of what agents
 // remembered to list. Append-only: it never blocks or changes a permission.
 // VERIFY: the payload of permission.asked / permission.replied is not
@@ -7,7 +9,7 @@ import { appendFileSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 
 export const PermissionLog = async ({ client, directory }) => {
-  const dir = join(directory, ".scratch")
+  const dir = join(directory, ".agent-logs")
   const file = join(dir, "permission-prompts.jsonl")
 
   return {
