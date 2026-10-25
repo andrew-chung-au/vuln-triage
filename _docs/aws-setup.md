@@ -6,7 +6,7 @@ The agents write the Terraform files and the GitHub Actions workflows. You own t
 
 Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip.io` (`_docs/architecture.md`, Deployment and A36), and the local Compose stack for observability, the alert and the responder during submission (A34). Sources: `_docs/architecture.md` (Deployment, Security boundaries, Routing and notifications, assumptions A26, A36 and A37) and tasks 17, 18, 21 and 37. Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS, GHCR, Let's Encrypt and Terraform behaviours, prices and console paths are marked `VERIFY:`: check them in the documentation or console when you do the step.
 
-Everything in "Submission steps" is needed for the submission. "Future-development extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
+Everything in "Submission steps" is needed for the submission. "Future-development extra steps" is optional and starts only after the submission is in (`_docs/roadmap-future.md`, Rule).
 
 For a single prioritised view of **all** human action (this AWS runbook plus the per-issue verification runs, merges and sweeps), see `_docs/human-tasklist.md`; it indexes back to the steps here.
 
@@ -40,8 +40,8 @@ Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFr
 | 10 | Nightly stop and cost tag | Submission | With the server | 10 min |
 | 11 | Teardown | Submission | When you decide to end the deployment | 30 min |
 | S1 | Future-development extra secrets | Future development | After the submission is in | 20 min |
-| S2 | Grafana and responder on AWS (X3) | Future development | After the submission is in | see `roadmap-showcase.md` |
-| S3 | On-demand demo and Launch button (X1, X9) | Future development | After the submission is in | see `roadmap-showcase.md` |
+| S2 | Grafana and responder on AWS (X3) | Future development | After the submission is in | see `roadmap-future.md` |
+| S3 | On-demand demo and Launch button (X1, X9) | Future development | After the submission is in | see `roadmap-future.md` |
 
 Steps 1-4 need no repository code. Steps 4 and 5 are decisions (for step 4, the name form; the hostnames themselves exist only after the first apply creates the Elastic IP); record them in the issue for task 17. You, not an agent, perform the first deploy (task 17).
 
@@ -219,7 +219,7 @@ Then release any Elastic IP left, and check Cost Explorer filtered by `project=v
 
 # Future-development extra steps
 
-Nothing in this section is needed for the submission. Start it only after the submission is in. Items are described in `_docs/roadmap-showcase.md`.
+Nothing in this section is needed for the submission. Start it only after the submission is in. Items are described in `_docs/roadmap-future.md`.
 
 ## S1. Future-development extra secrets
 
@@ -233,11 +233,11 @@ The step 8 rules apply.
 
 ## S2. Grafana and responder on AWS (X3)
 
-Observability and the responder run on AWS only as future-development item X3 (a separate observability server). Grafana would then need a public hostname and TLS as in step 4. Details and cost: `_docs/roadmap-showcase.md`.
+Observability and the responder run on AWS only as future-development item X3 (a separate observability server). Grafana would then need a public hostname and TLS as in step 4. Details and cost: `_docs/roadmap-future.md`.
 
 ## S3. On-demand demo and Launch button (X1, X9)
 
-See X1, X9 and their design notes in `_docs/roadmap-showcase.md`. Nothing is set up from this guide.
+See X1, X9 and their design notes in `_docs/roadmap-future.md`. Nothing is set up from this guide.
 
 # Reference
 
@@ -260,7 +260,7 @@ Future-development additions (VERIFY: all prices):
 - A separate observability server for X3: VERIFY its price.
 - LLM API usage for X4: VERIFY the provider's price.
 - A Lambda and its function URL for X9: within the free tier (VERIFY).
-- X1 on-demand demo: about $0 standing cost while the demo is down (`roadmap-showcase.md`).
+- X1 on-demand demo: about $0 standing cost while the demo is down (`roadmap-future.md`).
 
 ## Decisions for the human
 

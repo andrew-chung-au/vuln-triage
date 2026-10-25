@@ -76,7 +76,7 @@ class ScanTrigger(StrEnum):
 
 class NotificationKind(StrEnum):
     TOP_TIER = "top tier"
-    # Showcase kinds, stored now so no later table rebuild is needed.
+    # Future-development kinds, stored now so no later table rebuild is needed.
     REMINDER = "reminder"
     ESCALATION = "escalation"
     SIGNALS_CHANGED = "signals changed"

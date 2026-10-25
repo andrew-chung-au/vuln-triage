@@ -159,7 +159,7 @@ Covers: Observability, US-13
 
 ## 24. Observability stack and the US-13 Grafana dashboard
 Goal: Prometheus, Loki, Tempo, Grafana and the Collector show the US-13 signals side by side.
-Description: Adds the Collector processors and the Compose observability services (Prometheus, Loki, Tempo, Grafana and the Collector) from `_docs/architecture.md` § Observability, with Grafana behind authentication, and the MailHog mail catcher as a Compose service (a dependency, ask before adding) that task 37 and the Grafana email contact point send to in development and tests. For submission the stack runs in local Compose only; running it on AWS is a future-development item (X3 in `_docs/roadmap-showcase.md`). It provisions the "US-13 journey" dashboard with a Prometheus pane, a Tempo pane and a Loki pane. The check is the manual dashboard in Compose showing the three signals side by side and the MailHog service answering; the `make test-compose` cases are added in task 25.
+Description: Adds the Collector processors and the Compose observability services (Prometheus, Loki, Tempo, Grafana and the Collector) from `_docs/architecture.md` § Observability, with Grafana behind authentication, and the MailHog mail catcher as a Compose service (a dependency, ask before adding) that task 37 and the Grafana email contact point send to in development and tests. For submission the stack runs in local Compose only; running it on AWS is a future-development item (X3 in `_docs/roadmap-future.md`). It provisions the "US-13 journey" dashboard with a Prometheus pane, a Tempo pane and a Loki pane. The check is the manual dashboard in Compose showing the three signals side by side and the MailHog service answering; the `make test-compose` cases are added in task 25.
 Depends on: 23
 Covers: Observability, US-13
 
@@ -217,7 +217,7 @@ Covers: On-Call Agent, Alerting on User Impact, Observability, Deployment
 
 # Future development (after submission)
 
-Tasks 30-36 are built after submission (spec § Future development; items X4-X6 in `_docs/roadmap-showcase.md`). They keep their numbers and nothing in the submission scope depends on them. Task 35 gained the E8 notice, the security-lead contact's check and a dependency on task 34 (human decision, 2026-10-22).
+Tasks 30-36 are built after submission (spec § Future development; items X4-X6 in `_docs/roadmap-future.md`). They keep their numbers and nothing in the submission scope depends on them. Task 35 gained the E8 notice, the security-lead contact's check and a dependency on task 34 (human decision, 2026-10-22).
 
 ## 30. LLM brief with the fix-version guardrail
 Goal: An open finding gets a matching brief or the structured finding with "brief unavailable".

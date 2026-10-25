@@ -5,7 +5,7 @@ project is on track. It sequences the work; it is not part of the build plan
 that the plan review checks (`_docs/planning-process.md` Stages 1-6).
 
 - Adopted: 2026-10-19, from a review of opencode's status analysis (Claude Code, claude-opus-5-5); see `_docs/ai-usage-log.md`.
-- Goal: 24/24, built as Tier A → B → C milestones (human decision of 2026-10-17; tiers in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5), in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). This file is the submission track, phases S0-S5 (human decision H1, 2026-10-22). Anything that scores nothing goes to the future-development track, [`roadmap-showcase.md`](roadmap-showcase.md), which stays a separate file and starts only after the submission is in.
+- Goal: 24/24, built as Tier A → B → C milestones (human decision of 2026-10-17; tiers in `_docs/reviews/2026-10-16-final-rubric-impact.md` §5), in the smallest shape that meets the criteria in `_docs/rubric.md` and the course's project requirements (a rollback path, an alert trigger, an on-call responder; peer review of three other projects is required to pass). This file is the submission track, phases S0-S5 (human decision H1, 2026-10-22). Anything that scores nothing goes to the future-development track, [`roadmap-future.md`](roadmap-future.md), which stays a separate file and starts only after the submission is in.
 - Timing and scope trade-offs are the human's. "On track" here means steps are done in order and the audited score meets the checkpoint for the steps done.
 - Source of truth for status: the GitHub tracker and `_docs/rubric-evidence.md`. The status column here is a snapshot taken at each check-in, not live state.
 
@@ -184,7 +184,7 @@ milestone boundary; this table is input to that filing, not a second backlog.
 
 Not in these milestones: tasks 30-36 (LLM brief, brief evaluation, MCP server and
 the n8n tasks: workflows, reminders, digest, export check). They are in the
-future-development track (items X4-X6 in [`roadmap-showcase.md`](roadmap-showcase.md)), and
+future-development track (items X4-X6 in [`roadmap-future.md`](roadmap-future.md)), and
 none of them scores a Tier B or C criterion.
 
 **Ordering if AWS is slow.** If AWS setup holds up B4-B6, do B1 → B2 → B3 → C2 →
@@ -217,7 +217,7 @@ before the first production deploy.
 | 9 | D5: fallback if AWS is not available in time: a kind cluster or local Compose deployment with a recorded demo (a clear demo with the deployment scores Deployment 2, but CI/CD 3 then needs a deploy target CI can reach) | Keep AWS as the plan; name the fallback date at B4 | open |
 | 10 | D6: move n8n tasks 33 and 34 ahead of task 25, and add 34 to the `Depends on:` of tasks 25 and 28 (`T-JOURNEY` asserts the `notification.deliver` span n8n's report call creates, and `P-DEMO` needs n8n's retry) | Yes; keep n8n out of task 15's Compose file, so Containerization still scores first | resolved (human, 2026-10-22, via the draft): moot, the n8n tasks moved to the future-development track (H7) |
 | 11 | D7: when filing the Milestone B and C issues, split task 21 (dev auto-deploy depends on 17 and 19 only; prod promotion on 18) and task 24 (Compose stack depends on 23 only; `vt-observability` on 17) | Yes; Deployment 2 and CI/CD 2 no longer wait for the prod stack, and the observability work no longer waits for AWS | resolved (human, 2026-10-22, via the draft): task 21 split (dev auto-deploy in task 21, promotion in task 18); task 24's AWS half moved to the future-development track (X3) |
-| 12 | H1: two tracks, submission (this file) and future development (`roadmap-showcase.md`, kept separate) | replaces steps 15-17 as one sequence | resolved (human, 2026-10-22) |
+| 12 | H1: two tracks, submission (this file) and future development (`roadmap-future.md`, kept separate) | replaces steps 15-17 as one sequence | resolved (human, 2026-10-22) |
 | 13 | H2: infrastructure as code with Terraform (or OpenTofu), not CloudFormation | replaces the 2026-10-17 decision's CloudFormation | resolved (human, 2026-10-22) |
 | 14 | H3: one server runs dev and prod as two Compose projects behind two hostnames; a deploy pulls and restarts by image tag on the server; rollback runs the production deploy again with the previous tag | replaces (A36) one instance per environment | resolved (human, 2026-10-22) |
 | 15 | H4: images in GitHub's container registry (GHCR), public | replaces ECR | resolved (human, 2026-10-22) |

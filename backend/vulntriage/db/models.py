@@ -3,7 +3,7 @@
 Enums are stored as strings with a CHECK constraint. Every constraint has an
 explicit name so the Alembic migration, SQLite batch mode and Postgres agree.
 Untrusted text (``summary``, ``details``, ``references``) is only stored here;
-nothing renders it. ``Brief`` is not built yet (showcase task 30), and the KEV
+nothing renders it. ``Brief`` is not built yet (future-development task 30), and the KEV
 value is derived (``enums.kev_value``), not a column.
 """
 
