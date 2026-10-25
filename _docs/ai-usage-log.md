@@ -2561,3 +2561,33 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make test-integration`: 232 passed against Postgres 16.4 in the cloud session. `make test-compose JOB=telemetry` FAILED at the backend image build (`ghcr.io` blob host refused by the network policy); not re-run. The CI telemetry result (run 40188742150, 3 passed) was read from the Actions job log, not produced here. The CC27 run signed in through the real login form on `make dev-start` with recorded fixtures (`POST /api/auth/login` 200); the screenshots show fixture data, and the README says so. `make verify` was not re-run after these edits (README, images and docs only); the pre-push hook runs it. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC30, remove the leftover mock "Demo credentials" box from the real sign-in page (frontend; found during CC27)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's instruction "do CC30 and remove the demo credentials box". No new key prompt saved.
+- files changed: `frontend/src/routes/login.tsx`, `frontend/src/services/index.ts`, `frontend/src/test/vulntriage.test.tsx`, `frontend/README.md`; `_docs/cloud-tasklist.md`; this log entry
+- verification (tests run, reviewer verdict): ran the new regression test red against the old page (stashed the two source files; 1 failed, 88 passed), then green after restoring the fix. `make verify`: PASS WITH WARNINGS, 89 frontend and 496 backend tests, type check pass; the only warning is that `BASE` equalled `HEAD` while the changes were uncommitted. Not checked in a browser after the change. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC31 reviewer access docs (README "Try it as a reviewer", demo seed, seeder `--wait`, A14 runbook), the A13 `/api` base-URL fix, and the `make demo` proposal
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "yes" to writing the demo recipe and README section, and their decision that a public password is acceptable because reviewers are anonymous. No new key prompt saved.
+- files changed: `README.md`, `deploy/seed-pilot.py`, `deploy/demo-seed.json` (new), `_docs/aws-setup.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`, `_docs/make-demo-proposal.md` (new); this log entry. Protected files (`Makefile`, `AGENTS.md`) are not changed.
+- verification (tests run, reviewer verdict): ran the README local recipe from an empty SQLite database in this session: user created, 4 repositories registered, scans finished, 4 assets and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Tested the new `--wait` option against a stopped backend (clean error after 3 s) and a just-started one (signed in). NOT run: the AWS server command in `aws-setup.md` (no server exists; marked `VERIFY:`), the `make demo` target (proposal only), and the README's `printf | uv run` line exactly as written (the test used an equivalent stdin file). The `/api` base-URL finding comes from reading `Caddyfile` and `frontend/nginx.conf`, not from a deployed run. `make verify` runs in the pre-push hook. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CC32, apply `make demo` and `make demo-reset` (protected `Makefile` and `AGENTS.md`)
+- agent role: orchestrator (Claude Code cloud session)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human's "approve make demo", approving the diff in `_docs/make-demo-proposal.md`. No new key prompt saved.
+- files changed: `Makefile` (commit `7beafd9`, `HUMAN_APPROVED=1`); `AGENTS.md` (commit `936ca53`, `HUMAN_APPROVED=1`); `README.md`, `_docs/make-demo-proposal.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`; this log entry
+- verification (tests run, reviewer verdict): ran `make demo-reset` then `make demo` from an empty dev database, then a read-only API check: 4 assets (clean, incomplete, findings, clean) and 2 findings (P1 urllib3 CVE-2023-43804, P2 pyyaml CVE-2020-14343). Ran `make dev-stop`. The pre-push `make verify` follows. Not tested: a second `make demo` on a non-empty database (documented as registering the repositories twice), and `make demo` on a machine other than this cloud session (Python 3.13, uv 0.11). No reviewer verdict, no QA run. No GitHub issue exists for this change, so there is no approval record on an issue; the record is in `_docs/make-demo-proposal.md`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the human approved the exact diff before it was applied; the applied Makefile text is the proposed text, unchanged.

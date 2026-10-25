@@ -215,6 +215,28 @@ dev-stop: ## Stop the processes started by dev-start
 	  else echo "$$name is not running"; fi; \
 	done
 
+# --- Local reviewer demo ----------------------------------------------------
+# One command: migrate, create a demo security lead, start the app on the
+# recorded fixtures (no Docker, no network) and register four demo repositories
+# through the API. The demo password is public by design and works only on this
+# local database. VT_FEEDS=fixtures is refused unless DEPLOYMENT_ENVIRONMENT is
+# dev or test, so it cannot run in production.
+DEMO_USER = lead
+DEMO_PASSWORD = demo-password-local
+
+demo: dev-migrate ## Start the app on recorded fixtures with a demo login and four demo repositories (local, no Docker, no network)
+	@printf '%s\n' '$(DEMO_PASSWORD)' | uv run --directory backend python -m vulntriage.manage create-user --username $(DEMO_USER) --display-name "Security Lead" --email lead@example.com --role "security lead" || echo "note: the demo user was not created (it may already exist)"
+	@$(MAKE) dev-start VT_FEEDS=fixtures DEPLOYMENT_ENVIRONMENT=dev
+	@VT_SEED_PASSWORD='$(DEMO_PASSWORD)' python3 deploy/seed-pilot.py --base-url http://127.0.0.1:8000 --username $(DEMO_USER) --seed-file deploy/demo-seed.json --wait 60
+	@echo "Open http://127.0.0.1:5173 and sign in as $(DEMO_USER) / $(DEMO_PASSWORD). Stop with: make dev-stop"
+
+demo-reset: ## Stop the app and delete the local dev database, so make demo starts clean
+	@$(MAKE) dev-stop
+	@rm -f backend/.scratch/vulntriage.db
+	@echo "dev database removed"
+
+.PHONY: demo demo-reset
+
 # --- Compose stack (issue #137, task 15) ---------------------------------
 # The full application stack (frontend, backend, Postgres) on one origin.
 # Needs Docker and a .env (copy .env.example). Runs on the human's host or in

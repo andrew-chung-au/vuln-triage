@@ -1,6 +1,6 @@
 variable "aws_region" {
   type    = string
-  default = "ap-southeast-2"
+  default = "us-east-1"
 }
 
 variable "github_owner" {

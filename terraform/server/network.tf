@@ -8,8 +8,8 @@ data "aws_vpc" "default" {
 }
 
 resource "aws_security_group" "server" {
-  name        = "vuln-triage-server"
-  description = "VulnTriage server: HTTP/HTTPS in, all out. No SSH (SSM only)."
+  name        = "web-http-https"
+  description = "Public web server: HTTP and HTTPS in, all out. No SSH (SSM only)."
   vpc_id      = data.aws_vpc.default.id
 
   ingress {

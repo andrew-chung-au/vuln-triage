@@ -15,7 +15,7 @@ yet), then its state is migrated into the bucket it just created.
      backend "s3" {
        bucket  = "vuln-triage-tfstate-..."   # your state_bucket_name
        key     = "bootstrap/terraform.tfstate"
-       region  = "ap-southeast-2"
+       region  = "us-east-1"
        encrypt = true
        # VERIFY: S3-native state locking (use_lockfile) in your Terraform
        # version; if unavailable, add a DynamoDB lock table and `dynamodb_table`.

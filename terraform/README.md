@@ -48,7 +48,7 @@ human checks IAM → Identity providers:
 
 ## Defaults (overridable in `terraform.tfvars`)
 
-- `aws_region = "ap-southeast-2"`
+- `aws_region = "us-east-1"` (decided 2026-10-25: lowest prices; reviewers are in the US and EU)
 - `instance_type = "t3.medium"` (`VERIFY:` size; `t3.small` fallback)
 - `nightly_stop_enabled = true`
 - Reverse proxy: **Caddy** (automatic Let's Encrypt; `server/caddy/Caddyfile`).

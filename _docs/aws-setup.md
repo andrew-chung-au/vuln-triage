@@ -177,11 +177,32 @@ Once the dev environment answers, register the pilot assets so real findings app
 3. **Run the seed script** against the dev URL, signed in as a `security lead` (only a security lead may register; the password is prompted or read from `VT_SEED_PASSWORD`, never passed on the command line):
 
    ```
-   python deploy/seed-pilot.py --base-url https://dev.<eip>.sslip.io --username <security-lead>
+   python deploy/seed-pilot.py --base-url https://dev.<eip>.sslip.io/api --username <security-lead>
    ```
+
+   The base URL **ends in `/api`**: the dashboard host serves the single-page app, and only `/api/` is forwarded to the backend (with the prefix stripped). Without `/api` the script's login gets a 404 or 405 and says so.
 
    It is stdlib-only (no dependency to install) and prints each registered asset with its id and scan status. Re-running it registers the assets again, so run it once (or clear the earlier assets first).
 4. **Check (the acceptance):** on the dev dashboard each asset shows a scan status and, once its first scan finishes, at least one finding. The repository URLs stay out of telemetry (A38) — the seed script is a plain API client and emits no spans, metrics or logs.
+
+## Public reviewer account (A14)
+
+Peer reviewers are anonymous and cannot be contacted, so the README publishes one shared login for the **dev** URL (`reviewer` / `vt-reviewer-demo`, a `security lead`). That is a decision the human made on 2026-10-25: a public password is accepted so reviewers can use the live app at all. Create it once the dev environment answers (after step A9), from a Session Manager session on the server (no SSH). `VERIFY:` the command; it has not been run on the server.
+
+```
+cd /opt/vuln-triage/dev
+printf '%s\n' 'vt-reviewer-demo' | docker compose -f /opt/vuln-triage/app/compose.yaml -f compose.deploy.yaml --project-name dev --env-file .env exec -T backend python -m vulntriage.manage create-user --username reviewer --display-name "Public reviewer (demo)" --email reviewer@example.com --role "security lead"
+```
+
+Change the username or password in the README and in this command together. Do **not** create this account on production.
+
+What a public `security lead` login allows, and what keeps it acceptable:
+
+- **Anyone can register an asset.** The URL must be `https://github.com/<owner>/<repo>`, so it cannot reach an internal address, but each registration starts a scan that uses the server's read-only GitHub token and its rate limit. Accepted: the token is read-only and public-repo only.
+- **Anyone can send mail to any address if mail is on.** An asset's `ownerEmail` is where a top-priority finding is emailed. While this account is public, keep mail off on dev (leave `MAIL_TRANSPORT` unset) **or** keep the SES account in the sandbox (never request production access), so only your verified demo recipient can ever receive anything. Do not enable real delivery on dev while the account is public.
+- **Anyone can lock the account.** Five failed sign-ins in 15 minutes lock a username for 15 minutes, so a stranger can keep `reviewer` locked out. Accepted; the local demo in the README is the fallback.
+- **The data can be changed or filled with junk.** Keep nothing real on dev: only public repositories and fictional owners. The pilot seed (A13) can be re-run after clearing the dev database if it is vandalised.
+- **Rotate or remove after grading:** delete the account, or tear down (step 11). The password is unique to this project; do not reuse it anywhere.
 
 ## 11. Teardown
 
@@ -246,7 +267,7 @@ Record each answer in the task 17 issue before it starts:
 
 | # | Decision | Recommendation |
 |---|---|---|
-| 1 | Region | The region your earlier EC2 work used, or `ap-southeast-2` if none |
+| 1 | Region | **Decided 2026-10-25: `us-east-1`** (lowest prices; reviewers are in the US and EU). The Terraform defaults and examples now say so |
 | 2 | Existing GitHub OIDC provider in the account | Tell the agent; reuse it if present |
 | 3 | Secrets store | Secrets Manager with one JSON secret per environment, as planned |
 | 4 | Verified sender address and demo recipient addresses (step 9) | One sender address you control; the route itself is settled |

@@ -1,10 +1,10 @@
 # Copy to terraform.tfvars (git-ignored). Defaults suit the submission; override
 # as needed.
-aws_region           = "ap-southeast-2"
+aws_region           = "us-east-1"
 instance_type        = "t3.medium" # VERIFY sizing; t3.small is the fallback
 data_volume_gb       = 30
 nightly_stop_enabled = true
-nightly_stop_cron    = "cron(0 14 * * ? *)" # 14:00 UTC; adjust to your timezone
+nightly_stop_cron    = "cron(0 4 * * ? *)" # 04:00 UTC; set nightly_stop_enabled = false while graders may visit
 
 secret_names = ["vuln-triage/dev", "vuln-triage/prod"] # names only; values created by the human
 
