@@ -33,14 +33,14 @@
   "panels": [
     {
       "id": 1,
-      "title": "Notifications (metric) — vt_notifications_total",
+      "title": "Notifications (metric) — vt_notifications_total, running total",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (vt_notification_kind, vt_outcome) (rate(vt_notifications_total[5m]))",
+          "expr": "sum by (vt_notification_kind, vt_outcome) (vt_notifications_total)",
           "legendFormat": "{{vt_notification_kind}}/{{vt_outcome}}"
         }
       ]
