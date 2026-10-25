@@ -2471,3 +2471,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make backend-test` passed (471 passed). `make verify` result is in the #193 Engineer comment. The Loki leg was not run (no Docker) and no held-job case was added to `T-JOURNEY-BE`; the reason is in `_docs/pending-verification.md`. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #194 (emit scan.finished on failed scans)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #194 per the issue, the PM grooming comment (6395764352) and the human decisions (comment 6396310715). No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/scan.py` (`_fail` logs `scan.finished` after its commit; the feed-failure path re-sets `Scan.trace_id` after its rollback); `tests/test_scan_finished_log.py` (new); this log entry
+- verification (tests run, reviewer verdict): new tests written first and seen failing; `make verify` PASS (480 backend tests, 87 frontend tests). No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

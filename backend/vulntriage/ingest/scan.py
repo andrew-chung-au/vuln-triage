@@ -277,6 +277,9 @@ def run_scan(
                 session.rollback()
                 scan = session.get(Scan, scan_id)
                 asset = session.get(Asset, scan.asset_id)
+                # The rollback undid the trace id set above; set it again so the
+                # failed scan row still joins the journey trace.
+                scan.trace_id = current_trace_id_hex()
                 _fail(session, scan, asset, FailureReason.FEED_UNAVAILABLE)
                 return
             # KEV/EPSS enrichment (E3): a feed failure here marks signals stale
@@ -317,7 +320,18 @@ def _fail(session: Session, scan: Scan, asset: Asset, reason: FailureReason) -> 
     asset.scan_status = ScanStatus.SCAN_FAILED.value
     asset.scan_failure_reason = reason.value
     asset.last_scan_at = now
+    scan_id = scan.id
     session.commit()
+    # #194: a failed scan is a terminal outcome too. Logged after the commit and
+    # inside scan.run (every caller is), with ids and the failure code only.
+    log_event(
+        "scan.finished",
+        {
+            "vt.scan.id": str(scan_id),
+            "vt.scan.status": ScanStatus.SCAN_FAILED.value,
+            "vt.error.code": reason.value,
+        },
+    )
 
 
 def run_pending_scans(
