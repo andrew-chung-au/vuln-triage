@@ -99,6 +99,17 @@ data "aws_iam_policy_document" "deploy" {
     actions   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
     resources = ["*"]
   }
+  # The dev deploy MUST read the instance state before it calls the server, so
+  # a deploy to a stopped server (the nightly stop) is skipped and reported and
+  # never calls the instance (architecture.md Cost controls (2); task 21/#142).
+  # DescribeInstances has no resource-level scoping, so it is read-only on `*`;
+  # the role still cannot start, stop or modify the instance.
+  statement {
+    sid       = "ReadInstanceState"
+    effect    = "Allow"
+    actions   = ["ec2:DescribeInstances"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role" "dev_deploy" {

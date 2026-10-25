@@ -18,6 +18,7 @@ Where to read more:
 - `_docs/agent-kit/procedures/`: read the relevant procedure before verifying, asking the human, or writing a session summary.
 - `_docs/agent-kit/environments.md`: which environment runs where, and what each has
 - `_docs/ai-usage-log.md` and `_session-summaries/`: what each agent did, with which tool and model
+- `_docs/human-tasklist.md`: the prioritised index of everything the human must do (AWS setup, per-issue verification runs, merges/approvals, recurring sweeps), linking to `aws-setup.md`, `terraform-verify.md`, `pending-verification.md` and `human-cheatsheet.md`
 
 Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ passed review on 2026-10-22 (`_docs/reviews/2026-10-22-plan-review-2.md`, at 46dd403). Application code follows _docs/tasks.md in the order of _docs/roadmap.md; the spec and the other protected files still change only with human approval.
 

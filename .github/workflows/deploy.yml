@@ -1,29 +1,47 @@
 name: deploy
 
-# Build once on a push to main, tag with the course image tag, push to GHCR and
-# record each digest (task 17 / #141). The automatic dev deploy on merge is
-# task 21 (#142) and is added as a later job; this workflow builds and publishes
-# the images and records their digests so a deploy can pull them by tag.
+# Two triggers, two deploy paths, one server (architecture.md § Deployment):
+#   - push to main (tests gated): build once, tag YYYYMMDD-HHMMSS-shortsha, push
+#     to GHCR, record each digest, then deploy the `dev` project automatically
+#     (task 17 / #141, task 21 / #142). A red test leaves the previous version
+#     running — the merge is held by branch protection, so no deploy runs here.
+#   - workflow_dispatch (manual): promote an existing image tag to the `prod`
+#     project in the `production` environment, with the human as the required
+#     reviewer; nothing is rebuilt (task 18 / #143). Rollback = re-run with the
+#     previous tag from the deploy log.
 #
 # Pull requests never get an AWS role or push images (that stays on verify.yml).
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to promote to prod (default: the tag running in dev). Course form YYYYMMDD-HHMMSS-shortsha."
+        required: false
+        type: string
 
 permissions:
   contents: read
   packages: write        # push images to GHCR with the workflow GITHUB_TOKEN
-  id-token: write        # assume the dev OIDC role for the deploy (task 21)
+  id-token: write        # assume the dev/prod OIDC role for a deploy
 
 concurrency:
-  group: deploy-main
+  # One deploy at a time per trigger: the push build+dev-deploy share one group,
+  # a manual prod promotion its own, so a promotion never cancels a dev deploy.
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && 'prod' || 'main' }}
   cancel-in-progress: false
 
 jobs:
+  # Build + push only on a push to main. A manual prod promotion rebuilds
+  # nothing (it deploys an existing tag), so this job is skipped there.
   build-and-push:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
+      backend_digest: ${{ steps.backend.outputs.digest }}
+      frontend_digest: ${{ steps.frontend.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,15 +85,343 @@ jobs:
             echo "- frontend: \`${{ steps.frontend.outputs.digest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # The automatic dev deploy runs here on a green build (task 21 / #142 fills in
-  # the SSM deploy step; task 17 provides the build above that it consumes). It
-  # is a separate job so the build can publish images even before task 21 lands.
-  # deploy-dev:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   environment: dev
-  #   steps:
-  #     - assume AWS_DEV_ROLE_ARN via OIDC
-  #     - SSM SendCommand to the project=vuln-triage server: pull the tag, write
-  #       the Caddyfile, docker compose up the dev project; skip-and-report when
-  #       the instance is stopped (nightly stop). See task 21 (#142).
+  # Automatic dev deploy (task 21 / #142). Runs only after a green build; branch
+  # protection already held a red test from merging, so reaching here means the
+  # tests passed. It assumes the dev OIDC role (scoped to this repo on `main`),
+  # reads the instance state FIRST, and:
+  #   - when the server is stopped (the nightly stop), does NOT call the server
+  #     and ends with a visible "dev deploy skipped: server stopped" summary
+  #     (not a pass-as-deployed and not a failure): the human starts the server
+  #     and re-runs this workflow (architecture.md Cost controls (2),
+  #     aws-setup.md step 10);
+  #   - when the server is running, delivers the dev project files and brings
+  #     the `dev` Compose project up on the pushed image tag via SSM Run Command,
+  #     then records the deployed tag and digests in the deploy log.
+  # The production promotion (prod project) is task 18 (#143), not here.
+  deploy-dev:
+    if: github.event_name == 'push'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ needs.build-and-push.outputs.tag }}
+      BACKEND_DIGEST: ${{ needs.build-and-push.outputs.backend_digest }}
+      FRONTEND_DIGEST: ${{ needs.build-and-push.outputs.frontend_digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC: assume the dev deploy role. Its trust policy accepts only this
+      # repo on `main`; the role can SSM SendCommand to project=vuln-triage
+      # instances and read instance state, nothing else.
+      - name: Assume the dev deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEV_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Read the instance state FIRST (architecture.md Cost controls (2)). The
+      # server carries the provider default tag project=vuln-triage and the
+      # Name tag vuln-triage-server. A stopped instance (nightly stop) must not
+      # be called.
+      - name: Read the server's instance state
+        id: state
+        run: |
+          set -euo pipefail
+          read -r instance_id instance_state < <(
+            aws ec2 describe-instances \
+              --filters \
+                "Name=tag:project,Values=vuln-triage" \
+                "Name=tag:Name,Values=vuln-triage-server" \
+                "Name=instance-state-name,Values=pending,running,stopping,stopped" \
+              --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+              --output text | head -n1
+          )
+          if [ -z "${instance_id:-}" ]; then
+            echo "No instance tagged project=vuln-triage / Name=vuln-triage-server was found." >&2
+            echo "Has the server module been applied (aws-setup.md step 7)?" >&2
+            exit 1
+          fi
+          echo "instance_id=$instance_id" >> "$GITHUB_OUTPUT"
+          echo "instance_state=$instance_state" >> "$GITHUB_OUTPUT"
+          echo "Instance $instance_id is $instance_state."
+
+      # Stopped server: skip and report. No call to the server; the workflow
+      # ends with a visible summary (not a pass-as-deployed, not a failure).
+      - name: Skip and report (server stopped)
+        if: steps.state.outputs.instance_state != 'running'
+        run: |
+          {
+            echo "## dev deploy skipped: server stopped"
+            echo
+            echo "Instance \`${{ steps.state.outputs.instance_id }}\` is \`${{ steps.state.outputs.instance_state }}\`, not \`running\` (the nightly stop)."
+            echo "Nothing was deployed and the server was not called; the previously running version is unchanged."
+            echo "Start the server (EC2 → Instances → Start) and re-run this workflow to deploy tag \`${TAG}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "dev deploy skipped: server stopped"
+
+      # Running server: deploy the dev project by image tag via SSM Run Command.
+      # The committed terraform/server/deploy-env.sh holds the server-side logic
+      # for both environments (write the image-pinned Compose override and the
+      # project .env with DEPLOYMENT_ENVIRONMENT=dev; pull the tagged GHCR images
+      # — public, no registry credential — bring the dev project up, and rebuild
+      # the single shared Caddy so dev and prod coexist on 80/443). We base64
+      # that script and the committed compose.yaml so no quoting survives into
+      # the SSM payload, send one AWS-RunShellScript command that exports the
+      # inputs and runs the script, then wait and surface its result. A failed
+      # pull leaves the running containers in place (architecture.md Rollback).
+      - name: Deploy the dev Compose project (SSM Run Command)
+        if: steps.state.outputs.instance_state == 'running'
+        id: deploy
+        env:
+          INSTANCE_ID: ${{ steps.state.outputs.instance_id }}
+          REPO: ${{ github.repository }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+
+          eip="$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)"
+          eip_dashed="${eip//./-}"
+
+          script_b64="$(base64 -w0 terraform/server/deploy-env.sh)"
+          app_b64="$(base64 -w0 compose.yaml)"
+
+          # The command the server runs: export the inputs, decode the deploy
+          # script and exec it. The app compose is passed through to the script
+          # as APP_COMPOSE_B64 (it decodes it itself).
+          remote="export DEPLOY_ENV='dev' IMAGE_TAG='${TAG}' GHCR_REPO='ghcr.io/${REPO}' EIP_DASHED='${eip_dashed}' AWS_REGION='${REGION}' APP_COMPOSE_B64='${app_b64}'; echo '${script_b64}' | base64 -d | bash"
+
+          cmd_id="$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --instance-ids "$INSTANCE_ID" \
+            --comment "dev deploy ${TAG}" \
+            --parameters "commands=[$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$remote")]" \
+            --query 'Command.CommandId' --output text)"
+          echo "SSM command: $cmd_id"
+          echo "cmd_id=$cmd_id" >> "$GITHUB_OUTPUT"
+
+          # Wait for completion, then surface output and fail on a non-Success
+          # final status.
+          aws ssm wait command-executed \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" || true
+          status="$(aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'Status' --output text)"
+          echo "--- remote stdout ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' --output text || true
+          echo "--- remote stderr ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardErrorContent' --output text || true
+          echo "final status: $status"
+          [ "$status" = "Success" ]
+
+      # Record the deployed tag and digests in the deploy log (the acceptance:
+      # "recording the tag and digest in the deploy log").
+      - name: Record the dev deploy
+        if: steps.state.outputs.instance_state == 'running'
+        run: |
+          {
+            echo "## dev deploy"
+            echo
+            echo "- environment: \`dev\`"
+            echo "- image tag: \`${TAG}\`"
+            echo "- backend digest: \`${BACKEND_DIGEST}\`"
+            echo "- frontend digest: \`${FRONTEND_DIGEST}\`"
+            echo "- SSM command: \`${{ steps.deploy.outputs.cmd_id }}\`"
+            echo "- instance: \`${{ steps.state.outputs.instance_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Manual production promotion (task 18 / #143). A workflow_dispatch run in the
+  # `production` environment — the human is the required reviewer (aws-setup.md
+  # step 6.1), so the deploy pauses for approval before anything runs. It takes
+  # an image tag (default: the tag currently running in dev), rebuilds nothing,
+  # and deploys the `prod` Compose project at app.<eip>.sslip.io with that tag
+  # and DEPLOYMENT_ENVIRONMENT=prod. Rollback is this same job re-run with the
+  # previous tag from the deploy log (architecture.md § Deployment, Rollback).
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      INPUT_TAG: ${{ inputs.image_tag }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # OIDC: assume the PROD deploy role. Its trust policy accepts only tokens
+      # from this repo in the `production` environment (not `main`, not PRs), so
+      # the human's environment approval gates the credential itself.
+      - name: Assume the prod deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PROD_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Read the instance state first (as the dev deploy does). A prod promotion
+      # to a stopped server is skipped and reported, never half-applied.
+      - name: Read the server's instance state
+        id: state
+        run: |
+          set -euo pipefail
+          read -r instance_id instance_state < <(
+            aws ec2 describe-instances \
+              --filters \
+                "Name=tag:project,Values=vuln-triage" \
+                "Name=tag:Name,Values=vuln-triage-server" \
+                "Name=instance-state-name,Values=pending,running,stopping,stopped" \
+              --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+              --output text | head -n1
+          )
+          if [ -z "${instance_id:-}" ]; then
+            echo "No instance tagged project=vuln-triage / Name=vuln-triage-server was found." >&2
+            exit 1
+          fi
+          echo "instance_id=$instance_id" >> "$GITHUB_OUTPUT"
+          echo "instance_state=$instance_state" >> "$GITHUB_OUTPUT"
+          echo "Instance $instance_id is $instance_state."
+
+      - name: Skip and report (server stopped)
+        if: steps.state.outputs.instance_state != 'running'
+        run: |
+          {
+            echo "## prod promotion skipped: server stopped"
+            echo
+            echo "Instance \`${{ steps.state.outputs.instance_id }}\` is \`${{ steps.state.outputs.instance_state }}\`, not \`running\`."
+            echo "Nothing was deployed and the server was not called; production is unchanged."
+            echo "Start the server (EC2 → Instances → Start) and re-run this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "prod promotion skipped: server stopped"
+
+      # Resolve the tag to promote: the input if given, else the tag currently
+      # running in dev (read from the dev project's .env on the server via SSM).
+      # Defaulting to dev's tag is the "default: the one running in dev" rule and
+      # keeps prod on an image that has already been serving dev.
+      - name: Resolve the image tag to promote
+        if: steps.state.outputs.instance_state == 'running'
+        id: tag
+        env:
+          INSTANCE_ID: ${{ steps.state.outputs.instance_id }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-}"
+          if [ -z "$tag" ]; then
+            echo "No image_tag input; reading the tag currently running in dev."
+            read_cmd="grep -E '^IMAGE_TAG=' /opt/vuln-triage/dev/.env | head -n1 | cut -d= -f2-"
+            cmd_id="$(aws ssm send-command \
+              --document-name AWS-RunShellScript \
+              --instance-ids "$INSTANCE_ID" \
+              --comment "read dev tag for prod promotion" \
+              --parameters "commands=[$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$read_cmd")]" \
+              --query 'Command.CommandId' --output text)"
+            aws ssm wait command-executed --command-id "$cmd_id" --instance-id "$INSTANCE_ID" || true
+            tag="$(aws ssm get-command-invocation \
+              --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+              --query 'StandardOutputContent' --output text | tr -d '[:space:]')"
+          fi
+          if [ -z "$tag" ]; then
+            echo "Could not resolve an image tag: no input given and dev has no IMAGE_TAG yet." >&2
+            echo "Deploy dev first, or pass the image_tag input explicitly." >&2
+            exit 1
+          fi
+          echo "Promoting image tag: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # Resolve the digests for this tag from GHCR, so the deploy log records
+      # what was promoted (acceptance: the log holds each tag's digest; rollback
+      # reads the previous tag from it).
+      - name: Resolve image digests for the tag
+        if: steps.state.outputs.instance_state == 'running'
+        id: digests
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # GHCR packages are public (the server pulls without a credential), so
+          # inspecting the manifest needs no login. Best-effort: a miss records
+          # "unknown" and never fails the promotion.
+          bd="$(docker buildx imagetools inspect "ghcr.io/${REPO}/backend:${TAG}" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)"
+          fd="$(docker buildx imagetools inspect "ghcr.io/${REPO}/frontend:${TAG}" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)"
+          echo "backend_digest=${bd:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "frontend_digest=${fd:-unknown}" >> "$GITHUB_OUTPUT"
+
+      # Promote: deploy the prod project with the resolved tag via SSM. No
+      # secret is carried by the workflow — deploy-env.sh reads the prod secret
+      # from Secrets Manager using the server's instance role (the prod deploy
+      # OIDC role has no secrets access; architecture.md Security boundaries).
+      # DEPLOYMENT_ENVIRONMENT=prod is set by deploy-env.sh, which makes the
+      # backend's VT_FEEDS=fixtures / VT_DEMO_DEFECT refusals fail closed.
+      - name: Deploy the prod Compose project (SSM Run Command)
+        if: steps.state.outputs.instance_state == 'running'
+        id: deploy
+        env:
+          INSTANCE_ID: ${{ steps.state.outputs.instance_id }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          set -euo pipefail
+
+          eip="$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)"
+          eip_dashed="${eip//./-}"
+
+          script_b64="$(base64 -w0 terraform/server/deploy-env.sh)"
+          app_b64="$(base64 -w0 compose.yaml)"
+
+          remote="export DEPLOY_ENV='prod' IMAGE_TAG='${TAG}' GHCR_REPO='ghcr.io/${REPO}' EIP_DASHED='${eip_dashed}' AWS_REGION='${REGION}' APP_COMPOSE_B64='${app_b64}'; echo '${script_b64}' | base64 -d | bash"
+
+          cmd_id="$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --instance-ids "$INSTANCE_ID" \
+            --comment "prod promotion ${TAG}" \
+            --parameters "commands=[$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$remote")]" \
+            --query 'Command.CommandId' --output text)"
+          echo "SSM command: $cmd_id"
+          echo "cmd_id=$cmd_id" >> "$GITHUB_OUTPUT"
+
+          aws ssm wait command-executed \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" || true
+          status="$(aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'Status' --output text)"
+          echo "--- remote stdout ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' --output text || true
+          echo "--- remote stderr ---"
+          aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardErrorContent' --output text || true
+          echo "final status: $status"
+          [ "$status" = "Success" ]
+
+      # Record the promotion in the deploy log: the tag and each digest, so a
+      # rollback can re-run this workflow with the previous tag.
+      - name: Record the prod promotion
+        if: steps.state.outputs.instance_state == 'running'
+        run: |
+          {
+            echo "## prod promotion"
+            echo
+            echo "- environment: \`prod\`"
+            echo "- promoted image tag: \`${{ steps.tag.outputs.tag }}\`"
+            echo "- backend digest: \`${{ steps.digests.outputs.backend_digest }}\`"
+            echo "- frontend digest: \`${{ steps.digests.outputs.frontend_digest }}\`"
+            echo "- tag source: ${INPUT_TAG:+explicit input}${INPUT_TAG:-the tag running in dev}"
+            echo "- SSM command: \`${{ steps.deploy.outputs.cmd_id }}\`"
+            echo "- instance: \`${{ steps.state.outputs.instance_id }}\`"
+            echo
+            echo "_Rollback:_ re-run this workflow (Actions → deploy → Run workflow) with the **previous** tag from an earlier entry here."
+          } >> "$GITHUB_STEP_SUMMARY"
