@@ -23,10 +23,20 @@ agent sandbox.
 ## Run it
 
 ```sh
-cp ../.env.example ../.env          # set GRAFANA_ADMIN_PASSWORD
+cp .env.example .env                # from the repo root; set GRAFANA_ADMIN_PASSWORD
 cd observability
-docker compose up -d --wait
+docker compose --env-file ../.env up -d --wait
 ```
+
+Compose reads `.env` from the folder you run it in, so pass the root file with
+`--env-file ../.env` (without it Compose reports `GRAFANA_ADMIN_PASSWORD` missing).
+Use the same flag for `down`.
+
+The alert rule's placeholder recipient and responder webhook
+(`VT_ALERT_HUMAN_EMAIL`, `VT_RESPONDER_WEBHOOK_URL`, `VT_RESPONDER_WEBHOOK_TOKEN`)
+default to values that go nowhere, so the plain stack starts without them. Export
+real ones in your shell first to change them. Without these defaults Grafana exits
+at start-up with "could not find addresses in settings".
 
 Grafana: `http://localhost:3000` (user `admin`, password `GRAFANA_ADMIN_PASSWORD`).
 The **US-13 journey** dashboard (folder "VulnTriage") has three panels — a

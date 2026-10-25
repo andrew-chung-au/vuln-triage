@@ -56,6 +56,14 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # The provisioned alert rule (grafana/provisioning/alerting/us14-overdue.yaml)
+      # reads these. Grafana refuses to start if the email address is empty, so the
+      # plain stack gets placeholders that go nowhere; `compose.alert.yaml` and
+      # ci/test-compose.sh set the real values for the alert test, and exporting them
+      # in your shell overrides these defaults.
+      VT_ALERT_HUMAN_EMAIL: ${VT_ALERT_HUMAN_EMAIL:-oncall@example.invalid}
+      VT_RESPONDER_WEBHOOK_URL: ${VT_RESPONDER_WEBHOOK_URL:-http://localhost:9/unused}
+      VT_RESPONDER_WEBHOOK_TOKEN: ${VT_RESPONDER_WEBHOOK_TOKEN:-unused}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/etc/grafana/dashboards:ro
