@@ -1,4 +1,4 @@
-"""MCP read operations (issue #84, Showcase US-12): I-MCP and I-AUTH-MCP.
+"""MCP read operations (issue #84, future development US-12): I-MCP and I-AUTH-MCP.
 
 The MCP server itself is task 32; this proves the three read endpoints plus
 `GET /assets/{id}` under the MCP token, the labelled untrusted-advisory

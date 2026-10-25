@@ -78,7 +78,7 @@ _PYGOAT_ASSET = {
     "internetFacing": True,
     "repositoryUrl": "https://github.com/adeyosemanputra/pygoat",
 }
-# The submission backend span list for T-JOURNEY-BE (brief.generate is showcase,
+# The submission backend span list for T-JOURNEY-BE (brief.generate is future development,
 # not asserted).
 _JOURNEY_SPANS = {
     "scan.run", "repository.read", "osv.query", "signals.enrich",

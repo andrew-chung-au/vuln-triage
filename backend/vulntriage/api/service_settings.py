@@ -5,7 +5,7 @@ provisions (ASSUMPTION A1, #27/#50): the n8n token (``N8N_API_TOKEN``), the MCP
 token (``MCP_API_TOKEN``) and the responder token (``RESPONDER_API_TOKEN``). No
 value is logged, returned in an error or stored; each is compared in constant
 time against the ``Authorization: Bearer`` value. For submission the n8n and MCP
-tokens do not exist (their callers are Showcase); the responder token is used by
+tokens do not exist (their callers are future development); the responder token is used by
 task 28's responder.
 """
 

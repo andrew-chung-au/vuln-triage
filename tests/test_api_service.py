@@ -4,7 +4,7 @@ Covers the submission scope of task 10a: the n8n and responder bearer
 allowlists (I-AUTH-N8N's submission subset and I-RESP-*), top-tier
 NotificationJob creation with the lifecycle idempotency key, and I-OWNER-ONCE's
 job half (a second refresh creates no second job). The n8n claim/report/digest
-behaviour is Showcase; here those endpoints are contract-only stubs.
+behaviour is future development; here those endpoints are contract-only stubs.
 """
 
 from __future__ import annotations

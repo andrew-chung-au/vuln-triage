@@ -230,7 +230,7 @@ def test_recorders_with_no_confirmed_inputs_return_2_and_make_no_request(monkeyp
 def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
     """`.env.example` (task 15) lists the submission setting/secret names only.
 
-    It must name what the submission needs, must not name showcase-only
+    It must name what the submission needs, must not name future-development-only
     settings, and must carry no real values: every setting line is ``NAME=``
     (empty) or a stub default (``LLM_MODE=stub`` / ``RESPONDER_MODE=stub``).
     """
@@ -256,7 +256,7 @@ def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
         "RESPONDER_MODE",
     } <= names
 
-    # Showcase-only settings must not appear in the submission file.
+    # Future-development-only settings must not appear in the submission file.
     assert names.isdisjoint(
         {"MCP_API_TOKEN", "N8N_API_TOKEN", "LLM_API_KEY", "SMTP_PASSWORD"}
     )

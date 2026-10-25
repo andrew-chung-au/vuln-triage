@@ -1,4 +1,4 @@
-"""Service-token operations: n8n, responder and the showcase stubs (issue #83).
+"""Service-token operations: n8n, responder and the future-development stubs (issue #83).
 
 Submission scope (real behaviour):
 - ``POST /signals/refresh`` — re-score every asset's findings and create
@@ -7,7 +7,7 @@ Submission scope (real behaviour):
 - ``GET /responder/findings/{id}`` and ``GET /responder/notification-jobs`` —
   the US-15 responder's two read operations.
 
-Showcase stubs (contract-only, documented statuses; behaviour is tasks 32-35):
+Future-development stubs (contract-only, documented statuses; behaviour is tasks 32-35):
 - ``GET /notification-jobs``, ``POST /notification-jobs/{id}/claim``,
   ``POST /notification-jobs/{id}/report``, ``GET /reports/weekly-digest``,
   and the three ``/mcp/`` operations.
@@ -97,12 +97,12 @@ def scheduled_rescan(request: Request, _: None = Depends(require_n8n)) -> Respon
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
 
-# -- n8n showcase stubs (contract-only) -------------------------------------
+# -- n8n future-development stubs (contract-only) -------------------------------------
 
 
 @router.get("/notification-jobs")
 def list_notification_jobs(request: Request, _: None = Depends(require_n8n)) -> list[dict[str, Any]]:
-    # Showcase: the n8n delivery path is tasks 32-35. The backend delivers the
+    # Future development: the n8n delivery path is tasks 32-35. The backend delivers the
     # owner notification itself in submission scope, so this returns no jobs.
     kinds = request.query_params.getlist("kind")
     for kind in kinds:
@@ -113,19 +113,19 @@ def list_notification_jobs(request: Request, _: None = Depends(require_n8n)) -> 
 
 @router.post("/notification-jobs/{job_id}/claim")
 def claim_notification_job(job_id: str, request: Request, _: None = Depends(require_n8n)) -> dict[str, Any]:
-    # Showcase stub: no job is ever listed, so any id is unknown.
+    # Future-development stub: no job is ever listed, so any id is unknown.
     raise _error("not_found", 404)
 
 
 @router.post("/notification-jobs/{job_id}/report", status_code=204)
 def report_notification_job(job_id: str, request: Request, _: None = Depends(require_n8n)) -> Response:
-    # Showcase stub: no job is ever claimable, so any id is unknown.
+    # Future-development stub: no job is ever claimable, so any id is unknown.
     raise _error("not_found", 404)
 
 
 @router.get("/reports/weekly-digest")
 def weekly_digest(request: Request, _: None = Depends(require_n8n)) -> dict[str, Any]:
-    # Showcase stub: valid shape with no findings; validates the week query.
+    # Future-development stub: valid shape with no findings; validates the week query.
     week = request.query_params.get("week")
     if week is not None and not _WEEK_RE.match(week):
         raise _error("validation", 422)
@@ -206,7 +206,7 @@ def _responder_job_to_wire(job: NotificationJob, finding_id: str) -> dict[str, A
     }
 
 
-# -- MCP read operations (task 10b; Showcase US-12) -------------------------
+# -- MCP read operations (task 10b; future development US-12) -------------------------
 
 
 @router.get("/mcp/top-exposures")
