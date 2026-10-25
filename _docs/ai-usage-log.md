@@ -2433,3 +2433,12 @@ Copy this template for each new entry:
 - files changed: new `.opencode/plugins/permission-log.js` (protected path, commit 4fa0674, human-approved in the session; it appends OpenCode `permission.asked` / `permission.replied` events to `.scratch/permission-prompts.jsonl`); `_docs/permission-sweeps.md`; this log entry
 - verification (tests run, reviewer verdict): the plugin has NOT been run. The OpenCode docs do not document the event payload, whether `node:fs` is available in a plugin, or whether subagent sessions emit the events (VERIFY). `make permission-report SINCE=1b37fd1` was run read-only: 68 summaries, 29 without a Permission review section (mostly Kiro Web and cloud sessions that did not use the template), no settings change supported by the counts. No reviewer verdict.
 - human review (what I checked or corrected, or `none`): the human approved the plugin commit; the first OpenCode session after it is the check.
+
+- date: 2026-10-25
+- task/issue: #65 (permission sweep 1) — `make permission-report` reads the OpenCode prompt log
+- agent role: Orchestrator (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human saw `.scratch/permission-prompts.jsonl` appear after resuming an OpenCode session, and approved a described diff to `permission-report.py`. No new key prompt saved.
+- files changed: `_docs/agent-kit/scripts/permission-report.py` (protected path, commit 5fd93d4: `prompt_stats`, `prompt_label`, `render_prompts`; `main` reads `.scratch/permission-prompts.jsonl` when present and no longer returns early when no summaries changed); `.scratch/agent-kit-issue-permission-log.md` (git-ignored draft of an agent-kit issue, not filed by the agent); this log entry
+- verification (tests run, reviewer verdict): ran `make permission-report SINCE=9eb4071` against the live log: it listed `gh issue edit` (1 prompt, no reply logged) and `python3|bash .scratch/*` (1 prompt, once). No automated tests were added: the regression script the old docstring mentioned is not tracked in the repo. Subagent coverage of the log is not yet checked. No reviewer verdict. The approval record is on #65 (comment 6394523862) and lists three differences between the approved description and the committed diff.
+- human review (what I checked or corrected, or `none`): the human approved the described change before the commit; the three differences were disclosed afterwards in the approval record.
