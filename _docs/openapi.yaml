@@ -1336,6 +1336,7 @@ components:
         - lockfile parse error
         - repository unavailable
         - no dependency files
+        - internal error
 
     KevValue:
       type: string
@@ -1498,7 +1499,7 @@ components:
             - $ref: '#/components/schemas/ScanFailureReason'
             - type: 'null'
           description: |
-            `null` unless `scanStatus` is `scan failed`; one of the four reasons
+            `null` unless `scanStatus` is `scan failed`; one of the five reasons
             when it is.
         lastScanAt:
           type:

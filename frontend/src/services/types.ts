@@ -12,7 +12,8 @@ export type ScanFailureReason =
   | "feed unavailable"
   | "lockfile parse error"
   | "repository unavailable"
-  | "no dependency files";
+  | "no dependency files"
+  | "internal error";
 export type KevValue = "KEV: listed" | "KEV: not listed" | "KEV: n/a (no CVE)";
 export type UserRole = "security lead" | "asset owner";
 export type BriefStatus = "available" | "unavailable" | "pending";

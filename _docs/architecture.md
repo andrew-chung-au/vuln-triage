@@ -120,7 +120,7 @@ Enum values (stored and sent on the wire exactly as written here, ASSUMPTION: (A
 |---|---|
 | Finding status | `open`, `risk accepted`, `fixed`, `withdrawn` |
 | Asset scan status | `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`, `scanned, clean` |
-| Failure reason | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files` |
+| Failure reason | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files`, `internal error` (an unexpected exception inside the scan, #198) |
 | KEV value (derived, not stored) | `KEV: listed`, `KEV: not listed`, `KEV: n/a (no CVE)` |
 | Tier | `P1`, `P2`, `P3`, `P4` |
 | Criticality | `low`, `medium`, `high`, `critical` |
@@ -139,7 +139,7 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 
 | Mock (`types.ts`) | Data model |
 |---|---|
-| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the four failure reasons) |
+| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the five failure reasons) |
 | `FindingStatus` value `risk_accepted` | `risk accepted` (exact spec string) |
 | `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed. Cases that need a 403: a write with the responder API token (`I-RESP-WRITE`: a job claim or retry `POST`, or risk acceptance; Security boundaries credential table; showcase: the same for the n8n API token, and for the MCP token, whose write refusal is "a 4xx", US-12); an asset owner accepting risk on another owner's asset (Security boundaries, dashboard authentication paragraph, A30; the status code is #23's). Showcase (US-12): #23 may use the same code for the MCP token write. The existing codes cover the other refused cases: expired session 401 (`unauthenticated`), whitespace-only reason 422 (`validation`), showcase (n8n): a second claim of a claimed job (`conflict`) |
 | `User { id, name, email }` | `User.username`, `display_name`, `email`, `role` (`security lead` or `asset owner`); `password_hash` and Sessions stay server-side |
