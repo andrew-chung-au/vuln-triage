@@ -40,8 +40,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (kind, outcome) (rate(vt_notifications_total[5m]))",
-          "legendFormat": "{{kind}}/{{outcome}}"
+          "expr": "sum by (vt_notification_kind, vt_outcome) (rate(vt_notifications_total[5m]))",
+          "legendFormat": "{{vt_notification_kind}}/{{vt_outcome}}"
         }
       ]
     },

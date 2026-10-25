@@ -680,6 +680,22 @@ describe("contract-shaped screens", () => {
     expect(screen.getByTestId("asset-scan-a8")).toHaveTextContent("scanned, incomplete");
   });
 
+  it("shows an internal error scan failure as scan failed with the reason text (#198)", async () => {
+    await signIn();
+    setUser(DEMO_USER);
+    const assets = await mockServices.listAssets();
+    vi.spyOn(mockServices, "listAssets").mockResolvedValue(
+      assets.map((a) =>
+        a.id === "a5" ? { ...a, scanStatus: "scan failed", scanFailureReason: "internal error" } : a,
+      ),
+    );
+    renderApp("/assets");
+
+    const cell = await screen.findByTestId("asset-scan-a5");
+    expect(cell).toHaveTextContent("scan failed");
+    expect(cell).toHaveTextContent("internal error");
+  });
+
   it("shows the forbidden message on the accept screen and leaves the finding open", async () => {
     await signInAsOwner();
     setUser(DEMO_OWNER_USER);

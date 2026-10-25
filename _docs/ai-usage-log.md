@@ -2461,3 +2461,53 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS (87 frontend tests, 459 backend tests, typecheck, whitespace, weakened-test checks). QA PASS on #180 (criteria 1-3) at `a4926ce`, with two note fixes applied afterwards (the stale "none is filed" line and the dashboard-label citation). The Docker/Compose cases were not run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): approved all four decisions at the #180 decision point; corrected two process points: never propose allowing `python3 .scratch/*` (the right answer is a make target), and the two modified docs were the human's #65 work, committed as `0e9af39` (the interim "not mine" report was wrong).
+
+- date: 2026-10-25
+- task/issue: #193 (delivery worker: outcome span/log/counter on every held branch; folds #177)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #193 per the issue, the PM grooming comment (6395175402) and the human decisions (comment 6395603152). No new key prompt saved.
+- files changed: `backend/vulntriage/mail/delivery.py` (span, log and one counter increment on the ownerless, owner-email-missing and no_target holds; counter added to mail_config and header_injection; `vt.finding.id` omitted for no_target); `tests/test_notifications.py` (new cases for all eight outcomes, second poll, empty traceparent, leak check); `_docs/pending-verification.md` and `_docs/human-tasklist.md` (#177/#193 Loki leg recorded); this log entry
+- verification (tests run, reviewer verdict): `make backend-test` passed (471 passed). `make verify` result is in the #193 Engineer comment. The Loki leg was not run (no Docker) and no held-job case was added to `T-JOURNEY-BE`; the reason is in `_docs/pending-verification.md`. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #194 (emit scan.finished on failed scans)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #194 per the issue, the PM grooming comment (6395764352) and the human decisions (comment 6396310715). No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/scan.py` (`_fail` logs `scan.finished` after its commit; the feed-failure path re-sets `Scan.trace_id` after its rollback); `tests/test_scan_finished_log.py` (new); this log entry
+- verification (tests run, reviewer verdict): new tests written first and seen failing; `make verify` PASS (480 backend tests, 87 frontend tests). No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #195 (US-13 dashboard: align panel queries with exported metric labels)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #195 per the rewritten issue, the PM grooming comment (6396447910) and the human decisions of 2026-10-25 (live check split to #199; variables marked unverified; doc notes added). No new key prompt saved.
+- files changed: `tests/test_us13_dashboard.py` (new); `observability/grafana/dashboards/us13-journey.json` (panel 1 groups by and labels with `vt_notification_kind`, `vt_outcome`); `_docs/testing.md` and `_docs/architecture.md` (one "exported as" note each); this log entry
+- verification (tests run, reviewer verdict): test written first and seen failing against the old dashboard (2 failures), then passing after the fix; `make verify` PASS (487 backend tests, 87 frontend tests). The Prometheus label spelling was not checked against a live stack (#199). No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #198 (finish a scan that dies from an unexpected exception: `scan failed` / `internal error`)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #198 under option C, with the human's decision (comment 6396530035), the PM list (6396549653) and the approved spec commit 543c87d (record 6396589596). No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/scan.py` (catch-all in `run_scan` reusing `_fail`; `_fail` marks kept findings stale, success clears the mark); `backend/vulntriage/db/enums.py`; `backend/migrations/versions/0002_internal_error_failure_reason.py` (new); `backend/vulntriage/observability/tracing.py` (`span` no longer records exception messages); `tests/test_scan_internal_error.py` (new); `tests/test_db_schema.py`; `tests/test_ingest.py`; `_docs/architecture.md`, `_docs/api.md`, `_docs/openapi.yaml`; `frontend/src/services/types.ts`; `frontend/src/test/vulntriage.test.tsx`; this log entry
+- verification (tests run, reviewer verdict): tests written first; `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is one rewritten assertion in `test_worker_survives_an_unexpected_error`, which asserted the superseded "left unfinished" behaviour); `make openapi-validate` OK. The migration ran on SQLite only, not on Postgres. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: CI fix on PR #200 (`verify / postgres-integration` failed on three SQLite-only tests from #198 and #194)
+- agent role: Software Engineer subagent (Claude Code, local sandbox, `main`)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to move the two Migration 0002 tests to a `unit`-only module and keep the PRAGMA test off Postgres. No new key prompt saved.
+- files changed: `tests/test_migration_0002.py` (new, `unit`; the two migration tests moved unchanged); `tests/test_scan_orphaned_scan.py` (new, `unit`; the PRAGMA test moved unchanged); `tests/test_scan_internal_error.py` and `tests/test_scan_finished_log.py` (the moved tests and their unused imports removed); this log entry
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (496 backend tests, 88 frontend tests; the warning is the earlier #198 rewritten assertion). Not run on Postgres (no Docker here). A `pytest.skip` on the non-SQLite dialect was tried first and the verify gate failed it ("skip markers added"), so the PRAGMA test was moved to a `unit` module instead. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

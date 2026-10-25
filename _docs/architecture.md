@@ -120,7 +120,7 @@ Enum values (stored and sent on the wire exactly as written here, ASSUMPTION: (A
 |---|---|
 | Finding status | `open`, `risk accepted`, `fixed`, `withdrawn` |
 | Asset scan status | `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`, `scanned, clean` |
-| Failure reason | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files` |
+| Failure reason | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files`, `internal error` (an unexpected exception inside the scan, #198) |
 | KEV value (derived, not stored) | `KEV: listed`, `KEV: not listed`, `KEV: n/a (no CVE)` |
 | Tier | `P1`, `P2`, `P3`, `P4` |
 | Criticality | `low`, `medium`, `high`, `critical` |
@@ -139,7 +139,7 @@ Field names in the right-hand column are the Data model's; the wire spelling is 
 
 | Mock (`types.ts`) | Data model |
 |---|---|
-| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the four failure reasons) |
+| `ScanStatus = "scanned" \| "scan_error" \| "not_scanned"` | `Asset.scan_status`: the five asset scan status values, plus `Asset.scan_failure_reason` (nullable, one of the five failure reasons) |
 | `FindingStatus` value `risk_accepted` | `risk accepted` (exact spec string) |
 | `ServiceErrorCode`: `validation`, `not_found`, `conflict`, `unauthenticated` | No code for an authenticated caller who isn't allowed. Cases that need a 403: a write with the responder API token (`I-RESP-WRITE`: a job claim or retry `POST`, or risk acceptance; Security boundaries credential table; showcase: the same for the n8n API token, and for the MCP token, whose write refusal is "a 4xx", US-12); an asset owner accepting risk on another owner's asset (Security boundaries, dashboard authentication paragraph, A30; the status code is #23's). Showcase (US-12): #23 may use the same code for the MCP token write. The existing codes cover the other refused cases: expired session 401 (`unauthenticated`), whitespace-only reason 422 (`validation`), showcase (n8n): a second claim of a claimed job (`conflict`) |
 | `User { id, name, email }` | `User.username`, `display_name`, `email`, `role` (`security lead` or `asset owner`); `password_hash` and Sessions stay server-side |
@@ -358,7 +358,7 @@ The US-13 journey is scan → match → score → notification job → backend d
 | Signal | What |
 |---|---|
 | Trace | Root span `scan.run`, children `repository.read`, `osv.query`, `signals.enrich`, `prioritise`, `brief.generate` (showcase), `notification.enqueue`, and later `notification.deliver` |
-| Metric | `vt_notifications_total{kind,outcome}`, `vt_notification_delivery_seconds`, `vt_top_tier_notification_overdue{finding_id,tier}` (0 or 1) |
+| Metric | `vt_notifications_total{kind,outcome}` (exported to Prometheus as `vt_notification_kind` and `vt_outcome`), `vt_notification_delivery_seconds`, `vt_top_tier_notification_overdue{finding_id,tier}` (0 or 1) |
 | Log | JSON lines: `event`, `trace_id`, `span_id`, ids and outcome codes only |
 
 One trace ID: the backend stores the W3C `traceparent` of `notification.enqueue` on the NotificationJob. For submission the backend delivery worker reads it from the job, records `notification.deliver` as a child span of it, and logs and counts the outcome with the same trace ID, so the whole journey is in the backend. Showcase: n8n receives the `traceparent` in the job and sends it back as the `traceparent` header when it reports the result (VERIFY: n8n's HTTP Request node sets custom headers), so the journey joins in the backend even if n8n emits no spans. Grafana shows the metric, trace and logs side by side, with trace-to-logs links (VERIFY: Tempo-to-Loki data source link). Every code path that creates a NotificationJob (a scan, the daily signal refresh; showcase: the reminder and escalation schedules, issue close, the weekly digest) records a `notification.enqueue` span, with its own root span when it is not inside `scan.run`, and stores that span's `traceparent` on the job. A job's `traceparent` is therefore never null and never changes.

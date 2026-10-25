@@ -325,14 +325,17 @@ A finding has exactly one status. This is the complete list:
 
 Each asset has exactly one scan status, with exactly these values:
 `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`,
-`scanned, clean`. Only an OSV outage, or a repository or lockfile failure,
-gives `scan failed`; a readable repository with no dependency file to read is
-a repository failure. A `scan failed` status also records one failure reason,
-with exactly these values: `feed unavailable` (OSV unavailable),
-`lockfile parse error`, `repository unavailable` (the GitHub repository is
-unreachable or missing, or the read-only token is rejected or expired), or
-`no dependency files` (the repository is readable but contains none of
-`uv.lock`, `requirements.txt` or `package-lock.json`).
+`scanned, clean`. Only an OSV outage, a repository or lockfile failure, or an
+unexpected failure inside VulnTriage itself gives `scan failed`; a readable
+repository with no dependency file to read is a repository failure. A
+`scan failed` status also records one failure reason, with exactly these
+values: `feed unavailable` (OSV unavailable), `lockfile parse error`,
+`repository unavailable` (the GitHub repository is unreachable or missing, or
+the read-only token is rejected or expired), `no dependency files` (the
+repository is readable but contains none of `uv.lock`, `requirements.txt` or
+`package-lock.json`), or `internal error` (the scan stopped on a failure that
+none of the other four describes; it is shown to users as the reason text
+`internal error`, with no technical detail, and the scheduled run retries it).
 For a successful scan the precedence is
 `scanned, findings` > `scanned, incomplete` > `scanned, clean`.
 "Version unknown" and refused-include warnings (E10) still show under every
@@ -365,6 +368,11 @@ Each case gets exactly one value:
 - GitHub repository unreachable or the read-only token rejected:
   `scan failed`, reason `repository unavailable`; previous findings are kept
   and marked stale.
+- Any other unexpected failure while the scan runs: `scan failed`, reason
+  `internal error`; the scan changes no dependency row, previous findings are
+  kept and marked stale, and the scan is finished (not left running or queued).
+  The reason carries no exception message, stack trace, repository URL or file
+  content.
 
 The scan status is not a finding status, and the `stale` feed marker is not a
 finding status.

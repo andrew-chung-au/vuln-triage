@@ -17,7 +17,23 @@ See `_docs/human-tasklist.md` for the prioritised roll-up of **all** human
 action (this file + the AWS setup, merges and sweeps); this file is the detailed
 per-issue checklist it links to for the verification runs.
 
-Last updated: 2026-10-25 (#180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
+Last updated: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
+
+## Cloud-session queue (Docker work to hand to Claude Code cloud sessions)
+
+Added 2026-10-25 at the human's direction: work the local sandbox can't do for
+lack of Docker goes to a Claude Code cloud session (`_docs/cloud-sessions.md`;
+one session per issue, credit is limited). Each line is a candidate, not a
+started job.
+
+- **#181** (T-E6, telemetry backend down): groomed, PM decisions Q1-Q3 still open (see the #181 comments). Author and run it in the cloud.
+- **#182** (`I-OWNER-SENDER` MailHog form): follows #160 (task 28).
+- **#198** (`internal error` scan reason): look at the failure reason on the dashboard in a running UI. Running migration `0002` on real Postgres is now **#201** (a `postgres_migration` check in the `postgres-integration` job; Docker-only, verified in CI).
+- **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): needs a running Grafana; shares the dashboard with #181, so sequence them. #195 is now the static fix and test, done locally.
+- **#172 / #174 / #193** (`T-JOURNEY-BE` Loki leg, plus the optional held-job case): run the `telemetry` job and add the held-job case.
+- **#157** (`T-REFUSE` run and negative check), **#155** (dashboard and MailHog check), **#158** (Grafana rule run): verification only.
+- **#140** (security scan, PR #167): needs network to generate the fixture lockfiles.
+- **Human machine, not cloud:** AWS applies and secrets (#141, `human-tasklist.md` §A).
 
 ## #141 — AWS infrastructure + dev environment (task 17)
 
@@ -162,6 +178,31 @@ harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
 - [ ] **Also confirms #174 and the log half of #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`; #177 was folded into #193 and closed on 2026-10-25). If this Loki leg does **not** carry the journey trace id, re-open #174 or #193 rather than only #172.
 - [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
 - [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`.
+
+## #177 / #193 — delivery outcome signals on every branch (Loki leg)
+
+Commit: see the Engineer comment on #193. The span/log/counter for all eight
+outcomes (`sent`, `failed`, and `held` with `sender_not_verified`,
+`header_injection`, `mail_config`, `ownerless`, `owner_email_missing`,
+`no_target`) is covered under `make test` (`tests/test_notifications.py`,
+SQLite + in-memory exporters): the log and span trace ids equal the job's stored
+`traceparent` trace id and the counter increments once. The end-to-end Loki leg
+is **best-effort, not a gate** (human decision, 2026-10-25); closing #193 does
+not wait on it.
+
+- [ ] (CI telemetry job, or a Codespace / cloud / Docker host) The #172
+  `T-JOURNEY-BE` Loki assertion (see #172 above) covers the `sent` log. It also
+  remains the only end-to-end proof of #177's `sent` log leg.
+- [ ] Held-job Loki case is **not** in `T-JOURNEY-BE`: not added blind. It needs a
+  second asset with no owner registered through the container backend (a distinct
+  repository URL the `VT_FEEDS=fixtures` mode can scan, which the fixtures do not
+  have yet), and `wait_for_trace_with_span("notification.enqueue")` then matches
+  either journey's trace, so the test needs a per-asset trace lookup. Neither can
+  be checked without Docker. Optional manual check: with the stack up, register an
+  ownerless asset whose scan yields a P1 finding, wait one delivery poll (~30s),
+  then confirm a Loki `notification.deliver` log with `vt.outcome="held"` and
+  `vt.error.code="ownerless"` carries the trace id of that job's
+  `notification.enqueue` span in Tempo. Post the result on #193.
 
 ---
 

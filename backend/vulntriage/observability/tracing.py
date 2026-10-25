@@ -18,7 +18,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Span
+from opentelemetry.trace import Span, Status, StatusCode
 
 from vulntriage.observability.allowlist import filter_attributes
 from vulntriage.observability import settings
@@ -81,8 +81,16 @@ def span(name: str, attributes: Mapping[str, Any] | None = None) -> Iterator[Spa
     at span start. Add later attributes with :func:`set_span_attributes`.
     """
     attrs = filter_attributes(attributes or {})
-    with get_tracer().start_as_current_span(name, attributes=attrs) as current:
-        yield current
+    # #198: the SDK default would copy an exception's message and stack trace
+    # into a span event and the status description. Record the error status only.
+    with get_tracer().start_as_current_span(
+        name, attributes=attrs, record_exception=False, set_status_on_exception=False
+    ) as current:
+        try:
+            yield current
+        except BaseException:
+            current.set_status(Status(StatusCode.ERROR))
+            raise
 
 
 @contextmanager

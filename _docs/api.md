@@ -198,7 +198,7 @@ Enums are exactly these strings:
 | `Criticality` | `low`, `medium`, `high`, `critical` |
 | `FindingStatus` | `open`, `risk accepted`, `fixed`, `withdrawn` |
 | `ScanStatus` | `not yet scanned`, `scan failed`, `scanned, findings`, `scanned, incomplete`, `scanned, clean` |
-| `ScanFailureReason` | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files` |
+| `ScanFailureReason` | `feed unavailable`, `lockfile parse error`, `repository unavailable`, `no dependency files`, `internal error` |
 | `KevValue` | `KEV: listed`, `KEV: not listed`, `KEV: n/a (no CVE)` |
 | `UserRole` | `security lead`, `asset owner` |
 | `BriefStatus` | `available`, `unavailable`, `pending` |
