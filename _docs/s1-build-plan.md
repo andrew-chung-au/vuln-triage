@@ -38,7 +38,7 @@ source of truth for order and scope stays `_docs/roadmap.md` (S1) and
 | 7 | #109 | - | Four review-2 plan fixes; must precede #81-#84 |
 | 8 | #81 | 9a | Session cookie, CSRF, lockout, user CLI, role guard |
 | 9 | #82 | 9b | Findings/assets/re-scan/risk/PATCH endpoints, error order |
-| 10 | #83 | 10a | Signals/scans, jobs/idempotency/traceparent, Showcase stubs |
+| 10 | #83 | 10a | Signals/scans, jobs/idempotency/traceparent, future-development stubs |
 | 11 | #84 | 10b | MCP and responder read operations, GET-only allowlists |
 | 12 | #85 | 11 | Real `Services`, Vite proxy, dashboard views, `make dev` |
 | 13 | #86 | 12 | Risk acceptance, audit, re-scan and asset-edit UI |

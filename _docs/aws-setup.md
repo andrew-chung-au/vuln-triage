@@ -6,7 +6,7 @@ The agents write the Terraform files and the GitHub Actions workflows. You own t
 
 Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip.io` (`_docs/architecture.md`, Deployment and A36), and the local Compose stack for observability, the alert and the responder during submission (A34). Sources: `_docs/architecture.md` (Deployment, Security boundaries, Routing and notifications, assumptions A26, A36 and A37) and tasks 17, 18, 21 and 37. Where this guide and `architecture.md` differ, `architecture.md` wins and the difference is a defect here. AWS, GHCR, Let's Encrypt and Terraform behaviours, prices and console paths are marked `VERIFY:`: check them in the documentation or console when you do the step.
 
-Everything in "Submission steps" is needed for the submission. "Showcase extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
+Everything in "Submission steps" is needed for the submission. "Future-development extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
 
 For a single prioritised view of **all** human action (this AWS runbook plus the per-issue verification runs, merges and sweeps), see `_docs/human-tasklist.md`; it indexes back to the steps here.
 
@@ -39,9 +39,9 @@ Not used, on purpose (cost): load balancers, NAT gateways, RDS, ECS/EKS, CloudFr
 | 9 | Email sending route | Submission | Before task 37 runs on AWS | 15 min plus the verification wait |
 | 10 | Nightly stop and cost tag | Submission | With the server | 10 min |
 | 11 | Teardown | Submission | When you decide to end the deployment | 30 min |
-| S1 | Showcase extra secrets | Showcase | After the submission is in | 20 min |
-| S2 | Grafana and responder on AWS (X3) | Showcase | After the submission is in | see `roadmap-showcase.md` |
-| S3 | On-demand demo and Launch button (X1, X9) | Showcase | After the submission is in | see `roadmap-showcase.md` |
+| S1 | Future-development extra secrets | Future development | After the submission is in | 20 min |
+| S2 | Grafana and responder on AWS (X3) | Future development | After the submission is in | see `roadmap-showcase.md` |
+| S3 | On-demand demo and Launch button (X1, X9) | Future development | After the submission is in | see `roadmap-showcase.md` |
 
 Steps 1-4 need no repository code. Steps 4 and 5 are decisions (for step 4, the name form; the hostnames themselves exist only after the first apply creates the Elastic IP); record them in the issue for task 17. You, not an agent, perform the first deploy (task 17).
 
@@ -122,7 +122,7 @@ Derivation: the secrets table (Security boundaries) lists what exists; the crede
 Not in AWS for submission:
 - No email credential exists: SES uses the instance role (step 9). Do not create SMTP credentials.
 - The Grafana admin password, the observability stack's tokens (including the Grafana Viewer token), the responder's `RESPONDER_API_TOKEN`, and the responder's LLM key and GitHub token belong to the local Compose stack for submission (A34). They go in the local git-ignored `.env`, which agents never read.
-- The backend LLM key, the n8n, MCP and tracker tokens and SMTP credentials are showcase (S1).
+- The backend LLM key, the n8n, MCP and tracker tokens and SMTP credentials are future development (S1).
 
 Rules:
 - Generate passwords and tokens with a password manager or `openssl rand -base64 32` on your machine. Never paste a value into an issue, a chat with an agent or a file in the repository.
@@ -217,14 +217,14 @@ Human-only. Follow `_docs/architecture.md` Deployment → Teardown, in this orde
 
 Then release any Elastic IP left, and check Cost Explorer filtered by `project=vuln-triage` a few days later.
 
-# Showcase extra steps
+# Future-development extra steps
 
 Nothing in this section is needed for the submission. Start it only after the submission is in. Items are described in `_docs/roadmap-showcase.md`.
 
-## S1. Showcase extra secrets
+## S1. Future-development extra secrets
 
-Each is showcase and `VERIFY:` for the exact name, which `architecture.md` does not fix:
-- LLM API key for the backend brief (X4), in AWS with the backend's other secrets. The architecture's secrets table lists "LLM keys" without a showcase mark; the credentials table (backend key is showcase, responder key is local) is followed here.
+Each is future development and `VERIFY:` for the exact name, which `architecture.md` does not fix:
+- LLM API key for the backend brief (X4), in AWS with the backend's other secrets. The architecture's secrets table lists "LLM keys" without a future-development mark; the credentials table (backend key is future development, responder key is local) is followed here.
 - `N8N_API_TOKEN`, `MCP_API_TOKEN` and the tracker token (X5, X6).
 - SMTP credentials, only if n8n sends mail (X6).
 - For Grafana and the responder on AWS (S2): the Grafana admin password, the responder's LLM key and GitHub token, `RESPONDER_API_TOKEN` and the Grafana Viewer token, moved from the local `.env` into AWS secrets.
@@ -233,7 +233,7 @@ The step 8 rules apply.
 
 ## S2. Grafana and responder on AWS (X3)
 
-Observability and the responder run on AWS only as showcase item X3 (a separate observability server). Grafana would then need a public hostname and TLS as in step 4. Details and cost: `_docs/roadmap-showcase.md`.
+Observability and the responder run on AWS only as future-development item X3 (a separate observability server). Grafana would then need a public hostname and TLS as in step 4. Details and cost: `_docs/roadmap-showcase.md`.
 
 ## S3. On-demand demo and Launch button (X1, X9)
 
@@ -255,7 +255,7 @@ On-demand prices in `us-east-1`, orders of magnitude only (VERIFY in the AWS Pri
 
 Running all the time: roughly $40 a month. With the nightly stop (about 12 hours a day): roughly $25 a month, because the volumes, snapshots and the Elastic IP are still charged while the server is stopped. After teardown (step 11) the standing cost is about $0: only the state bucket, a few cents, stays until you delete it.
 
-Showcase additions (VERIFY: all prices):
+Future-development additions (VERIFY: all prices):
 - A second server for X2: VERIFY its price.
 - A separate observability server for X3: VERIFY its price.
 - LLM API usage for X4: VERIFY the provider's price.
