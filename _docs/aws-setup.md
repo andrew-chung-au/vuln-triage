@@ -147,6 +147,27 @@ The instance role's SES permission is send-only, limited to the one verified sen
 - **Nightly stop.** The server is stopped each night (Cost controls); the schedule is in the Terraform (VERIFY: EventBridge Scheduler). Start the server from the console (EC2 → Instances → Start) before working or demoing. Both environments stop together, so switch the nightly stop off (the Terraform variable, apply, or disable the schedule in the console) while graders may visit, and switch it back on afterwards. A stopped server has three effects: the backend runs a catch-up refresh and re-scan at start if the last run is over 24 hours old; an automatic dev deploy to a stopped server is skipped and reported in the workflow summary, so re-run the skipped workflow after you start the server; and anyone visiting the URL sees nothing. The Elastic IP is kept, so the hostnames do not change (VERIFY: an Elastic IP stays associated with a stopped instance).
 - **Cost allocation tag.** After the first apply, activate the `project` tag in Billing → Cost allocation tags (VERIFY), so Cost Explorer can show this project's spend alone. Tags take about a day to appear.
 
+## Production promotion and rollback (task 18)
+
+Production is **never** deployed automatically. A merge to `main` deploys only the `dev` project (task 21); you promote a tested image to production by hand, and only you can (the `production` GitHub environment has you as the required reviewer). Both environments run on the one server as two Compose projects behind one Caddy: `dev` at `dev.<eip>.sslip.io`, `prod` at `app.<eip>.sslip.io` (A36). Nothing is rebuilt during a promotion — it deploys an image tag that already exists in GHCR.
+
+Prerequisites (once):
+- The `production` environment exists with you as the required reviewer (step 6.1) and the `AWS_PROD_ROLE_ARN` variable is set (step 7).
+- The production secret `vuln-triage/prod` exists in Secrets Manager with at least `POSTGRES_PASSWORD` (step 8). The deploy reads it on the server with the instance role; the workflow carries no secret.
+- The server is running (promotion to a stopped server is skipped and reported, like the dev deploy; start it first).
+
+**Promote a release:**
+1. GitHub → Actions → **deploy** → **Run workflow** (this is the `workflow_dispatch` trigger).
+2. Leave **"Image tag to promote"** blank to promote the tag currently running in dev (the default — the image that has been serving dev), or paste a specific `YYYYMMDD-HHMMSS-shortsha` tag from an earlier deploy-log entry.
+3. The run pauses for your review on the `production` environment. Approve it. The `deploy-prod` job then deploys the `prod` project with that tag and records the promoted tag and each image's digest in the run summary (the deploy log).
+4. Confirm `https://app.<eip>.sslip.io` answers and shows the promoted build. The run summary (and the earlier build run for that tag) names the digest; `dev` and `prod` run the same digest when you promote dev's current tag.
+
+**Roll back:** re-run the same workflow and paste the **previous** tag — read it from an earlier "prod promotion" entry in the deploy log (each entry names its tag and digests). The promotion is the rollback; there is no separate path. A deploy that fails to pull leaves the running containers in place, so a bad tag does not take production down (`_docs/architecture.md` Deployment → Rollback). Alembic migrations are backward compatible for one release, so the previous image runs on the current schema.
+
+Notes:
+- The deploy log is the workflow run summary; keep the tag and digest from each promotion so a rollback has a previous tag to use.
+- The demo-defect gate `P-FLAG-GONE` (task 29) runs in this same production workflow; its step is added by task 29, not here.
+
 ## 11. Teardown
 
 Human-only. Follow `_docs/architecture.md` Deployment → Teardown, in this order:
