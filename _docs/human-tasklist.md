@@ -45,11 +45,14 @@ credentials.
 | A9 | First dev deploy; confirm `https://dev.<eip>.sslip.io` answers and the deploy log names an image digest → closes **#141** | push to `main` + AWS | `terraform-verify.md` §4 | ☐ |
 | A10 | Email route: verify the SES sender identity (and the demo recipient, SES sandbox); settle the SES `VERIFY:` items. Needed before task 37 delivers on AWS | AWS console | `aws-setup.md` §9, `pending-verification.md` #156 | ☐ |
 | A11 | Nightly stop on by default; switch it **off** while graders may visit; activate the `project` cost-allocation tag | AWS console / Terraform var | `aws-setup.md` §10 | ☐ |
+| A12 | Add the **prod** secret `vuln-triage/prod` (at least `POSTGRES_PASSWORD`), then **promote to production** (task 18 / #143): Actions → deploy → Run workflow, approve the `production` environment, confirm `https://app.<eip>.sslip.io` answers and `dev`/`prod` share the digest; rollback = re-run with the previous tag → closes **#143** | AWS console + GitHub Actions | `aws-setup.md` §8 + "Production promotion and rollback", `terraform-verify.md` §7 | ☐ |
 
 > **Dependency order:** A1-A3 need no repo code. A4-A5 are safe anywhere (no
 > AWS). A6 is the first apply. A8 can be folded into A6 if you apply after #142
 > is merged; otherwise it is a quick re-apply of one module. A9 is the
-> end-to-end gate for the dev environment.
+> end-to-end gate for the dev environment. A12 (prod promotion) needs A3's
+> `production` environment, A6's `AWS_PROD_ROLE_ARN`, and the `vuln-triage/prod`
+> secret; it needs **no** Terraform re-apply (task 18 adds no Terraform).
 
 ## B. Per-issue verification runs (code is merged; needs a real run to close)
 
@@ -104,9 +107,6 @@ merge-commit only — is in `_docs/human-cheatsheet.md`.
 
 ## E. Later / scheduled (not blocking submission)
 
-- ☐ Production environment + manual promotion/rollback (task 18 / **#143**) and
-  its AWS secrets — the `prod` half of `aws-setup.md` §8 and a `production`
-  environment reviewer (§6.1).
 - ☐ Pilot seed data registered through the API (task 22 / **#144**) once the dev
   environment is up.
 - ☐ Showcase AWS steps (S1-S3) — after submission (`aws-setup.md` Showcase

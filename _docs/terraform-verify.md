@@ -1,4 +1,4 @@
-# Verifying the Terraform (task 17 / #141; task 21 / #142)
+# Verifying the Terraform (task 17 / #141; task 21 / #142; task 18 / #143)
 
 How to check the `terraform/` modules before and after applying them. The agent
 writes the Terraform; **the human runs every `terraform apply`** and performs the
@@ -124,6 +124,34 @@ Then the end-to-end check for #142 (needs a push to `main`):
 
 Note: the `deploy-dev` job runs only on push to `main`; pull requests never
 receive an AWS role (confirmed by the `deploy` workflow not running on PRs).
+
+## 7. Production promotion and rollback (task 18 / #143)
+
+Task 18 adds the manual `deploy-prod` job to the same `.github/workflows/deploy.yml`
+(a `workflow_dispatch` in the `production` environment) and refactors the
+server-side logic into one shared `terraform/server/deploy-env.sh` that both the
+dev and prod deploys run. **No Terraform change is needed** — the prod deploy
+role and the instance role (Secrets Manager read) already exist from task 17,
+and the prod role shares the same deploy policy as the dev role (including the
+`ec2:DescribeInstances` added in §6). The prod deploy carries **no secret**: the
+server reads `vuln-triage/prod` from Secrets Manager with the instance role.
+
+Prerequisites (the human):
+
+- [ ] The `production` GitHub environment exists with the human as the **required reviewer** (`aws-setup.md` step 6.1), and the repo variable `AWS_PROD_ROLE_ARN` is set (§3 / `aws-setup.md` step 7).
+- [ ] The Secrets Manager secret `vuln-triage/prod` exists with at least `POSTGRES_PASSWORD` (`aws-setup.md` step 8). The instance role reads it; the deploy role cannot.
+
+End-to-end checks (needs a `workflow_dispatch` run):
+
+- [ ] **Promotion gates on approval:** Actions → deploy → Run workflow pauses on the `production` environment until the human approves; the prod OIDC credential is only issued for the `production` environment (not `main`, not PRs).
+- [ ] **Default tag = dev's current tag:** running with a blank `image_tag` promotes the tag currently running in dev (read from `/opt/vuln-triage/dev/.env` on the server); an explicit tag overrides it. Nothing is rebuilt.
+- [ ] **Prod answers and shares dev's digest:** `https://app.<elastic-ip>.sslip.io` answers the frontend; when the promoted tag is dev's current tag, `dev` and `prod` run the **same image digest** (the deploy log names it). Both hostnames are served by the one shared Caddy (`vt-caddy`), so bringing up `prod` leaves `dev` serving.
+- [ ] **Rollback:** re-running the workflow with the **previous** tag from an earlier "prod promotion" deploy-log entry rolls production back; a failed pull leaves the running containers in place (`_docs/architecture.md` Rollback). The rollback is recorded as a new deploy-log entry.
+- [ ] **Stopped server:** a promotion while the instance is stopped ends with a visible "prod promotion skipped: server stopped" summary and does not call the server.
+- [ ] `DEPLOYMENT_ENVIRONMENT=prod` is set on the prod backend (so `VT_FEEDS=fixtures` / `VT_DEMO_DEFECT` fail closed; `architecture.md` Environment signal). Confirm the prod `.env` on the server carries it.
+
+Note: the demo-defect gate `P-FLAG-GONE` runs in this production workflow but its
+step is added by task 29 (#161), not task 18.
 
 ## Notes / VERIFY (settled at apply time)
 
