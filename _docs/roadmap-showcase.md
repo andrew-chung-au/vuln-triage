@@ -1,10 +1,10 @@
-# VulnTriage roadmap: showcase track
+# VulnTriage roadmap: future development
 
-Status: adopted 2026-10-22 (human decision H1 in `_docs/roadmap.md`). This file stays separate from `_docs/roadmap.md` after the submission track is merged into it.
+Status: adopted 2026-10-22 (human decision H1 in `_docs/roadmap.md`), reworded 2026-10-26. The file keeps its original name, `roadmap-showcase.md`, so existing links still work; earlier documents call this track "Showcase". This file stays separate from `_docs/roadmap.md` after the submission track is merged into it.
 
-Purpose: VulnTriage is also a CV showcase. This track holds the work that scores no rubric points but makes the project stronger to show: the original plan's fuller deployment, the deferred product features, and an on-demand live demo. It is ongoing and has no deadline.
+Purpose: the submission is the goal and comes first. This track lists what comes next once it is in: the fuller deployment from the original plan, the deferred product features, and an on-demand live demo. None of it scores rubric points. It is ongoing and has no deadline.
 
-**Rule:** no showcase item starts before the submission is in (phase S5 in the submission track), unless the submission work is blocked waiting on something outside the project. Showcase items are filed as GitHub issues under a "Showcase" milestone when the track starts.
+**Rule:** no future-development item starts before the submission is in (phase S5 in the submission track), unless the submission work is blocked waiting on something outside the project. Items are filed as GitHub issues under a "Future development" milestone when the track starts.
 
 **Cost principle:** about $0 standing cost while the demo is down. Evidence when down: README recordings, screenshots, an architecture diagram and the history of passing workflows.
 
@@ -23,8 +23,8 @@ Ordered by value for effort; the order may change.
 | X7 | Hardening: managed database or snapshots, secret scanning in CI, Terraform linting and a `plan` check on pull requests | "Production ready" credibility | X1 | Small each |
 | X8 | Write-ups: architecture diagram, the agent-team process, cost notes | The agent-kit process is a story in itself | Submission done | Small |
 | X9 | Portfolio "Launch demo" button: a static portfolio site (GitHub Pages) calls one Lambda function URL, which triggers the X1 workflow; a scheduled workflow destroys the environment after a fixed lifetime | A live demo on request with $0 standing cost; a serverless control plane to talk about | X1 | Small to medium; Lambda free tier |
-| X10 | Least-privilege deploy: replace `AWS-RunShellScript` in the dev and prod deploy roles with a custom SSM document that runs only the deploy script (one document per environment, so the dev role cannot deploy prod). Closes the Terraform review's F5 (`_docs/reviews/2026-10-25-terraform-pre-apply-review.md`), accepted for submission on 2026-10-25 | The dev role can no longer run arbitrary commands as root on the server that holds prod | Submission S3 | Small to medium; touches `terraform/deploy-roles/`, the server's SSM document and the protected deploy workflow |
-| X10 | Host and runtime metrics on the Grafana dashboard: CPU, memory and requests-per-second (the course Part 4 "at minimum" monitoring bar). Add the Collector `hostmetrics` receiver (or a node/cAdvisor exporter) to the `observability/` stack and a dashboard row; the FastAPI HTTP metrics (RPS, latency, errors) already come from the auto-instrumentation (task 23). Not required by the rubric (Observability scores on the US-13 journey); this meets the course's production-monitoring expectation for the showcase | Infra health alongside the app-domain metrics; parity with the course's monitoring | task 24 (the observability stack) | Small |
+| X11 | Least-privilege deploy: replace `AWS-RunShellScript` in the dev and prod deploy roles with a custom SSM document that runs only the deploy script (one document per environment, so the dev role cannot deploy prod). Closes the Terraform review's F5 (`_docs/reviews/2026-10-25-terraform-pre-apply-review.md`), accepted for submission on 2026-10-25 | The dev role can no longer run arbitrary commands as root on the server that holds prod | Submission S3 | Small to medium; touches `terraform/deploy-roles/`, the server's SSM document and the protected deploy workflow |
+| X10 | Host and runtime metrics on the Grafana dashboard: CPU, memory and requests-per-second (the course Part 4 "at minimum" monitoring bar). Add the Collector `hostmetrics` receiver (or a node/cAdvisor exporter) to the `observability/` stack and a dashboard row; the FastAPI HTTP metrics (RPS, latency, errors) already come from the auto-instrumentation (task 23). Not required by the rubric (Observability scores on the US-13 journey); this meets the course's production-monitoring expectation, as a later addition | Infra health alongside the app-domain metrics; parity with the course's monitoring | task 24 (the observability stack) | Small |
 
 ## X1 design notes
 
