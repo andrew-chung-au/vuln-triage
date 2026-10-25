@@ -2394,3 +2394,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the CI log of run 40142529529: 1 failed, 5 passed, 1 skipped. The claimed-job fix worked (A-TIER, A-GAP part 2 and A-RESOLVE passed; A-FIRE reached both sinks). A-FIRE failed only on `responder alert label leaked 'owner'`, because the rule title "Top-tier owner notification overdue" is the `alertname` label; the labels were exactly `{alertname, finding_id: 1, grafana_folder: VulnTriage, tier: P1}`. `make verify` passed (1 assertion added, 0 removed). The rule-absent negative pass has not run in CI yet (the harness stops after a positive failure). The `compose` cases were NOT run here (no Docker).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none yet.
+
+- date: 2026-10-25
+- task/issue: #159 (task 27) — third failing `verify / alert` run on PR #183 (at d7027ad), and the PR's conflict with `main`
+- agent role: Engineer (Claude Code, local sandbox, branch `feat/159-alert-compose-job`)
+- model: Claude Opus 5.5 (`claude-opus-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human pasted the PR #183 page showing the alert job failing and a conflict in `_docs/pending-verification.md`.
+- files changed: `ci/test-compose.sh` (`run_alert` starts Grafana last, after a bounded wait for the overdue-gauge heartbeat in Prometheus; new `wait_for_heartbeat`); this log entry; then a merge of `origin/main` into the branch.
+- verification (tests run, reviewer verdict): read the CI log of run 40145258781: 1 failed, 5 passed, 1 skipped; A-FIRE passed. A-HELD failed on a `[RESOLVED]` email sent at 00:11:51 whose labels were `alertname`, `datasource_uid=prometheus`, `grafana_folder`, `ref_id=A` (no `finding_id`): the rule's start-up NoData instance, which fired because Grafana evaluated before the backend's first 60s metric export, and resolved after the default route's 5m group_interval, after A-FIRE's MailHog reset. `bash -n ci/test-compose.sh` passed. The `compose` cases were NOT run here (no Docker).
+- new dependencies: none (`curl` is on the CI runner).
+- human review (what I checked or corrected, or `none`): none yet.

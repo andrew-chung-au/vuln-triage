@@ -118,6 +118,22 @@ run_not_implemented() {
   return 3
 }
 
+wait_for_heartbeat() {
+  # Bounded wait (60 x 5s) until Prometheus returns at least one
+  # vt_top_tier_notification_overdue series (the label-less 0 heartbeat).
+  local url="http://localhost:9090/api/v1/query?query=vt_top_tier_notification_overdue"
+  local i
+  echo "== [alert] waiting for the overdue-gauge heartbeat in Prometheus =="
+  for i in $(seq 1 60); do
+    if curl -fsS "$url" 2>/dev/null | grep -q '"result":\[{'; then
+      return 0
+    fi
+    sleep 5
+  done
+  echo "the overdue-gauge heartbeat never reached Prometheus within 300s" >&2
+  return 1
+}
+
 # -- alert job (task 27, #159): the US-14 A-* cases ---------------------------
 #
 # Layers compose.alert.yaml (Grafana SMTP -> MailHog, the stub webhook sink, the
@@ -154,8 +170,16 @@ run_alert() {
   mkdir -p .scratch
 
   echo "== [alert] starting the app + observability + webhook-sink stack (project $PROJECT) =="
+  # Grafana starts LAST, once the gauge's heartbeat is in Prometheus. Started
+  # together, Grafana evaluated the rule before the backend's first metric
+  # export (60s), so the metric was absent: NoData fired a human email at
+  # start-up, and its [RESOLVED] email came ~6 min later (the default route's
+  # 5m group_interval), landing in a later case's "no human email" check
+  # (A-HELD in the CI run at d7027ad).
   "${COMPOSE[@]}" up -d --wait \
-    db migrations otel-collector prometheus tempo loki mailhog grafana webhook-sink backend || return 1
+    db migrations otel-collector prometheus tempo loki mailhog webhook-sink backend || return 1
+  wait_for_heartbeat || return 1
+  "${COMPOSE[@]}" up -d --wait grafana || return 1
 
   echo "== [alert] running the positive A-* cases (rule present) =="
   # The seam clears any prior seeded state between cases (test fixture); -s so the
