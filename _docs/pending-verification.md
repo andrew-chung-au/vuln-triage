@@ -13,6 +13,10 @@ socket (`AGENTS.md` Project gotchas), so Compose stacks, live dependency scans,
 and AWS applies are authored by the agent and **verified by the human**. This
 file collects those hand-offs so a cloud session has one checklist.
 
+See `_docs/human-tasklist.md` for the prioritised roll-up of **all** human
+action (this file + the AWS setup, merges and sweeps); this file is the detailed
+per-issue checklist it links to for the verification runs.
+
 Last updated: 2026-10-24.
 
 ---

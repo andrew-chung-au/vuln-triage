@@ -8,6 +8,8 @@ Design decisions behind it: Terraform, one server for dev and prod, GHCR, `sslip
 
 Everything in "Submission steps" is needed for the submission. "Showcase extra steps" is optional and starts only after the submission is in (`_docs/roadmap-showcase.md`, Rule).
 
+For a single prioritised view of **all** human action (this AWS runbook plus the per-issue verification runs, merges and sweeps), see `_docs/human-tasklist.md`; it indexes back to the steps here.
+
 ## What gets built, and by whom
 
 Three Terraform modules, all in one region, every resource tagged `project=vuln-triage`. Terraform is the tool; OpenTofu runs the same files. Installing it is a new tool the build task asks you about first.
