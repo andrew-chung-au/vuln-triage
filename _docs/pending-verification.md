@@ -17,7 +17,7 @@ See `_docs/human-tasklist.md` for the prioritised roll-up of **all** human
 action (this file + the AWS setup, merges and sweeps); this file is the detailed
 per-issue checklist it links to for the verification runs.
 
-Last updated: 2026-10-24.
+Last updated: 2026-10-25.
 
 ---
 
@@ -116,6 +116,17 @@ should not change.**
 - [ ] Note: the delivery-dependent cases — `T-JOURNEY-BE`, the MailHog forms of `I-OWNER-NOAWS`/`I-OWNER-SENDER`, `T-E6` and `T-DELIVER-TRACE` — are **not** in #157; they need the deployed backend container to deliver and are prerequisite **#172**. The `alert` and `responder` jobs are tasks 27 (#159) and 28 (#160); `make test-compose JOB=alert|responder` exits 3 with a "not implemented in #157" message until those land.
 - [ ] Also under `make verify` (no Docker): `tests/test_marker_hygiene.py` fails if the `compose` marker appears outside the allowed compose modules — the guard that stops an ordinary backend test being silently dropped from `make test`.
 - [ ] Close #157 when `make test-compose JOB=telemetry` (`T-REFUSE`) is green in CI (its acceptance criteria were narrowed to `T-REFUSE` + the selector on 2026-10-24; #172 carries the delivery cases and `T-JOURNEY-BE`).
+
+## #172 — feed-client wiring + VT_FEEDS fixture mode (task 40)
+
+PRs: #175, #178 (merged). Run in **CI (telemetry job) or a Codespace / Claude
+Code cloud / Docker host** (Docker). This is the containerized-backend-delivers
+harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
+
+- [ ] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog.
+- [ ] **Also confirms #174 and #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`). Both were static-verified on `main` and closed; if this Loki leg does **not** carry the journey trace id, re-open #174/#177 rather than only #172.
+- [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
+- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`.
 
 ---
 
