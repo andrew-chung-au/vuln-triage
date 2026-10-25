@@ -2451,3 +2451,13 @@ Copy this template for each new entry:
 - files changed: `_docs/agent-kit/scripts/permission-report.py` (protected path, commit 3265553: `seconds_between`, `fmt_wait`, total and longest wait per pattern, rows sorted by total wait); this log entry
 - verification (tests run, reviewer verdict): ran `make permission-report SINCE=9eb4071` against the live log: `gh issue edit` waited 8m24s, the `.scratch` script 17s, `make issue-close` 1s, matching the log timestamps. No automated tests. Subagent coverage of the log is still not checked. No reviewer verdict. Approval record on #65 (comment 6394566984). The agent had said it would show the diff before committing and did not; the record says so.
 - human review (what I checked or corrected, or `none`): the human approved the change from a verbal description; the diff was not shown before the commit.
+
+- date: 2026-10-25
+- task/issue: #180 (PM observability helper-caller sweep); decision point filed #193, #194 and #195, folded #177 into #193, and added the exemplar assertion to #172
+- agent role: Orchestrator plus a PM subagent (OpenCode, local sandbox, `main`)
+- model: deepseek-v4.1-flash-free (both; subagents inherit the main model)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human asked to work #180 after reviewing the remaining-task shortlist, then approved A/B/C, folding #177 into A, adding D to #172, and not filing the Showcase/responder gaps. No new key prompt saved.
+- files changed: new `_session-summaries/planning-2026-10-25-observability-helper-sweep.md`; `_docs/human-tasklist.md` (removed #177 as a separate verification row; recorded the fold); `_docs/pending-verification.md` (#177's log-leg proof now points at #193); `_docs/roadmap.md` (check-in line); this log entry. GitHub writes: #193, #194 and #195 created; #172 body gained the T-A4 exemplar criterion; #177 commented on and closed as folded.
+- verification (tests run, reviewer verdict): `make verify` PASS (87 frontend tests, 459 backend tests, typecheck, whitespace, weakened-test checks). QA PASS on #180 (criteria 1-3) at `a4926ce`, with two note fixes applied afterwards (the stale "none is filed" line and the dashboard-label citation). The Docker/Compose cases were not run here (no Docker).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): approved all four decisions at the #180 decision point; corrected two process points: never propose allowing `python3 .scratch/*` (the right answer is a make target), and the two modified docs were the human's #65 work, committed as `0e9af39` (the interim "not mine" report was wrong).
