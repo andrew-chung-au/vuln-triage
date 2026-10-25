@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). Showcase features (LLM brief, n8n workflows, MCP server) are built after submission and are clearly marked **(Showcase)** throughout.
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). The LLM brief, n8n workflows and MCP server are future development, planned after submission and marked as such throughout (older documents call this track "Showcase").
 
 ---
 
@@ -77,7 +77,7 @@ The submission path runs end to end: inventory → match → enrich → rank →
 
 A **web dashboard** lists findings per asset with status (`open`, `risk accepted`, `fixed`, `withdrawn`) and an audit trail; only a human can set `risk accepted`.
 
-**(Showcase, post-submission):** an LLM brief for owners (with a fixed-version guardrail), n8n workflows (GitHub issue, reminders, escalation, weekly digest), and a read-only MCP server. See the [Showcase section of the spec](_docs/specs.md#showcase-post-submission).
+**Planned next, after submission:** an LLM brief for owners (with a fixed-version guardrail), n8n workflows (GitHub issue, reminders, escalation, weekly digest), and a read-only MCP server. See the [future-development section of the spec](_docs/specs.md#future-development-after-submission).
 
 VulnTriage does **not** actively scan networks/applications, does **not** patch software automatically, and exposes **no** write tools through MCP.
 
@@ -260,14 +260,14 @@ The key journey — a scan through to the owner notification — is instrumented
 
 **Product & build**
 - [`_docs/project-brief.md`](_docs/project-brief.md) — problem, workflow, success criteria
-- [`_docs/specs.md`](_docs/specs.md) — product spec (US-1…US-15, acceptance lines); [Showcase](_docs/specs.md#showcase-post-submission)
+- [`_docs/specs.md`](_docs/specs.md) — product spec (US-1…US-15, acceptance lines); [future development](_docs/specs.md#future-development-after-submission)
 - [`_docs/tasks.md`](_docs/tasks.md) — numbered build backlog, coverage summary, dependency chain
 - [`_docs/roadmap.md`](_docs/roadmap.md) — order of work and progress check-ins
 
 **Architecture & contract**
 - [`_docs/architecture.md`](_docs/architecture.md) — architecture (Stage 2)
 - [`_docs/openapi.yaml`](_docs/openapi.yaml) — API contract (OpenAPI 3.1) · [`_docs/api.md`](_docs/api.md) — endpoint table
-- [`_docs/testing.md`](_docs/testing.md) — test strategy (Showcase cases marked, not counted)
+- [`_docs/testing.md`](_docs/testing.md) — test strategy (future-development cases marked, not counted)
 
 **Process & AI workflow**
 - [`_docs/agent-team.md`](_docs/agent-team.md) — roles, tools/models, hand-overs

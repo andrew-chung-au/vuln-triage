@@ -102,7 +102,7 @@ merge-commit only) is in `_docs/human-cheatsheet.md`.
 
 ## E. Later / scheduled (not blocking submission)
 
-- ☐ Showcase AWS steps (S1-S3): after submission (`aws-setup.md` Showcase steps,
+- ☐ Future-development AWS steps (S1-S3): after submission (`aws-setup.md` Showcase steps,
   `roadmap-showcase.md`).
 - ☐ Teardown when you end the deployment: `aws-setup.md` §11,
   `terraform-verify.md` §5.
@@ -117,7 +117,7 @@ F0 shapes a Terraform fix and so the first AWS apply. F1-F3 gate the responder.
 
 | # | Decision | Detail | Cloud link | Status |
 |---|---|---|---|---|
-| F0 | **Accept or fix the shared deploy policy** (Terraform review finding F5). The dev and prod roles can both run any shell command as root on the one server through `AWS-RunShellScript`, so "the dev role can run only the dev deploy" cannot be met with IAM alone on a shared server. Either accept it in writing (mitigations: `main` branch protection, `dev` limited to `main`, `production` reviewers) or have CC29 add a custom SSM document that runs only the deploy script | `_docs/reviews/2026-10-25-terraform-pre-apply-review.md` F5 | **Shapes CC29** | ☑ Decided 2026-10-25: option 1, accept for submission. The custom SSM document is parked as showcase item X10 (`roadmap-showcase.md`); `terraform-verify.md` §2 records the accepted risk |
+| F0 | **Accept or fix the shared deploy policy** (Terraform review finding F5). The dev and prod roles can both run any shell command as root on the one server through `AWS-RunShellScript`, so "the dev role can run only the dev deploy" cannot be met with IAM alone on a shared server. Either accept it in writing (mitigations: `main` branch protection, `dev` limited to `main`, `production` reviewers) or have CC29 add a custom SSM document that runs only the deploy script | `_docs/reviews/2026-10-25-terraform-pre-apply-review.md` F5 | **Shapes CC29** | ☑ Decided 2026-10-25: option 1, accept for submission. The custom SSM document is parked as future-development item X11 (`roadmap-showcase.md`); `terraform-verify.md` §2 records the accepted risk |
 
 F1-F3 are open decisions only you can make. They gate **#160** (the responder,
 task 28), then #161, #182 and the recorded drill (task 39), which carry
