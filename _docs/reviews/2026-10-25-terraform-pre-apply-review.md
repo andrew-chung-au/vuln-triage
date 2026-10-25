@@ -17,6 +17,7 @@ Two findings will stop the first apply or the first dev deploy, so fix them befo
 | F4 | Medium | `user-data.sh` may format the data volume before it is attached | A9 (server bootstrap) |
 | F5 | Medium | Both roles share one policy that can run arbitrary root commands on the server holding both environments | design, not blocking |
 | F6 | Low | Smaller items, listed below | none |
+| F7 | Medium | Security group egress description had an apostrophe, which AWS rejects (found by `validate`) | A6 (server apply); **fixed** |
 
 ## Findings
 
@@ -76,5 +77,7 @@ Both roles use the same policy (`main.tf:125-135`). `AWS-RunShellScript` runs an
 Run in a cloud session with Docker, image `hashicorp/terraform:1.17.0` (the version pinned in `ci/push-check/Dockerfile`), on a copy of `terraform/` under `.scratch/` so the repo stays clean.
 
 - `terraform fmt -check -recursive`: **pass**, all three modules, no diff.
-- `terraform init -backend=false`: **did not run.** The session's network policy refuses `registry.terraform.io` (and `checkpoint-api.hashicorp.com`), so the AWS provider cannot be downloaded. `terraform validate` needs the provider, so it did not run either. Not substituted with anything. To finish: add `registry.terraform.io` and `releases.hashicorp.com` under Allowed domains for the cloud environment (human B6), then rerun.
+- `terraform init -backend=false` and `terraform validate`: **first attempt blocked**, then run after the human added `registry.terraform.io` and `releases.hashicorp.com` to the cloud environment's allowed domains (B6). Provider `hashicorp/aws v5.100.0` installed for all three modules. `bootstrap` and `deploy-roles` are valid.
+- **`server` failed validation (F7, Medium, fixed):** `network.tf` egress description `All outbound (image pulls, Let's Encrypt, SES, SSM)` contains an apostrophe, which AWS security group descriptions do not allow (`"egress.0.description" doesn't comply with restrictions`). It would have failed the first `terraform apply`. Fixed in this branch by rewording to `TLS certificates`. After the fix `server` validates and `fmt -check` is clean on all modules. `validate` checks syntax and provider schema only; it does not run `plan`, so IAM policy behaviour (F1, F3) is still unproven until a real apply and deploy.
+- Provider lock files (`.terraform.lock.hcl`) are not committed. `init` resolved `~> 5.0` to 5.100.0. Committing them would pin the provider; if the human applies from a different OS, generate hashes for both platforms with `terraform providers lock` first (F6, Low).
 - Container networking: a container cannot reach the session proxy by default. Use `--network host`, pass `HTTPS_PROXY` and mount `/root/.ccr/ca-bundle.crt` as `SSL_CERT_FILE`. Docker Hub pulls by the daemon work.
