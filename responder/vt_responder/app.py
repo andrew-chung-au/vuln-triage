@@ -14,6 +14,16 @@ fingerprint) logs ``no_change`` with an explanation and touches nothing (no
 run, no API read, no repeat-guard claim; US-15), a repeated fingerprint is
 ignored, otherwise one stub run.
 
+Real mode (#241) answers ``accepted`` straight away and runs the agent in the
+background (``_BackgroundRuns``): the fingerprint stays claimed and in flight until
+the run ends; a run that raises, times out, is cancelled or ends ``error`` releases
+it (and counts toward ``RESPONDER_MAX_FAILED_RUNS``, after which firings log
+``retry_cap_reached`` until the alert resolves). At most
+``RESPONDER_MAX_CONCURRENT_RUNS`` run at once; a second alert beyond that is
+accepted and queued, up to ``RESPONDER_MAX_QUEUED_RUNS``, and only past that is it
+refused (503, claim released, so Grafana's retry runs it). A run lost to a restart
+is released at the next start (``run_lost_on_restart``), never stuck.
+
 400 stays for a fingerprint or ``finding_id`` that is present but malformed,
 and for a ``finding_id`` with no fingerprint (a real run cannot be guarded
 against repeats without one).
@@ -23,10 +33,14 @@ Run it: ``uvicorn vt_responder.app:create_app_from_env --factory``.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
 import re
+import threading
+from concurrent.futures import CancelledError, ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -118,6 +132,80 @@ async def _read_capped(request: Request, limit: int) -> bytes | None:
     return b"".join(chunks)
 
 
+class _BackgroundRuns:
+    """Real mode (#241): runs the agent off the request, bounded, and always ends the claim.
+
+    The webhook claims the fingerprint (``FingerprintGuard.claim``, which also marks it
+    in flight) and calls ``submit``; the claim is ended in ``_job``'s ``finally`` (or by
+    the done-callback when the job never ran), so it is never held forever. At most
+    ``max_concurrent_runs`` runs execute at once; up to ``max_queued_runs`` more wait
+    (accepted and queued). Past that the alert is refused and its claim released.
+    """
+
+    def __init__(self, settings: Settings, runner, guard: FingerprintGuard, log: ActionLog) -> None:
+        self._runner = runner
+        self._guard = guard
+        self._log = log
+        self._capacity = settings.max_concurrent_runs + settings.max_queued_runs
+        self._lock = threading.Lock()
+        self._pending = 0  # submitted and not yet ended (running plus queued)
+        self._pool = ThreadPoolExecutor(max_workers=settings.max_concurrent_runs,
+                                        thread_name_prefix="responder-run")
+
+    def submit(self, fp: str, fid: str | None) -> str:
+        """Called with ``fp`` already claimed. Returns ``accepted`` or ``busy_refused``."""
+        with self._lock:
+            if self._pending >= self._capacity:
+                full = True
+            else:
+                full = False
+                self._pending += 1
+        if full:
+            self._guard.abandon(fp)  # released, so the 503'd re-send is not a "repeat"
+            self._log.emit("run_refused", outcome="busy_refused", fingerprint=fp, finding_id=fid,
+                           reason="queue_full")
+            return "busy_refused"
+        try:
+            future = self._pool.submit(self._job, fp, fid)
+        except RuntimeError:  # the pool is shut down (the app is stopping)
+            self._ended(fp, ran=False)
+            self._log.emit("run_refused", outcome="busy_refused", fingerprint=fp, finding_id=fid,
+                           reason="shutting_down")
+            return "busy_refused"
+        future.add_done_callback(lambda f: self._ended(fp, ran=False) if f.cancelled() else None)
+        self._log.emit("run_accepted", outcome="accepted", fingerprint=fp, finding_id=fid)
+        return "accepted"
+
+    def _ended(self, fp: str, *, ran: bool) -> None:
+        if not ran:
+            self._guard.abandon(fp)  # never started: released, not counted as a failed run
+        with self._lock:
+            self._pending -= 1
+
+    def _job(self, fp: str, fid: str | None) -> None:
+        outcome = "error"  # anything but a returned outcome counts as a failed run
+        try:
+            outcome = self._runner.run(fp, fid)
+        except BaseException as exc:  # noqa: BLE001 - incl. cancellation; must never escape the worker
+            cancelled = isinstance(exc, (asyncio.CancelledError, CancelledError))
+            reason = "run_cancelled" if cancelled else "run_raised"
+            try:
+                self._log.emit("run_failed", outcome="error", fingerprint=fp, finding_id=fid, reason=reason)
+            except Exception:  # noqa: BLE001
+                pass
+        finally:
+            try:
+                self._guard.finish(fp, failed=outcome == "error")
+            finally:
+                with self._lock:
+                    self._pending -= 1
+
+    def shutdown(self) -> None:
+        # Queued runs are cancelled (their claims released by the done-callback); a run
+        # already executing is left to finish.
+        self._pool.shutdown(wait=False, cancel_futures=True)
+
+
 def create_app(settings: Settings, *, api: ResponderApi | None = None, git: FakeGit | None = None,
                github: FakeGitHub | None = None, log: ActionLog | None = None,
                make_session=None, checkout_git=None, branches=None) -> FastAPI:
@@ -150,7 +238,20 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
         github = github or FakeGitHub()
         runner = StubRunner(api, git, github, log)
 
-    app = FastAPI(title="VulnTriage responder", docs_url=None, redoc_url=None, openapi_url=None)
+    background = _BackgroundRuns(settings, runner, guard, log) if settings.mode == "real" else None
+    for lost in guard.lost_on_restart:
+        # A run the previous process never finished: its claim was released at startup.
+        log.emit("run_lost_on_restart", outcome="released", fingerprint=lost,
+                 reason="process_restarted_during_run")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        if background is not None:
+            background.shutdown()
+
+    app = FastAPI(title="VulnTriage responder", docs_url=None, redoc_url=None, openapi_url=None,
+                  lifespan=lifespan)
     if settings.mode == "stub":
         app.state.git = git
         app.state.github = github
@@ -177,9 +278,19 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
                 )
                 results.append({"fingerprint": None, "outcome": "no_change"})
                 continue
+            if background is not None and guard.failed_runs(fp) >= settings.max_failed_runs:
+                # Retry cap (#241): this fingerprint failed N runs in a row. Not claimed,
+                # no run; a resolved notification lifts the cap.
+                log.emit("retry_cap_reached", outcome="retry_cap_reached", fingerprint=fp, finding_id=fid,
+                         reason=f"{guard.failed_runs(fp)} consecutive failed runs")
+                results.append({"fingerprint": fp, "outcome": "retry_cap_reached"})
+                continue
             if not guard.claim(fp):
                 log.emit("alert_ignored", outcome="repeat", fingerprint=fp, finding_id=fid)
                 results.append({"fingerprint": fp, "outcome": "repeat_ignored"})
+                continue
+            if background is not None:
+                results.append({"fingerprint": fp, "outcome": background.submit(fp, fid)})
                 continue
             outcome = "error"  # an exception out of the run counts as a failed run
             try:
@@ -206,7 +317,10 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
             log.emit("webhook_rejected", outcome="400")
             return JSONResponse({"error": str(exc)}, status_code=400)
         results = await run_in_threadpool(handle, alerts)
-        return JSONResponse({"results": results})
+        # A refused alert (queue full) is not accepted: answer 503 so Grafana re-sends it.
+        # Alerts accepted in the same body are repeats on the re-send, so nothing runs twice.
+        refused = any(r["outcome"] == "busy_refused" for r in results)
+        return JSONResponse({"results": results}, status_code=503 if refused else 200)
 
     return app
 

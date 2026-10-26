@@ -2801,3 +2801,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS at each push (final: frontend 89, backend 532, responder 231). The merge fixed the two failing PR 238 checks locally; CI on PR 239 not yet read. QA PASS on #221 at `898083a` (comment 6426404789); the hardening commit `de7ba9c` and the script fix `898083a` were not separately QA-checked. The #222 script was syntax-checked with `sh -n`, never run (it needs the owner's token). The merge conflict was resolved with a shell script, not the editing tool.
 - new dependencies: none (the Engineer's `claude-agent-sdk` pin is in its entry above).
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #241 real agent in the background, with a retry cap (follow-up to #221), on `claude/241-background-run` (from `claude/f4-real-runner-followup`)
+- agent role: Engineer (Claude Code subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task to implement #241 reusing `FingerprintGuard`, deciding what a second concurrent alert gets, with a fake session and no new dependency. No new key prompt saved.
+- files changed: `responder/vt_responder/{app,guard,config}.py`, `responder/tests/test_background.py` (new), `.env.example` (three names, no values), this entry, `_docs/roadmap.md`, `_session-summaries/issue-241-background-run.md`.
+- verification (tests run, reviewer verdict): `make verify BASE=origin/claude/f4-real-runner-followup` PASS (frontend 89, backend 532, responder 257; 89 assertion lines added, 0 removed). No QA review yet. No live SDK call, no key, no network to Anthropic or GitHub.
+- new dependencies: none (standard-library `ThreadPoolExecutor`).
+- human review (what I checked or corrected, or `none`): none.
