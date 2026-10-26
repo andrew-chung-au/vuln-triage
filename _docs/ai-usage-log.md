@@ -2661,3 +2661,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (frontend 89, backend 515, responder 51 passed; the warning is that BASE equals HEAD so only uncommitted changes were compared). Not run: the new assertion and the config change (no Docker here); `make test-compose JOB=telemetry` is needed. No reviewer verdict. The exporter option name, exemplar support for counters in Collector 0.111.0 (read from upstream source via web fetch, not run) and the `query_exemplars` shape are marked `VERIFY:`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #219 follow-up: responder spec gap, an alert with no fingerprint (US-15)
+- agent role: Engineer (Claude Code subagent, own worktree)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's request to stop returning 400 for an alert with neither a fingerprint nor a `finding_id`, with the owner's decisions on which cases keep 400. No new key prompt saved.
+- files changed: `responder/vt_responder/app.py` (parse rule, `no_change` branch in `handle`, module docstring), `responder/tests/test_webhook.py`, `_docs/testing.md` (`I-RESP-HOOK-MALFORMED` and `I-RESP-HOOK-NOCHANGE` rows), this entry. One existing test input was changed on purpose: the `{"labels":{}}` case in `test_hook_malformed_payload_gets_400_and_no_run` now expects 200 under the new rule, so it was replaced by a `finding_id`-without-fingerprint input that still gets 400.
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 63 responder passed; the warning is that BASE equals HEAD); weakened-test check 21 assertion lines added, 0 removed. Not run: any Docker job, a real Grafana test notification (the missing fingerprint is unconfirmed). No reviewer verdict, no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

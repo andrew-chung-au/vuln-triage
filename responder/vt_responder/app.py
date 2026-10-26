@@ -7,8 +7,15 @@ the documented common shape ``{"status", "alerts": [{"status", "fingerprint",
 header (the contact point's "authorization" setting).
 
 Order of checks: bearer token (401, nothing else is read), body size (413),
-JSON shape (400), then per alert: resolved is ignored, a repeated fingerprint
-is ignored, otherwise one stub run.
+JSON shape (400), then per alert: resolved is ignored, an alert with neither a
+fingerprint nor a ``finding_id`` (Grafana's test notification may carry no
+fingerprint) logs ``no_change`` with an explanation and touches nothing (no
+run, no API read, no repeat-guard claim; US-15), a repeated fingerprint is
+ignored, otherwise one stub run.
+
+400 stays for a fingerprint or ``finding_id`` that is present but malformed,
+and for a ``finding_id`` with no fingerprint (a real run cannot be guarded
+against repeats without one).
 
 Run it: ``uvicorn vt_responder.app:create_app_from_env --factory``.
 """
@@ -75,14 +82,18 @@ def _parse_alerts(body: bytes) -> list[dict[str, Any]]:
         if status not in ("firing", "resolved"):
             raise _BadPayload("alert status must be 'firing' or 'resolved'")
         fingerprint = alert.get("fingerprint")
-        if not isinstance(fingerprint, str) or not _SAFE_ID.match(fingerprint):
-            raise _BadPayload("alert fingerprint is missing or malformed")
+        if fingerprint is not None and (not isinstance(fingerprint, str) or not _SAFE_ID.match(fingerprint)):
+            raise _BadPayload("alert fingerprint is malformed")
         labels = alert.get("labels", {})
         if not isinstance(labels, dict):
             raise _BadPayload("alert labels must be an object")
         finding_id = labels.get("finding_id")
         if finding_id is not None and (not isinstance(finding_id, str) or not _SAFE_ID.match(finding_id)):
             raise _BadPayload("finding_id label is malformed")
+        if fingerprint is None and finding_id is not None:
+            # A run for a real finding must be guarded against repeats, and the
+            # guard is keyed by fingerprint, so this alert cannot be handled safely.
+            raise _BadPayload("alert has a finding_id but no fingerprint")
         out.append({"status": status, "fingerprint": fingerprint, "finding_id": finding_id})
     return out
 
@@ -129,6 +140,17 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
             if alert["status"] == "resolved":
                 log.emit("alert_ignored", outcome="resolved", fingerprint=fp, finding_id=fid)
                 results.append({"fingerprint": fp, "outcome": "resolved_ignored"})
+                continue
+            if fp is None:
+                # Neither a fingerprint nor a finding_id (a Grafana test alert may carry
+                # no fingerprint; US-15): nothing runs, so nothing is guarded or read.
+                log.emit(
+                    "no_change", outcome="no_change", fingerprint=None, finding_id=None,
+                    explanation="Checked the alert: it carries neither a fingerprint nor a finding_id label, "
+                                "so this is a Grafana test alert or a false positive, not an undelivered "
+                                "finding. No finding or job was read, so there is no defect to reproduce.",
+                )
+                results.append({"fingerprint": None, "outcome": "no_change"})
                 continue
             if not guard.claim(fp):
                 log.emit("alert_ignored", outcome="repeat", fingerprint=fp, finding_id=fid)
