@@ -107,7 +107,7 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install responder-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test responder-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
+.PHONY: install test frontend-install backend-install responder-install backend-lock responder-lock frontend-start frontend-stop frontend-build frontend-test backend-test responder-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
 
 test: ## Run all tests (frontend, then backend, then responder)
 	@$(MAKE) frontend-test
@@ -125,6 +125,9 @@ responder-install: ## Install responder dependencies from responder/uv.lock (uv 
 
 backend-lock: ## Update backend/uv.lock after editing backend/pyproject.toml (uv lock)
 	@cd backend && uv lock
+
+responder-lock: ## Update responder/uv.lock after editing responder/pyproject.toml (uv lock)
+	@cd responder && uv lock
 
 backend-test: ## Run the backend pytest suite (needs make install first)
 	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
