@@ -2691,3 +2691,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): facts read from the GitHub Actions record through the GitHub tools: run 40291587781 (PR 224 head, `telemetry` 3 passed with the exemplar assertion, `verify` green), alert run 40226288166 green, check run list for PR 224; `git grep` on `origin/main` for the exemplar call, the `skipif` pair and `alert.yml`. `make verify` result is in the PR. No QA or reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the owner chose to create the five tickets and close #223 (2026-10-26).
+
+- date: 2026-10-26
+- task/issue: #225 close-out sweep run by the agent instead of the owner (#157, #174, #141); QA re-check of #172 (PASS, comment 6411988890) and #172 closed
+- agent role: Orchestrator (Claude Code cloud session, main session) and one QA subagent for #172
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked for a guide to the highest-value human verification chunk, then asked why the agent could not do it, then said yes to the #172 QA re-check and the doc tidy. No new key prompt saved.
+- files changed: `_docs/pending-verification.md` (#141, #157 and QA-unverified sections removed; queue lines updated), `_docs/human-tasklist.md` (B5 and A9 updated), `_docs/roadmap.md` (check-in), this entry. GitHub, outside the diff: comments with the evidence on #157, #174, #141 and #172, and all four closed as completed.
+- verification (tests run, reviewer verdict): facts read from the GitHub Actions record through the GitHub tools: `telemetry` job log of run 40291587781 ("3 passed in 61.07s"), job lists of runs 40188742150, 40073386642 and 40073409867, alert run 40226288166, and the `Record the image digests` values in the `deploy-dev` log of run 40291937292. The `skipif` pair at `tests/test_compose_alert.py:136,179` read directly. `make verify` on this branch: PASS WITH WARNINGS (frontend 89, backend 515, responder 68 passed; the warning is only that BASE equals HEAD; docs-only diff). The QA subagent's PASS on #172 (comment 6411988890) was checked against the issue's comment list before closing; it was inferred from the CI run, not a local run, and it did not re-run `make verify`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner asked for the sweep to be done by the agent and approved the QA re-check and the tidy; the owner did not look at the Actions pages themselves.
