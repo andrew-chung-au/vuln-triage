@@ -2761,3 +2761,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one rewritten comment line in the dashboard test, no assertion changed). The dashboard was NOT loaded in Grafana (no Docker); checked statically only. No reviewer verdict; no QA run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: rubric re-audit at `20a1fd8` (branch `claude/funny-dijkstra-svm6xw`, the content of PR #236)
+- agent role: Rubric Evidence Auditor (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to re-audit all criteria at the current tree, look at the three G9 screenshots, and verify the pre-merge 21/24 audit. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md` (rewritten: 22 of 24 at `20a1fd8`), this entry. No other file.
+- verification (tests run, reviewer verdict): read-only. Opened the three `docs/images/g9-*.png` and the g1, g2, g5-ruleset and g7 screenshots; read `make issue-dump N=226` comments and #220 comments; read `responder/vt_responder/runner.py` and `ci/test-compose.sh`; read the `verify` jobs of runs 40337986272 (`b1f5d0c`), 40334369080 (`20a1fd8`) and 40291587781 (telemetry job log tail: 3 passed) through the GitHub tools; confirmed with `git grep` that the exemplar assertion is in `43d812d`. The GitHub API showed PR #236 merged as `b1f5d0c` during the audit, so the document says so. `make verify` and the test counts were not run or re-counted by me; nothing was run on Docker or against the live URLs. No QA run, no reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
