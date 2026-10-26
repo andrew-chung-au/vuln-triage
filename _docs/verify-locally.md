@@ -385,6 +385,7 @@ make clean-scratch     # remove .scratch/ working files
 | `http://localhost:8080/findings` returns JSON on refresh | nginx `/api` prefix-strip or the SPA fallback is misconfigured | check `frontend/nginx.conf` (`location /api/` and `try_files ... /index.html`) |
 | Compose data gone after a restart | the stack was brought down with `CLEAN=1` (volume removed) | use plain `make compose-down`; `CLEAN=1` is a deliberate fresh slate |
 | a service never becomes healthy | a dependency failed its health check | `docker compose ps` and `docker compose logs <service>` to see which |
+| `make test-compose` stops with `ports are not available: exposing port TCP 127.0.0.1:9099 ... /forwards/expose returned unexpected status: 500` (Docker Desktop on Windows with WSL) | something on Windows already listens on that host port; seen 2026-10-26: **VS Code** (`Code.exe`) auto-forwarding the port it spotted in terminal output | find the owner: `netstat.exe -ano \| grep :9099`, then `tasklist.exe /FI "PID eq <pid>"` (from WSL). For VS Code: Ports panel, right-click the port, **Stop Forwarding Port**, and untick the setting `remote.autoForwardPorts`. The stub webhook sink's 9099 is fixed in `ci/test-compose.sh`, `compose.alert.yaml` and the alert tests, so free the port rather than changing it. Other ports the jobs publish (3000, 4317, 8025, 9090, 9100) can clash the same way. Check a port with `docker run --rm -p 127.0.0.1:<port>:<port> alpine true` |
 
 ## Related docs
 
