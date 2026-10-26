@@ -257,7 +257,10 @@ jobs:
       INPUT_TAG: ${{ inputs.image_tag }}
       REPO: ${{ github.repository }}
     steps:
+      # Full history: P-FLAG-GONE below checks the tree of the promoted commit,
+      # which is not the tip of the ref this run was dispatched from.
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
       # OIDC: assume the PROD deploy role. Its trust policy accepts only tokens
       # from this repo in the `production` environment (not `main`, not PRs), so
@@ -337,6 +340,38 @@ jobs:
           echo "Promoting image tag: $tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      # P-FLAG-GONE (#161, task 29): stop the promotion while a test-only switch
+      # is still in the code. It runs only here, in the production promotion, never
+      # in a pull-request job or in make test-compose, so the pull-request gate
+      # stays green while the demo defect exists.
+      #   - The image tag is YYYYMMDD-HHMMSS-shortsha (build-and-push), so its last
+      #     dash-separated field is the commit the images were built from. The tree
+      #     of THAT commit is checked: it is what the images contain. The script
+      #     is the one on the ref this run was dispatched from, so an old tag is
+      #     judged by today's rule.
+      #   - The checked-out workspace is checked too: the compose.yaml and
+      #     deploy-env.sh sent to the server come from it, not from the tag.
+      #   - A failure stops the job before "Deploy the prod Compose project", so
+      #     nothing reaches the server. There is no override input on purpose.
+      - name: P-FLAG-GONE (demo defect and fixtures flag)
+        if: steps.state.outputs.instance_state == 'running'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          sha="${TAG##*-}"
+          commit="$(git rev-parse --verify --quiet "${sha}^{commit}")" || {
+            echo "P-FLAG-GONE: image tag ${TAG} does not end in a commit that exists in this repository, so what it contains cannot be checked" >&2
+            exit 1
+          }
+          promoted="${RUNNER_TEMP}/promoted-tree"
+          mkdir -p "$promoted"
+          git archive "$commit" | tar -x -C "$promoted"
+          echo "== P-FLAG-GONE at the promoted commit ${commit} (tag ${TAG}) =="
+          python3 ci/check_flag_gone.py "$promoted"
+          echo "== P-FLAG-GONE at the deploy files this run sends (${GITHUB_SHA}) =="
+          python3 ci/check_flag_gone.py .
+
       # Resolve the digests for this tag from GHCR, so the deploy log records
       # what was promoted (acceptance: the log holds each tag's digest; rollback
       # reads the previous tag from it).
@@ -360,7 +395,7 @@ jobs:
       # from Secrets Manager using the server's instance role (the prod deploy
       # OIDC role has no secrets access; architecture.md Security boundaries).
       # DEPLOYMENT_ENVIRONMENT=prod is set by deploy-env.sh, which makes the
-      # backend's VT_FEEDS=fixtures / VT_DEMO_DEFECT refusals fail closed.
+      # backend's fixtures-mode and demo-defect refusals fail closed.
       - name: Deploy the prod Compose project (SSM Run Command)
         if: steps.state.outputs.instance_state == 'running'
         id: deploy
