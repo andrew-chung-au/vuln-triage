@@ -25,27 +25,26 @@ make test        # run the unit + integration suites
 
 See [Quick start](#quick-start) for the few-minute version, including creating a login.
 
-### Reviewer scoring guide — the 12 criteria, the score, and the proof
+### Where to find each criterion
 
-**For the peer reviewer.** The table maps each of the 12 criteria to the level we believe it meets and links straight to the proof you need to confirm that level. The rubric has 24 points; 10 to pass. **We currently evidence 22 of 24** — the only criterion below its maximum is On-Call Agent (0/2), stated honestly below. Independent audit: [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md) (updated only by the Rubric Evidence Auditor role, with links opened and checked).
+**For the peer reviewer.** For each of the 12 criteria, this points to what exists and where to see it, so you can judge the level yourself against [`_docs/rubric.md`](_docs/rubric.md). The rubric has 24 points; 10 to pass. An independent in-repo audit of the evidence (not a score we assign here) is in [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md), updated only by the Rubric Evidence Auditor role.
 
-Legend: ✅ top level claimed · ⚠️ a stated caveat · ❌ not yet earned.
+| # | Criterion | What exists, and the proof to open |
+|---|---|---|
+| 1 | **Problem Description** | Problem, what it does, and expected behaviour → [The problem](#the-problem) · [What it does](#what-it-does) · [Expected behaviour](#expected-behaviour) |
+| 2 | **Product Specification** | Spec with per-story acceptance lines + a public tracker the agents used → [`_docs/specs.md`](_docs/specs.md) · [public Issues](https://github.com/andrew-chung-au/vuln-triage/issues) (role-labelled `PM:`/`Engineer:`/`QA:` comments, acceptance checklists) · [`_docs/tasks.md`](_docs/tasks.md) |
+| 3 | **Agent Team Specification** | Team + how they hand work over, QA independence, issue lifecycle → [`_docs/agent-team.md`](_docs/agent-team.md) · role files in [`.claude/agents/`](.claude/agents) and [`.opencode/agents/`](.opencode/agents) |
+| 4 | **Context Management** | `AGENTS.md` describes the project and links the modular docs (process, team, procedures, spec…) → [`AGENTS.md`](AGENTS.md) ("Where to read more") |
+| 5 | **Application** | Full-stack, data in a DB, one-command run. `make dev` (SQLite, no Docker); CI drives the end-to-end backend journey on Postgres → [Quick start](#quick-start) · [live dev site screenshot](docs/images/g7-vuln-triage-dev-findings.png) · `backend/` · `frontend/` |
+| 6 | **Testing** | Unit and integration, one command, green in CI. `make test` → [Testing & CI](#testing--ci) · [green `verify` run](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml) (all seven jobs) |
+| 7 | **Containerization** | Full system incl. Postgres via Compose, one command: `make compose-up` → [`compose.yaml`](compose.yaml) · [Quick start — Option B](#option-b--full-stack-in-docker-make-compose-up) |
+| 8 | **Deployment** | Deployed and reachable at public URLs → **dev** https://dev.52-206-221-145.sslip.io (reviewer login below) · **prod** https://app.52-206-221-145.sslip.io · [Deployment](#deployment--rollback) · [deployment screenshots](#deployment-evidence) |
+| 9 | **CI/CD** | CI on every PR + auto-deploy to dev on merge + manual prod promotion → [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) · [CI/CD screenshots](#deployment-evidence) (production reviewer gate, `protect-main` ruleset) |
+| 10 | **Observability** | Metric + trace + structured logs sharing one trace ID, no PII/secrets, viewable in Grafana. The log↔trace shared ID is shown in the screenshots; the metric→trace (exemplar) leg is shown as a CI assertion rather than a screenshot → [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
+| 11 | **Alerting on User Impact** | One real Grafana alert on an undelivered top-priority finding; fired in CI and seen live → [Alerting & on-call](#alerting--on-call-agent) · [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/alerting) |
+| 12 | **On-Call Agent** | A stub-mode responder, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host; a real runner that opens a fix PR, and the recorded alert-to-fix run, are not done yet → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
 
-| # | Criterion (max) | Score we claim | Why that level — and the proof to open |
-|---|---|---|---|
-| 1 | **Problem Description** (2) | ✅ **2** | README states the problem, what it does, and expected behaviour → [The problem](#the-problem) · [What it does](#what-it-does) · [Expected behaviour](#expected-behaviour) |
-| 2 | **Product Specification** (2) | ✅ **2** | Spec with per-story acceptance lines + a public tracker the agents used → [`_docs/specs.md`](_docs/specs.md) · [public Issues](https://github.com/andrew-chung-au/vuln-triage/issues) (role-labelled `PM:`/`Engineer:`/`QA:` comments, acceptance checklists) · [`_docs/tasks.md`](_docs/tasks.md) |
-| 3 | **Agent Team Specification** (2) | ✅ **2** | Team + how they hand work over, QA independence, issue lifecycle → [`_docs/agent-team.md`](_docs/agent-team.md) · role files in [`.claude/agents/`](.claude/agents) and [`.opencode/agents/`](.opencode/agents) |
-| 4 | **Context Management** (2) | ✅ **2** | `AGENTS.md` describes the project **and** links the modular docs (process, team, procedures, spec…) → [`AGENTS.md`](AGENTS.md) ("Where to read more") |
-| 5 | **Application** (2) | ✅ **2** | Full-stack, data in a DB, one-command run. Run `make dev` (SQLite, no Docker); CI drives the end-to-end backend journey on Postgres → [Quick start](#quick-start) · [live dev site screenshot](docs/images/g7-vuln-triage-dev-findings.png) · `backend/` · `frontend/` |
-| 6 | **Testing** (2) | ✅ **2** | Unit **and** integration, one command, green in CI. `make test` → [Testing & CI](#testing--ci) · [green `verify` run](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml) (all seven jobs) |
-| 7 | **Containerization** (2) | ✅ **2** | Full system incl. Postgres via Compose, one command: `make compose-up` → [`compose.yaml`](compose.yaml) · [Quick start — Option B](#option-b--full-stack-in-docker-make-compose-up) |
-| 8 | **Deployment** (2) | ✅ **2** | Deployed and reachable at public URLs → **dev** https://dev.52-206-221-145.sslip.io (reviewer login below) · **prod** https://app.52-206-221-145.sslip.io · [Deployment](#deployment--rollback) · [deployment screenshots](#deployment-evidence) |
-| 9 | **CI/CD** (3) | ✅ **3** | CI on every PR + auto-deploy to dev on merge + **manual** prod promotion (highest level) → [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) · [CI/CD screenshots](#deployment-evidence) (production reviewer gate, `protect-main` ruleset) |
-| 10 | **Observability** (2) | ⚠️ **2** | Metric + trace + structured logs sharing one trace ID, no PII/secrets, viewable in Grafana. **Caveat (stated, not hidden):** the log↔trace shared ID is shown in screenshots; the metric→trace (exemplar) leg is **asserted in CI**, not screenshotted → [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
-| 11 | **Alerting on User Impact** (1) | ✅ **1** | One real Grafana alert on an undelivered top-priority finding; fired in CI and seen live → [Alerting & on-call](#alerting--on-call-agent) · [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/alerting) |
-| 12 | **On-Call Agent** (2) | ❌ **0** | **No real runner yet — we do not claim this point.** A stub-mode responder, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host, but no agent has opened a real fix PR. Remaining work and the capture plan → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
-| | **Total** | **22 / 24** | Pass mark 10. See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work. |
+See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work.
 
 <!-- PLACEHOLDER: if you record a demo video / drill, link it here and in Deployment:
 ### Demo recording
@@ -224,7 +223,7 @@ _Not captured yet: the recorded end-to-end drill and the responder pull request 
 
 ## Beyond the rubric
 
-Work done **outside** the 12 scored criteria — not required to pass, but it may be worth bonus consideration. Each item links to where you can check it.
+Work done **outside** the 12 scored criteria — not required by the rubric. Listed here in case it is useful to a reviewer; each item links to where you can check it.
 
 **Engineering depth beyond "it works"**
 - **Deterministic, explainable, AI-free ranking.** Findings are ranked by real-world-exploitation evidence (CISA KEV + FIRST EPSS) plus asset criticality/exposure, each with a human-readable reason — and **no AI in the ranking path**, so the scores are reproducible and auditable. → [What it does](#what-it-does) · `backend/vulntriage/`
@@ -242,7 +241,7 @@ Work done **outside** the 12 scored criteria — not required to pass, but it ma
 - **Append-only AI-usage log and key-prompt archive.** Every AI-assisted task is recorded; role-defining prompts are saved verbatim. → [`_docs/ai-usage-log.md`](_docs/ai-usage-log.md) · [`_docs/prompts/`](_docs/prompts)
 - **Infrastructure as code for a cost-controlled single server** (dev + prod projects, GHCR images, `sslip.io` hostnames, no domain purchase). → [`terraform/`](terraform)
 
-**Honesty as a feature.** The project ships an [independent rubric audit](_docs/rubric-evidence.md) that marks its own weak spots (On-Call Agent at 0, the Observability metric-leg caveat) rather than overclaiming — so a reviewer can trust the rest of the evidence.
+**Self-audit.** The repo ships an [independent in-repo rubric audit](_docs/rubric-evidence.md) that records where the evidence is strong and where it is thin (including the On-Call Agent gap and the Observability metric-leg note), so the claims above can be checked rather than taken on trust.
 
 > Scope note: the LLM owner-brief (with a fixed-version guardrail), n8n routing workflows, a read-only MCP server, and deploying observability to AWS are **planned future development**, not claimed here. → [spec, future development](_docs/specs.md#future-development-after-submission)
 
