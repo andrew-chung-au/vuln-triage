@@ -2741,3 +2741,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one docstring line in `tests/test_compose_responder.py` that was rewritten, no assertion changed). `bash -n ci/test-compose.sh` passes; a unit test runs the script with `JOB=responder` and a fake failing `docker` and gets exit 1, not 3. The `compose`-marked cases collect (8) but were NOT run: no Docker in this session, so every Docker case (P-PROD-REFUSAL, Grafana body shape, test notification, 401, env check, real-mode refusal) is unverified until `make test-compose JOB=responder` runs on a Docker host or in CI. No reviewer verdict; no QA run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #199 last criterion: drop the US-13 dashboard's Environment and Version filters (owner decision, option 2)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to remove the two template variables and the docs that mention the filter. No new key prompt saved.
+- files changed: `observability/grafana/dashboards/us13-journey.json` (templating list now empty; panels and queries unchanged), `observability/README.md`, `_docs/pending-verification.md`, `tests/test_us13_dashboard.py` (comment only), this entry. `us14-overdue.yaml` and `_docs/specs.md` not changed (the spec has no "filter" text).
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one rewritten comment line in the dashboard test, no assertion changed). The dashboard was NOT loaded in Grafana (no Docker); checked statically only. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
