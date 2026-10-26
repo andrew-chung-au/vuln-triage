@@ -2723,6 +2723,16 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the owner ran every Docker and Grafana step, took the screenshots, committed them, and chose option 2 for the filters.
 
 - date: 2026-10-26
+- task/issue: PR hand-off correction and the post-merge rubric audit; tidy-up of the stale score and responder references
+- agent role: Orchestrator (Claude Code cloud session), with the `rubric-auditor` subagent (its own entry is above)
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner said they could not see the PR, then pasted an opencode audit made at `8f7a3ee` (21 of 24) and asked for a post-merge audit and a tidy-up of the references. No new key prompt saved.
+- files changed: `README.md` (the criterion 10 row, the responder wording in five places, the demo-uptime sentence), `_docs/roadmap.md` (the S2 note, the C3 estimate, a new check-in row), `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md` (CC1), `_docs/agent-team.md` (the auditor row), this entry. GitHub: PR #235's description corrected, PR #236 opened (merged by the owner), a new PR for the audit and the tidy-up.
+- verification (tests run, reviewer verdict): the agent first reported PR #235 as open after the owner had merged it, and corrected that after checking the PR's state; it later checked #236's state itself (merged 14:15:38 UTC as `b1f5d0c`) and ran `git diff 20a1fd8 b1f5d0c`, which is empty, so `main` is exactly the tree the auditor audited. The 22-of-24 score is the `rubric-auditor`'s (`1f5f8ca`), not the orchestrator's; the orchestrator read its Observability row and reports its stated limit (the metric-to-trace link is asserted in CI, not shown in a UI view). The old roadmap check-in rows that say 21 were left as history. `make verify` result is in the PR.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none yet; the owner has not reviewed the audit or the tidy-up.
+
+- date: 2026-10-26
 - task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
 - agent role: Engineer (Claude Code cloud session subagent)
 - model: claude-sonnet-5-5
@@ -2759,5 +2769,15 @@ Copy this template for each new entry:
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to remove the two template variables and the docs that mention the filter. No new key prompt saved.
 - files changed: `observability/grafana/dashboards/us13-journey.json` (templating list now empty; panels and queries unchanged), `observability/README.md`, `_docs/pending-verification.md`, `tests/test_us13_dashboard.py` (comment only), this entry. `us14-overdue.yaml` and `_docs/specs.md` not changed (the spec has no "filter" text).
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one rewritten comment line in the dashboard test, no assertion changed). The dashboard was NOT loaded in Grafana (no Docker); checked statically only. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: rubric re-audit at `20a1fd8` (branch `claude/funny-dijkstra-svm6xw`, the content of PR #236)
+- agent role: Rubric Evidence Auditor (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to re-audit all criteria at the current tree, look at the three G9 screenshots, and verify the pre-merge 21/24 audit. No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md` (rewritten: 22 of 24 at `20a1fd8`), this entry. No other file.
+- verification (tests run, reviewer verdict): read-only. Opened the three `docs/images/g9-*.png` and the g1, g2, g5-ruleset and g7 screenshots; read `make issue-dump N=226` comments and #220 comments; read `responder/vt_responder/runner.py` and `ci/test-compose.sh`; read the `verify` jobs of runs 40337986272 (`b1f5d0c`), 40334369080 (`20a1fd8`) and 40291587781 (telemetry job log tail: 3 passed) through the GitHub tools; confirmed with `git grep` that the exemplar assertion is in `43d812d`. The GitHub API showed PR #236 merged as `b1f5d0c` during the audit, so the document says so. `make verify` and the test counts were not run or re-counted by me; nothing was run on Docker or against the live URLs. No QA run, no reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
