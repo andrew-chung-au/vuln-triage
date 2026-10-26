@@ -41,7 +41,7 @@ Last updated: 2026-10-25.
 
 | # | Task | Output | Needs (human) | Unblocks (human) | Status |
 |---|---|---|---|---|---|
-| CC1 | **Rubric re-audit** with the `rubric-auditor` at current HEAD; update `_docs/rubric-evidence.md`. Not credited: anything awaiting a real Docker/CI/AWS run | Per-criterion table, total, missing-evidence list ranked by points per effort. Resets the roadmap's "10 audited" score | none | Informs when to submit (the human's call) | ☑ 2026-10-25: **17/24** at `fb24904` (commit `be9f8bf`). Testing, Application and the four documentation criteria MET; Containerization, Deployment, CI/CD and Observability each 1; Alerting 1/1; On-Call Agent 0. Rerun after the Docker session (CC14-CC19) and again after A9/A12 |
+| CC1 | **Rubric re-audit** with the `rubric-auditor` at current HEAD; update `_docs/rubric-evidence.md`. Not credited: anything awaiting a real Docker/CI/AWS run | Per-criterion table, total, missing-evidence list ranked by points per effort. Resets the roadmap's "10 audited" score | none | Informs when to submit (the human's call) | ☑ 2026-10-25: **17/24** at `fb24904` (commit `be9f8bf`). Testing, Application and the four documentation criteria MET; Containerization, Deployment, CI/CD and Observability each 1; Alerting 1/1; On-Call Agent 0. **Re-run 2026-10-26: 22/24** at `20a1fd8` (commit `1f5f8ca`): Observability now MET on the three committed Grafana screenshots plus the CI exemplar assertion (PR #236, merged as `b1f5d0c`); On-Call Agent still 0. Rerun after the real responder exists |
 | CC2 | **Close-out doc drafts** (#163, #19): README sections for deployment, observability and the responder; the AI usage report. Placeholders for anything that needs a real run, URL or recording | Drafted sections with `TODO(human-run)` markers for the URL, recordings and rollback evidence | A9 and A12 (URL, rollback proof) and the recording fill the placeholders | C1 (review and merge) | ☐ |
 | CC3 | **Stale-doc sweep:** roadmap statuses against the tracker; check whether #68 is already covered by #138 and #201 and can close; check the leftover consistency items (roadmap "Open decisions" 8, `service.version` in the allowlist); append the roadmap check-in line for each session | Small doc PR; issue comments with evidence | none | none | ☐ |
 | CC4 | **Permission sweep** (#65): run `make permission-report SINCE=<commit>` and write the proposed `opencode.json` and `.claude/settings.json` changes | A proposal comment on #65 | D1 (the human approves and applies the settings changes; they are protected) | D1 | ☐ |
@@ -99,7 +99,7 @@ All of these wait on **CC13**. Group them so one session brings the stack up onc
 
 ## Suggested order
 
-1. CC1 is done (17/24). Next, with no approvals needed: CC24 (README overclaims), CC25, CC8, CC3, CC10.
+1. CC1 is done (17/24 on 2026-10-25, 22/24 on 2026-10-26). Next, with no approvals needed: CC24 (README overclaims), CC25, CC8, CC3, CC10.
 2. Ask the human for B1 and B2; then CC9, CC12 and CC13.
 3. One Docker session: CC14, CC15, CC16, CC17, CC18, CC19 and CC26 together. The audit ranks CC26 and CC15 as the cheapest points (+1 Containerization, +1 Observability), no AWS needed.
 4. CC2, CC4, CC5, CC6 as spare capacity; CC7 only after the human agrees.

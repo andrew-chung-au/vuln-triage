@@ -16,7 +16,7 @@ from vt_responder.actlog import ActionLog
 from vt_responder.api_client import ResponderApi
 from vt_responder.real_runner import AgentResult, RealRunner
 
-from .conftest import ADVISORY_TEXT, FakeBackend
+from conftest import ADVISORY_TEXT, FakeBackend
 
 pytestmark = pytest.mark.unit
 
