@@ -11,7 +11,7 @@
 # Usage (via the Makefile): make test-compose JOB=<telemetry|alert|responder>
 #   JOB=telemetry  the cases #157 ships (see below)
 #   JOB=alert      task 27 / #159 (the US-14 A-* alert cases)
-#   JOB=responder  task 28 / #160 (not implemented here; selector only)
+#   JOB=responder  task 28c / #220 (the responder in Compose, wiring cases)
 #   no JOB         runs all three in turn (for the human's host)
 #
 # The telemetry cases #157 ships: T-REFUSE only (the backend's excluded
@@ -111,13 +111,6 @@ run_telemetry() {
   backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_telemetry.py
 }
 
-run_not_implemented() {
-  # The selector is complete (task 25) but these jobs' cases are later tasks.
-  echo "make test-compose JOB=$1: the $1 cases are task ${2} (not implemented in #157)." >&2
-  echo "The selector exists so the CI $1 job can be wired when that task lands." >&2
-  return 3
-}
-
 wait_for_heartbeat() {
   # Bounded wait (60 x 5s) until Prometheus returns at least one
   # vt_top_tier_notification_overdue series (the label-less 0 heartbeat).
@@ -203,18 +196,69 @@ run_alert() {
     backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_alert.py || return 1
 }
 
+# -- responder job (task 28c, #220): the responder wired into the alert path --
+#
+# Layers compose.responder.yaml (the stub-mode responder built from ./backend,
+# the backend's VT_DEMO_DEFECT passthrough) on the alert stack under its own
+# project. Grafana's webhook contact point is pointed at the responder, so the
+# real Grafana alert reaches it; compose.alert.yaml still makes Grafana depend
+# on the webhook-sink, so the sink starts too and a case asserts it saw 0
+# requests. The responder's logs are stdout JSON lines (the Collector ingests
+# OTLP only), so the cases read `docker compose logs responder`.
+#
+# Cases: tests/test_compose_responder.py (P-PROD-REFUSAL, the Grafana body shape,
+# the Grafana test notification, the 401 cases, the env check). #233 adds
+# P-DEMO-BE; #161 adds the verify.yml job.
+run_responder() {
+  PROJECT="vt-responder"
+  COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml -f compose.alert.yaml -f compose.responder.yaml)
+
+  # Throwaway test-only values (never committed, never from .env). The webhook
+  # token is Grafana's VT_RESPONDER_WEBHOOK_TOKEN; compose.responder.yaml gives
+  # the SAME value to the responder as its webhook secret. The API token is
+  # shared by the backend and the responder and must be non-empty (compose.yaml
+  # defaults it to empty, which would give the responder 401s from the backend).
+  export VT_ALERT_HUMAN_EMAIL="${VT_ALERT_HUMAN_EMAIL:-alert-human@alert.test}"
+  export VT_RESPONDER_WEBHOOK_TOKEN="${VT_RESPONDER_WEBHOOK_TOKEN:-responder-webhook-not-a-secret}"
+  export VT_RESPONDER_WEBHOOK_URL="http://responder:9100/webhook/grafana"
+  export RESPONDER_API_TOKEN="${RESPONDER_API_TOKEN:-responder-api-not-a-secret}"
+  export RESPONDER_MODE="stub"
+  export VT_WEBHOOK_SINK_HOST_URL="http://localhost:9099"
+  export VT_RESPONDER_HOST_URL="http://localhost:9100"
+  export VT_COMPOSE_PROJECT="$PROJECT"
+  export VT_COMPOSE_FILES="compose.yaml compose.telemetry.yaml compose.alert.yaml compose.responder.yaml"
+  # Firing needs a gauge scrape + >= one 1-minute rule evaluation (as the alert
+  # job); a dedicated knob keeps it tunable without touching the other jobs.
+  export VT_COMPOSE_POLL_TIMEOUT="${VT_RESPONDER_POLL_TIMEOUT:-300}"
+
+  mkdir -p .scratch
+
+  echo "== [responder] starting the app + observability + responder stack (project $PROJECT) =="
+  # Grafana starts last, once the gauge heartbeat is in Prometheus, and after the
+  # responder (its webhook destination), for the reasons given in run_alert.
+  "${COMPOSE[@]}" up -d --wait \
+    db migrations otel-collector prometheus tempo loki mailhog webhook-sink backend responder || return 1
+  wait_for_heartbeat || return 1
+  "${COMPOSE[@]}" up -d --wait grafana || return 1
+
+  echo "== [responder] running the responder cases =="
+  backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_responder.py
+}
+
 case "$JOB" in
   telemetry) run_telemetry ;;
   alert)     run_alert ;;
-  responder) run_not_implemented responder 28 ;;
+  responder) run_responder ;;
   "")
-    # No JOB: run all three in turn (the human's host). responder is not
-    # implemented yet, so this reports it and fails overall until it lands.
+    # No JOB: run all three in turn (the human's host).
+    # Each job tears its own project down first: they publish the same host
+    # ports (8000, 3000, ...), so the next job cannot start beside the last.
     rc=0
     run_telemetry || rc=$?
+    cleanup
     run_alert || rc=$?
-    run_not_implemented responder 28 || true
-    echo "note: the responder job is task 28 (#160), not implemented yet." >&2
+    cleanup
+    run_responder || rc=$?
     exit "$rc"
     ;;
   *)

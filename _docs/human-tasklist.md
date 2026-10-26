@@ -40,7 +40,7 @@ index and the linked docs stay the source of the commands.
 | Issue | Sitting | Rows it covers |
 |---|---|---|
 | [#225](https://github.com/andrew-chung-au/vuln-triage/issues/225) | Close-out sweep in the browser: issues already proven by CI | B5 (#157, #172, #174, #141), B9 |
-| [#226](https://github.com/andrew-chung-au/vuln-triage/issues/226) | Live observability stack on a Docker host, started once | G9, G10; `pending-verification.md` §#155, §#193, §"#210 and #211" |
+| [#226](https://github.com/andrew-chung-au/vuln-triage/issues/226) | Live observability stack on a Docker host, started once | G9, G10; `pending-verification.md` §#155, §#193, §"#210 and #211", §#220 (`make test-compose JOB=responder`, run after the stack checks) |
 | [#227](https://github.com/andrew-chung-au/vuln-triage/issues/227) | AWS console session | A1 (leftovers), A7, A8, A10, A11 |
 | [#228](https://github.com/andrew-chung-au/vuln-triage/issues/228) | Unblock cloud sessions | B1, B4, B6, B7 |
 | [#229](https://github.com/andrew-chung-au/vuln-triage/issues/229) | Owner decisions | F4, D2, the `P-FLAG-GONE` wording for #161 |

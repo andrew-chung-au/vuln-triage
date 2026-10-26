@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
+import threading
 
-from conftest import API_TOKEN, WEBHOOK_SECRET, alert_body, make_rig
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from conftest import API_TOKEN, WEBHOOK_SECRET, FakeBackend, alert_body, make_rig, make_settings
+from vt_responder.actlog import ActionLog
+from vt_responder.api_client import ResponderApi
+from vt_responder.app import create_app
+from vt_responder.fakes import FakeGit, FakeGitHub
 
 pytestmark = pytest.mark.unit
 
@@ -105,6 +113,192 @@ def test_hook_resolved_does_not_burn_the_fingerprint(rig):
     rig.backend.add_finding("42", ["failed"])
     post(rig, alert_body("fpX", status="resolved"))
     assert post(rig, alert_body("fpX")).json()["results"][0]["outcome"] == "pull_request_opened"
+
+
+def outcome(rig, body):
+    return post(rig, body).json()["results"][0]["outcome"]
+
+
+def test_hook_resolved_forgets_the_fingerprint_so_a_refiring_runs_again(rig):
+    rig.backend.add_finding("42", ["failed"])
+    assert outcome(rig, alert_body("fpF")) == "pull_request_opened"
+    assert outcome(rig, alert_body("fpF")) == "repeat_ignored"  # firing, firing: one run
+    requests_before = len(rig.backend.requests)
+    assert outcome(rig, alert_body("fpF", status="resolved")) == "resolved_ignored"
+    assert len(rig.backend.requests) == requests_before  # resolved reads no API
+    assert len(rig.github.calls) == 1  # and starts no run
+    assert outcome(rig, alert_body("fpF")) == "pull_request_opened"  # firing, resolved, firing: two runs
+    assert len(rig.github.calls) == 2
+    ignored = [r for r in rig.records() if r["event"] == "alert_ignored" and r["outcome"] == "resolved"]
+    assert len(ignored) == 1
+
+
+def test_hook_resolved_for_unknown_fingerprint_is_harmless(rig):
+    rig.backend.add_finding("42", ["failed"])
+    assert outcome(rig, alert_body("fpK")) == "pull_request_opened"
+    before = rig.state_file.read_text()
+    assert outcome(rig, alert_body("fpUnknown", status="resolved")) == "resolved_ignored"
+    assert rig.state_file.read_text() == before  # no record change
+    assert outcome(rig, alert_body("fpK")) == "repeat_ignored"
+
+
+def test_hook_resolved_release_survives_restart(tmp_path):
+    first = make_rig(tmp_path)
+    first.backend.add_finding("42", ["failed"])
+    assert outcome(first, alert_body("fpGone")) == "pull_request_opened"
+    assert outcome(first, alert_body("fpKept")) == "pull_request_opened"
+    post(first, alert_body("fpGone", status="resolved"))
+    second = make_rig(tmp_path)  # a new app and guard over the same record file
+    second.backend.add_finding("42", ["failed"])
+    assert outcome(second, alert_body("fpKept")) == "repeat_ignored"
+    assert outcome(second, alert_body("fpGone")) == "pull_request_opened"
+
+
+def test_hook_resolved_and_firing_in_one_body_are_handled_each(rig):
+    rig.backend.add_finding("42", ["failed"])
+    assert outcome(rig, alert_body("fpOld")) == "pull_request_opened"
+    body = alert_body("fpNew")
+    body["alerts"].append(alert_body("fpOld", status="resolved")["alerts"][0])
+    r = post(rig, body)
+    assert [x["outcome"] for x in r.json()["results"]] == ["pull_request_opened", "resolved_ignored"]
+    assert outcome(rig, alert_body("fpOld")) == "pull_request_opened"  # fpOld was released
+    assert outcome(rig, alert_body("fpNew")) == "repeat_ignored"  # fpNew is still guarded
+
+
+# --- resolved while a run is in flight (deferred release) --------------------
+
+class _BlockingGitHub(FakeGitHub):
+    """Holds the first run inside ``open_pull_request`` until the test lets it go."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.entered = threading.Event()
+        self.release_run = threading.Event()
+        self.block = True
+
+    def open_pull_request(self, branch, title, body):
+        if self.block:
+            self.block = False  # only the first run blocks
+            self.entered.set()
+            assert self.release_run.wait(10), "test never released the run"
+        return super().open_pull_request(branch, title, body)
+
+
+def _inflight_rig(tmp_path, fail_after_release=False):
+    settings = make_settings(tmp_path)
+    backend = FakeBackend()
+    api = ResponderApi(settings.api_url, settings.api_token, transport=httpx.MockTransport(backend.handler))
+    github, lines = _BlockingGitHub(), []
+    app = create_app(settings, api=api, git=FakeGit(), github=github, log=ActionLog(lines.append))
+    backend.add_finding("42", ["failed"])
+    return TestClient(app), backend, github, settings
+
+
+def _start_blocked_run(client, github, fp):
+    box = {}
+    t = threading.Thread(target=lambda: box.update(r=client.post(URL, json=alert_body(fp), headers=HEADERS)))
+    t.start()
+    assert github.entered.wait(10), "the run never started"
+    return t, box
+
+
+HEADERS = {"Authorization": f"Bearer {WEBHOOK_SECRET}"}
+
+
+def _out(client, fp, status="firing"):
+    return client.post(URL, json=alert_body(fp, status=status), headers=HEADERS).json()["results"][0]["outcome"]
+
+
+def test_hook_resolved_in_flight_defers_the_release_until_the_run_ends(tmp_path):
+    client, _backend, github, _s = _inflight_rig(tmp_path)
+    t, box = _start_blocked_run(client, github, "fpI")
+    assert _out(client, "fpI", "resolved") == "resolved_ignored"  # arrives mid-run
+    assert _out(client, "fpI") == "repeat_ignored"  # no second concurrent run...
+    github.release_run.set()
+    t.join(10)
+    assert box["r"].json()["results"][0]["outcome"] == "pull_request_opened"
+    # ...but that firing came after the resolved, so it cancelled the deferred release.
+    assert _out(client, "fpI") == "repeat_ignored"
+    assert len(github.calls) == 1
+
+
+def test_hook_resolved_in_flight_releases_when_the_run_ends(tmp_path):
+    client, _backend, github, _s = _inflight_rig(tmp_path)
+    t, box = _start_blocked_run(client, github, "fpJ")
+    assert _out(client, "fpJ", "resolved") == "resolved_ignored"
+    github.release_run.set()
+    t.join(10)
+    assert box["r"].json()["results"][0]["outcome"] == "pull_request_opened"
+    assert _out(client, "fpJ") == "pull_request_opened"  # released after the run: a new run
+    assert len(github.calls) == 2
+
+
+def test_hook_resolved_in_flight_second_firing_ignored_then_third_runs(tmp_path):
+    client, _backend, github, _s = _inflight_rig(tmp_path)
+    t, _box = _start_blocked_run(client, github, "fpH")
+    assert _out(client, "fpH") == "repeat_ignored"  # second firing, run still in flight
+    assert _out(client, "fpH", "resolved") == "resolved_ignored"
+    github.release_run.set()
+    t.join(10)
+    assert _out(client, "fpH") == "pull_request_opened"  # third firing starts a new run
+
+
+def test_hook_resolved_in_flight_with_an_error_releases_once(tmp_path):
+    client, backend, github, settings = _inflight_rig(tmp_path)
+    backend.fail_status = 500
+    # The error path never reaches the (blocking) GitHub call, so drive the guard directly
+    # to hold the run open: claim, resolve (deferred), then finish as failed.
+    guard = client.app.state.guard
+    assert guard.claim("fpD") is True
+    assert guard.resolve("fpD") == "deferred"
+    guard.finish("fpD", failed=True)  # error plus deferred release: one release, no error
+    guard.finish("fpD", failed=True)  # a stray second finish is harmless
+    backend.fail_status = None
+    github.block = False
+    assert _out(client, "fpD") == "pull_request_opened"
+    assert settings.state_file.exists()
+
+
+class _RaisingOnceGitHub(FakeGitHub):
+    """Makes the first run raise out of ``runner.run`` (not return ``"error"``)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.raise_next = True
+
+    def open_pull_request(self, branch, title, body):
+        if self.raise_next:
+            self.raise_next = False
+            raise RuntimeError("boom: the run crashed")
+        return super().open_pull_request(branch, title, body)
+
+
+def test_hook_run_that_raises_releases_the_fingerprint_and_clears_in_flight(tmp_path):
+    # #234 raise path: an exception out of runner.run (not an "error" outcome) must not
+    # leave the fingerprint claimed or the run marked in flight. The webhook answers 500
+    # (the exception propagates out of the handler; the client is told to retry).
+    settings = make_settings(tmp_path)
+    backend = FakeBackend()
+    backend.add_finding("42", ["failed"])
+    api = ResponderApi(settings.api_url, settings.api_token, transport=httpx.MockTransport(backend.handler))
+    github = _RaisingOnceGitHub()
+    app = create_app(settings, api=api, git=FakeGit(), github=github, log=ActionLog(lambda s: None))
+    client = TestClient(app, raise_server_exceptions=False)  # see the real 500, not a re-raise
+
+    r = client.post(URL, json=alert_body("fpX1"), headers=HEADERS)
+    assert r.status_code == 500
+    assert github.raise_next is False  # the raising path really ran
+
+    # Fingerprint released from the persisted record, so a restart would not see it either.
+    assert "fpX1" not in settings.state_file.read_text(encoding="utf-8")
+    # In-flight state cleared: a resolved now is "unknown" (nothing recorded), not "deferred"
+    # (which it would be if the run were still marked in flight, and would then hang forever).
+    assert app.state.guard.resolve("fpX1") == "unknown"
+    # A later firing is not a repeat: it starts a new run, which completes.
+    r2 = client.post(URL, json=alert_body("fpX1"), headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["results"][0]["outcome"] == "pull_request_opened"
+    assert len(github.calls) == 1
 
 
 @pytest.mark.parametrize("raw", [

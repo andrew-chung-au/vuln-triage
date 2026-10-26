@@ -2701,3 +2701,33 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): facts read from the GitHub Actions record through the GitHub tools: `telemetry` job log of run 40291587781 ("3 passed in 61.07s"), job lists of runs 40188742150, 40073386642 and 40073409867, alert run 40226288166, and the `Record the image digests` values in the `deploy-dev` log of run 40291937292. The `skipif` pair at `tests/test_compose_alert.py:136,179` read directly. `make verify` on this branch: PASS WITH WARNINGS (frontend 89, backend 515, responder 68 passed; the warning is only that BASE equals HEAD; docs-only diff). The QA subagent's PASS on #172 (comment 6411988890) was checked against the issue's comment list before closing; it was inferred from the CI run, not a local run, and it did not re-run `make verify`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the owner asked for the sweep to be done by the agent and approved the QA re-check and the tidy; the owner did not look at the Actions pages themselves.
+
+- date: 2026-10-26
+- task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #232 per the PM grooming in #220 comment 6412133802. No new key prompt saved.
+- files changed: `responder/vt_responder/guard.py` (resolve, finish, in-flight and deferred sets), `responder/vt_responder/app.py`, `responder/tests/test_webhook.py`, `_docs/testing.md` (`I-RESP-HOOK-REPEAT`, `I-RESP-HOOK-RESOLVED`), this entry.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 76 passed; the warning is only that BASE equals HEAD, so uncommitted changes were compared). No reviewer verdict; no QA run yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #234 responder guard hardening, first criterion only (raise path)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement only the "Raise path" criterion of #234 and run a mutation check. No new key prompt saved.
+- files changed: `responder/tests/test_webhook.py` (one test and a raising fake), this entry. No production code.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 77 passed; the warning is only that BASE equals HEAD). Mutation check: with the `try/finally` removed from `app.py` the new test failed (76 passed, 1 failed) and `app.py` was restored with an empty diff. No reviewer verdict; no QA run. The other #234 criteria are not done.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #220 responder in Compose and the wiring cases (task 28c)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #220 per the PM grooming in comment 6412133802, with no Docker available. No new key prompt saved.
+- files changed: `compose.responder.yaml` (new), `ci/test-compose.sh` (`responder` branch; teardown between jobs on the no-JOB path), `tests/test_compose_responder_static.py` (new, unit), `tests/compose_responder.py` (new helpers), `tests/test_compose_responder.py` (`--build`, new compose cases), `_docs/tasks.md` (tasks 28/29 wording), this entry.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one docstring line in `tests/test_compose_responder.py` that was rewritten, no assertion changed). `bash -n ci/test-compose.sh` passes; a unit test runs the script with `JOB=responder` and a fake failing `docker` and gets exit 1, not 3. The `compose`-marked cases collect (8) but were NOT run: no Docker in this session, so every Docker case (P-PROD-REFUSAL, Grafana body shape, test notification, 401, env check, real-mode refusal) is unverified until `make test-compose JOB=responder` runs on a Docker host or in CI. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
