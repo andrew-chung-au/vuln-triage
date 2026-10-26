@@ -2641,3 +2641,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): PM grooming report on #160; five issues created (#218-#222) with the split recorded in a comment on #160 (6404873337). QA PASS on #218 (6406748025) and #219 (6406748685), each by a fresh QA subagent at `7df3a6f`; `make assert-clean` PASS and HEAD unchanged after QA. `make verify` after the merge and again after `5ab7b7b`: frontend 89, backend 515, responder 51 passed, type check and whitespace passed. Not run: the container form of `P-PROD-REFUSAL`; any Docker or Compose job; the Grafana test-alert payload; a CI run of the `verify` workflow with the new targets.
 - new dependencies: none by the orchestrator (the `responder/uv.lock` packages are in the #219 entry).
 - human review (what I checked or corrected, or `none`): the owner approved the split and all seven PM recommendations, the parallel start, and the exact `Makefile`/`AGENTS.md` diff before commit. I restored a comma my edit dropped in the `AGENTS.md` Test (all) line before committing.
+
+- date: 2026-10-26
+- task/issue: QA of #157 and #172; unverified items collected in #223
+- agent role: Orchestrator (Claude Code cloud session); launched two QA subagents
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner pointed out that neither #157 nor #172 had a QA verdict and asked for QA on both; then asked for the unverified items to go in a new issue, `pending-verification.md` and the human tasklist. No new key prompt saved.
+- files changed: `_docs/pending-verification.md` (new section "QA unverified items (2026-10-26)" and a note in the #172 section), `_docs/human-tasklist.md` (B5 status, new rows B9, B10, F4, F5), this entry. Created issue #223.
+- verification (tests run, reviewer verdict): QA #157 PASS with unverified items (comment 6410124690); QA #172 FAIL on two criteria (comment 6410133733). Both QA runs: `make verify` passed (89 frontend, 515 backend, 51 responder). Not run by anyone in this session: the telemetry CI record (run 40188742150), the T-REFUSE negative-check runs, any Docker job. #157 and #172 are not closed. No `make verify` was run after this docs-only commit.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none yet; the owner has not yet decided the exemplar assertion, the `P-FLAG-GONE` scope, or whether to close #157.
