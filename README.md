@@ -45,10 +45,9 @@ See [Quick start](#quick-start) for the few-minute version, including creating a
 | 12 | **On-Call Agent** (2) | 0 | A stub-mode responder, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host; a real runner that opens a fix PR, and the recorded alert-to-fix run, are not done yet → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
 | | **Total** | **22 / 24** | A starting suggestion, not a self-grade. See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work. |
 
-<!-- PLACEHOLDER: if you record a demo video / drill, link it here and in Deployment:
 ### Demo recording
-📹 [Watch the end-to-end drill](<URL>) — metric at 1 → one alert naming the finding → responder PR → owner email in MailHog → alert resolves.
--->
+
+📹 Any walkthrough or on-call-drill recording (metric at 1 → one alert naming the finding → responder PR → owner email in MailHog → alert resolves) is on the project channel: **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)**.
 
 ---
 
@@ -211,12 +210,7 @@ Captured 2026-10-26 on the local Compose observability stack ([`observability/`]
 
 _The metric→trace link (the Prometheus exemplar that carries the trace ID) is asserted in CI (`tests/test_compose_telemetry.py`, the `telemetry` job), not shown in the screenshots above; the screenshots show the same trace ID in a log event and in its trace._
 
-_Not captured yet: the recorded end-to-end drill and the responder pull request (no real responder runner yet; a stub-mode responder exists)._
-
-
-<!-- PLACEHOLDER: link the recorded drill here if you have one:
-📹 **Demo recording:** [end-to-end drill](<URL>) — shows the metric at 1, one alert naming the finding, the responder opening a PR, the owner email arriving in MailHog, and the alert resolving.
--->
+_Not captured yet: the recorded end-to-end drill and the responder pull request (no real responder runner yet; a stub-mode responder exists). Any recording is on the project channel **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)** (see [Demo recording](#demo-recording))._
 
 ---
 
@@ -270,7 +264,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 
 > The first live deploy is a human-run AWS step (account, secrets, `terraform apply`), tracked in [`_docs/aws-setup.md`](_docs/aws-setup.md). The Deployment criterion accepts *a public URL **or** a clear demo of the deployment.*
 
-<!-- If the deployment is not kept live at submission, link the demo recording instead (see Screenshots & demo). -->
+> If the deployment is not kept live at submission, see the demo recording instead (project channel: [youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions); see [Demo recording](#demo-recording)).
 
 ---
 
