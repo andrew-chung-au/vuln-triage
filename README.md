@@ -128,6 +128,8 @@ make compose-up          # builds + starts frontend + backend + Postgres, one co
 make compose-down        # stop
 ```
 
+> **Docker Desktop on Windows (WSL) says `ports are not available ... /forwards/expose ... 500`?** Another Windows program already holds that host port, and VS Code's automatic port forwarding can be that program. Open VS Code's **Ports** panel, right-click the port and choose **Stop Forwarding Port**, and untick the setting `remote.autoForwardPorts`. To find the owner of any port from WSL: `netstat.exe -ano | grep :<port>`, then `tasklist.exe /FI "PID eq <pid>"`. Details: [`_docs/verify-locally.md`](_docs/verify-locally.md) Troubleshooting. Option A needs no Docker and is not affected.
+
 Both options serve the SPA and the API on one origin (the API lives under `/api`; the proxy strips the prefix), so no CORS setup is needed.
 
 ---

@@ -353,6 +353,8 @@ These cases are `compose`-marked and **deselected** by `make test` / `make verif
 never *skips* them; `tests/test_marker_hygiene.py` guards against an ordinary test
 being silently tagged `compose`.
 
+> **Port already taken?** If a job stops with `ports are not available ... /forwards/expose ... 500` (Docker Desktop on Windows with WSL), see the Troubleshooting table below: on 2026-10-26 the process holding port 9099 was VS Code (`Code.exe`; why it held it was not confirmed). Check a port before you start; it costs a minute.
+>
 > **First-run `VERIFY:` items.** Each Compose job pins external images (Grafana,
 > Tempo, Loki, Prometheus, the Collector, MailHog) whose exact query shapes and
 > behaviours are marked `VERIFY:` in the code until a human confirms them on the
