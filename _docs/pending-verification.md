@@ -20,7 +20,7 @@ decisions, merges). This file is the detailed per-issue checklist both link to;
 the cloud-session queue below is superseded by the cloud list, which is the
 source for order and dependencies.
 
-Last updated: 2026-10-26, later (owner-run items regrouped into one ticket per sitting: #225 close-out sweep, #226 live observability stack, #227 AWS console, #228 unblock cloud sessions, #229 decisions; #223 closed as replaced by #225; the #159 section removed, its issue closed and its last items green). Earlier: 2026-10-26 (QA unverified items for #157, #172, #218 and #219 collected in #223). Earlier: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
+Last updated: 2026-10-26, evening (the owner's responder-job run and live US-13 stack check are recorded; the #220 section is gone and the #155 and "#210 and #211" sections are reduced to leftovers; the #199 result is in the queue above). Earlier, 2026-10-26, later (owner-run items regrouped into one ticket per sitting: #225 close-out sweep, #226 live observability stack, #227 AWS console, #228 unblock cloud sessions, #229 decisions; #223 closed as replaced by #225; the #159 section removed, its issue closed and its last items green). Earlier: 2026-10-26 (QA unverified items for #157, #172, #218 and #219 collected in #223). Earlier: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 
 ## Cloud-session queue (Docker work to hand to Claude Code cloud sessions)
 
@@ -34,7 +34,7 @@ started job.
 - **#198** (`internal error` scan reason): look at the failure reason on the dashboard in a running UI. Running migration `0002` on real Postgres is now **#201** (a `postgres_migration` check in the `postgres-integration` job; Docker-only, verified in CI).
 - **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): **run live by the owner on 2026-10-26** (results in #226, comment 6417013401). The real labels are `vt_notification_kind` and `vt_outcome`; `deployment_environment` and `service_version` are not labels on `vt_notifications_total`, and the dashboard's Environment and Version variables filtered nothing, so the owner chose to drop them (X14 is the future work). The dashboard change was checked statically only; the next live run confirms the dropdowns are gone.
 - **#172**, **#174** and **#157** (`T-JOURNEY-BE`, the Loki leg, `T-REFUSE`): done in CI (run 40291587781) and closed (2026-10-26). The optional #193 held-job case is in #226.
-- **#155** (dashboard and MailHog check): run live by the owner on 2026-10-26 (results in #226). The **#158** Grafana rule spot checks and the optional held-job Loki case remain in #226.
+- **#155** (dashboard and MailHog check): run live by the owner on 2026-10-26 (results in #226). The optional US-14 rule spot checks (#158 is closed) and the optional held-job Loki case remain in #226; on 2026-10-26 only the rule's presence was seen (`us14-notification-overdue`, Provisioned, Normal; its contact points and policy were not checked).
 - **#140** (security scan, PR #167): needs network to generate the fixture lockfiles.
 - **Human machine, not cloud:** AWS applies and secrets (#141, `human-tasklist.md` §A).
 
