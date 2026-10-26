@@ -27,6 +27,7 @@ _ALLOWED = frozenset(
         "pull_request",
         "job_states",
         "reason",
+        "model",
     }
 )
 

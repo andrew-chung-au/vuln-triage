@@ -1,7 +1,8 @@
 """The stub run: one deterministic pass per alert, no model, no SDK.
 
 It proves the wiring only (architecture, Responder agent; testing.md section
-Responder). The real runner (Claude Agent SDK) is task 28d (#221).
+Responder). The real runner is ``real_runner.RealRunner`` (task 28d, #221);
+wiring the live Claude Agent SDK session into it is the remaining part of #221.
 
 Decision rule:
 - no ``finding_id`` (a Grafana test alert or the NoData alert): "no change";

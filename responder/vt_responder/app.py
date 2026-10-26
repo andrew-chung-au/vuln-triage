@@ -119,19 +119,29 @@ async def _read_capped(request: Request, limit: int) -> bytes | None:
 
 
 def create_app(settings: Settings, *, api: ResponderApi | None = None, git: FakeGit | None = None,
-               github: FakeGitHub | None = None, log: ActionLog | None = None) -> FastAPI:
-    if settings.mode != "stub":
-        raise ConfigError("only RESPONDER_MODE=stub is implemented here; the real runner is task 28d (#221)")
+               github: FakeGitHub | None = None, log: ActionLog | None = None,
+               make_session=None) -> FastAPI:
+    if settings.mode not in ("stub", "real"):
+        raise ConfigError("RESPONDER_MODE must be 'stub' or 'real'")
     log = log or ActionLog()
     api = api or ResponderApi(settings.api_url, settings.api_token)
-    git = git or FakeGit()
-    github = github or FakeGitHub()
     guard = FingerprintGuard(settings.state_file)
-    runner = StubRunner(api, git, github, log)
+    if settings.mode == "real":
+        # Real mode (task 28d / #221): an agent session may open a fix PR.
+        # The SDK sits behind make_session so tests pass a fake one; by default
+        # the live session is built lazily (no SDK import until a run happens).
+        from .real_runner import RealRunner, build_default_session
+
+        runner = RealRunner(api, log, settings.model, make_session or (lambda m: build_default_session(m)))
+    else:
+        git = git or FakeGit()
+        github = github or FakeGitHub()
+        runner = StubRunner(api, git, github, log)
 
     app = FastAPI(title="VulnTriage responder", docs_url=None, redoc_url=None, openapi_url=None)
-    app.state.git = git
-    app.state.github = github
+    if settings.mode == "stub":
+        app.state.git = git
+        app.state.github = github
     app.state.guard = guard
 
     def handle(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
