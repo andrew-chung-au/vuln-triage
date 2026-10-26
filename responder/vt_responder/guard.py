@@ -18,6 +18,9 @@ class FingerprintGuard:
         self._path = Path(path)
         self._lock = threading.Lock()
         self._handled = self._load()
+        # In-memory only: runs in flight and resolved notifications waiting for them.
+        self._inflight: set[str] = set()
+        self._deferred: set[str] = set()
 
     def _load(self) -> set[str]:
         try:
@@ -41,17 +44,54 @@ class FingerprintGuard:
         os.replace(tmp, self._path)
 
     def claim(self, fingerprint: str) -> bool:
-        """Return True the first time a fingerprint is seen, False after."""
+        """Return True the first time a fingerprint is seen, False after.
+
+        A repeat firing that arrives while a release is deferred (see ``resolve``)
+        cancels that release: the run in flight covers the alert that is firing now.
+        """
         with self._lock:
             if fingerprint in self._handled:
+                self._deferred.discard(fingerprint)
                 return False
             self._handled.add(fingerprint)
+            self._inflight.add(fingerprint)
             self._save()
             return True
 
     def release(self, fingerprint: str) -> None:
         """Forget a fingerprint (used when a run failed, so a re-sent alert retries)."""
         with self._lock:
+            self._release_locked(fingerprint)
+
+    def _release_locked(self, fingerprint: str) -> None:
+        if fingerprint in self._handled:
+            self._handled.discard(fingerprint)
+            self._save()
+
+    def resolve(self, fingerprint: str) -> str:
+        """The alert resolved: forget the fingerprint so a later firing runs again.
+
+        Returns ``released``, ``deferred`` (a run is in flight, so the release waits
+        for ``finish``; releasing now would allow a second concurrent run) or
+        ``unknown`` (nothing recorded; the record is left untouched).
+
+        Limit: if a fix does not hold and the alert never resolves, Grafana sends
+        nothing (no repeat), so the guard is not the cause.
+        """
+        with self._lock:
+            if fingerprint in self._inflight:
+                self._deferred.add(fingerprint)
+                return "deferred"
             if fingerprint in self._handled:
-                self._handled.discard(fingerprint)
-                self._save()
+                self._release_locked(fingerprint)
+                return "released"
+            return "unknown"
+
+    def finish(self, fingerprint: str, *, failed: bool = False) -> None:
+        """A run ended. Release it if it failed or a resolved was deferred (once)."""
+        with self._lock:
+            self._inflight.discard(fingerprint)
+            deferred = fingerprint in self._deferred
+            self._deferred.discard(fingerprint)
+            if failed or deferred:
+                self._release_locked(fingerprint)

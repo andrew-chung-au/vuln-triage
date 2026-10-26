@@ -7,7 +7,8 @@ the documented common shape ``{"status", "alerts": [{"status", "fingerprint",
 header (the contact point's "authorization" setting).
 
 Order of checks: bearer token (401, nothing else is read), body size (413),
-JSON shape (400), then per alert: resolved is ignored, an alert with neither a
+JSON shape (400), then per alert: resolved starts no run and forgets the
+fingerprint (deferred until the run ends if one is in flight), an alert with neither a
 fingerprint nor a ``finding_id`` (Grafana's test notification may carry no
 fingerprint) logs ``no_change`` with an explanation and touches nothing (no
 run, no API read, no repeat-guard claim; US-15), a repeated fingerprint is
@@ -138,6 +139,8 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
         for alert in alerts:
             fp, fid = alert["fingerprint"], alert["finding_id"]
             if alert["status"] == "resolved":
+                if fp is not None:
+                    guard.resolve(fp)  # forget it so a later firing runs again (deferred if in flight)
                 log.emit("alert_ignored", outcome="resolved", fingerprint=fp, finding_id=fid)
                 results.append({"fingerprint": fp, "outcome": "resolved_ignored"})
                 continue
@@ -156,9 +159,13 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
                 log.emit("alert_ignored", outcome="repeat", fingerprint=fp, finding_id=fid)
                 results.append({"fingerprint": fp, "outcome": "repeat_ignored"})
                 continue
-            outcome = runner.run(fp, fid)
-            if outcome == "error":
-                guard.release(fp)  # a re-sent alert may retry a run that failed
+            outcome = "error"  # an exception out of the run counts as a failed run
+            try:
+                outcome = runner.run(fp, fid)
+            finally:
+                # A failed run is released so a re-sent alert retries; a resolved that
+                # arrived during the run releases here too (once).
+                guard.finish(fp, failed=outcome == "error")
             results.append({"fingerprint": fp, "outcome": outcome})
         return results
 

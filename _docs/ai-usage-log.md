@@ -2701,3 +2701,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): facts read from the GitHub Actions record through the GitHub tools: `telemetry` job log of run 40291587781 ("3 passed in 61.07s"), job lists of runs 40188742150, 40073386642 and 40073409867, alert run 40226288166, and the `Record the image digests` values in the `deploy-dev` log of run 40291937292. The `skipif` pair at `tests/test_compose_alert.py:136,179` read directly. `make verify` on this branch: PASS WITH WARNINGS (frontend 89, backend 515, responder 68 passed; the warning is only that BASE equals HEAD; docs-only diff). The QA subagent's PASS on #172 (comment 6411988890) was checked against the issue's comment list before closing; it was inferred from the CI run, not a local run, and it did not re-run `make verify`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the owner asked for the sweep to be done by the agent and approved the QA re-check and the tidy; the owner did not look at the Actions pages themselves.
+
+- date: 2026-10-26
+- task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #232 per the PM grooming in #220 comment 6412133802. No new key prompt saved.
+- files changed: `responder/vt_responder/guard.py` (resolve, finish, in-flight and deferred sets), `responder/vt_responder/app.py`, `responder/tests/test_webhook.py`, `_docs/testing.md` (`I-RESP-HOOK-REPEAT`, `I-RESP-HOOK-RESOLVED`), this entry.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 76 passed; the warning is only that BASE equals HEAD, so uncommitted changes were compared). No reviewer verdict; no QA run yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
