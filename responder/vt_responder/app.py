@@ -143,6 +143,7 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
             git=checkout_git or SubprocessGit(settings.repo, settings.github_token),
             branches=branches or GitHubRestBranches(settings.repo, settings.github_token),
             max_turns=settings.max_turns, timeout_seconds=settings.run_timeout_seconds,
+            repo=settings.repo,
         )
     else:
         git = git or FakeGit()

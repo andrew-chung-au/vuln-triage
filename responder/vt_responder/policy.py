@@ -64,14 +64,18 @@ class Decision:
         return Decision(False, reason)
 
 
-def _is_env_file(name: str) -> bool:
-    return name == ".env" or (name.startswith(".env") and name != ".env.example")
+def _is_env_file(name: str, *, allow_example: bool = True) -> bool:
+    """An ``.env*`` file, matched case-insensitively. ``.env.example`` is readable."""
+    lowered = name.lower()
+    if allow_example and lowered == ".env.example":
+        return False
+    return lowered.startswith(".env")
 
 
 def _is_protected_name(name: str) -> bool:
     lowered = name.lower()
     return (
-        _is_env_file(name)
+        _is_env_file(name, allow_example=False)
         or lowered.endswith(PROTECTED_SUFFIXES)
         or lowered.startswith("dockerfile")
         or (lowered.startswith("compose") and lowered.endswith((".yaml", ".yml")))
@@ -121,11 +125,12 @@ class ToolPolicy:
         parts = real.relative_to(self._root).parts
         if not parts:
             return Decision.deny("path_not_allowed")
-        if _is_env_file(parts[-1]):
+        lowered_parts = tuple(p.lower() for p in parts)
+        if _is_env_file(parts[-1], allow_example=False):
             return Decision.deny("env_file")
-        if ".github" in parts:
+        if ".github" in lowered_parts:
             return Decision.deny("github_dir")
-        if PROTECTED_COMPONENTS.intersection(parts) or _is_protected_name(parts[-1]):
+        if PROTECTED_COMPONENTS.intersection(lowered_parts) or _is_protected_name(parts[-1]):
             return Decision.deny("infrastructure_path")
         if parts[0] not in WRITABLE_ROOTS:
             return Decision.deny("path_not_allowed")

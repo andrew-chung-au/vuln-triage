@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import os
+import re
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
@@ -85,8 +86,13 @@ class RealRunner:
                  git: CheckoutGit | None = None, branches: BranchClient | None = None,
                  max_turns: int = DEFAULT_MAX_TURNS,
                  timeout_seconds: int = DEFAULT_RUN_TIMEOUT_SECONDS,
-                 timeout_grace_seconds: float = 5.0) -> None:
+                 timeout_grace_seconds: float = 5.0, repo: str | None = None) -> None:
         self._api = api
+        # When set, a reported pull request must be a PR URL in this repository.
+        self._pr_url = (
+            re.compile(rf"https://github\.com/{re.escape(repo)}/pull/[0-9]+", re.IGNORECASE)
+            if repo else None
+        )
         self._log = log
         self._model = model
         self._make_session = make_session
@@ -137,6 +143,9 @@ class RealRunner:
 
         served = result.model or self._model
         if result.outcome == "pull_request_opened" and result.pull_request:
+            if self._pr_url and not self._pr_url.fullmatch(result.pull_request):
+                return self._finish_failed(fingerprint, finding_id, "pull_request_url_invalid",
+                                           model=served)
             log.emit("pull_request_opened", outcome="agent", fingerprint=fingerprint,
                      finding_id=finding_id, pull_request=result.pull_request, model=served)
             return "pull_request_opened"

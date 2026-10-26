@@ -92,6 +92,47 @@ def test_each_run_gets_its_own_fresh_checkout_that_is_deleted_afterwards(tmp_pat
     assert not c1.parent.exists()  # and so is its temporary parent directory
 
 
+def rig_with_repo(behaviour, repo):
+    backend = FakeBackend()
+    backend.add_finding("42", ["failed"])
+    api = ResponderApi("http://backend.test", "tok", transport=httpx.MockTransport(backend.handler))
+    lines: list[str] = []
+    branches = FakeBranchClient()
+    runner = RealRunner(api, ActionLog(lines.append), MODEL, lambda m, ctx: Session(behaviour),
+                        git=FakeCheckoutGit(), branches=branches, timeout_seconds=5,
+                        timeout_grace_seconds=0.0, repo=repo)
+    return runner, lines
+
+
+@pytest.mark.parametrize("url", [
+    "https://github.com/owner/repo/pull/7",
+    "https://github.com/Owner/Repo/pull/7",
+])
+def test_a_pull_request_url_in_the_configured_repo_is_accepted(url):
+    runner, lines = rig_with_repo(lambda s: AgentResult("pull_request_opened", MODEL, pull_request=url),
+                                  "owner/repo")
+    assert runner.run("fp1", "42") == "pull_request_opened"
+    assert any(e["event"] == "pull_request_opened" and e["pull_request"] == url for e in events(lines))
+
+
+@pytest.mark.parametrize("url", [
+    "https://github.com/other/repo/pull/7",
+    "https://github.com/owner/repo-evil/pull/7",
+    "https://github.com/owner/repo/pull/7/files",
+    "https://github.com/owner/repo/issues/7",
+    "https://evil.example/owner/repo/pull/7",
+    "http://github.com/owner/repo/pull/7",
+    "https://github.com/owner/repo/pull/7?x=1",
+])
+def test_a_pull_request_url_outside_the_configured_repo_is_a_failed_run(url):
+    runner, lines = rig_with_repo(lambda s: AgentResult("pull_request_opened", MODEL, pull_request=url),
+                                  "owner/repo")
+    assert runner.run("fp1", "42") == "error"
+    blob = "\n".join(lines)
+    assert "pull_request_url_invalid" in blob
+    assert url not in blob  # an unvalidated URL is not echoed into the log
+
+
 def test_the_session_is_handed_the_bounds_and_a_policy_for_this_fingerprint(tmp_path):
     def behaviour(s):
         assert s.ctx.max_turns == 7 and s.ctx.timeout_seconds == 5

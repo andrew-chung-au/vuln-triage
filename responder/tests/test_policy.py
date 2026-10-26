@@ -102,6 +102,35 @@ def test_write_to_env_example_is_still_not_in_a_writable_root(policy):
     assert not policy.check(*edit(".env.example")).allowed
 
 
+@pytest.mark.parametrize("path", ["backend/.env.example", "backend/.ENV.EXAMPLE", "responder/.env.example"])
+def test_write_to_env_example_inside_a_writable_root_is_refused(policy, path):
+    d = policy.check(*edit(path))
+    assert not d.allowed and d.reason == "env_file"
+
+
+@pytest.mark.parametrize("path", ["backend/.ENV", "backend/.Env.local", "backend/.eNv.production"])
+def test_write_to_env_file_is_refused_in_any_letter_case(policy, path):
+    d = policy.check(*edit(path))
+    assert not d.allowed and d.reason == "env_file"
+
+
+@pytest.mark.parametrize("path", ["backend/.GitHub/workflows/ci.yml", "backend/.GITHUB/x.yml"])
+def test_write_to_github_dir_is_refused_in_any_letter_case(policy, path):
+    d = policy.check(*edit(path))
+    assert not d.allowed and d.reason == "github_dir"
+
+
+@pytest.mark.parametrize("path", ["backend/x/INFRA/main.py", "backend/Terraform/a.py", "frontend/Deploy/run.sh"])
+def test_write_under_an_infrastructure_dir_is_refused_in_any_letter_case(policy, path):
+    d = policy.check(*edit(path))
+    assert not d.allowed and d.reason == "infrastructure_path"
+
+
+def test_read_of_env_file_is_refused_in_any_letter_case_but_env_example_is_readable(policy):
+    assert policy.check("Read", {"file_path": "backend/.ENV"}).reason == "env_file"
+    assert policy.check("Read", {"file_path": ".ENV.Example"}).allowed
+
+
 @pytest.mark.parametrize("path", [".env", ".env.local", "backend/.env"])
 def test_read_of_env_file_is_refused_but_env_example_is_readable(policy, path):
     d = policy.check("Read", {"file_path": path})
