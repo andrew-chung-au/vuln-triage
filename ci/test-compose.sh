@@ -207,8 +207,10 @@ run_alert() {
 # OTLP only), so the cases read `docker compose logs responder`.
 #
 # Cases: tests/test_compose_responder.py (P-PROD-REFUSAL, the Grafana body shape,
-# the Grafana test notification, the 401 cases, the env check). #233 adds
-# P-DEMO-BE; #161 adds the verify.yml job.
+# the Grafana test notification, the 401 cases, the env check) and
+# tests/test_compose_demo_be.py (P-DEMO-BE, #233: the full stub loop, run twice;
+# it recreates the backend container with VT_DEMO_DEFECT set and unset). #161 adds
+# the verify.yml job.
 run_responder() {
   PROJECT="vt-responder"
   COMPOSE=(docker compose -p "$PROJECT" -f compose.yaml -f compose.telemetry.yaml -f compose.alert.yaml -f compose.responder.yaml)
@@ -241,8 +243,15 @@ run_responder() {
   wait_for_heartbeat || return 1
   "${COMPOSE[@]}" up -d --wait grafana || return 1
 
-  echo "== [responder] running the responder cases =="
-  backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose tests/test_compose_responder.py
+  # P-DEMO-BE (#233) logs in over HTTP to register the pip-app asset, so it needs
+  # the security-lead user (VT_TEST_USERNAME / VT_TEST_PASSWORD / VT_BACKEND_URL are
+  # exported at the top of this script). seed_user uses the responder COMPOSE array.
+  seed_user || return 1
+
+  echo "== [responder] running the responder wiring cases, then P-DEMO-BE (about 8 to 10 minutes per take) =="
+  # One pytest run, files in order: the wiring cases first, then the long loop.
+  backend/.venv/bin/pytest -c backend/pyproject.toml -s -m compose \
+    tests/test_compose_responder.py tests/test_compose_demo_be.py
 }
 
 case "$JOB" in

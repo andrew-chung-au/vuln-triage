@@ -39,10 +39,47 @@ STATE_FILE = "/tmp/responder-state/handled-fingerprints.json"  # compose.respond
 _DOCKER_TIMEOUT_S = 120
 
 
-def _docker(args: list[str], *, timeout: float = _DOCKER_TIMEOUT_S) -> subprocess.CompletedProcess[str]:
+def _docker(
+    args: list[str], *, timeout: float = _DOCKER_TIMEOUT_S, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [*_compose_base(), *args], capture_output=True, text=True, timeout=timeout, check=False
+        [*_compose_base(), *args], capture_output=True, text=True, timeout=timeout, check=False,
+        env=env,
     )
+
+
+def recreate_backend(defect: str | None) -> None:
+    """Recreate the backend container with ``VT_DEMO_DEFECT`` set to ``defect`` (``None`` = unset).
+
+    ``docker compose restart`` does NOT re-read the environment, so the harness
+    recreates the container: ``up -d --force-recreate --no-deps --wait backend``
+    (#233). compose.responder.yaml passes ``${VT_DEMO_DEFECT:-}`` through, so the
+    value comes from THIS subprocess's environment: the variable is removed first
+    so ``None`` really means unset, whatever the caller's environment held. Raises
+    ``ComposeQueryError`` on a non-zero exit (never a skip).
+    """
+    env = {k: v for k, v in os.environ.items() if k != "VT_DEMO_DEFECT"}
+    if defect is not None:
+        env["VT_DEMO_DEFECT"] = defect
+    proc = _docker(
+        ["up", "-d", "--force-recreate", "--no-deps", "--wait", "backend"], timeout=300, env=env
+    )
+    if proc.returncode != 0:
+        raise ComposeQueryError(f"recreating the backend failed (rc={proc.returncode}): {proc.stderr}")
+
+
+def backend_demo_defect() -> str:
+    """The ``VT_DEMO_DEFECT`` value inside the running backend container ('' when off)."""
+    proc = _docker(["exec", "-T", "backend", "sh", "-c", 'printf %s "$VT_DEMO_DEFECT"'])
+    if proc.returncode != 0:
+        raise ComposeQueryError(f"reading VT_DEMO_DEFECT from the backend failed: {proc.stderr}")
+    return proc.stdout.strip()
+
+
+def message_subject(message: dict[str, Any]) -> str:
+    """The Subject header of a MailHog v2 message ('' when absent)."""
+    values = ((message.get("Content") or {}).get("Headers") or {}).get("Subject") or []
+    return str(values[0]) if values else ""
 
 
 # -- the responder's action log (stdout JSON lines) ---------------------------
