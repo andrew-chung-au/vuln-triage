@@ -2781,3 +2781,23 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read-only. Opened the three `docs/images/g9-*.png` and the g1, g2, g5-ruleset and g7 screenshots; read `make issue-dump N=226` comments and #220 comments; read `responder/vt_responder/runner.py` and `ci/test-compose.sh`; read the `verify` jobs of runs 40337986272 (`b1f5d0c`), 40334369080 (`20a1fd8`) and 40291587781 (telemetry job log tail: 3 passed) through the GitHub tools; confirmed with `git grep` that the exemplar assertion is in `43d812d`. The GitHub API showed PR #236 merged as `b1f5d0c` during the audit, so the document says so. `make verify` and the test counts were not run or re-counted by me; nothing was run on Docker or against the live URLs. No QA run, no reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #221 remaining criteria (task 28d, real Agent SDK runner) on `claude/f4-real-runner-fix`
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to build the remaining #221 criteria with a fake SDK and fake GitHub client, no key, no network. No new key prompt saved.
+- files changed: `responder/pyproject.toml`, `responder/uv.lock` (new dependency), `responder/vt_responder/{policy,checkout,github_client,sdk_session}.py` (new), `config.py`, `app.py`, `real_runner.py`, `prompt.py`, `actlog.py` (field `tool`), `fakes.py`; tests `test_policy.py`, `test_real_runner_isolation.py`, `test_sdk_session.py`, `test_sdk_isolation.py` (new), `test_mode.py`, `test_real_runner.py` (session factory now takes `(model, ctx)`; real-mode settings now need the key, token and repo); this entry; the roadmap row; the session summary.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 210 passed; the warning is that the branch base equals HEAD, so only uncommitted changes were diffed). The live SDK session was NEVER run: no key, no network to Anthropic or GitHub. SdkSession is tested with a fake SDK, and one test builds the real `ClaudeAgentOptions` (no connection). SDK behaviour (that a PreToolUse deny overrides the permission mode, the `RESULT:` line convention, git over HTTPS with an extraheader) is read from the installed package and marked `VERIFY:`. No reviewer verdict; no QA run.
+- new dependencies: `claude-agent-sdk==0.2.174` in `responder/` only (F2); transitive: mcp, jsonschema, cryptography, pyjwt, sse-starlette and others in `responder/uv.lock`. `backend/uv.lock` unchanged (a test asserts it).
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: PR 238 CI fixes and #221 close-out on `claude/f4-real-runner-fix` (PR 239); #222 runbook script fix; #241 filed
+- agent role: Orchestrator (Claude Code cloud session)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner's instructions in the session: test and fix kiro's PR 238, move it to a `claude/*` branch, start the remaining #221 work, fix the #222 script, harden the policy, file the background-run follow-up, close #221 and update the roadmap. No new key prompt saved.
+- files changed: `responder/tests/test_real_runner.py` (import), `.env.example` (`RESPONDER_MODEL` empty), `_docs/human-tasklist.md` (merge conflict), `_docs/responder-token-proof.md` (script), `responder/vt_responder/{policy,real_runner,app}.py` and `responder/tests/{test_policy,test_real_runner_isolation}.py` (hardening), the session summary, the roadmap row; this entry.
+- verification (tests run, reviewer verdict): `make verify` PASS at each push (final: frontend 89, backend 532, responder 231). The merge fixed the two failing PR 238 checks locally; CI on PR 239 not yet read. QA PASS on #221 at `898083a` (comment 6426404789); the hardening commit `de7ba9c` and the script fix `898083a` were not separately QA-checked. The #222 script was syntax-checked with `sh -n`, never run (it needs the owner's token). The merge conflict was resolved with a shell script, not the editing tool.
+- new dependencies: none (the Engineer's `claude-agent-sdk` pin is in its entry above).
+- human review (what I checked or corrected, or `none`): none.

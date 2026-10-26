@@ -3,12 +3,16 @@ name = "vulntriage-responder"
 version = "0.1.0"
 description = "VulnTriage US-15 responder: Grafana webhook receiver (stub mode; task 28b, #219)"
 requires-python = ">=3.12"
-# Only packages the backend already locks, at the backend's locked versions
-# (backend/uv.lock). No Agent SDK here: the real runner is task 28d (#221).
+# The web packages are the backend's locked versions (backend/uv.lock). The
+# Claude Agent SDK is the one responder-only dependency (F2); the backend lock
+# and image must never mention it (a test asserts this, #221).
 dependencies = [
     "fastapi==0.161.1",
     "uvicorn==0.54.0",
     "httpx==0.28.1",
+    # VERIFY: PyPI package name "claude-agent-sdk" and version 0.2.174 (latest seen
+    # on pypi.org/pypi/claude-agent-sdk/json on 2026-10-26; requires Python >=3.10).
+    "claude-agent-sdk==0.2.174",
 ]
 
 [dependency-groups]

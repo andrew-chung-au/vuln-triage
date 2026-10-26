@@ -28,6 +28,7 @@ _ALLOWED = frozenset(
         "job_states",
         "reason",
         "model",
+        "tool",
     }
 )
 

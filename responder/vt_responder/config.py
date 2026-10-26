@@ -7,6 +7,7 @@ object and are never logged: ``Settings.__repr__`` omits them.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
@@ -21,6 +22,10 @@ DEFAULT_API_URL = "http://backend:8000"
 # From the 4.6 generation on, the Anthropic model ID is itself the pinned
 # version, so "claude-sonnet-5-5" needs no separate dated snapshot.
 PINNED_MODEL_HINT = "claude-sonnet-5-5"
+# Run bounds for the real runner (#221): safe defaults, overridable from the environment.
+DEFAULT_MAX_TURNS = 30
+DEFAULT_RUN_TIMEOUT_SECONDS = 600
+_REPO = re.compile(r"[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}")
 
 
 class ConfigError(RuntimeError):
@@ -34,12 +39,16 @@ def _truthy(value: str | None) -> bool:
 def _in_test_or_ci(env: Mapping[str, str]) -> bool:
     """True under pytest or CI, where only ``stub`` is accepted.
 
-    VERIFY: ``CI`` is set by GitHub Actions (documented); ``PYTEST_CURRENT_TEST``
-    is set by pytest while a test runs; ``DEPLOYMENT_ENVIRONMENT`` follows the
-    backend's name for the same fail-closed test (architecture A35).
+    The signals (any one is enough): ``CI`` or ``GITHUB_ACTIONS`` truthy,
+    ``PYTEST_CURRENT_TEST`` present, ``DEPLOYMENT_ENVIRONMENT=test``.
+    VERIFY: ``CI`` and ``GITHUB_ACTIONS`` are set by GitHub Actions (documented);
+    ``PYTEST_CURRENT_TEST`` is set by pytest while a test runs;
+    ``DEPLOYMENT_ENVIRONMENT`` follows the backend's name for the same
+    fail-closed test (architecture A35).
     """
     return (
         _truthy(env.get("CI"))
+        or _truthy(env.get("GITHUB_ACTIONS"))
         or "PYTEST_CURRENT_TEST" in env
         or env.get("DEPLOYMENT_ENVIRONMENT", "").strip().lower() == "test"
     )
@@ -54,6 +63,13 @@ class Settings:
     state_file: Path
     max_body_bytes: int
     model: str = ""
+    # Real mode only (#221). The two secrets come from the environment and are never
+    # logged (repr=False); they are empty in stub mode.
+    anthropic_api_key: str = field(default="", repr=False)
+    github_token: str = field(default="", repr=False)
+    repo: str = ""  # "owner/name" of the repository the agent fixes
+    max_turns: int = DEFAULT_MAX_TURNS
+    run_timeout_seconds: int = DEFAULT_RUN_TIMEOUT_SECONDS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -77,6 +93,27 @@ class Settings:
                 "RESPONDER_MODEL is required in real mode (F4: pin the model, "
                 f"e.g. {PINNED_MODEL_HINT}); there is no default in code"
             )
+        api_key = github_token = repo = ""
+        max_turns, timeout = DEFAULT_MAX_TURNS, DEFAULT_RUN_TIMEOUT_SECONDS
+        if mode == "real":
+            # Both secrets come from the environment only. Messages name the variable,
+            # never a value.
+            api_key = env.get("ANTHROPIC_API_KEY", "").strip()
+            if not api_key:
+                raise ConfigError("ANTHROPIC_API_KEY is required in real mode (environment only)")
+            github_token = env.get("RESPONDER_GITHUB_TOKEN", "").strip()
+            if not github_token:
+                raise ConfigError("RESPONDER_GITHUB_TOKEN is required in real mode (environment only)")
+            repo = env.get("RESPONDER_GITHUB_REPO", "").strip()
+            if not _REPO.fullmatch(repo):
+                raise ConfigError("RESPONDER_GITHUB_REPO must be 'owner/name' in real mode")
+            try:
+                max_turns = int(env.get("RESPONDER_MAX_TURNS", str(DEFAULT_MAX_TURNS)))
+                timeout = int(env.get("RESPONDER_RUN_TIMEOUT_SECONDS", str(DEFAULT_RUN_TIMEOUT_SECONDS)))
+            except ValueError as exc:
+                raise ConfigError("RESPONDER_MAX_TURNS and RESPONDER_RUN_TIMEOUT_SECONDS must be integers") from exc
+            if max_turns <= 0 or timeout <= 0:
+                raise ConfigError("RESPONDER_MAX_TURNS and RESPONDER_RUN_TIMEOUT_SECONDS must be positive")
         try:
             max_body = int(env.get("RESPONDER_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES)))
         except ValueError as exc:
@@ -91,4 +128,9 @@ class Settings:
             state_file=Path(env.get("RESPONDER_STATE_FILE", DEFAULT_STATE_FILE)),
             max_body_bytes=max_body,
             model=model,
+            anthropic_api_key=api_key,
+            github_token=github_token,
+            repo=repo,
+            max_turns=max_turns,
+            run_timeout_seconds=timeout,
         )

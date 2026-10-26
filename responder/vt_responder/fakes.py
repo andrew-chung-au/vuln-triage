@@ -24,6 +24,21 @@ class FakeGit:
         self.calls.append(("push", {"branch": branch}))
 
 
+class FakeBranchClient:
+    """Real-mode fake: records branches the 'agent' pushed and their deletion; no network."""
+
+    def __init__(self, existing: set[str] | None = None) -> None:
+        self.branches: set[str] = set(existing or ())
+        self.deleted: list[str] = []
+
+    def delete_branch_if_exists(self, branch: str) -> bool:
+        if branch in self.branches:
+            self.branches.discard(branch)
+            self.deleted.append(branch)
+            return True
+        return False
+
+
 class FakeGitHub:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
