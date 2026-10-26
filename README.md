@@ -206,7 +206,7 @@ Captured 2026-10-26 on the local Compose observability stack ([`observability/`]
 |---|---|
 | **The US-13 dashboard** with data in all three panes: the notifications metric (`top tier/held` green, `top tier/sent` yellow), recent `scan.run` traces from Tempo and backend events from Loki. The Environment and Version dropdowns visible here were removed afterwards: they were not connected to any panel (issue #199) | ![US-13 journey dashboard with metric, trace and log panes](docs/images/g9-grafana-dashboard-dev-local.png) |
 | **One `notification.deliver` log event in Loki**, expanded: it carries `trace_id` `42f5161ee955e543e2f5f355e410c247`, `vt_outcome` `sent` and `vt_tier` `P1` | ![Expanded notification.deliver log event with its trace id](docs/images/g9-grafana-trace-scan-loki-expandedlog.png) |
-| **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The spans take milliseconds; the 29.34 s total is the gap before the delivery worker's next poll | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
+| **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The visible spans take milliseconds; the trace's overall duration is 29.34 s | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
 
 _Not captured yet: the recorded end-to-end drill and the responder pull request (the responder is not built)._
 
