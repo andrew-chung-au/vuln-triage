@@ -15,6 +15,12 @@ MODES = ("stub", "real")
 DEFAULT_MAX_BODY_BYTES = 1_048_576  # 1 MiB; a Grafana alert body is a few KiB.
 DEFAULT_STATE_FILE = "responder-state/handled-fingerprints.json"
 DEFAULT_API_URL = "http://backend:8000"
+# F4 (owner decision 2026-10-26): the model the real runner names. There is no
+# default here on purpose -- real mode must be given one explicitly, so the
+# recorded drill (task 39) runs against a model the owner pinned, never a guess.
+# From the 4.6 generation on, the Anthropic model ID is itself the pinned
+# version, so "claude-sonnet-5-5" needs no separate dated snapshot.
+PINNED_MODEL_HINT = "claude-sonnet-5-5"
 
 
 class ConfigError(RuntimeError):
@@ -47,6 +53,7 @@ class Settings:
     api_url: str
     state_file: Path
     max_body_bytes: int
+    model: str = ""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -62,6 +69,14 @@ class Settings:
         token = env.get("RESPONDER_API_TOKEN", "")
         if not token.strip():
             raise ConfigError("RESPONDER_API_TOKEN is required")
+        # F4: real mode must name a model (no default in code). Stub mode never
+        # calls a model, so the variable is optional there.
+        model = env.get("RESPONDER_MODEL", "").strip()
+        if mode == "real" and not model:
+            raise ConfigError(
+                "RESPONDER_MODEL is required in real mode (F4: pin the model, "
+                f"e.g. {PINNED_MODEL_HINT}); there is no default in code"
+            )
         try:
             max_body = int(env.get("RESPONDER_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES)))
         except ValueError as exc:
@@ -75,4 +90,5 @@ class Settings:
             api_url=env.get("RESPONDER_API_URL", DEFAULT_API_URL).rstrip("/"),
             state_file=Path(env.get("RESPONDER_STATE_FILE", DEFAULT_STATE_FILE)),
             max_body_bytes=max_body,
+            model=model,
         )

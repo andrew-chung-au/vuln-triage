@@ -38,11 +38,28 @@ def test_mode_real_is_refused_in_test_and_ci(marker):
         Settings.from_env({**GOOD, "RESPONDER_MODE": "real", **marker})
 
 
-def test_mode_real_passes_config_but_the_app_refuses_until_28d():
+def test_mode_real_requires_a_pinned_model():
+    # F4: real mode must name a model; there is no default in code.
+    with pytest.raises(ConfigError, match="RESPONDER_MODEL"):
+        Settings.from_env({**GOOD, "RESPONDER_MODE": "real"})
+
+
+def test_mode_real_builds_the_app_with_a_model_and_a_fake_session():
     # The explicit env mapping has no CI marker, so config accepts 'real'.
-    s = Settings.from_env({**GOOD, "RESPONDER_MODE": "real"})
-    with pytest.raises(ConfigError, match="28d"):
-        create_app(s)
+    s = Settings.from_env({**GOOD, "RESPONDER_MODE": "real", "RESPONDER_MODEL": "claude-sonnet-5-5"})
+    assert s.model == "claude-sonnet-5-5"
+    # A fake session keeps the SDK out of the test path; the app must build.
+    app = create_app(s, make_session=lambda model: None)
+    assert app is not None
+
+
+def test_mode_real_default_session_is_lazy_and_not_implemented_yet():
+    # Importing the real runner must not import the SDK; building the default
+    # session is the remaining part of #221 and raises until it is wired.
+    from vt_responder.real_runner import build_default_session
+
+    with pytest.raises(NotImplementedError, match="#221"):
+        build_default_session("claude-sonnet-5-5")
 
 
 @pytest.mark.parametrize("missing", ["RESPONDER_WEBHOOK_SECRET", "RESPONDER_API_TOKEN"])
@@ -67,7 +84,8 @@ def test_mode_app_from_env_refuses_unset_mode(monkeypatch):
 def test_mode_stub_imports_no_agent_sdk():
     # A fresh interpreter: import the whole package and check no SDK module was loaded.
     code = (
-        "import sys, vt_responder.app, vt_responder.runner, vt_responder.api_client\n"
+        "import sys, vt_responder.app, vt_responder.runner, vt_responder.real_runner, "
+        "vt_responder.prompt, vt_responder.api_client\n"
         "bad = [m for m in sys.modules if m.split('.')[0] in ('anthropic', 'claude_agent_sdk', 'claude_code_sdk')]\n"
         "sys.exit(1 if bad else 0)\n"
     )
