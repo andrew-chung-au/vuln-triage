@@ -303,7 +303,7 @@ env in `ci/test-compose.sh` and runs the backend on `VT_FEEDS=fixtures`.
 ```sh
 make test-compose JOB=telemetry   # US-13: T-REFUSE, T-JOURNEY-BE, I-OWNER-* (MailHog)
 make test-compose JOB=alert       # US-14: A-FIRE and its rule-absent negative
-make test-compose JOB=responder   # US-15: P-DEMO-BE, P-PROD-REFUSAL, I-RESP-* (task 28)
+make test-compose JOB=responder   # US-15: P-PROD-REFUSAL and the wiring cases (#220); P-DEMO-BE is #233
 make test-compose                 # all three in turn
 ```
 
@@ -337,9 +337,16 @@ What each job brings up and asserts:
      (`manage.py alert-set --finding-id <id> --state sent`). Within a few minutes
      the webhook sink records one `status: resolved` request for that finding
      and no second `firing` request.
-- **`responder`** (issue #160, task 28): not implemented yet —
-  `make test-compose JOB=responder` prints a "not implemented, task 28" message
-  and exits non-zero until that task lands.
+- **`responder`** (issue #220, task 28c): the app + observability + alert +
+  responder under the `vt-responder` project; the responder is built from
+  `./backend` with its source bind-mounted (no new image). Needs no `.env`:
+  `ci/test-compose.sh` exports throwaway values. It covers the container
+  `P-PROD-REFUSAL`, the real Grafana body reaching the responder, a Grafana test
+  notification ending `no_change`, a bad bearer getting 401, and the container env
+  check. These cases were written without being run; the first run on a Docker
+  host is the open step in `_docs/pending-verification.md` §#220. `P-DEMO-BE` (the
+  full loop) is #233 and is not in this job yet. The two stacks publish the same
+  host ports, so take the observability stack down before running it.
 
 These cases are `compose`-marked and **deselected** by `make test` / `make verify`
 (the default `-m "not compose"`), so a no-Docker `make verify` never runs them and
