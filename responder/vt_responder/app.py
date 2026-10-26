@@ -41,7 +41,7 @@ from .runner import StubRunner
 
 # Fingerprints become a branch name and finding ids become a URL path segment,
 # so both are restricted to a short safe alphabet.
-_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_SAFE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
 class _BadPayload(ValueError):
@@ -82,13 +82,13 @@ def _parse_alerts(body: bytes) -> list[dict[str, Any]]:
         if status not in ("firing", "resolved"):
             raise _BadPayload("alert status must be 'firing' or 'resolved'")
         fingerprint = alert.get("fingerprint")
-        if fingerprint is not None and (not isinstance(fingerprint, str) or not _SAFE_ID.match(fingerprint)):
+        if fingerprint is not None and (not isinstance(fingerprint, str) or not _SAFE_ID.fullmatch(fingerprint)):
             raise _BadPayload("alert fingerprint is malformed")
         labels = alert.get("labels", {})
         if not isinstance(labels, dict):
             raise _BadPayload("alert labels must be an object")
         finding_id = labels.get("finding_id")
-        if finding_id is not None and (not isinstance(finding_id, str) or not _SAFE_ID.match(finding_id)):
+        if finding_id is not None and (not isinstance(finding_id, str) or not _SAFE_ID.fullmatch(finding_id)):
             raise _BadPayload("finding_id label is malformed")
         if fingerprint is None and finding_id is not None:
             # A run for a real finding must be guarded against repeats, and the

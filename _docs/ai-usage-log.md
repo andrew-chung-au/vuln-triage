@@ -2671,3 +2671,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 63 responder passed; the warning is that BASE equals HEAD); weakened-test check 21 assertion lines added, 0 removed. Not run: any Docker job, a real Grafana test notification (the missing fingerprint is unconfirmed). No reviewer verdict, no QA run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-26
+- task/issue: #219 QA follow-up: `_SAFE_ID` accepted a trailing newline (`"ok\n"`)
+- agent role: Engineer (Claude Code subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's request to reject a trailing newline in fingerprint and `finding_id`, with red-then-green test evidence. No new key prompt saved.
+- files changed: `responder/vt_responder/app.py` (`_SAFE_ID` anchors dropped, both uses now `fullmatch`), `responder/tests/test_webhook.py` (new newline and valid-id cases), `_docs/testing.md` (`I-RESP-HOOK-MALFORMED` row), this entry.
+- verification (tests run, reviewer verdict): new tests run on the old code first (2 failed: `"ok\n"` and `finding_id "1\n"` got 200; `"ok\r\n"` and `"\n"` already got 400), then on the fixed code (68 responder passed). `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 68 responder passed; the warning is that BASE equals HEAD). No reviewer verdict, no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none

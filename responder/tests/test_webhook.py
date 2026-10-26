@@ -133,6 +133,31 @@ def test_hook_malformed_payload_gets_400_and_no_run(rig, raw):
     assert not rig.state_file.exists()
 
 
+@pytest.mark.parametrize("fingerprint", ["ok\n", "ok\r\n", "\n"])
+def test_hook_malformed_fingerprint_with_newline_gets_400_and_no_run(rig, fingerprint):
+    # `$` matches before a trailing newline; the fingerprint becomes a branch name (#221).
+    rig.backend.add_finding("42", ["failed"])
+    r = post(rig, alert_body(fingerprint))
+    assert r.status_code == 400
+    assert rig.backend.requests == [] and rig.git.calls == [] and rig.github.calls == []
+    assert not rig.state_file.exists()  # no guard record
+
+
+def test_hook_malformed_finding_id_with_newline_gets_400_and_no_run(rig):
+    rig.backend.add_finding("1", ["failed"])
+    r = post(rig, alert_body("fpN", finding_id="1\n"))
+    assert r.status_code == 400
+    assert rig.backend.requests == [] and rig.git.calls == [] and rig.github.calls == []
+    assert not rig.state_file.exists()
+
+
+def test_hook_valid_ids_are_still_accepted(rig):
+    rig.backend.add_finding("42", ["failed"])
+    r = post(rig, alert_body("ok_-9"))
+    assert r.status_code == 200
+    assert r.json()["results"][0]["outcome"] == "pull_request_opened"
+
+
 def test_hook_malformed_alert_blocks_the_whole_payload(rig):
     rig.backend.add_finding("42", ["failed"])
     body = alert_body("good")
