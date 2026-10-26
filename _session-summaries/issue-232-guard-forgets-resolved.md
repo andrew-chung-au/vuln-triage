@@ -14,6 +14,8 @@ The owner asked for the highest-value human verification chunk, then asked why t
 
 - **#234 (follow-up to #232), same session.** QA's risk that no test made the runner raise became #234, narrowed at the owner's request to the raise-path test only; the `_save()` failure modes and restart loss became future-development item X12 in `_docs/roadmap-future.md`. Engineer `6f4792b` added `test_hook_run_that_raises_releases_the_fingerprint_and_clears_in_flight` (the webhook answers 500, the fingerprint is released, in-flight is cleared, a later firing runs). Mutation check done twice (the Engineer in place, QA on a copy): removing the `finally` makes it fail. QA PASS (6413284562), assert clean PASS. Pull request: https://github.com/andrew-chung-au/vuln-triage/pull/235.
 
+- **#220 (Compose wiring), same session.** Engineer commits `d53438f`, `b97f714`, `ea3eee8`, `91b61a4`: `compose.responder.yaml` (no new image: built from `./backend` with the source bind-mounted), the `responder` branch of `ci/test-compose.sh`, a static compose-file test, eight `compose`-marked cases (written, NOT run: no Docker here) and the `tasks.md` 28/29 wording. QA (6413501579): the [V] criteria PASS (static checker mutated on a copy: all 10 mutations caught), the [D] criteria UNVERIFIED. Decision point (owner, 2026-10-26): the real-Grafana-body criterion is amended to a `claimed` backdated job; a one-line comment fix in the protected `Makefile` was approved and committed as `5173c20` (record on #220, comment 6413563367); QA's two test-quality risks parked as X13. #220 stays open until the Docker-host run, listed in #226 and `pending-verification.md` §#220.
+
 ## Files created or modified
 
 - Responder: `responder/vt_responder/guard.py` (`resolve`, `finish`, in-memory in-flight and deferred sets), `responder/vt_responder/app.py` (resolved calls `guard.resolve`; the run is wrapped in try/finally calling `guard.finish`), `responder/tests/test_webhook.py` (new cases).
@@ -50,7 +52,7 @@ none.
 ## Permission review
 
 - Read-only (propose allowing): none of the role comments reported an approval. The orchestrator's `make install` (network; installs into git-ignored directories; no matched `ask` rule recorded).
-- Writes to the record (keep asking): GitHub issue comments, issue creation, the #220 body edit and issue closes through the GitHub tools; `make issue-comment` posts by the PM, Engineer and QA roles; `git push -u origin claude/funny-dijkstra-svm6xw` (cloud session branch, three pushes).
+- Writes to the record (keep asking): GitHub issue comments, issue creation, the #220 body edit and issue closes through the GitHub tools; `make issue-comment` posts by the PM, Engineer and QA roles; `git push -u origin claude/funny-dijkstra-svm6xw` (cloud session branch, several pushes); `HUMAN_APPROVED=1 git commit` for the protected `Makefile` comment change `5173c20` (matched `ask` rule, owner approved the exact diff; record on #220, comment 6413563367); opening PR #235.
 - Risky (propose denying): none. A web-fetch subagent read public GitHub pages for CC11 (no approval requested). The PM's report notes it used `cat backend/Dockerfile` for a file read (a convention slip, no approval needed).
 - Role comments without an approvals line: the PM's #220 comment states "none"; the #232 Engineer comment and the #232 and #172 QA comments state "none". The CC11 fetch had no comment.
 
