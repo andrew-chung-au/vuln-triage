@@ -2703,6 +2703,16 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the owner asked for the sweep to be done by the agent and approved the QA re-check and the tidy; the owner did not look at the Actions pages themselves.
 
 - date: 2026-10-26
+- task/issue: #220 closed after the owner's Docker-host run; a step-by-step walkthrough for the human verification (#226); port-clash notes
+- agent role: Orchestrator (Claude Code cloud session)
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked for a guided walkthrough of the highest-value human verification block, then pasted each result; asked whether to document or change the port, and for the note to be more prominent in the quick start. No new key prompt saved.
+- files changed: `README.md` (a Docker port-clash note under Option B), `_docs/verify-locally.md` (the responder job description, a port-clash note and a troubleshooting row), `_docs/pending-verification.md` (the §#220 section removed), `_docs/human-tasklist.md`, `_docs/roadmap.md`, this entry. GitHub, outside the diff: a result comment on #220 and #220 closed.
+- verification (tests run, reviewer verdict): the responder job result is the OWNER's run, not mine: `make test-compose JOB=responder` gave 8 passed in 103.26 s (2m28s wall clock) on the owner's Docker host (WSL, Docker 29.8.2, Compose v5.6.0); I read the pasted tail of the output only, not the full log. I diagnosed the port clash from the owner's `netstat.exe` and `tasklist.exe` output (process `Code.exe` held 127.0.0.1:9099); why VS Code held it was not confirmed. `make verify` PASS before each push (frontend 89, backend 532, responder 77). QA's [D] criteria for #220 were marked unverified (6413501579) and were not re-checked by QA after the owner's run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner ran the job, found and cleared the port clash by closing VS Code, and pasted the results.
+
+- date: 2026-10-26
 - task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
 - agent role: Engineer (Claude Code cloud session subagent)
 - model: claude-sonnet-5-5

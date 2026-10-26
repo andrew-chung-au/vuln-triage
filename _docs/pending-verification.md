@@ -136,16 +136,6 @@ clean clone (the app steps use `make`; see `_docs/agent-kit/environments.md`).
 - [ ] If the panel still shows nothing while Prometheus has the series, file an issue; the panel query is in `observability/grafana/dashboards/us13-journey.json` and is checked statically by `tests/test_us13_dashboard.py`.
 - [ ] On success: retake `g9-grafana-dashboard.png` (full dashboard, view mode) and `g9-grafana-trace.png` (one `scan.run` trace, single full-width Explore pane), link them in the README, and tick `#155` and `#199` above if the panels also show data there.
 
-## #220 — responder in Compose and the wiring cases (task 28c)
-
-Commits `d53438f`, `b97f714`, `ea3eee8`, `91b61a4`; QA (comment 6413501579) passed the [V] criteria and marked the [D] criteria unverified. The cases in `tests/test_compose_responder.py` and the `responder` branch of `ci/test-compose.sh` were **written but never run**: the cloud session has no working Docker build. Run on a Docker host (it is part of the #226 sitting; it brings up its own `vt-responder` stack, so take the observability stack down first because both publish the same host ports). No `.env` is needed (throwaway values come from the script).
-
-- [ ] `make test-compose JOB=responder` is green; paste the output on #220 and note the wall-clock time (for #161's `timeout-minutes`).
-- [ ] `VERIFY:` the `docker compose run --build`, `-T` and `--no-deps` flags on the host's Compose version (fallback: `docker compose build backend` first), and `docker compose logs --no-log-prefix`.
-- [ ] `VERIFY:` the Grafana 11.3.0 receivers-test endpoint and body (`POST /api/alertmanager/grafana/config/api/v1/receivers/test`; the bearer may need `secureSettings`), and whether a test notification carries a `fingerprint`.
-- [ ] `VERIFY:` the backend API accepts `RESPONDER_API_TOKEN` as the responder's bearer.
-- [ ] Close #220 when the run is green. #233 (`P-DEMO-BE`) starts after that. Two small test-quality risks are parked as `roadmap-future.md` X13.
-
 ---
 
 ## Convention
