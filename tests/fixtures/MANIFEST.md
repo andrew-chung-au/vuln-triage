@@ -63,6 +63,8 @@ public OSV API (`tests/fixtures/osv/packages.txt` lists the confirmed queries).
 | tests/fixtures/osv/vulns/PYSEC-2023-212.json | urllib3 duplicate advisory sharing CVE-2023-43804 (E9 merge) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
 | tests/fixtures/osv/vulns/GHSA-8q59-q68h-6hv4.json | PyYAML advisory, fixed 5.4 | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
 | tests/fixtures/osv/vulns/GHSA-withdrawn-0000.json | withdrawn advisory (E4: no finding at first sight) | n/a (project-authored) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/vulns/GHSA-fixture-nofix-0001.json | invented advisory for flask with an open-ended range (no `fixed` event), alias invented CVE-2099-0001; gives `fixture-owner/pip-app` (flask 2.3.3) a no-fixed-version finding for the P-DEMO-BE case (#233); NOT a recording and not a real advisory | n/a (project-authored) | n/a (written 2026-10-26) | n/a | project-authored | no token or private data (hand-written) |
+| tests/fixtures/osv/querybatch.json (`PyPI\|flask\|2.3.3` entry) | by-query entry mapping flask 2.3.3 to GHSA-fixture-nofix-0001 (added 2026-10-26, #233) | n/a (project-authored) | n/a (written 2026-10-26) | n/a | project-authored | no token or private data (hand-written) |
 
 ### KEV and EPSS fixtures (task 6, #78)
 
@@ -75,4 +77,5 @@ in `tests/fixtures/cves.txt`.
 | path | fixture | source URL | capture date | commit SHA | capture method | token/private-data check |
 |---|---|---|---|---|---|---|
 | tests/fixtures/kev/known_exploited_vulnerabilities.json | KEV slice (CVE-2023-43804 listed; an unrelated listed CVE) | n/a (project-authored, shape mirrors cisa.gov) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written, public CVE metadata only) |
+| tests/fixtures/kev/known_exploited_vulnerabilities.json (CVE-2099-0001 row) | invented KEV row for the invented CVE-2099-0001, so the flask finding ranks P1 on an exposed asset (added 2026-10-26, #233); NOT a recording and not a real CVE | n/a (project-authored) | n/a (written 2026-10-26) | n/a | project-authored | no token or private data (hand-written) |
 | tests/fixtures/epss/epss.json | EPSS scores for CVE-2023-43804 and CVE-2020-14343 | n/a (project-authored, shape mirrors api.first.org) | n/a (written 2026-10-23) | n/a | project-authored | no token or private data (hand-written) |

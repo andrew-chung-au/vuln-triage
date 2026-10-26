@@ -1,0 +1,24 @@
+{
+  "id": "GHSA-fixture-nofix-0001",
+  "aliases": ["CVE-2099-0001"],
+  "modified": "2026-10-26T00:00:00Z",
+  "published": "2026-10-26T00:00:00Z",
+  "summary": "Project-authored advisory with no fixed version (fixture only, not a real advisory)",
+  "details": "Invented for the P-DEMO-BE case (#233): an open-ended affected range, so a finding for flask 2.3.3 has no fixed version.",
+  "affected": [
+    {
+      "package": {"ecosystem": "PyPI", "name": "flask"},
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {"introduced": "0"}
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {"type": "ADVISORY", "url": "https://example.invalid/advisories/GHSA-fixture-nofix-0001"}
+  ]
+}
