@@ -2711,3 +2711,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 76 passed; the warning is only that BASE equals HEAD, so uncommitted changes were compared). No reviewer verdict; no QA run yet.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #234 responder guard hardening, first criterion only (raise path)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement only the "Raise path" criterion of #234 and run a mutation check. No new key prompt saved.
+- files changed: `responder/tests/test_webhook.py` (one test and a raising fake), this entry. No production code.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 77 passed; the warning is only that BASE equals HEAD). Mutation check: with the `try/finally` removed from `app.py` the new test failed (76 passed, 1 failed) and `app.py` was restored with an empty diff. No reviewer verdict; no QA run. The other #234 criteria are not done.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

@@ -259,6 +259,48 @@ def test_hook_resolved_in_flight_with_an_error_releases_once(tmp_path):
     assert settings.state_file.exists()
 
 
+class _RaisingOnceGitHub(FakeGitHub):
+    """Makes the first run raise out of ``runner.run`` (not return ``"error"``)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.raise_next = True
+
+    def open_pull_request(self, branch, title, body):
+        if self.raise_next:
+            self.raise_next = False
+            raise RuntimeError("boom: the run crashed")
+        return super().open_pull_request(branch, title, body)
+
+
+def test_hook_run_that_raises_releases_the_fingerprint_and_clears_in_flight(tmp_path):
+    # #234 raise path: an exception out of runner.run (not an "error" outcome) must not
+    # leave the fingerprint claimed or the run marked in flight. The webhook answers 500
+    # (the exception propagates out of the handler; the client is told to retry).
+    settings = make_settings(tmp_path)
+    backend = FakeBackend()
+    backend.add_finding("42", ["failed"])
+    api = ResponderApi(settings.api_url, settings.api_token, transport=httpx.MockTransport(backend.handler))
+    github = _RaisingOnceGitHub()
+    app = create_app(settings, api=api, git=FakeGit(), github=github, log=ActionLog(lambda s: None))
+    client = TestClient(app, raise_server_exceptions=False)  # see the real 500, not a re-raise
+
+    r = client.post(URL, json=alert_body("fpX1"), headers=HEADERS)
+    assert r.status_code == 500
+    assert github.raise_next is False  # the raising path really ran
+
+    # Fingerprint released from the persisted record, so a restart would not see it either.
+    assert "fpX1" not in settings.state_file.read_text(encoding="utf-8")
+    # In-flight state cleared: a resolved now is "unknown" (nothing recorded), not "deferred"
+    # (which it would be if the run were still marked in flight, and would then hang forever).
+    assert app.state.guard.resolve("fpX1") == "unknown"
+    # A later firing is not a repeat: it starts a new run, which completes.
+    r2 = client.post(URL, json=alert_body("fpX1"), headers=HEADERS)
+    assert r2.status_code == 200
+    assert r2.json()["results"][0]["outcome"] == "pull_request_opened"
+    assert len(github.calls) == 1
+
+
 @pytest.mark.parametrize("raw", [
     b"not json",
     b"[]",
