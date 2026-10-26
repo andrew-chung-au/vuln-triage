@@ -3,7 +3,7 @@
 <!-- PROJECT: specific to this folder. Protected: changes need human approval. -->
 
 VulnTriage ranks vulnerable software dependencies by real-world exploit risk and routes each fix to its owner.
-Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/` (planning documents).
+Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `responder/` (the responder agent service and its tests), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/` (planning documents).
 
 Where to read more:
 - `README.md`: the project in one page and the planning document index
@@ -26,16 +26,17 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 
 <!-- Every slot is a make target or "none". To be filled in when the project is scaffolded. -->
 
-- **Install:** `make install`: installs all dependencies: the frontend's `npm ci` from `frontend/package-lock.json` and the backend's `uv sync --locked` from `backend/uv.lock`.
+- **Install:** `make install`: installs all dependencies: the frontend's `npm ci` from `frontend/package-lock.json` the backend's `uv sync --locked` from `backend/uv.lock`, and the responder's `uv sync --locked` from `responder/uv.lock`.
 - **Run:** `make frontend-start` / `make frontend-stop`: starts/stops the frontend Vite dev server on `127.0.0.1:5173` (log: `.scratch/frontend.log`; `frontend-stop` stops only the PID `frontend-start` recorded).
 - **Dev (all):** `make dev`: applies the SQLite migrations (`alembic upgrade head`) then runs the backend (FastAPI on SQLite, `127.0.0.1:8000`) and the frontend Vite dev server (`127.0.0.1:5173`) together with no Docker; Ctrl-C stops both. Background form: `make dev-start` / `make dev-stop` (logs in `.scratch/`; `dev-stop` stops only the PIDs `dev-start` recorded). `make dev-migrate` runs the migration step alone.
 - **Demo:** `make demo`: migrates, creates a demo security lead, starts the backend and frontend on the recorded fixtures (`VT_FEEDS=fixtures`, no Docker, no network) and registers four demo repositories; sign in as `lead` / `demo-password-local` at `127.0.0.1:5173`. `make demo-reset` stops the app and deletes the dev database. Details: the README's "Try it as a reviewer".
 - **Build frontend:** `make frontend-build`: builds the production output to `frontend/dist/`.
 - **Type-check frontend:** `make frontend-typecheck`: runs `tsc --noEmit` in `frontend/` (`vite build` does not type-check).
 - **Audit frontend:** `make frontend-audit`: runs `npm audit` in `frontend/` after checking `frontend/node_modules` exists (added in #111).
-- **Test (all):** `make test`: runs `make frontend-test` (vitest, the cases in `frontend/src/test/`) and `make backend-test` (pytest, the backend unit and SQLite integration cases in `tests/`; the case count is whatever each runner prints, not recorded here).
+- **Test (all):** `make test`: runs `make frontend-test` (vitest, the cases in `frontend/src/test/`), `make backend-test` (pytest, the backend unit and SQLite integration cases in `tests/`) and `make responder-test` (pytest, the responder cases in `responder/tests/`); the case count is whatever each runner prints, not recorded here.
 - **Lock backend:** `make backend-lock`: runs `uv lock` in `backend/` to update `backend/uv.lock` after editing `backend/pyproject.toml`.
 - **Test (backend):** `make backend-test`: runs the backend pytest suite in `backend/.venv` (starting with the smoke test and U-NET/I-NET).
+- **Test (responder):** `make responder-test`: runs the responder pytest suite in `responder/.venv` (the `I-RESP-HOOK-*` cases).
 - **Test (one file):** `none`
 - **Verify:** `make verify`: both test suites via `make test`, frontend type check, whitespace and weakened-test checks. How to use it: `_docs/agent-kit/procedures/verify.md`.
 - **Validate OpenAPI:** `make openapi-validate`: validates `_docs/openapi.yaml` with `uvx openapi-spec-validator==0.9.0` (VERIFY: package name and OpenAPI 3.1 support).

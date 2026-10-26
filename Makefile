@@ -5,7 +5,7 @@
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_ -]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: frontend-install backend-install ## Install all dependencies
+install: frontend-install backend-install responder-install ## Install all dependencies
 
 verify: ## Run the verification gate: make verify [BASE=<commit>]
 	@bash _docs/agent-kit/scripts/verify.sh $(BASE)
@@ -107,11 +107,12 @@ openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAP
 
 # --- Frontend (issue #15 E2) ---------------------------------------------
 
-.PHONY: install test frontend-install backend-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
+.PHONY: install test frontend-install backend-install responder-install backend-lock frontend-start frontend-stop frontend-build frontend-test backend-test responder-test test-unit test-sqlite-integration test-conformance frontend-typecheck frontend-audit dev dev-migrate dev-start dev-stop compose-up compose-down test-integration postgres-integration
 
-test: ## Run all tests (frontend, then backend)
+test: ## Run all tests (frontend, then backend, then responder)
 	@$(MAKE) frontend-test
 	@$(MAKE) backend-test
+	@$(MAKE) responder-test
 
 frontend-install: ## Install frontend dependencies (npm ci)
 	@npm --prefix frontend ci
@@ -119,12 +120,19 @@ frontend-install: ## Install frontend dependencies (npm ci)
 backend-install: ## Install backend dependencies from backend/uv.lock (uv sync --locked)
 	@cd backend && uv sync --locked
 
+responder-install: ## Install responder dependencies from responder/uv.lock (uv sync --locked)
+	@cd responder && uv sync --locked
+
 backend-lock: ## Update backend/uv.lock after editing backend/pyproject.toml (uv lock)
 	@cd backend && uv lock
 
 backend-test: ## Run the backend pytest suite (needs make install first)
 	@test -x backend/.venv/bin/pytest || { echo "backend/.venv is missing: run make install first" >&2; exit 1; }
 	@backend/.venv/bin/pytest -c backend/pyproject.toml -m "not compose" tests
+
+responder-test: ## Run the responder pytest suite (needs make install first)
+	@test -x responder/.venv/bin/pytest || { echo "responder/.venv is missing: run make install first" >&2; exit 1; }
+	@responder/.venv/bin/pytest -c responder/pyproject.toml responder/tests
 
 # Marker-scoped backend subsets for the CI jobs (issue #139, task 19). Each is a
 # slice of backend-test; `make test` still runs them all for the local gate.
