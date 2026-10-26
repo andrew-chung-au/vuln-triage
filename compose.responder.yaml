@@ -1,0 +1,75 @@
+# Responder-job test stack (issue #220, task 28c). Layered on the alert stack:
+#
+#   docker compose -p vt-responder \
+#     -f compose.yaml -f compose.telemetry.yaml -f compose.alert.yaml \
+#     -f compose.responder.yaml up -d --wait ...
+#
+# A `-f` OVERRIDE like compose.alert.yaml (observability/compose.yaml is not
+# edited). It adds the responder service and one backend variable:
+#
+#   1. `responder`: the stub-mode webhook receiver (responder/vt_responder). NO
+#      new image or dependency, the same pattern as `webhook-sink` in
+#      compose.alert.yaml: it is built from the existing ./backend Dockerfile
+#      (fastapi, uvicorn and httpx are backend runtime dependencies) and the
+#      package is bind-mounted read-only and put on PYTHONPATH. The image runs
+#      as a non-root user, so the guard's state file is on /tmp inside the
+#      container (writable), not on a named volume (Docker creates those
+#      root-owned). `docker compose restart responder` keeps the record;
+#      `down` clears it.
+#   2. `backend`: passes VT_DEMO_DEFECT through (compose.yaml does not).
+#
+# The responder holds no secrets beyond the two it needs: the webhook bearer
+# secret (the SAME value as Grafana's VT_RESPONDER_WEBHOOK_TOKEN, so the real
+# contact point authenticates) and RESPONDER_API_TOKEN (shared with the
+# backend). No env_file, no GitHub token, no API key, no cloud credential;
+# tests/test_compose_responder_static.py asserts it. RESPONDER_MODE and the
+# API token default to empty, which the responder refuses at startup (fail
+# closed); ci/test-compose.sh exports throwaway test-only values.
+#
+# The compose.alert.yaml Grafana still depends on `webhook-sink`, so the sink
+# starts too; VT_RESPONDER_WEBHOOK_URL points Grafana at the responder instead,
+# and a case asserts the sink recorded 0 requests.
+#
+# VERIFY: that a second service built from ./backend, as webhook-sink is, is not
+# a "new image" for the owner (the PM grooming on #220 treats it as not new).
+#
+# Needs Docker; runs in CI (the `responder` job) or on the human's host, never
+# in the agent sandbox.
+
+services:
+  responder:
+    build:
+      context: ./backend
+    command:
+      - python
+      - -m
+      - uvicorn
+      - vt_responder.app:create_app_from_env
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "9100"
+    working_dir: /app
+    environment:
+      PYTHONPATH: /responder
+      RESPONDER_MODE: ${RESPONDER_MODE:-}
+      RESPONDER_WEBHOOK_SECRET: ${VT_RESPONDER_WEBHOOK_TOKEN:?set VT_RESPONDER_WEBHOOK_TOKEN}
+      RESPONDER_API_TOKEN: ${RESPONDER_API_TOKEN:-}
+      RESPONDER_API_URL: http://backend:8000
+      RESPONDER_STATE_FILE: /tmp/responder-state/handled-fingerprints.json
+    volumes:
+      - ./responder/vt_responder:/responder/vt_responder:ro
+    ports:
+      # Published on loopback only, so the host-side cases can send requests
+      # (a wrong bearer must get 401) and nothing else on the network can.
+      - "127.0.0.1:9100:9100"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    environment:
+      # Off unless the harness sets it (empty means off); the fix step of a
+      # later case recreates the backend with it unset.
+      VT_DEMO_DEFECT: ${VT_DEMO_DEFECT:-}
