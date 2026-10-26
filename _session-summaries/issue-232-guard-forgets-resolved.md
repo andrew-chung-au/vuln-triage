@@ -38,7 +38,7 @@ The owner asked for the highest-value human verification chunk, then asked why t
 - At the #220 decision point: amend the real-Grafana-body criterion to a `claimed` backdated job; approve the one-line protected `Makefile` comment change; park QA's two test-quality risks as X13.
 - Asked for a step-by-step walkthrough of the Docker-host verification, with the agent doing whatever it could itself; asked whether to document or change the port clash (decided: document, keep the port) and for the note to be more prominent in the README.
 - Filters: chose option 2, drop the dashboard's Environment and Version filters; option 1 (make them work) is future development X14.
-- Asked the agent to submit the PR; PR #235 was already open and not a draft, so the agent updated its description and left the merge to the owner.
+- Asked the agent to submit the PR, then said they could not see it. **The agent had wrongly reported PR #235 as open and ready for review for several turns: the owner had merged it at 11:05 UTC (head `2a805e0`), and the agent had not re-checked its state.** The agent then found 14 commits on the branch that were not in `main`, merged `main` into the branch (no force-push) and opened PR #236 with only that work; the description of the merged PR #235 was corrected.
 
 ## Mismatches with the spec or design docs
 
@@ -63,7 +63,7 @@ none.
 ## Permission review
 
 - Read-only (propose allowing): none of the role comments reported an approval. The orchestrator's `make install` (network; installs into git-ignored directories; no matched `ask` rule recorded).
-- Writes to the record (keep asking): GitHub issue comments, issue creation, the #220 body edit and issue closes through the GitHub tools; `make issue-comment` posts by the PM, Engineer and QA roles; `git push -u origin claude/funny-dijkstra-svm6xw` (cloud session branch, several pushes); `HUMAN_APPROVED=1 git commit` for the protected `Makefile` comment change `5173c20` (matched `ask` rule, owner approved the exact diff; record on #220, comment 6413563367); opening PR #235.
+- Writes to the record (keep asking): GitHub issue comments, issue creation, the #220 body edit and issue closes through the GitHub tools; `make issue-comment` posts by the PM, Engineer and QA roles; `git push -u origin claude/funny-dijkstra-svm6xw` (cloud session branch, several pushes); `HUMAN_APPROVED=1 git commit` for the protected `Makefile` comment change `5173c20` (matched `ask` rule, owner approved the exact diff; record on #220, comment 6413563367); opening PRs #235 and #236 and editing their descriptions; merging `main` into the session branch (a merge commit, no force-push).
 - Risky (propose denying): none. A web-fetch subagent read public GitHub pages for CC11 (no approval requested). The PM's report notes it used `cat backend/Dockerfile` for a file read (a convention slip, no approval needed). One QA subagent ran `git show --output=.scratch/...` twice to try to extract deleted images; the output went to the terminal and nothing changed.
 - Role comments without an approvals line: the PM's #220 comment states "none"; the #232 Engineer comment and the #232 and #172 QA comments state "none". The CC11 fetch had no comment. The #234, #220 and #199 Engineer and QA comments all state none needed.
 
@@ -82,6 +82,8 @@ QA's risks on #232, none changing its verdict:
 - `compose.yaml` does not pass `VT_DEMO_DEFECT` through; #220's criteria add it.
 - Flake #185 (Tempo drops leading zeros in trace ids) can fail `T-JOURNEY-BE` about 1 run in 16.
 
+A process lapse by the agent: after PR #235 was merged it kept pushing commits to the branch and told the owner the PR was open and ready, without re-reading the PR's state, so the post-merge work (the dashboard change, the screenshots, the records for #199 and #155, which were already closed on GitHub) was not in `main` until PR #236. Re-read the PR's state before saying it is open.
+
 Noticed later in the session:
 - #220: the static compose checker does not parse a list-form `environment:`; the test-notification case snapshots the `no_change` count (both X13).
 - The alert annotations in `us14-overdue.yaml` read `deployment_environment` and `service_version` labels, which `vt_notifications_total` does not carry, so they are empty today (X14). The Loki log event does carry both as fields.
@@ -96,4 +98,4 @@ Noticed later in the session:
 - **Rubric re-audit** (`rubric-auditor`) so `_docs/rubric-evidence.md` reflects the Observability screenshots, the responder job run and the closed issues.
 - X12 (guard failure modes), X13 (two #220 test-quality risks) and X14 (working dashboard filters, plus the alert annotation labels) are parked in `_docs/roadmap-future.md`.
 - #225 is left for the owner to tick and close. #229 (owner decisions) and #222 (token) are unchanged. The optional G10 alert-firing screenshot and the held-job Loki case were skipped.
-- The owner merges PR #235.
+- The owner reviews and merges PR #236 (PR #235 was already merged at head `2a805e0`).
