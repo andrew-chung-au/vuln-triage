@@ -2820,3 +2820,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify BASE=origin/claude/f4-real-runner-followup` PASS (frontend 89, backend 532, responder 257; 89 assertion lines added, 0 removed). No QA review yet. No live SDK call, no key, no network to Anthropic or GitHub.
 - new dependencies: none (standard-library `ThreadPoolExecutor`).
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26 - ci/161-flag-gone-script-and-tests
+- task/issue: #161 (P-FLAG-GONE check script + its tests, task 29), branch `ci/161-flag-gone-script-and-tests` (re-land of the non-protected files from the conflicting draft PR #248)
+- agent role: Engineer (Kiro)
+- model: Auto
+- prompt or instruction given (or link to a file in `_docs/prompts/`): owner handoff pass — re-land the non-protected deliverables from stuck draft PR #248 (`claude/161-draft`) onto a clean branch off current `main`, resolving the `_docs/ai-usage-log.md` conflict, and QA-check the script + tests. The protected `.github/` commits (A and B) stay owner-run. No new key prompt saved.
+- files changed: `ci/check_flag_gone.py` (new), `tests/test_flag_gone.py` (new), `_docs/161-responder-job-proposal.md` (new), `_session-summaries/issue-161-responder-job-draft.md` (new), this entry. The conflicting `_docs/ai-usage-log.md` change from the draft was NOT carried over; this fresh entry replaces it.
+- verification (tests run, reviewer verdict): `python3 -m pytest tests/test_flag_gone.py --noconftest` → 19 passed (the repo `conftest.py` imports `sqlalchemy`, absent in this sandbox, so the suite is run isolated; `make test` runs it normally where deps are installed). `python3 ci/check_flag_gone.py .` → `P-FLAG-GONE: FAIL (103 findings)`, exit 1 — the expected result while the demo defect is present (proposal predicted ~78 on `main`; the tree has grown). No reviewer verdict.
+- new dependencies: none (stdlib + pytest).
+- human review (what I checked or corrected, or `none`): none.
