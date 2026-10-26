@@ -114,8 +114,15 @@ def test_hook_resolved_does_not_burn_the_fingerprint(rig):
     b'{"status":"firing","alerts":[]}',
     b'{"status":"weird","alerts":[{"fingerprint":"a"}]}',
     b'{"status":"firing","alerts":["x"]}',
-    b'{"status":"firing","alerts":[{"labels":{}}]}',
+    # US-15 change (#219): an alert with no fingerprint AND no finding_id used to be 400 here
+    # (b'{"labels":{}}'); it is now a 200 "no change" (see the NOCHANGE cases). A finding_id
+    # without a fingerprint stays 400 because the run cannot be guarded against repeats.
+    b'{"status":"firing","alerts":[{"labels":{"finding_id":"42"}}]}',
     b'{"status":"firing","alerts":[{"fingerprint":"../etc/passwd"}]}',
+    b'{"status":"firing","alerts":[{"fingerprint":"../etc/passwd","labels":{}}]}',
+    b'{"status":"firing","alerts":[{"fingerprint":"","labels":{}}]}',
+    b'{"status":"firing","alerts":[{"fingerprint":7,"labels":{}}]}',
+    b'{"status":"firing","alerts":[{"labels":{"finding_id":"1/../2"}}]}',
     b'{"status":"firing","alerts":[{"fingerprint":"ok","labels":{"finding_id":"1/../2"}}]}',
     b'{"status":"firing","alerts":[{"fingerprint":"ok","labels":"x"}]}',
 ])
@@ -183,6 +190,65 @@ def test_hook_nochange_alert_without_finding_id(rig):
     assert r.json()["results"][0]["outcome"] == "no_change"
     _assert_no_change(rig, expect_api_calls=0)
     assert "finding_id" in [x for x in rig.records() if x["event"] == "no_change"][0]["explanation"]
+
+
+@pytest.mark.parametrize("alert", [
+    {"status": "firing", "labels": {"alertname": "TestAlert"}},
+    {"status": "firing", "labels": {}},
+    {"status": "firing"},
+    {"status": "firing", "fingerprint": None, "labels": {"finding_id": None}},
+])
+def test_hook_nochange_alert_without_fingerprint_or_finding_id(rig, alert):
+    # US-15: a test alert may carry no fingerprint; explain and change nothing, not 400.
+    rig.backend.add_finding("42", ["failed"])
+    r = rig.client.post(URL, json={"status": "firing", "alerts": [alert]}, headers=rig.headers)
+    assert r.status_code == 200
+    assert r.json()["results"] == [{"fingerprint": None, "outcome": "no_change"}]
+    _assert_no_change(rig, expect_api_calls=0)
+    assert not rig.state_file.exists()  # the repeat guard record is untouched
+    rec = [x for x in rig.records() if x["event"] == "no_change"][0]
+    assert rec["fingerprint"] is None and rec["finding_id"] is None
+    assert "neither a fingerprint nor a finding_id" in rec["explanation"]
+    assert "run_started" not in [x["event"] for x in rig.records()]
+
+
+def test_hook_nochange_without_ids_leaves_existing_guard_record_unchanged(rig):
+    rig.backend.add_finding("42", ["failed"])
+    post(rig, alert_body("fpK"))  # a real run claims fpK
+    before = rig.state_file.read_text(encoding="utf-8")
+    calls = (len(rig.git.calls), len(rig.github.calls), len(rig.backend.requests))
+    body = {"status": "firing", "alerts": [{"status": "firing", "labels": {}}]}
+    assert post(rig, body).json()["results"][0]["outcome"] == "no_change"
+    assert post(rig, body).json()["results"][0]["outcome"] == "no_change"  # not a "repeat": nothing is guarded
+    assert rig.state_file.read_text(encoding="utf-8") == before
+    assert (len(rig.git.calls), len(rig.github.calls), len(rig.backend.requests)) == calls
+
+
+def test_hook_nochange_resolved_without_ids_is_ignored(rig):
+    body = {"status": "resolved", "alerts": [{"status": "resolved", "labels": {}}]}
+    r = post(rig, body)
+    assert r.status_code == 200
+    assert r.json()["results"] == [{"fingerprint": None, "outcome": "resolved_ignored"}]
+    assert rig.backend.requests == [] and rig.git.calls == [] and rig.github.calls == []
+    assert not rig.state_file.exists()
+    assert [x["event"] for x in rig.records()] == ["alert_ignored"]
+
+
+def test_hook_nochange_without_ids_mixed_with_a_real_alert(rig):
+    rig.backend.add_finding("42", ["failed"])
+    body = alert_body("fpM2")
+    body["alerts"].append({"status": "firing", "labels": {}})
+    outcomes = [x["outcome"] for x in post(rig, body).json()["results"]]
+    assert outcomes == ["pull_request_opened", "no_change"]
+    assert rig.state_file.read_text(encoding="utf-8") == '["fpM2"]'
+
+
+def test_hook_nochange_finding_id_without_fingerprint_is_400(rig):
+    rig.backend.add_finding("42", ["failed"])
+    body = {"status": "firing", "alerts": [{"status": "firing", "labels": {"finding_id": "42"}}]}
+    assert post(rig, body).status_code == 400
+    assert rig.backend.requests == [] and rig.git.calls == [] and rig.github.calls == []
+    assert not rig.state_file.exists()
 
 
 def test_hook_nochange_finding_without_failed_job(rig):
