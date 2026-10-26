@@ -40,8 +40,11 @@ at start-up with "could not find addresses in settings".
 
 Grafana: `http://localhost:3000` (user `admin`, password `GRAFANA_ADMIN_PASSWORD`).
 The **US-13 journey** dashboard (folder "VulnTriage") has three panels — a
-Prometheus metric pane, a Tempo trace pane and a Loki logs pane — with an
-environment and version filter.
+Prometheus metric pane, a Tempo trace pane and a Loki logs pane. It has no
+environment or version filter: the metric series carries no
+`deployment_environment` or `service_version` label, so such filters would
+filter nothing (dropped in #199; making them work is future work, X14 in
+`_docs/roadmap-future.md`).
 
 ## Point the backend at the Collector
 

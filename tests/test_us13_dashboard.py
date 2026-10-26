@@ -23,8 +23,10 @@ _METRICS_PY = _ROOT / "backend/vulntriage/observability/metrics.py"
 _DELIVERY_PY = _ROOT / "backend/vulntriage/mail/delivery.py"
 
 # Template variable queries whose labels cannot be proved statically: they may be
-# resource attributes that never become series labels. Unverified, live check
-# pending (#199); deliberately not asserted valid.
+# resource attributes that never become series labels. The dashboard's environment
+# and version variables were dropped (#199, owner decision 2026-10-26; X14), so
+# today the templating list is empty and this allowance is unused. Deliberately
+# not asserted valid if such a variable returns.
 _UNVERIFIED_VARIABLE_LABELS = {"deployment_environment", "service_version"}
 
 _PROMQL_KEYWORDS = {"by", "without", "on", "ignoring", "group_left", "group_right", "bool"}

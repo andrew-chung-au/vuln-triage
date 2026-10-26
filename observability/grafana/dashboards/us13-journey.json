@@ -7,28 +7,7 @@
   "version": 1,
   "refresh": "30s",
   "templating": {
-    "list": [
-      {
-        "name": "environment",
-        "label": "Environment",
-        "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(deployment_environment)",
-        "includeAll": true,
-        "multi": false,
-        "current": { "text": "All", "value": "$__all" }
-      },
-      {
-        "name": "version",
-        "label": "Version",
-        "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(service_version)",
-        "includeAll": true,
-        "multi": false,
-        "current": { "text": "All", "value": "$__all" }
-      }
-    ]
+    "list": []
   },
   "panels": [
     {
