@@ -128,6 +128,8 @@ make compose-up          # builds + starts frontend + backend + Postgres, one co
 make compose-down        # stop
 ```
 
+> **Docker Desktop on Windows (WSL) says `ports are not available ... /forwards/expose ... 500`?** Another Windows program already holds that host port, and VS Code's automatic port forwarding can be that program. Open VS Code's **Ports** panel, right-click the port and choose **Stop Forwarding Port**, and untick the setting `remote.autoForwardPorts`. To find the owner of any port from WSL: `netstat.exe -ano | grep :<port>`, then `tasklist.exe /FI "PID eq <pid>"`. Details: [`_docs/verify-locally.md`](_docs/verify-locally.md) Troubleshooting. Option A needs no Docker and is not affected.
+
 Both options serve the SPA and the API on one origin (the API lives under `/api`; the proxy strips the prefix), so no CORS setup is needed.
 
 ---
@@ -196,9 +198,17 @@ Captured 2026-10-25 and 2026-10-26 from the live deployment and the GitHub setti
 | **The live dev site**, signed in as the public reviewer, showing ranked findings for the demo repositories | ![live dev findings](docs/images/g7-vuln-triage-dev-findings.png) |
 | **The live production site**: the sign-in page at `app.52-206-221-145.sslip.io` over HTTPS (production has no public account) | ![live production sign-in page](docs/images/g6-vuln-triage-production-login.png) |
 
-_Not captured yet: the Grafana view with one trace ID across metric, trace and log, the recorded end-to-end drill, and the responder pull request (the responder is not built)._
+### Observability evidence
 
-<!-- PLACEHOLDER: add the Grafana and responder images under docs/images/ and link them here when they exist. Do not link files that are not committed. -->
+Captured 2026-10-26 on the local Compose observability stack ([`observability/`](observability/)) after one journey run of `make demo` against the recorded fixtures (`VT_FEEDS=fixtures`), so the findings are demo data. One trace ID, `42f5161ee955e543e2f5f355e410c247`, appears in both the log event and the trace below.
+
+| What it shows | Screenshot |
+|---|---|
+| **The US-13 dashboard** with data in all three panes: the notifications metric (`top tier/held` green, `top tier/sent` yellow), recent `scan.run` traces from Tempo and backend events from Loki. The Environment and Version dropdowns visible here were removed afterwards: they were not connected to any panel (issue #199) | ![US-13 journey dashboard with metric, trace and log panes](docs/images/g9-grafana-dashboard-dev-local.png) |
+| **One `notification.deliver` log event in Loki**, expanded: it carries `trace_id` `42f5161ee955e543e2f5f355e410c247`, `vt_outcome` `sent` and `vt_tier` `P1` | ![Expanded notification.deliver log event with its trace id](docs/images/g9-grafana-trace-scan-loki-expandedlog.png) |
+| **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The visible spans take milliseconds; the trace's overall duration is 29.34 s | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
+
+_Not captured yet: the recorded end-to-end drill and the responder pull request (the responder is not built)._
 
 
 <!-- PLACEHOLDER: link the recorded drill here if you have one:
@@ -244,7 +254,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 
 ## Observability
 
-The key journey — a scan through to the owner notification — is instrumented with **metrics, traces and structured logs that share one trace ID**, exported over OTLP to the Collector and viewable side by side in Grafana (Prometheus / Tempo / Loki panes). A code-level allowlist plus a Collector processor keep customer data, advisory text, owner contact details, URLs and credentials **out** of telemetry. Config and the US-13 dashboard live in [`observability/`](observability/).
+The key journey — a scan through to the owner notification — is instrumented with **metrics, traces and structured logs that share one trace ID**, exported over OTLP to the Collector and viewable side by side in Grafana (Prometheus / Tempo / Loki panes). A code-level allowlist plus a Collector processor keep customer data, advisory text, owner contact details, URLs and credentials **out** of telemetry. Config and the US-13 dashboard live in [`observability/`](observability/). Screenshots of a live run (the dashboard, a log event and the trace sharing one trace ID) are under [Observability evidence](#observability-evidence).
 
 ## Alerting & on-call agent
 

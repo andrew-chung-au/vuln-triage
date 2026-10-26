@@ -20,7 +20,7 @@ decisions, merges). This file is the detailed per-issue checklist both link to;
 the cloud-session queue below is superseded by the cloud list, which is the
 source for order and dependencies.
 
-Last updated: 2026-10-26, later (owner-run items regrouped into one ticket per sitting: #225 close-out sweep, #226 live observability stack, #227 AWS console, #228 unblock cloud sessions, #229 decisions; #223 closed as replaced by #225; the #159 section removed, its issue closed and its last items green). Earlier: 2026-10-26 (QA unverified items for #157, #172, #218 and #219 collected in #223). Earlier: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
+Last updated: 2026-10-26, evening (the owner's responder-job run (#220 comment 6415509715) and live US-13 stack check (#226 comment 6417013401) are recorded; the closed #158 section is removed; the #220 section is gone and the #155 and "#210 and #211" sections are reduced to leftovers; the #199 result is in the queue above). Earlier, 2026-10-26, later (owner-run items regrouped into one ticket per sitting: #225 close-out sweep, #226 live observability stack, #227 AWS console, #228 unblock cloud sessions, #229 decisions; #223 closed as replaced by #225; the #159 section removed, its issue closed and its last items green). Earlier: 2026-10-26 (QA unverified items for #157, #172, #218 and #219 collected in #223). Earlier: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 
 ## Cloud-session queue (Docker work to hand to Claude Code cloud sessions)
 
@@ -32,9 +32,9 @@ started job.
 - **#181** (T-E6, telemetry backend down): groomed; the human answered PM decisions Q1-Q3 on 2026-10-25 (comment 6396530230: best-effort close, narrow "alerts unaffected", add Collector self-metrics). Author and run it in the cloud.
 - **#182** (`I-OWNER-SENDER` MailHog form): follows #160 (task 28).
 - **#198** (`internal error` scan reason): look at the failure reason on the dashboard in a running UI. Running migration `0002` on real Postgres is now **#201** (a `postgres_migration` check in the `postgres-integration` job; Docker-only, verified in CI).
-- **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): needs a running Grafana; shares the dashboard with #181, so sequence them. #195 is now the static fix and test, done locally.
+- **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): **run live by the owner on 2026-10-26** (results in #226, comment 6417013401). The real labels are `vt_notification_kind` and `vt_outcome`; `deployment_environment` and `service_version` are not labels on `vt_notifications_total`, and the dashboard's Environment and Version variables filtered nothing, so the owner chose to drop them (X14 is the future work). The dashboard change was checked statically only; the next live run confirms the dropdowns are gone.
 - **#172**, **#174** and **#157** (`T-JOURNEY-BE`, the Loki leg, `T-REFUSE`): done in CI (run 40291587781) and closed (2026-10-26). The optional #193 held-job case is in #226.
-- **#155** (dashboard and MailHog check) and the **#158** Grafana rule spot checks: one live-stack sitting, #226.
+- **#155** (dashboard and MailHog check): run live by the owner on 2026-10-26 (results in #226). The optional US-14 rule spot checks (#158 is closed) and the optional held-job Loki case remain in #226; on 2026-10-26 only the rule's presence was seen (`us14-notification-overdue`, Provisioned, Normal; its contact points and policy were not checked).
 - **#140** (security scan, PR #167): needs network to generate the fixture lockfiles.
 - **Human machine, not cloud:** AWS applies and secrets (#141, `human-tasklist.md` §A).
 
@@ -51,18 +51,11 @@ advisory services and to generate the fixture lockfiles). Full checklist on the
 - [ ] `make verify` stays green (the scan is not part of it).
 - [ ] Close #140 when the CI `security-scan` job is green on the PR.
 
-## #155 — observability stack + US-13 dashboard (task 24)
+## #155 — observability stack + US-13 dashboard (task 24): leftovers
 
-PR: (this change). Run in a **Codespace / Claude Code cloud / Docker host**
-(needs Docker). The stack is `observability/`; full detail in
-`observability/README.md`.
+The live check was run by the owner on 2026-10-26 (results in #226, comment 6417013401): the six services started healthy, the metric, trace and log panels show data, a `scan.run` trace of 7 spans joins to its `notification.deliver` log line by trace id, MailHog received the owner email (with the mail settings passed explicitly), and all six containers started healthy. Open:
 
-- [ ] `cd observability && docker compose up -d --wait` comes up healthy (Collector, Prometheus, Tempo, Loki, Grafana, MailHog); set `GRAFANA_ADMIN_PASSWORD` in `.env` first.
-- [ ] Run the backend against it: `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 DEPLOYMENT_ENVIRONMENT=dev SERVICE_VERSION=local make dev`, then trigger a scan.
-- [ ] Grafana `http://localhost:3000` → the "US-13 journey" dashboard shows the three signals (metric, trace, logs) side by side, filterable by environment and version.
-- [ ] MailHog answers at `http://localhost:8025` (it receives the owner email in task 37).
-- [ ] `VERIFY:` the pinned image tags resolve and the Collector `keep_keys` / Loki OTLP / Tempo OTLP / Grafana trace-to-logs behave as configured (`observability/README.md` VERIFY list). Adjust config if a pinned version differs.
-- [ ] Note: the `make test-compose` telemetry cases (`T-JOURNEY-BE`, `T-REFUSE`) that *assert* the allowlist drop are **task 25 (#157)**, not this task; this task's check is the manual dashboard.
+- [ ] `VERIFY:` the Grafana trace-to-logs link from a trace (`observability/grafana/provisioning/datasources/datasources.yaml`, `tracesToLogsV2`) was not tried. It is optional ("where available" in #155).
 
 ## #156 — backend owner notification + delivery (task 37)
 
@@ -75,28 +68,6 @@ Compose and AWS variants the sandbox cannot run.
 - [ ] `VERIFY:` MailHog's SMTP port and HTTP read API (1025 / `GET /api/v2/messages` assumed; `observability/compose.yaml`).
 - [ ] (Human, AWS step — deferred, task 37 SES) Add `boto3` to `backend/pyproject.toml` and run `make backend-lock`; settle the SES `VERIFY:` items (IAM action `ses:SendEmail`/`ses:SendRawEmail`, verified-identity ARN, `ses:FromAddress` condition, region, sandbox verified-recipient rule, free allowance) and the exact `boto3` SES client call in `mail/transport.py` `SesTransport.send`. The code ships MailHog-proven with the SES path `VERIFY:`-marked until then.
 - [ ] Note: the ownerless-release path (`held: ownerless` / `held: owner email missing` → released by setting an owner email) is `I-ASSET-UPDATE`, owned by the asset-update task, not this one.
-
-## #158 — US-14 alert metric + provisioned Grafana rule (task 26)
-
-PR: (this change). The **metric half is fully `make verify`-able** — the new
-`tests/test_metrics_overdue.py` cases run under `make test` (SQLite + fake clock
-+ an `InMemoryMetricReader`, no Docker/AWS/network), so **the human needs only
-`make verify`** to land that half. `backend/uv.lock` should **not** change (no
-new dependency). The items below are the **Grafana rule**, which is authored
-here and needs a real Grafana to confirm — run in a **Codespace / Claude Code
-cloud / Docker host**. The rule is `observability/grafana/provisioning/alerting/us14-overdue.yaml`
-(the whole `grafana/provisioning` folder is already mounted into the Grafana
-container, so no `observability/compose.yaml` change was needed).
-
-- [ ] With the `observability/` stack up (`cd observability && docker compose up -d --wait`, `GRAFANA_ADMIN_PASSWORD` set), confirm Grafana provisions the rule, both contact points and the notification policy with no load error (Grafana → Alerting; container logs show no provisioning error). Set `VT_ALERT_HUMAN_EMAIL`, `VT_RESPONDER_WEBHOOK_URL`, `VT_RESPONDER_WEBHOOK_TOKEN` in the stack env first (the YAML references them; no real values are committed).
-- [ ] Run the backend against the Collector (`OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 DEPLOYMENT_ENVIRONMENT=dev SERVICE_VERSION=local make dev`). Drive a **failed** top-tier job (task 28's `VT_DEMO_DEFECT=notify_no_fix` is the intended driver once it exists; until then force a job to `failed` / backdate a `pending` job past 30 min) and confirm the rule shows **1** for that finding and the alert fires **one** instance carrying its `finding_id` and `tier`.
-- [ ] Confirm a **sent** job shows **0** and the alert for that finding resolves (and that its series is gone 24h after `sent_at`).
-- [ ] Confirm a system with **no jobs** fires **no** alert and sends **no** responder message (only the label-less `0` heartbeat series exists).
-- [ ] Confirm the `NoData` path: stop the backend/metric so the metric goes absent, and confirm the rule's `noDataState: Alerting` fires **one** instance with **no** `finding_id`, routed to the **human email only** (never the responder webhook).
-- [ ] Confirm a finding alert reaches **both** the responder webhook and the human email (via the `finding-alert` contact point's two receivers), and that the annotations carry the dashboard link, environment and version.
-- [ ] `VERIFY:` the Grafana-11.3.0 details marked in `us14-overdue.yaml`: the file-provisioning schema loads clean; the `threshold`/`eq 1` condition fires one instance per `{finding_id,tier}` series; a single contact point with two receivers delivers to both; the `finding_id =~ ".+"` matcher excludes the NoData instance so it falls through to the human-only default; the webhook bearer-auth header shape; `repeat_interval: 8760h` as the no-repeat stand-in; the `/d/<uid>/<slug>` dashboard URL; and how the Collector's Prometheus export surfaces `deployment.environment` / `service.version` as metric labels for the environment/version annotations (else set them from the stack env).
-- [ ] Note: the `alert` Compose test and the `A-*` cases are **task 27 (#159)**; the responder webhook **receiver** is **task 28 (#160)** — both out of scope here.
-- [ ] Close #158 when the metric half is green under `make verify` and the Grafana rule behaviour above is confirmed on the running stack.
 
 ## #177 / #193 — delivery outcome signals on every branch (Loki leg)
 
@@ -123,28 +94,11 @@ not wait on it.
   `vt.error.code="ownerless"` carries the trace id of that job's
   `notification.enqueue` span in Tempo. Post the result on #193.
 
-## #210 and #211 — Grafana start-up and the US-13 metric panel (observability)
+## #210 and #211 — Grafana start-up and the US-13 metric panel (observability): leftovers
 
-PRs: #211 (stack starts without an override file) and #210 (metric panel plots a
-running total). Both merged 2026-10-25; neither was run against a live stack by an
-agent (no Docker daemon in the cloud session). Run on a Docker host, **not** in the
-clean clone (the app steps use `make`; see `_docs/agent-kit/environments.md`).
+PRs: #211 (stack starts without an override file) and #210 (metric panel plots a running total), both merged 2026-10-25. **Checked live by the owner on 2026-10-26** (results in #226, comment 6417013401): the stack started with no override file, all six containers healthy and no "could not find addresses" error (#211); after a fresh demo run with the stack up, the metric panel showed `top tier/sent` and `top tier/held` lines that step up on Last 1 hour, and Prometheus had `vt_notifications_total` (#210). Open:
 
-- [ ] **#211:** from `observability/`, `docker compose --env-file ../.env up -d --wait` with **no** override file (`.scratch/obs-override.yaml` removed or not passed). All six containers (Collector, Prometheus, Tempo, Loki, Grafana, MailHog) become healthy, and the Grafana log has no "could not find addresses in settings" error. The placeholders went through an override file on the owner's machine on 2026-10-25; the committed defaults are the same values.
-- [ ] **#211:** `make test-compose JOB=alert` still passes (the alert test's real `VT_ALERT_HUMAN_EMAIL` / `VT_RESPONDER_WEBHOOK_URL` must override the new defaults; checked statically only).
-- [ ] **#210:** after a fresh demo run **with the stack already up** (start the stack, delete `backend/.scratch/vulntriage.db`, then `make demo OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 SERVICE_VERSION=local`), the US-13 journey dashboard's first panel ("Notifications (metric) ... running total") shows a line that steps up on **Last 1 hour**. The owner saw no improvement on 2026-10-26, so the cause may be the data: check Prometheus (`http://localhost:9090`, query `vt_notifications_total`). No rows means no notification was recorded after the stack came up; a row with a value means the panel query needs another look.
-- [ ] If the panel still shows nothing while Prometheus has the series, file an issue; the panel query is in `observability/grafana/dashboards/us13-journey.json` and is checked statically by `tests/test_us13_dashboard.py`.
-- [ ] On success: retake `g9-grafana-dashboard.png` (full dashboard, view mode) and `g9-grafana-trace.png` (one `scan.run` trace, single full-width Explore pane), link them in the README, and tick `#155` and `#199` above if the panels also show data there.
-
-## #220 — responder in Compose and the wiring cases (task 28c)
-
-Commits `d53438f`, `b97f714`, `ea3eee8`, `91b61a4`; QA (comment 6413501579) passed the [V] criteria and marked the [D] criteria unverified. The cases in `tests/test_compose_responder.py` and the `responder` branch of `ci/test-compose.sh` were **written but never run**: the cloud session has no working Docker build. Run on a Docker host (it is part of the #226 sitting; it brings up its own `vt-responder` stack, so take the observability stack down first because both publish the same host ports). No `.env` is needed (throwaway values come from the script).
-
-- [ ] `make test-compose JOB=responder` is green; paste the output on #220 and note the wall-clock time (for #161's `timeout-minutes`).
-- [ ] `VERIFY:` the `docker compose run --build`, `-T` and `--no-deps` flags on the host's Compose version (fallback: `docker compose build backend` first), and `docker compose logs --no-log-prefix`.
-- [ ] `VERIFY:` the Grafana 11.3.0 receivers-test endpoint and body (`POST /api/alertmanager/grafana/config/api/v1/receivers/test`; the bearer may need `secureSettings`), and whether a test notification carries a `fingerprint`.
-- [ ] `VERIFY:` the backend API accepts `RESPONDER_API_TOKEN` as the responder's bearer.
-- [ ] Close #220 when the run is green. #233 (`P-DEMO-BE`) starts after that. Two small test-quality risks are parked as `roadmap-future.md` X13.
+- [ ] **#211:** `make test-compose JOB=alert` still passes (the alert test's real `VT_ALERT_HUMAN_EMAIL` / `VT_RESPONDER_WEBHOOK_URL` must override the new defaults; checked statically only; the nightly `alert` workflow also runs it).
 
 ---
 

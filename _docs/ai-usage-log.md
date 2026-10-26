@@ -2703,6 +2703,26 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the owner asked for the sweep to be done by the agent and approved the QA re-check and the tidy; the owner did not look at the Actions pages themselves.
 
 - date: 2026-10-26
+- task/issue: #220 closed after the owner's Docker-host run; a step-by-step walkthrough for the human verification (#226); port-clash notes
+- agent role: Orchestrator (Claude Code cloud session)
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked for a guided walkthrough of the highest-value human verification block, then pasted each result; asked whether to document or change the port, and for the note to be more prominent in the quick start. No new key prompt saved.
+- files changed: `README.md` (a Docker port-clash note under Option B), `_docs/verify-locally.md` (the responder job description, a port-clash note and a troubleshooting row), `_docs/pending-verification.md` (the §#220 section removed), `_docs/human-tasklist.md`, `_docs/roadmap.md`, this entry. GitHub, outside the diff: a result comment on #220 and #220 closed.
+- verification (tests run, reviewer verdict): the responder job result is the OWNER's run, not mine: `make test-compose JOB=responder` gave 8 passed in 103.26 s (2m28s wall clock) on the owner's Docker host (WSL, Docker 29.8.2, Compose v5.6.0); I read the pasted tail of the output only, not the full log. I diagnosed the port clash from the owner's `netstat.exe` and `tasklist.exe` output (process `Code.exe` held 127.0.0.1:9099); why VS Code held it was not confirmed. `make verify` PASS before each push (frontend 89, backend 532, responder 77). QA's [D] criteria for #220 were marked unverified (6413501579) and were not re-checked by QA after the owner's run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner ran the job, found and cleared the port clash by closing VS Code, and pasted the results.
+
+- date: 2026-10-26
+- task/issue: the live US-13 stack check (#155, #199) walked through with the owner step by step; the dashboard's Environment and Version filters found to filter nothing and dropped; three Grafana screenshots linked; #155 and #199 closed after QA; PR #235 description updated
+- agent role: Orchestrator (Claude Code cloud session) with an Engineer and five QA subagent runs for #199 and one QA run for #155
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked to be walked through the biggest human verification block with the agent doing what it could, pasted each result, chose to drop the filters, and asked to submit the PR. No new key prompt saved.
+- files changed: `observability/grafana/dashboards/us13-journey.json`, `observability/README.md`, `tests/test_us13_dashboard.py` (a comment) by the Engineer; `README.md` (Observability evidence, a Docker port-clash note), `_docs/verify-locally.md`, `_docs/pending-verification.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`, `_docs/roadmap.md`, `_docs/roadmap-future.md` (X12, X13, X14), the session summary, this entry; three images added and two removed under `docs/images/`. GitHub, outside the diff: result comments on #226, #155 and #199, rewritten bodies for #155 and #199, #155 closed, a PR description update.
+- verification (tests run, reviewer verdict): the stack, Grafana and Docker results are the OWNER's, pasted into the session; the agent ran no Docker. The agent read the dashboard JSON (the variables are defined but no panel query references them) and the three committed screenshots. QA: #155 PASS (6417378357); #199 FAIL four times on record wording (6417165141, 6417225167, 6417377952, 6417461140) and PASS on the fifth (6417556909); the dashboard change was checked statically only and has not been loaded live. `make verify` PASS at each push (frontend 89, backend 532, responder 77). The agent's first statement that the filters "work" was wrong and was corrected; the agent also had the line colours reversed in a comment and corrected that.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner ran every Docker and Grafana step, took the screenshots, committed them, and chose option 2 for the filters.
+
+- date: 2026-10-26
 - task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
 - agent role: Engineer (Claude Code cloud session subagent)
 - model: claude-sonnet-5-5
@@ -2729,5 +2749,15 @@ Copy this template for each new entry:
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #220 per the PM grooming in comment 6412133802, with no Docker available. No new key prompt saved.
 - files changed: `compose.responder.yaml` (new), `ci/test-compose.sh` (`responder` branch; teardown between jobs on the no-JOB path), `tests/test_compose_responder_static.py` (new, unit), `tests/compose_responder.py` (new helpers), `tests/test_compose_responder.py` (`--build`, new compose cases), `_docs/tasks.md` (tasks 28/29 wording), this entry.
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one docstring line in `tests/test_compose_responder.py` that was rewritten, no assertion changed). `bash -n ci/test-compose.sh` passes; a unit test runs the script with `JOB=responder` and a fake failing `docker` and gets exit 1, not 3. The `compose`-marked cases collect (8) but were NOT run: no Docker in this session, so every Docker case (P-PROD-REFUSAL, Grafana body shape, test notification, 401, env check, real-mode refusal) is unverified until `make test-compose JOB=responder` runs on a Docker host or in CI. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #199 last criterion: drop the US-13 dashboard's Environment and Version filters (owner decision, option 2)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to remove the two template variables and the docs that mention the filter. No new key prompt saved.
+- files changed: `observability/grafana/dashboards/us13-journey.json` (templating list now empty; panels and queries unchanged), `observability/README.md`, `_docs/pending-verification.md`, `tests/test_us13_dashboard.py` (comment only), this entry. `us14-overdue.yaml` and `_docs/specs.md` not changed (the spec has no "filter" text).
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one rewritten comment line in the dashboard test, no assertion changed). The dashboard was NOT loaded in Grafana (no Docker); checked statically only. No reviewer verdict; no QA run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.

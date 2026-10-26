@@ -303,7 +303,7 @@ env in `ci/test-compose.sh` and runs the backend on `VT_FEEDS=fixtures`.
 ```sh
 make test-compose JOB=telemetry   # US-13: T-REFUSE, T-JOURNEY-BE, I-OWNER-* (MailHog)
 make test-compose JOB=alert       # US-14: A-FIRE and its rule-absent negative
-make test-compose JOB=responder   # US-15: P-DEMO-BE, P-PROD-REFUSAL, I-RESP-* (task 28)
+make test-compose JOB=responder   # US-15: P-PROD-REFUSAL and the wiring cases (#220); P-DEMO-BE is #233
 make test-compose                 # all three in turn
 ```
 
@@ -337,15 +337,24 @@ What each job brings up and asserts:
      (`manage.py alert-set --finding-id <id> --state sent`). Within a few minutes
      the webhook sink records one `status: resolved` request for that finding
      and no second `firing` request.
-- **`responder`** (issue #160, task 28): not implemented yet —
-  `make test-compose JOB=responder` prints a "not implemented, task 28" message
-  and exits non-zero until that task lands.
+- **`responder`** (issue #220, task 28c): the app + observability + alert +
+  responder under the `vt-responder` project; the responder is built from
+  `./backend` with its source bind-mounted (no new image). Needs no `.env`:
+  `ci/test-compose.sh` exports throwaway values. It covers the container
+  `P-PROD-REFUSAL`, the real Grafana body reaching the responder, a Grafana test
+  notification ending `no_change`, a bad bearer getting 401, and the container env
+  check. The owner ran the job on a Docker host on 2026-10-26: 8 passed in 103 s
+  (#220 comment 6415509715). `P-DEMO-BE` (the full loop) is #233 and is not in
+  this job yet. The two stacks publish the same
+  host ports, so take the observability stack down before running it.
 
 These cases are `compose`-marked and **deselected** by `make test` / `make verify`
 (the default `-m "not compose"`), so a no-Docker `make verify` never runs them and
 never *skips* them; `tests/test_marker_hygiene.py` guards against an ordinary test
 being silently tagged `compose`.
 
+> **Port already taken?** If a job stops with `ports are not available ... /forwards/expose ... 500` (Docker Desktop on Windows with WSL), see the Troubleshooting table below: on 2026-10-26 the process holding port 9099 was VS Code (`Code.exe`; why it held it was not confirmed). Check a port before you start; it costs a minute.
+>
 > **First-run `VERIFY:` items.** Each Compose job pins external images (Grafana,
 > Tempo, Loki, Prometheus, the Collector, MailHog) whose exact query shapes and
 > behaviours are marked `VERIFY:` in the code until a human confirms them on the
@@ -378,6 +387,7 @@ make clean-scratch     # remove .scratch/ working files
 | `http://localhost:8080/findings` returns JSON on refresh | nginx `/api` prefix-strip or the SPA fallback is misconfigured | check `frontend/nginx.conf` (`location /api/` and `try_files ... /index.html`) |
 | Compose data gone after a restart | the stack was brought down with `CLEAN=1` (volume removed) | use plain `make compose-down`; `CLEAN=1` is a deliberate fresh slate |
 | a service never becomes healthy | a dependency failed its health check | `docker compose ps` and `docker compose logs <service>` to see which |
+| `make test-compose` stops with `ports are not available: exposing port TCP 127.0.0.1:9099 ... /forwards/expose returned unexpected status: 500` (Docker Desktop on Windows with WSL) | something on Windows already listens on that host port; seen 2026-10-26: **VS Code** (`Code.exe`) auto-forwarding the port it spotted in terminal output | find the owner: `netstat.exe -ano \| grep :9099`, then `tasklist.exe /FI "PID eq <pid>"` (from WSL). For VS Code: Ports panel, right-click the port, **Stop Forwarding Port**, and untick the setting `remote.autoForwardPorts`. The stub webhook sink's 9099 is fixed in `ci/test-compose.sh`, `compose.alert.yaml` and the alert tests, so free the port rather than changing it. Other ports the jobs publish (3000, 4317, 8025, 9090, 9100) can clash the same way. Check a port with `docker run --rm -p 127.0.0.1:<port>:<port> alpine true` |
 
 ## Related docs
 
