@@ -2801,3 +2801,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS at each push (final: frontend 89, backend 532, responder 231). The merge fixed the two failing PR 238 checks locally; CI on PR 239 not yet read. QA PASS on #221 at `898083a` (comment 6426404789); the hardening commit `de7ba9c` and the script fix `898083a` were not separately QA-checked. The #222 script was syntax-checked with `sh -n`, never run (it needs the owner's token). The merge conflict was resolved with a shell script, not the editing tool.
 - new dependencies: none (the Engineer's `claude-agent-sdk` pin is in its entry above).
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #161 (task 29): draft of the `responder` CI job and `P-FLAG-GONE` on `claude/161-responder-job-draft`
+- agent role: Engineer (Claude Code subagent, drafting only)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to draft, not apply, the protected `.github/` changes for #161 as a proposal document, and to commit the script and its tests as ordinary files. No new key prompt saved.
+- files changed: `ci/check_flag_gone.py` (new), `tests/test_flag_gone.py` (new), `_docs/161-responder-job-proposal.md` (new), the session summary; this entry. No protected file and nothing under `.github/` was changed.
+- verification (tests run, reviewer verdict): `make backend-test` passed (551 passed, 13 deselected; 19 of them new). `make verify`: see the session summary and the final report. The proposed YAML was only parsed (PyYAML), the run blocks and the proposed `ci/test-compose.sh` were syntax-checked with `bash -n`, and the `P-FLAG-GONE` step's shell text was run locally against the repository with a made-up tag. GitHub Actions, Docker and the Compose job were NOT run; the `responder` job has never run in CI and the new `deploy-prod` step has never run in Actions. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none yet; the owner has not read the proposal.
