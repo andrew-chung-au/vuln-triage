@@ -2802,7 +2802,16 @@ Copy this template for each new entry:
 - new dependencies: none (the Engineer's `claude-agent-sdk` pin is in its entry above).
 - human review (what I checked or corrected, or `none`): none.
 
-- date: 2026-10-26
+- date: 2026-10-26 - claude/233-p-demo-be
+- task/issue: #233 (P-DEMO-BE, task 28c-C: the full stub loop in Compose, run twice), branch `claude/233-p-demo-be`
+- agent role: Software Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #233 on the existing containerized harness without running Docker, resolve the three `VERIFY:` items by reading, and return a question if no fixture gave a no-fixed-version top-tier finding; then the owner's decision (a), a project-authored fixture. No new key prompt saved.
+- files changed: `tests/fixtures/osv/vulns/GHSA-fixture-nofix-0001.json` (new), `tests/fixtures/osv/querybatch.json`, `tests/fixtures/kev/known_exploited_vulnerabilities.json`, `tests/fixtures/MANIFEST.md`, `tests/test_fixture_nofix_finding.py` (new), `tests/test_compose_demo_be.py` (new, compose-marked), `tests/test_compose_demo_be_static.py` (new), `tests/compose_alert.py` (`set_job_state`), `tests/compose_responder.py` (`recreate_backend`, `backend_demo_defect`, `message_subject`), `tests/test_marker_hygiene.py` (one allowlist entry for the new compose module), `ci/test-compose.sh` (`seed_user` and the second test file in the responder job), `_docs/roadmap.md`, `_session-summaries/issue-233-p-demo-be.md`, this entry. Commits `48c79a8`, `901a37f` and the docs commit.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 542, responder 85 passed; the warning is the fixture files changed, reason: one advisory, one querybatch entry and one KEV row were added, nothing loosened, 0 assertion lines removed). `make backend-test` before and after adding the fixture: the 532 existing cases unchanged, plus the 2 new fixture cases. A read-only collection of the compose-marked cases found the new case. NOT RUN: the compose-marked case `test_p_demo_be_full_stub_loop_runs_twice_on_one_finding` (no Docker daemon in this session); so no [D] criterion has been observed passing, and the Grafana `resolved` notification is unverified. No reviewer verdict; no QA run.
+- new dependencies: none.
+
+- date: 2026-10-26  
 - task/issue: #241 real agent in the background, with a retry cap (follow-up to #221), on `claude/241-background-run` (from `claude/f4-real-runner-followup`)
 - agent role: Engineer (Claude Code subagent)
 - model: claude-sonnet-5-5

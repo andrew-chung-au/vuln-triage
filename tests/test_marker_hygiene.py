@@ -36,6 +36,8 @@ _ALLOWED_COMPOSE_MODULES = frozenset(
         "test_compose_alert.py",
         # The `responder` job's P-PROD-REFUSAL container form (task 28a, #218).
         "test_compose_responder.py",
+        # The `responder` job's P-DEMO-BE full stub loop, run twice (task 28c-C, #233).
+        "test_compose_demo_be.py",
     }
 )
 

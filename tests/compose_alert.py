@@ -131,6 +131,28 @@ def seed_overdue_job(
     return run_seam(args)
 
 
+def set_job_state(
+    finding_id: int | str,
+    state: str,
+    *,
+    age_minutes: int | None = None,
+    sent_age_hours: float | None = None,
+) -> dict[str, Any]:
+    """Flip every top-tier job of an EXISTING finding to ``state`` (``alert-set``).
+
+    Unlike ``seed_overdue_job`` (which always creates a NEW finding with a new id),
+    this keeps the finding id, so a second take of the same demo loop reuses the
+    finding, hence the same alert fingerprint (#233). ``result["updated"]`` is how
+    many jobs were changed (the caller asserts it is 1).
+    """
+    args = ["alert-set", "--finding-id", str(finding_id), "--state", state]
+    if age_minutes is not None:
+        args += ["--age-minutes", str(age_minutes)]
+    if sent_age_hours is not None:
+        args += ["--sent-age-hours", str(sent_age_hours)]
+    return run_seam(args)
+
+
 def clear_seed() -> dict[str, Any]:
     """Delete every row the alert seam created (each A-* case starts from zero)."""
     return run_seam(["alert-clear"])
