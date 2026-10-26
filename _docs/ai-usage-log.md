@@ -2721,3 +2721,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 515, responder 77 passed; the warning is only that BASE equals HEAD). Mutation check: with the `try/finally` removed from `app.py` the new test failed (76 passed, 1 failed) and `app.py` was restored with an empty diff. No reviewer verdict; no QA run. The other #234 criteria are not done.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #220 responder in Compose and the wiring cases (task 28c)
+- agent role: Engineer (Claude Code cloud session subagent)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's instruction to implement #220 per the PM grooming in comment 6412133802, with no Docker available. No new key prompt saved.
+- files changed: `compose.responder.yaml` (new), `ci/test-compose.sh` (`responder` branch; teardown between jobs on the no-JOB path), `tests/test_compose_responder_static.py` (new, unit), `tests/compose_responder.py` (new helpers), `tests/test_compose_responder.py` (`--build`, new compose cases), `_docs/tasks.md` (tasks 28/29 wording), this entry.
+- verification (tests run, reviewer verdict): `make verify`: PASS WITH WARNINGS (frontend 89, backend 532, responder 77 passed; the warning is one docstring line in `tests/test_compose_responder.py` that was rewritten, no assertion changed). `bash -n ci/test-compose.sh` passes; a unit test runs the script with `JOB=responder` and a fake failing `docker` and gets exit 1, not 3. The `compose`-marked cases collect (8) but were NOT run: no Docker in this session, so every Docker case (P-PROD-REFUSAL, Grafana body shape, test notification, 401, env check, real-mode refusal) is unverified until `make test-compose JOB=responder` runs on a Docker host or in CI. No reviewer verdict; no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
