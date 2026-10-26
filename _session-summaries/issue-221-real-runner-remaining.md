@@ -47,6 +47,23 @@ none new.
 - Writes to the record (keep asking): `make responder-install` (network, installs into `responder/.venv`); `make issue-comment` for the Engineer comment.
 - Risky (propose denying): none.
 
+Orchestrator and QA (added at close-out):
+
+- QA comment 6426404789: no commands required approval.
+- Risky, brought to the owner at the time: `git push -u origin responder/f4-and-real-runner-221` was refused by the agent-kit guard (only `claude/*` branches may be pushed). Nothing was bypassed; the owner chose to move the work to `claude/f4-real-runner-fix`.
+- Writes to the record (keep asking): `git push -u origin claude/f4-real-runner-fix` (twice, `make verify` ran in the pre-push hook); GitHub MCP calls that created PR 239, closed PR 238, created issue #241 and posted comments on #238 and #221.
+- Convention slip, recorded for honesty: the merge conflict in `_docs/human-tasklist.md` was resolved with a short Python script run from the shell, not with the editing tool. The result was checked (no conflict markers, F4 and F5 rows intact) and `make verify` passed.
+- Read-only: `.scratch/extract_proof_script.py` (writes only `.scratch/`) and `sh -n` on the extracted #222 script.
+
+## Orchestrator close-out (same session, after QA PASS at 898083a)
+
+- Merge of `main` into the PR branch (`0451bf1`) fixed three CI failures from PR 238: a relative `conftest` import in `test_real_runner.py`, a committed value for `RESPONDER_MODEL` in `.env.example` (a backend guard requires no committed values; the pinned model is in a comment), and the `_docs/human-tasklist.md` conflict.
+- `898083a`: the #222 runbook script now captures real push exit codes (it reported `sed`'s before).
+- `de7ba9c` (orchestrator, not QA-checked separately; `make verify` PASS, responder 231): case-insensitive protected names, writes to any `.env*` (including `.env.example`) refused, and the reported PR URL must match the configured repository. Two of QA's out-of-criteria risks.
+- QA risks left open, deliberately: read tools can name paths outside the checkout (`Glob` with an absolute pattern, `git diff HEAD:.env`); agent-written tests run with the secrets in the environment, so the real boundary is the token scope and branch protection (#222).
+- Background run and retry cap split to #241 at the owner's request.
+- Not decided by the owner in this session: `make responder-lock` (protected `Makefile`), listing the new variable names in `.env.example`, and the Compose passthrough. Still proposals.
+
 ## Interruptions
 
 none.
@@ -60,4 +77,5 @@ none.
 ## Follow-ups for the next session
 
 - First live run needs #222 (token) and the owner's key on a non-clean-clone host; check the `VERIFY:` items in `sdk_session.py` (PreToolUse deny overriding the permission mode, `RESULT:` line, git extraheader auth, commit identity).
-- Real runs outlast Grafana's webhook timeout: a background run (comment 6410222768 on #221) is not built here; `app.py` still runs the agent in the request.
+- Real runs outlast Grafana's webhook timeout: a background run (comment 6410222768 on #221) is not built here; `app.py` still runs the agent in the request. Filed as #241, needed before the drill (task 39).
+- The owner has created the responder token and runs #222 (`_docs/responder-token-proof.md`) on a host that is not the clean clone.
