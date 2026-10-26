@@ -27,7 +27,8 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.54.1
-    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    # exemplar-storage keeps the trace-id exemplars scraped from the Collector (T-A4, #172).
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--enable-feature=exemplar-storage"]
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:

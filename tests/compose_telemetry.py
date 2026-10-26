@@ -364,6 +364,57 @@ def wait_for_metric(promql: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> list[d
     return _poll(lambda: prometheus_query(promql) or False, timeout_s)
 
 
+def prometheus_exemplar_trace_ids(promql: str, lookback_s: int = 3600) -> set[str]:
+    """Return the ``trace_id`` labels of every exemplar stored for ``promql``.
+
+    Reads ``/api/v1/query_exemplars``, whose ``data`` is a list of
+    ``{seriesLabels, exemplars: [{labels: {trace_id, span_id}, value, timestamp}]}``.
+    Needs Prometheus started with ``--enable-feature=exemplar-storage`` and the
+    Collector's Prometheus exporter with ``enable_open_metrics: true``.
+
+    VERIFY: the ``query_exemplars`` response shape and the ``trace_id`` exemplar
+    label key on Prometheus v2.54.1 / Collector contrib 0.111.0.
+    """
+    now = time.time()
+    params = urllib.parse.urlencode(
+        {"query": promql, "start": f"{now - lookback_s:.3f}", "end": f"{now + 60:.3f}"}
+    )
+    payload = _get_json(f"{PROMETHEUS_URL}/api/v1/query_exemplars?{params}")
+    if payload.get("status") != "success":
+        raise ComposeQueryError(f"prometheus exemplar query {promql!r} not successful: {payload}")
+    ids: set[str] = set()
+    for series in payload.get("data") or []:
+        for exemplar in series.get("exemplars") or []:
+            trace_id = (exemplar.get("labels") or {}).get("trace_id")
+            if trace_id:
+                ids.add(trace_id)
+    return ids
+
+
+def wait_for_exemplar_trace_id(
+    promql: str, trace_id: str, timeout_s: float = DEFAULT_TIMEOUT_S
+) -> set[str]:
+    """Wait until an exemplar of ``promql`` carries ``trace_id``; return all seen ids.
+
+    Polls with the bounded ``_poll``; on timeout it raises with the trace ids
+    that were found, so a wrong id and a missing exemplar are told apart.
+    """
+    try:
+        return _poll(
+            lambda: (ids if trace_id in (ids := prometheus_exemplar_trace_ids(promql)) else False),
+            timeout_s,
+        )
+    except ComposeQueryError as exc:
+        try:
+            seen = prometheus_exemplar_trace_ids(promql)
+        except ComposeQueryError as inner:
+            seen = {f"<query failed: {inner}>"}
+        raise ComposeQueryError(
+            f"{exc}; no exemplar of {promql!r} carried trace id {trace_id!r}; "
+            f"exemplar trace ids seen: {sorted(seen)}"
+        ) from exc
+
+
 # -- MailHog ----------------------------------------------------------------
 
 

@@ -1,0 +1,30 @@
+[project]
+name = "vulntriage-responder"
+version = "0.1.0"
+description = "VulnTriage US-15 responder: Grafana webhook receiver (stub mode; task 28b, #219)"
+requires-python = ">=3.12"
+# Only packages the backend already locks, at the backend's locked versions
+# (backend/uv.lock). No Agent SDK here: the real runner is task 28d (#221).
+dependencies = [
+    "fastapi==0.161.1",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+]
+
+[tool.uv]
+package = false
+# Keep starlette at the backend's locked version (it resolved newer otherwise).
+constraint-dependencies = ["starlette==1.9.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "--strict-markers"
+testpaths = ["tests"]
+markers = [
+    "unit: pure function or in-process case with no network",
+]

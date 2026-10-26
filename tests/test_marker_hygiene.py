@@ -34,6 +34,8 @@ _ALLOWED_COMPOSE_MODULES = frozenset(
         # The `alert` job's US-14 A-* cases (task 27, #159): compose-marked and
         # deselected by make test/verify, like the telemetry module.
         "test_compose_alert.py",
+        # The `responder` job's P-PROD-REFUSAL container form (task 28a, #218).
+        "test_compose_responder.py",
     }
 )
 

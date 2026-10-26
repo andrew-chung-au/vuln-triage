@@ -20,7 +20,7 @@ decisions, merges). This file is the detailed per-issue checklist both link to;
 the cloud-session queue below is superseded by the cloud list, which is the
 source for order and dependencies.
 
-Last updated: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
+Last updated: 2026-10-26 (QA unverified items for #157, #172, #218 and #219 collected in #223; the section below). Earlier: 2026-10-25 (#193: held-delivery signals, Loki leg recorded; #180: #177 folded into #193; #159 alert job: CI job committed; cross-ref to verify-locally.md §7b)
 
 ## Cloud-session queue (Docker work to hand to Claude Code cloud sessions)
 
@@ -180,7 +180,7 @@ harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
 - [x] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog. **Done in CI:** run 40188742150 at `fb24904`, job `telemetry`, 3 passed in 55.02s (checked from the job log, 2026-10-25).
 - [ ] **Also confirms #174 and the log half of #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`; #177 was folded into #193 and closed on 2026-10-25). If this Loki leg does **not** carry the journey trace id, re-open #174 or #193 rather than only #172.
 - [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
-- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`. The criterion is met (run above); closing is the human's call (tasklist B5).
+- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`. The criterion is met (run above); closing is the human's call (tasklist B5). **Update 2026-10-26:** QA ran on #172 and FAILed two criteria (the exemplar assertion; the `P-FLAG-GONE` rule), so it is not ready to close until those are decided (tasklist F5). The green run above rests on the orchestrator's CI note, which QA could not independently confirm. See "QA unverified items (2026-10-26)" below and #223.
 
 ## #177 / #193 — delivery outcome signals on every branch (Loki leg)
 
@@ -219,6 +219,35 @@ clean clone (the app steps use `make`; see `_docs/agent-kit/environments.md`).
 - [ ] **#210:** after a fresh demo run **with the stack already up** (start the stack, delete `backend/.scratch/vulntriage.db`, then `make demo OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 SERVICE_VERSION=local`), the US-13 journey dashboard's first panel ("Notifications (metric) ... running total") shows a line that steps up on **Last 1 hour**. The owner saw no improvement on 2026-10-26, so the cause may be the data: check Prometheus (`http://localhost:9090`, query `vt_notifications_total`). No rows means no notification was recorded after the stack came up; a row with a value means the panel query needs another look.
 - [ ] If the panel still shows nothing while Prometheus has the series, file an issue; the panel query is in `observability/grafana/dashboards/us13-journey.json` and is checked statically by `tests/test_us13_dashboard.py`.
 - [ ] On success: retake `g9-grafana-dashboard.png` (full dashboard, view mode) and `g9-grafana-trace.png` (one `scan.run` trace, single full-width Explore pane), link them in the README, and tick `#155` and `#199` above if the panels also show data there.
+
+## QA unverified items (2026-10-26): #157, #172, #218, #219
+
+Issue: [#223](https://github.com/andrew-chung-au/vuln-triage/issues/223). Cloud QA
+ran on #157 (PASS with unverified items, comment 6410124690), #172 (FAIL on two
+criteria, comment 6410133733), #218 and #219 (PASS). The sandbox has no Docker and
+no way to read the GitHub Actions record, so these items are "not run yet", not
+"broken". Tick them here and on #223.
+
+**A. Look at the GitHub Actions record (no Docker needed)**
+
+- [ ] Telemetry job run 40188742150 at `fb24904`: `telemetry` green, 3 passed.
+- [ ] T-REFUSE negative-check runs 40073386642 and 40073409867 (the Engineer's evidence on #157): they failed when the excluded attributes were left in.
+- [ ] Delete the two `check/157-refuse-negative-*` branches (a human step).
+- [ ] Confirm the two `skipif` markers in `tests/test_compose_alert.py` (about lines 136 and 179) are the intended rule-present/rule-absent toggle (they come from #159).
+
+**B. Needs a Docker host (CI, or a machine that is not the clean clone)**
+
+- [ ] `make test-compose JOB=telemetry` passes with `T-JOURNEY-BE` and `I-OWNER-NOAWS` (see the #172 section above for the Loki leg and flake #185).
+- [ ] #218: the container form of `P-PROD-REFUSAL` (`tests/test_compose_responder.py`): the backend image with `DEPLOYMENT_ENVIRONMENT=prod` and `VT_DEMO_DEFECT=notify_no_fix` exits non-zero and logs `DemoDefectConfigurationError`; the dev control run exits 0. The `docker compose run` flags are marked `VERIFY:`; add `--build` so a stale image is not tested. Selecting it needs #220 (`ci/test-compose.sh` still exits 3 for `JOB=responder`).
+- [ ] #219 / #220: the real Grafana webhook body (a top-level `status`, `alerts[]` with a `fingerprint`, a `finding_id` label, the `Authorization` header). Does a Grafana test notification carry a `fingerprint`? The responder returns 400 if not.
+- [ ] The GitHub `verify` job is green with the new `make install` and `make test` targets (protected commit `5ab7b7b`); note its run time.
+
+**C. Decisions left by QA's FAIL on #172 (tasklist F5)**
+
+- [ ] Exemplar assertion in `T-JOURNEY-BE`: decided 2026-10-26 to add it. Added (not yet run, no Docker in the authoring sandbox); needs `make test-compose JOB=telemetry` green, with `enable_open_metrics` on the Collector exporter and `--enable-feature=exemplar-storage` on Prometheus (both `VERIFY:`).
+- [x] `P-FLAG-GONE` rule for `VT_FEEDS=fixtures`: decided 2026-10-26 to re-scope to task 29 / #161; docs aligned.
+
+On success, close #223, then close #157 and #172 per tasklist B5.
 
 ---
 

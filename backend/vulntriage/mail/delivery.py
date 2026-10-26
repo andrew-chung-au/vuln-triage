@@ -48,7 +48,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from vulntriage.db.enums import NotificationKind, NotificationState
 from vulntriage.db.models import Advisory, Asset, Finding, Lifecycle, NotificationJob
 from vulntriage.mail import settings as mail_settings
-from vulntriage.mail.message import HeaderInjectionError, build_message
+from vulntriage.mail.message import DemoDefectError, HeaderInjectionError, build_message
 from vulntriage.mail.transport import (
     MailConfigurationError,
     MailTransport,
@@ -250,15 +250,33 @@ class DeliveryWorker:
                 log.warning("notification job %s held: %s", job.id, exc)
                 return False
 
-            message = build_message(
-                sender=transport.verified_sender,
-                recipient=asset.owner_email or "",
-                finding_id=str(finding.id),
-                tier=job.tier,
-                package=finding.package,
-                fixed_version=finding.fixed_version,
-                advisory_text=advisory.summary if advisory is not None else None,
-            )
+            try:
+                message = build_message(
+                    sender=transport.verified_sender,
+                    recipient=asset.owner_email or "",
+                    finding_id=str(finding.id),
+                    tier=job.tier,
+                    package=finding.package,
+                    fixed_version=finding.fixed_version,
+                    advisory_text=advisory.summary if advisory is not None else None,
+                )
+            except DemoDefectError:
+                # The deliberate US-15 demo defect (task 28a / #218): the job
+                # fails, nothing is sent, and the log carries ids and the code
+                # only (never advisory text). It retries on the next poll.
+                job.state = NotificationState.FAILED.value
+                job.attempts += 1
+                job.last_error_code = "format_failed"
+                set_span_attributes(
+                    current, {"vt.outcome": "failed", "vt.error.code": "format_failed"}
+                )
+                metrics.notifications_total.add(
+                    1, {"vt.notification.kind": job.kind, "vt.outcome": "failed"}
+                )
+                _log_delivery_outcome(job, finding, outcome="failed", error_code="format_failed")
+                session.commit()
+                log.warning("notification job %s failed to format (demo defect)", job.id)
+                return False
 
             try:
                 transport.send(message)

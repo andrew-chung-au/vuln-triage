@@ -58,6 +58,7 @@ from compose_telemetry import (
     span_attribute_keys,
     span_names,
     wait_for_backend_health,
+    wait_for_exemplar_trace_id,
     wait_for_log_entry,
     wait_for_mail,
     wait_for_metric,
@@ -210,6 +211,9 @@ def test_t_journey_be_one_trace_across_metric_trace_log_and_mailhog() -> None:
 
     # Metric: a sent top-tier notification is counted (same journey).
     wait_for_metric('vt_notifications_total{vt_outcome="sent"}')
+    # T-A4: the metric carries the journey trace id as a Prometheus exemplar (the
+    # counter is incremented inside the notification.deliver span).
+    wait_for_exemplar_trace_id('vt_notifications_total{vt_outcome="sent"}', trace_id)
 
     # Log: a JSON log line carries the same trace id (the journey join).
     lines = wait_for_log_entry('{service_name="vulntriage-backend"}', trace_id)

@@ -2611,3 +2611,73 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the GitHub Actions run and job records and job logs for deploy runs #30, #31, #32, #33, #34 and the verify run 40214720806 through the GitHub API; read `deploy.yml`, `deploy-env.sh`, README, tasklist rows A6 to A14 and the session summary. Result 21 of 24 (was 17). NOT verified: the live dev and production URLs (the session proxy refused `*.sslip.io`), the `production` environment's reviewer rule, branch protection, any approver identity. Ran no tests and no Docker. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #218 (task 28a): `VT_DEMO_DEFECT=notify_no_fix` and its production refusal
+- agent role: Software Engineer (Claude Code cloud session, subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to implement #218, leaving `responder/` alone and keeping the `_docs/testing.md` edit small. No new key prompt saved.
+- files changed: `backend/vulntriage/ingest/settings.py`, `backend/vulntriage/mail/message.py`, `backend/vulntriage/mail/delivery.py`, `backend/vulntriage/main.py`, `tests/test_demo_defect.py`, `tests/test_compose_responder.py`, `tests/test_notifications.py`, `tests/test_marker_hygiene.py`, `_docs/testing.md`; this log entry.
+- verification (tests run, reviewer verdict): `make verify` ran: frontend 89 passed, backend 515 passed (7 deselected), type check and whitespace passed; the only warning was that BASE equals HEAD. NOT run: the container form of `P-PROD-REFUSAL` (`tests/test_compose_responder.py`; no Docker or ghcr.io here), so its `docker compose run` flags are unverified. No reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #219 (task 28b of #160): responder service in stub mode (webhook, bearer secret, repeat guard, action log, false-positive path)
+- agent role: Software Engineer (Claude Code cloud session, subagent in a worktree)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to implement #219 in a new top-level `responder/` project without touching `backend/` or protected files. No new key prompt saved.
+- files changed: new `responder/` project (`pyproject.toml`, `uv.lock`, `vt_responder/` with config, guard, action log, API client, fakes, stub runner and app, `tests/` with 51 cases); `_docs/testing.md` (new `I-RESP-HOOK-*` rows); this log entry.
+- verification (tests run, reviewer verdict): `uv run --project responder pytest responder/tests` via `.scratch/responder_test.sh`: 51 passed. `make verify` PASS WITH WARNINGS (89 frontend, 496 backend tests, type check; the only warning is that BASE equals HEAD); it does not run the `responder/` tests, because the Makefile targets are protected and not yet added. Not run: any Docker or Compose run, a real Grafana webhook, the real runner (task 28d). No reviewer verdict, no QA run.
+- new dependencies: none new to the project. `responder/uv.lock` pins `fastapi`, `uvicorn`, `httpx` and `pytest` (and `starlette` as a constraint) at the versions in `backend/uv.lock`; other transitive versions were resolved fresh and may differ.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-26
+- task/issue: #160 (task 28), split into #218-#222; orchestration of #218 and #219
+- agent role: Orchestrator (Claude Code cloud session); launched PM, Engineer and QA subagents
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the hand-off prompt to run the PM role on #160 once PR 217 was merged, then "Approve all recommendations, create the sub-issues", "Go ahead with #218 and #219 in parallel", and "Go ahead with the diff as shown". No new key prompt saved.
+- files changed: `Makefile` and `AGENTS.md` (protected commit `5ab7b7b`: `responder-install`/`responder-test` targets and the matching Layout and Commands lines); `_docs/roadmap.md` (check-in row); `_session-summaries/issue-218-219-responder-stub.md`; this entry. The Engineers' files are in their own entries above.
+- verification (tests run, reviewer verdict): PM grooming report on #160; five issues created (#218-#222) with the split recorded in a comment on #160 (6404873337). QA PASS on #218 (6406748025) and #219 (6406748685), each by a fresh QA subagent at `7df3a6f`; `make assert-clean` PASS and HEAD unchanged after QA. `make verify` after the merge and again after `5ab7b7b`: frontend 89, backend 515, responder 51 passed, type check and whitespace passed. Not run: the container form of `P-PROD-REFUSAL`; any Docker or Compose job; the Grafana test-alert payload; a CI run of the `verify` workflow with the new targets.
+- new dependencies: none by the orchestrator (the `responder/uv.lock` packages are in the #219 entry).
+- human review (what I checked or corrected, or `none`): the owner approved the split and all seven PM recommendations, the parallel start, and the exact `Makefile`/`AGENTS.md` diff before commit. I restored a comma my edit dropped in the `AGENTS.md` Test (all) line before committing.
+
+- date: 2026-10-26
+- task/issue: QA of #157 and #172; unverified items collected in #223
+- agent role: Orchestrator (Claude Code cloud session); launched two QA subagents
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner pointed out that neither #157 nor #172 had a QA verdict and asked for QA on both; then asked for the unverified items to go in a new issue, `pending-verification.md` and the human tasklist. No new key prompt saved.
+- files changed: `_docs/pending-verification.md` (new section "QA unverified items (2026-10-26)" and a note in the #172 section), `_docs/human-tasklist.md` (B5 status, new rows B9, B10, F4, F5), this entry. Created issue #223.
+- verification (tests run, reviewer verdict): QA #157 PASS with unverified items (comment 6410124690); QA #172 FAIL on two criteria (comment 6410133733). Both QA runs: `make verify` passed (89 frontend, 515 backend, 51 responder). Not run by anyone in this session: the telemetry CI record (run 40188742150), the T-REFUSE negative-check runs, any Docker job. #157 and #172 are not closed. No `make verify` was run after this docs-only commit.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none yet; the owner has not yet decided the exemplar assertion, the `P-FLAG-GONE` scope, or whether to close #157.
+
+- date: 2026-10-26
+- task/issue: #172 follow-up to QA's FAIL (exemplar assertion; `P-FLAG-GONE` re-scope docs)
+- agent role: Engineer (Claude Code subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator task relaying the owner's 2026-10-26 decisions (add the exemplar assertion; re-scope the fixtures `P-FLAG-GONE` rule to task 29 / #161). No new key prompt saved.
+- files changed: `tests/compose_telemetry.py` (`prometheus_exemplar_trace_ids`, `wait_for_exemplar_trace_id`), `tests/test_compose_telemetry.py` (exemplar assertion in `T-JOURNEY-BE`), `observability/otel-collector.yaml` (`enable_open_metrics: true` on the Prometheus exporter), `observability/compose.yaml` (`--enable-feature=exemplar-storage`), `_docs/testing.md`, `_docs/tasks.md` (tasks 29 and 40), `_docs/pending-verification.md` (section C), this entry.
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (frontend 89, backend 515, responder 51 passed; the warning is that BASE equals HEAD so only uncommitted changes were compared). Not run: the new assertion and the config change (no Docker here); `make test-compose JOB=telemetry` is needed. No reviewer verdict. The exporter option name, exemplar support for counters in Collector 0.111.0 (read from upstream source via web fetch, not run) and the `query_exemplars` shape are marked `VERIFY:`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26
+- task/issue: #219 follow-up: responder spec gap, an alert with no fingerprint (US-15)
+- agent role: Engineer (Claude Code subagent, own worktree)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's request to stop returning 400 for an alert with neither a fingerprint nor a `finding_id`, with the owner's decisions on which cases keep 400. No new key prompt saved.
+- files changed: `responder/vt_responder/app.py` (parse rule, `no_change` branch in `handle`, module docstring), `responder/tests/test_webhook.py`, `_docs/testing.md` (`I-RESP-HOOK-MALFORMED` and `I-RESP-HOOK-NOCHANGE` rows), this entry. One existing test input was changed on purpose: the `{"labels":{}}` case in `test_hook_malformed_payload_gets_400_and_no_run` now expects 200 under the new rule, so it was replaced by a `finding_id`-without-fingerprint input that still gets 400.
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 63 responder passed; the warning is that BASE equals HEAD); weakened-test check 21 assertion lines added, 0 removed. Not run: any Docker job, a real Grafana test notification (the missing fingerprint is unconfirmed). No reviewer verdict, no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-26
+- task/issue: #219 QA follow-up: `_SAFE_ID` accepted a trailing newline (`"ok\n"`)
+- agent role: Engineer (Claude Code subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's request to reject a trailing newline in fingerprint and `finding_id`, with red-then-green test evidence. No new key prompt saved.
+- files changed: `responder/vt_responder/app.py` (`_SAFE_ID` anchors dropped, both uses now `fullmatch`), `responder/tests/test_webhook.py` (new newline and valid-id cases), `_docs/testing.md` (`I-RESP-HOOK-MALFORMED` row), this entry.
+- verification (tests run, reviewer verdict): new tests run on the old code first (2 failed: `"ok\n"` and `finding_id "1\n"` got 200; `"ok\r\n"` and `"\n"` already got 400), then on the fixed code (68 responder passed). `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 68 responder passed; the warning is that BASE equals HEAD). No reviewer verdict, no QA run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none
