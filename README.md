@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **Not built yet:** the on-call responder agent (US-15), which is planned. The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). The LLM brief, n8n workflows and MCP server are future development, planned after submission and marked as such throughout (older documents call this track "Showcase").
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **On-call responder agent (US-15): no real runner yet.** A stub-mode responder service, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host; the real runner (Claude Agent SDK) and a recorded alert-to-fix run are the remaining work ([#160](https://github.com/andrew-chung-au/vuln-triage/issues/160)). The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). The LLM brief, n8n workflows and MCP server are future development, planned after submission and marked as such throughout (older documents call this track "Showcase").
 
 ---
 
@@ -208,7 +208,9 @@ Captured 2026-10-26 on the local Compose observability stack ([`observability/`]
 | **One `notification.deliver` log event in Loki**, expanded: it carries `trace_id` `42f5161ee955e543e2f5f355e410c247`, `vt_outcome` `sent` and `vt_tier` `P1` | ![Expanded notification.deliver log event with its trace id](docs/images/g9-grafana-trace-scan-loki-expandedlog.png) |
 | **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The visible spans take milliseconds; the trace's overall duration is 29.34 s | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
 
-_Not captured yet: the recorded end-to-end drill and the responder pull request (the real responder agent is not built; a stub-mode responder exists)._
+_The metric→trace link (the Prometheus exemplar that carries the trace ID) is asserted in CI (`tests/test_compose_telemetry.py`, the `telemetry` job), not shown in the screenshots above; the screenshots show the same trace ID in a log event and in its trace._
+
+_Not captured yet: the recorded end-to-end drill and the responder pull request (no real responder runner yet; a stub-mode responder exists)._
 
 
 <!-- PLACEHOLDER: link the recorded drill here if you have one:
@@ -259,7 +261,7 @@ The key journey — a scan through to the owner notification — is instrumented
 ## Alerting & on-call agent
 
 - **Alert (US-14).** When a top-priority finding is not delivered within the window, a provisioned Grafana rule fires **exactly one** alert naming the finding — to the owner's email and the responder — from real stored job state (not a simulation). Held jobs are exempt. Rule: [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/).
-- **On-call agent (US-15) — the real agent is not built yet; a stub-mode responder exists (no model, a fake GitHub client).** The design: a responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
+- **On-call agent (US-15) — no real runner yet; a stub-mode responder exists (no model, a fake GitHub client).** The design: a responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. The stub service, its repeat-alert guard, the demo defect and the Compose wiring run green on a Docker host; the remaining work is the real runner (Claude Agent SDK) and the recorded alert-to-fix drill ([drill runbook](_docs/drill-runbook.md)). Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
 
 ---
 
