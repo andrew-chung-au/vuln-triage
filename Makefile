@@ -275,9 +275,8 @@ postgres-integration: test-integration ## CI alias for the postgres-integration 
 # `compose`-marked and deselected by `make test`/`make verify`.
 #
 # #157 implements the `telemetry` job (and this selector); `alert` and
-# `responder` are tasks 27 (#159) and 28 (#160) and exit with a clear
-# not-implemented message until then. `T-JOURNEY-BE` (the full scan journey)
-# needs the backend feed-fixture wiring of prerequisite #172.
+# `responder` are tasks 27 (#159) and 28 (#160, #220). `T-JOURNEY-BE` (the full
+# scan journey) needs the backend feed-fixture wiring of prerequisite #172.
 
 # JOB, when set, must be exactly one of these words; make checks it before any
 # shell command runs, mirroring the SOURCE/OPENAPI validation idiom above.
