@@ -2713,6 +2713,16 @@ Copy this template for each new entry:
 - human review (what I checked or corrected, or `none`): the owner ran the job, found and cleared the port clash by closing VS Code, and pasted the results.
 
 - date: 2026-10-26
+- task/issue: the live US-13 stack check (#155, #199) walked through with the owner step by step; the dashboard's Environment and Version filters found to filter nothing and dropped; three Grafana screenshots linked; #155 and #199 closed after QA; PR #235 description updated
+- agent role: Orchestrator (Claude Code cloud session) with an Engineer and five QA subagent runs for #199 and one QA run for #155
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked to be walked through the biggest human verification block with the agent doing what it could, pasted each result, chose to drop the filters, and asked to submit the PR. No new key prompt saved.
+- files changed: `observability/grafana/dashboards/us13-journey.json`, `observability/README.md`, `tests/test_us13_dashboard.py` (a comment) by the Engineer; `README.md` (Observability evidence, a Docker port-clash note), `_docs/verify-locally.md`, `_docs/pending-verification.md`, `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`, `_docs/roadmap.md`, `_docs/roadmap-future.md` (X12, X13, X14), the session summary, this entry; three images added and two removed under `docs/images/`. GitHub, outside the diff: result comments on #226, #155 and #199, rewritten bodies for #155 and #199, #155 closed, a PR description update.
+- verification (tests run, reviewer verdict): the stack, Grafana and Docker results are the OWNER's, pasted into the session; the agent ran no Docker. The agent read the dashboard JSON (the variables are defined but no panel query references them) and the three committed screenshots. QA: #155 PASS (6417378357); #199 FAIL four times on record wording (6417165141, 6417225167, 6417377952, 6417461140) and PASS on the fifth (6417556909); the dashboard change was checked statically only and has not been loaded live. `make verify` PASS at each push (frontend 89, backend 532, responder 77). The agent's first statement that the filters "work" was wrong and was corrected; the agent also had the line colours reversed in a comment and corrected that.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner ran every Docker and Grafana step, took the screenshots, committed them, and chose option 2 for the filters.
+
+- date: 2026-10-26
 - task/issue: #232 responder guard forgets a fingerprint on `resolved` (task 28c-A, split from #220)
 - agent role: Engineer (Claude Code cloud session subagent)
 - model: claude-sonnet-5-5

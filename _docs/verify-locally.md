@@ -343,9 +343,9 @@ What each job brings up and asserts:
   `ci/test-compose.sh` exports throwaway values. It covers the container
   `P-PROD-REFUSAL`, the real Grafana body reaching the responder, a Grafana test
   notification ending `no_change`, a bad bearer getting 401, and the container env
-  check. These cases were written without being run; the first run on a Docker
-  host is the open step in `_docs/pending-verification.md` §#220. `P-DEMO-BE` (the
-  full loop) is #233 and is not in this job yet. The two stacks publish the same
+  check. The owner ran the job on a Docker host on 2026-10-26: 8 passed in 103 s
+  (#220 comment 6415509715). `P-DEMO-BE` (the full loop) is #233 and is not in
+  this job yet. The two stacks publish the same
   host ports, so take the observability stack down before running it.
 
 These cases are `compose`-marked and **deselected** by `make test` / `make verify`
