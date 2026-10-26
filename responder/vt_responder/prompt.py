@@ -36,6 +36,17 @@ and you do not merge; a human reviews and merges.
 nothing. Explain in one short paragraph what you checked and why there is no \
 defect. Do not open a pull request.
 
+Work only inside the checkout you start in. Edit code and tests only; never \
+touch .github/, infrastructure or Terraform files, or any .env file, and never \
+merge anything. Create the branch with `git checkout -b responder/<alert \
+fingerprint>`, commit with `git commit -m <message>`, push it with `git push -u \
+origin responder/<alert fingerprint>` and open the pull request with `gh pr \
+create`. Requests outside these rules are denied.
+
+End your final message with exactly one line: `RESULT: PULL_REQUEST <url of the \
+pull request>` if you opened one, or `RESULT: NO_CHANGE <one-sentence \
+explanation>` if there is no defect.
+
 Never include secrets, tokens, or text copied from an advisory in anything you \
 write (commit messages, test names, the pull request, or your explanation)."""
 

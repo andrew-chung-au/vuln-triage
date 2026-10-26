@@ -40,7 +40,7 @@ def make_runner(tmp_path: Path, result: AgentResult):
     api = ResponderApi("http://backend.test", "tok", transport=httpx.MockTransport(backend.handler))
     lines: list[str] = []
     session = FakeSession(result)
-    runner = RealRunner(api, ActionLog(lines.append), MODEL, make_session=lambda m: session)
+    runner = RealRunner(api, ActionLog(lines.append), MODEL, make_session=lambda m, ctx: session)
     return runner, backend, lines, session
 
 
@@ -97,7 +97,7 @@ def test_session_exception_is_a_failed_run(tmp_path: Path):
     backend = FakeBackend()
     api = ResponderApi("http://backend.test", "tok", transport=httpx.MockTransport(backend.handler))
     lines: list[str] = []
-    runner = RealRunner(api, ActionLog(lines.append), MODEL, make_session=lambda m: Boom())
+    runner = RealRunner(api, ActionLog(lines.append), MODEL, make_session=lambda m, ctx: Boom())
     backend.add_finding("42", ["failed"])
     assert runner.run("fp1", "42") == "error"
 

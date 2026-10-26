@@ -120,7 +120,7 @@ async def _read_capped(request: Request, limit: int) -> bytes | None:
 
 def create_app(settings: Settings, *, api: ResponderApi | None = None, git: FakeGit | None = None,
                github: FakeGitHub | None = None, log: ActionLog | None = None,
-               make_session=None) -> FastAPI:
+               make_session=None, checkout_git=None, branches=None) -> FastAPI:
     if settings.mode not in ("stub", "real"):
         raise ConfigError("RESPONDER_MODE must be 'stub' or 'real'")
     log = log or ActionLog()
@@ -130,9 +130,20 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
         # Real mode (task 28d / #221): an agent session may open a fix PR.
         # The SDK sits behind make_session so tests pass a fake one; by default
         # the live session is built lazily (no SDK import until a run happens).
+        from .checkout import SubprocessGit
+        from .github_client import GitHubRestBranches
         from .real_runner import RealRunner, build_default_session
 
-        runner = RealRunner(api, log, settings.model, make_session or (lambda m: build_default_session(m)))
+        def default_session(model, ctx):
+            return build_default_session(model, ctx, api_key=settings.anthropic_api_key,
+                                         github_token=settings.github_token)
+
+        runner = RealRunner(
+            api, log, settings.model, make_session or default_session,
+            git=checkout_git or SubprocessGit(settings.repo, settings.github_token),
+            branches=branches or GitHubRestBranches(settings.repo, settings.github_token),
+            max_turns=settings.max_turns, timeout_seconds=settings.run_timeout_seconds,
+        )
     else:
         git = git or FakeGit()
         github = github or FakeGitHub()
