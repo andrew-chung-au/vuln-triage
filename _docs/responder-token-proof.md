@@ -65,15 +65,29 @@ REMOTE="https://x-access-token:${RESPONDER_GH_TOKEN}@github.com/${REPO}.git"
 FP="proof-$(date +%s)"
 BRANCH="responder/${FP}"
 
+OUT=".scratch/push-proof.out"
 redact() { sed "s#${RESPONDER_GH_TOKEN}#***TOKEN***#g"; }
+# Run a command with its output redacted, keeping the command's REAL exit code
+# in $RC. (Piping straight into redact would report sed's exit code instead.)
+run() {
+  set +e
+  "$@" >"$OUT" 2>&1
+  RC=$?
+  set -e
+  redact <"$OUT"
+}
 
 echo "== Baseline: main SHA before =="
-MAIN_BEFORE=$(git ls-remote "$REMOTE" refs/heads/main | cut -f1 | redact)
+run git ls-remote "$REMOTE" refs/heads/main
+[ "$RC" -eq 0 ] || { echo "FAIL: cannot read the remote (check the token and repo access)"; exit 1; }
+MAIN_BEFORE=$(cut -f1 "$OUT")
+[ -n "$MAIN_BEFORE" ] || { echo "FAIL: no main SHA returned"; exit 1; }
 echo "main before: ${MAIN_BEFORE}"
 
 echo
 echo "== Make a trivial local commit on top of main =="
-git fetch "$REMOTE" main 2>&1 | redact
+run git fetch "$REMOTE" main
+[ "$RC" -eq 0 ] || { echo "FAIL: fetch failed"; exit 1; }
 git checkout -B push-proof FETCH_HEAD
 date > PROOF_SCRATCH.txt
 git add PROOF_SCRATCH.txt
@@ -81,26 +95,43 @@ git -c user.name=proof -c user.email=proof@example.invalid commit -q -m "proof: 
 
 echo
 echo "== Expect REJECTED: push to main =="
-set +e
-git push "$REMOTE" HEAD:main 2>&1 | redact
-PUSH_MAIN_RC=$?
-set -e
+run git push "$REMOTE" HEAD:main
+PUSH_MAIN_RC=$RC
 echo "push-to-main exit code: ${PUSH_MAIN_RC}  (non-zero = rejected, expected)"
+if [ "$PUSH_MAIN_RC" -eq 0 ]; then
+  echo "FAIL: the push to main was ACCEPTED. The token or the protect-main ruleset is wrong."
+  echo "Do not continue: check main now and revert the proof commit through a pull request."
+  exit 1
+fi
 
 echo
 echo "== main unchanged? =="
-MAIN_AFTER=$(git ls-remote "$REMOTE" refs/heads/main | cut -f1 | redact)
+run git ls-remote "$REMOTE" refs/heads/main
+MAIN_AFTER=$(cut -f1 "$OUT")
 echo "main after:  ${MAIN_AFTER}"
-[ "$MAIN_BEFORE" = "$MAIN_AFTER" ] && echo "OK: main SHA unchanged" || echo "WARNING: main SHA changed!"
+if [ "$MAIN_BEFORE" = "$MAIN_AFTER" ]; then
+  echo "OK: main SHA unchanged"
+else
+  echo "FAIL: main SHA changed!"
+  exit 1
+fi
 
 echo
 echo "== Expect SUCCESS: push a responder/<fingerprint> branch =="
-git push "$REMOTE" "HEAD:${BRANCH}" 2>&1 | redact
+run git push "$REMOTE" "HEAD:${BRANCH}"
+if [ "$RC" -ne 0 ]; then
+  echo "FAIL: the responder/<fingerprint> push was rejected (exit ${RC}); the token cannot open the runner's PR branch."
+  exit 1
+fi
 echo "pushed branch: ${BRANCH}"
 
 echo
 echo "== Clean up: delete the test branch =="
-git push "$REMOTE" --delete "${BRANCH}" 2>&1 | redact
+run git push "$REMOTE" --delete "${BRANCH}"
+if [ "$RC" -ne 0 ]; then
+  echo "WARNING: could not delete ${BRANCH} (exit ${RC}); delete it by hand on GitHub."
+  exit 1
+fi
 echo "deleted branch: ${BRANCH}"
 
 echo
