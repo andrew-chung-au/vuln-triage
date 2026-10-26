@@ -244,8 +244,8 @@ no way to read the GitHub Actions record, so these items are "not run yet", not
 
 **C. Decisions left by QA's FAIL on #172 (tasklist F5)**
 
-- [ ] Exemplar assertion in `T-JOURNEY-BE`: add it, or drop the claim.
-- [ ] `P-FLAG-GONE` rule for `VT_FEEDS=fixtures`: build now, or re-scope to task 29 / #161.
+- [ ] Exemplar assertion in `T-JOURNEY-BE`: decided 2026-10-26 to add it. Added (not yet run, no Docker in the authoring sandbox); needs `make test-compose JOB=telemetry` green, with `enable_open_metrics` on the Collector exporter and `--enable-feature=exemplar-storage` on Prometheus (both `VERIFY:`).
+- [x] `P-FLAG-GONE` rule for `VT_FEEDS=fixtures`: decided 2026-10-26 to re-scope to task 29 / #161; docs aligned.
 
 On success, close #223, then close #157 and #172 per tasklist B5.
 

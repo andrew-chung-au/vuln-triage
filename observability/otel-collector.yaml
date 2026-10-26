@@ -52,8 +52,12 @@ processors:
 
 exporters:
   # Prometheus scrapes this endpoint for metrics.
+  # enable_open_metrics serves the OpenMetrics format, the only one that carries
+  # exemplars (the trace id on vt_notifications_total, T-A4 / #172).
+  # VERIFY: option name on contrib 0.111.0.
   prometheus:
     endpoint: 0.0.0.0:8889
+    enable_open_metrics: true
   # Traces to Tempo over OTLP.
   otlp/tempo:
     endpoint: tempo:4317

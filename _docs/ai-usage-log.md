@@ -2651,3 +2651,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): QA #157 PASS with unverified items (comment 6410124690); QA #172 FAIL on two criteria (comment 6410133733). Both QA runs: `make verify` passed (89 frontend, 515 backend, 51 responder). Not run by anyone in this session: the telemetry CI record (run 40188742150), the T-REFUSE negative-check runs, any Docker job. #157 and #172 are not closed. No `make verify` was run after this docs-only commit.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none yet; the owner has not yet decided the exemplar assertion, the `P-FLAG-GONE` scope, or whether to close #157.
+
+- date: 2026-10-26
+- task/issue: #172 follow-up to QA's FAIL (exemplar assertion; `P-FLAG-GONE` re-scope docs)
+- agent role: Engineer (Claude Code subagent)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): orchestrator task relaying the owner's 2026-10-26 decisions (add the exemplar assertion; re-scope the fixtures `P-FLAG-GONE` rule to task 29 / #161). No new key prompt saved.
+- files changed: `tests/compose_telemetry.py` (`prometheus_exemplar_trace_ids`, `wait_for_exemplar_trace_id`), `tests/test_compose_telemetry.py` (exemplar assertion in `T-JOURNEY-BE`), `observability/otel-collector.yaml` (`enable_open_metrics: true` on the Prometheus exporter), `observability/compose.yaml` (`--enable-feature=exemplar-storage`), `_docs/testing.md`, `_docs/tasks.md` (tasks 29 and 40), `_docs/pending-verification.md` (section C), this entry.
+- verification (tests run, reviewer verdict): `make verify` PASS WITH WARNINGS (frontend 89, backend 515, responder 51 passed; the warning is that BASE equals HEAD so only uncommitted changes were compared). Not run: the new assertion and the config change (no Docker here); `make test-compose JOB=telemetry` is needed. No reviewer verdict. The exporter option name, exemplar support for counters in Collector 0.111.0 (read from upstream source via web fetch, not run) and the `query_exemplars` shape are marked `VERIFY:`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
