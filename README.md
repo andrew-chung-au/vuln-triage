@@ -40,9 +40,9 @@ The 12 criteria, what we did for each, and where to see it. Links go straight to
 | 7 | **Containerization** | Frontend + backend + Postgres via Compose, one command | [`compose.yaml`](compose.yaml) · [Quick start](#quick-start) |
 | 8 | **Deployment** | Terraform on AWS, `sslip.io` URL / demo | [Deployment](#deployment--rollback) |
 | 9 | **CI/CD** | CI on every PR; auto-deploy to dev on merge; manual prod promotion | [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) |
-| 10 | **Observability** | Scan→notification journey: metric, trace & log share one trace ID in Grafana; no PII/secrets in telemetry | [Observability](#observability) · [`observability/`](observability/) |
+| 10 | **Observability** | Scan→notification journey: metric, trace & log share one trace ID (the metric link is asserted in CI; a log event and its trace are shown in Grafana); no PII/secrets in telemetry | [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
 | 11 | **Alerting on User Impact** | An undelivered top-priority finding fires exactly one alert | [Alerting & on-call](#alerting--on-call-agent) |
-| 12 | **On-Call Agent** | Planned, not built yet: a responder agent that wakes on the alert and opens a fix PR | [Alerting & on-call](#alerting--on-call-agent) |
+| 12 | **On-Call Agent** | Not built yet (a stub-mode responder exists, with no model): a responder agent that wakes on the alert and opens a fix PR | [Alerting & on-call](#alerting--on-call-agent) |
 
 <!-- PLACEHOLDER: if you record a demo video / drill, link it here and in Deployment:
 ### Demo recording
@@ -73,7 +73,7 @@ The submission path runs end to end: inventory → match → enrich → rank →
 4. **Rank.** Give every finding a deterministic, explainable rank with a reason. No AI.
 5. **Route.** The backend refreshes KEV/EPSS daily on its own scheduler, re-scores findings, and notifies the owner of a new top-priority finding.
 6. **Re-scan.** Close a finding automatically when a re-scan shows the fixed version is in place.
-7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent (planned, not built yet) is meant to wake on it, open a fix PR, and log its actions (promotion to production stays manual). No customer data, advisory text or credentials go to telemetry.
+7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent (stub mode only so far; the real agent is not built yet) is meant to wake on it, open a fix PR, and log its actions (promotion to production stays manual). No customer data, advisory text or credentials go to telemetry.
 
 A **web dashboard** lists findings per asset with status (`open`, `risk accepted`, `fixed`, `withdrawn`) and an audit trail; only a human can set `risk accepted`.
 
@@ -89,7 +89,7 @@ VulnTriage does **not** actively scan networks/applications, does **not** patch 
 - An ownerless asset's findings are still recorded and ranked; the notification is held and the dashboard flags the asset as ownerless.
 - If an OSV/KEV/EPSS feed is unavailable, last-known data is kept and marked stale, the scheduled run retries, and no findings are deleted.
 - Only a human can set `risk accepted`; the audit trail records who, when and the previous value.
-- An undelivered top-priority finding fires **exactly one** alert. Once the responder agent exists (planned), its actions will be logged; production promotion stays manual.
+- An undelivered top-priority finding fires **exactly one** alert. Once the real responder agent exists (only a stub does so far), its actions will be logged; production promotion stays manual.
 
 ---
 
@@ -147,7 +147,7 @@ There is no sign-up, so these are the logins to use. They are **public demo acco
 | Password | `vt-reviewer-demo` |
 | Role | security lead: sees every asset and finding, can register an asset, can accept a risk |
 
-The dashboard lists the registered demo repositories with their scan status and ranked findings. Registering an asset takes any public `https://github.com/<owner>/<repo>` that has a `uv.lock`, `requirements.txt` or `package-lock.json`. The live demo runs on a small server that may be stopped overnight to save cost; if it does not answer, try again later or use the local demo below.
+The dashboard lists the registered demo repositories with their scan status and ranked findings. Registering an asset takes any public `https://github.com/<owner>/<repo>` that has a `uv.lock`, `requirements.txt` or `package-lock.json`. The live demo runs on a small server that could be stopped to save cost (the nightly stop is currently off); if it does not answer, try again later or use the local demo below.
 
 ### Local demo (no Docker, no network, a few minutes)
 
@@ -208,7 +208,7 @@ Captured 2026-10-26 on the local Compose observability stack ([`observability/`]
 | **One `notification.deliver` log event in Loki**, expanded: it carries `trace_id` `42f5161ee955e543e2f5f355e410c247`, `vt_outcome` `sent` and `vt_tier` `P1` | ![Expanded notification.deliver log event with its trace id](docs/images/g9-grafana-trace-scan-loki-expandedlog.png) |
 | **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The visible spans take milliseconds; the trace's overall duration is 29.34 s | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
 
-_Not captured yet: the recorded end-to-end drill and the responder pull request (the responder is not built)._
+_Not captured yet: the recorded end-to-end drill and the responder pull request (the real responder agent is not built; a stub-mode responder exists)._
 
 
 <!-- PLACEHOLDER: link the recorded drill here if you have one:
@@ -259,7 +259,7 @@ The key journey — a scan through to the owner notification — is instrumented
 ## Alerting & on-call agent
 
 - **Alert (US-14).** When a top-priority finding is not delivered within the window, a provisioned Grafana rule fires **exactly one** alert naming the finding — to the owner's email and the responder — from real stored job state (not a simulation). Held jobs are exempt. Rule: [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/).
-- **On-call agent (US-15) — planned, not built yet.** The design: a responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
+- **On-call agent (US-15) — the real agent is not built yet; a stub-mode responder exists (no model, a fake GitHub client).** The design: a responder agent wakes on that alert, reproduces the notification defect, opens a pull request with a fix and a test, and logs its actions; promotion to production stays manual. Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
 
 ---
 

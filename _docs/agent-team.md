@@ -57,7 +57,7 @@ Model ids are copied from [ai-usage-log.md](ai-usage-log.md). Where an entry nam
 | | not stated in the entry | `opencode/muse-spark-1.3-contributor-free` | #1 re-check at `ba39c5c`; #2 at `2dcc89d` (log 2026-10-16) |
 | | Claude Code | `claude-opus-5-5` | #11 at `c8dea47` and re-check at `ed05530` (log 2026-10-17); #14 (#14 summary lines 15 and 36); #12 at `948e332`, same-tool exception ([comment 6243727864](https://github.com/andrew-chung-au/vuln-triage/issues/12#issuecomment-6243727864); log 2026-10-18 "QA checks issue #12") |
 | Reviewer | Claude Code | `claude-opus-5-5` | Stage 1 plan review `ba39c5c`; issues #3 to #9 (log 2026-10-16) |
-| Rubric Evidence Auditor | Claude Code | `claude-opus-5-5` | #11 §7.4 audit `ad5b27d` (log 2026-10-17); "An OpenCode re-audit is planned after Stage 2" |
+| Rubric Evidence Auditor | Claude Code | `claude-opus-5-5` | #11 §7.4 audit `ad5b27d` (log 2026-10-17); re-audited 2026-10-25 (21 of 24 at `234cccf`) and 2026-10-26 (22 of 24, `1f5f8ca`); the owner also ran an OpenCode audit at `8f7a3ee` (21 of 24) |
 
 Muse Spark 1.3's part in #11 is not recorded. The human stated that the model changed during #11 from Muse Spark 1.3 to Space Bunny (log 2026-10-17 "Orchestrator resumes issue #11").
 
