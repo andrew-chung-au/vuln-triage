@@ -12,6 +12,8 @@ The owner asked for the highest-value human verification chunk, then asked why t
 - **#220 grooming and split.** The PM groomed #220 (comment 6412133802) and recommended three issues; the owner chose that. Created #232 (this issue) and #233 (`P-DEMO-BE`, run twice), both under #160, and narrowed #220 to the Compose wiring.
 - **#232.** The repeat-fingerprint guard now forgets a fingerprint when its alert resolves. A `resolved` that arrives while a run is in flight defers the release until the run finishes; a firing that arrives after the deferred resolved cancels the deferred release; a run that errors or raises still releases. QA PASS (6412775111).
 
+- **#234 (follow-up to #232), same session.** QA's risk that no test made the runner raise became #234, narrowed at the owner's request to the raise-path test only; the `_save()` failure modes and restart loss became future-development item X12 in `_docs/roadmap-future.md`. Engineer `6f4792b` added `test_hook_run_that_raises_releases_the_fingerprint_and_clears_in_flight` (the webhook answers 500, the fingerprint is released, in-flight is cleared, a later firing runs). Mutation check done twice (the Engineer in place, QA on a copy): removing the `finally` makes it fail. QA PASS (6413284562), assert clean PASS. Pull request: https://github.com/andrew-chung-au/vuln-triage/pull/235.
+
 ## Files created or modified
 
 - Responder: `responder/vt_responder/guard.py` (`resolve`, `finish`, in-memory in-flight and deferred sets), `responder/vt_responder/app.py` (resolved calls `guard.resolve`; the run is wrapped in try/finally calling `guard.finish`), `responder/tests/test_webhook.py` (new cases).
