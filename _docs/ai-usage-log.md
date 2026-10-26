@@ -2681,3 +2681,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): new tests run on the old code first (2 failed: `"ok\n"` and `finding_id "1\n"` got 200; `"ok\r\n"` and `"\n"` already got 400), then on the fixed code (68 responder passed). `make verify` PASS WITH WARNINGS (89 frontend, 515 backend, 68 responder passed; the warning is that BASE equals HEAD). No reviewer verdict, no QA run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-26
+- task/issue: review of the PR 224 hand-off note on #157/#172; owner verification items regrouped into #225-#229; doc tidy (#225's last section)
+- agent role: Orchestrator (Claude Code cloud session, main session, no subagents)
+- model: not recorded in the repository for this session
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner asked for a review of whether #157 and #172 were still a problem, then to round up the outstanding human verification items into fewer, efficient tickets, then for this doc-tidy PR. No new key prompt saved.
+- files changed: `_docs/testing.md` (the `telemetry` job row and the deferred-case bullets now point to #181 and #182; the `alert` job is recorded as landed), `_docs/pending-verification.md` (#157 and #172 items ticked with their CI runs, #181's decisions recorded, the closed #159 section removed, the QA-unverified section replaced by where each item went), `_docs/human-tasklist.md` (working-ticket index for #225-#229; B3, B5, B9 and F5 updated), `_docs/roadmap.md` (check-in), this entry. GitHub, outside the diff: created #225-#229, commented on #220 and #223, closed #223 as replaced by #225, and added notes to the #161 and #172 issue bodies.
+- verification (tests run, reviewer verdict): facts read from the GitHub Actions record through the GitHub tools: run 40291587781 (PR 224 head, `telemetry` 3 passed with the exemplar assertion, `verify` green), alert run 40226288166 green, check run list for PR 224; `git grep` on `origin/main` for the exemplar call, the `skipif` pair and `alert.yml`. `make verify` result is in the PR. No QA or reviewer verdict.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner chose to create the five tickets and close #223 (2026-10-26).
