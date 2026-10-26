@@ -80,6 +80,13 @@ export VT_BACKEND_URL="http://localhost:8000"
 export VT_COMPOSE_POLL_TIMEOUT="${VT_COMPOSE_POLL_TIMEOUT:-150}"
 
 cleanup() {
+  local rc=$?
+  # In CI, keep the stack's logs from a failed run before the project (and its
+  # logs) is removed; the workflow uploads .scratch/compose-logs-*.txt on failure.
+  if [ "$rc" -ne 0 ] && [ -n "${CI:-}" ]; then
+    mkdir -p .scratch
+    "${COMPOSE[@]}" logs --no-color --timestamps >".scratch/compose-logs-${PROJECT}.txt" 2>&1 || true
+  fi
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
