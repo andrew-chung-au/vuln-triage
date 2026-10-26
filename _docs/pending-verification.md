@@ -33,21 +33,10 @@ started job.
 - **#182** (`I-OWNER-SENDER` MailHog form): follows #160 (task 28).
 - **#198** (`internal error` scan reason): look at the failure reason on the dashboard in a running UI. Running migration `0002` on real Postgres is now **#201** (a `postgres_migration` check in the `postgres-integration` job; Docker-only, verified in CI).
 - **#199** (US-13 dashboard live Grafana check, split from #195 on 2026-10-25): needs a running Grafana; shares the dashboard with #181, so sequence them. #195 is now the static fix and test, done locally.
-- **#172 / #174** (`T-JOURNEY-BE` Loki leg): done in CI (run 40291587781); closing is in #225. The optional #193 held-job case is in #226.
-- **#157** (`T-REFUSE` run and negative check): done in CI; closing is in #225. **#155** (dashboard and MailHog check) and the **#158** Grafana rule spot checks: one live-stack sitting, #226.
+- **#172**, **#174** and **#157** (`T-JOURNEY-BE`, the Loki leg, `T-REFUSE`): done in CI (run 40291587781) and closed (2026-10-26). The optional #193 held-job case is in #226.
+- **#155** (dashboard and MailHog check) and the **#158** Grafana rule spot checks: one live-stack sitting, #226.
 - **#140** (security scan, PR #167): needs network to generate the fixture lockfiles.
 - **Human machine, not cloud:** AWS applies and secrets (#141, `human-tasklist.md` §A).
-
-## #141 — AWS infrastructure + dev environment (task 17)
-
-PR: #151 (merged). Run from the **human's machine** (AWS admin identity) and CI;
-full detail in `_docs/aws-setup.md` and `_docs/terraform-verify.md`.
-
-- [ ] Record the 5 decisions in #141 (region, existing OIDC provider y/n, secrets store, verified SES sender, apply-from-your-machine).
-- [ ] `terraform fmt -check` / `init -backend=false` / `validate` in each module under `terraform/` (also runnable in the push-check image; `_docs/terraform-verify.md` §1).
-- [ ] Apply in order: `bootstrap/` → `deploy-roles/` → `server/`; set the GitHub variables `AWS_DEV_ROLE_ARN` / `AWS_PROD_ROLE_ARN`; record the Elastic IP.
-- [ ] First deploy; confirm `https://dev.<eip>.sslip.io` answers the frontend and the deploy log names one image digest.
-- [ ] Close #141 when the dev URL is up.
 
 ## #140 — light security scan (task 20)
 
@@ -109,42 +98,6 @@ container, so no `observability/compose.yaml` change was needed).
 - [ ] Note: the `alert` Compose test and the `A-*` cases are **task 27 (#159)**; the responder webhook **receiver** is **task 28 (#160)** — both out of scope here.
 - [ ] Close #158 when the metric half is green under `make verify` and the Grafana rule behaviour above is confirmed on the running stack.
 
-## #157 — telemetry Compose test + `make test-compose` selector (task 25)
-
-PR: (this change). #157 ships the `make test-compose` + `JOB` selector (a
-protected `Makefile` change) and the single telemetry case **`T-REFUSE`**; the
-delivery-dependent cases move to #172 (they need the deployed backend container
-to deliver). The `telemetry` job is **Docker-only** — it runs the backend's
-span/log helpers against the `observability/` stack (Collector →
-Prometheus/Tempo/Loki) — so it is authored here and **verified by the human in a
-Codespace / Claude Code cloud / Docker host, or by CI (route 1)**. `make verify`
-in the sandbox is unaffected: the case is `compose`-marked and **deselected** by
-`make test` / `make verify` (so it never runs and never *skips* in the no-Docker
-gate), and `tests/test_marker_hygiene.py` guards against an ordinary test being
-silently tagged `compose`. The harness is `ci/test-compose.sh`; the case is
-`tests/test_compose_telemetry.py` (helpers in `tests/compose_telemetry.py`,
-driver in `tests/compose_driver.py`). **No new dependency; `backend/uv.lock`
-should not change.**
-
-- [x] (Done in CI: run 40188742150 at `fb24904`, `T-REFUSE` passed in the `telemetry` job.) (CI route 1, or Codespace / cloud / Docker host) `make test-compose JOB=telemetry` is green: it brings up the observability stack under the `vt-telemetry` project, runs the backend driver's `refuse` command against it, and passes `T-REFUSE` (the only telemetry case #157 ships). Wire the CI `telemetry` job (added to `.github/workflows/verify.yml`) and confirm it is green on the PR. Expect the `VERIFY:` query shapes to need a fix on the first real run — that is normal.
-- [x] (Done in CI: run 40073386642 on the throwaway branch `check/157-refuse-negative-collector`, `telemetry` red naming the leak; the branch is deleted.) Confirm `T-REFUSE` fails when `owner.email` is added to the Collector allowlist (`observability/otel-collector.yaml`) — the task-25 acceptance negative check.
-- [x] (Done: the Tempo and Loki queries return the expected data in the green `telemetry` runs 40188742150 and 40291587781.) `VERIFY:` the external query shapes marked in `tests/compose_telemetry.py` on the pinned images: Tempo trace-by-id `/api/traces/{id}` and its span-attribute JSON nesting (2.6.1), and Loki `/loki/api/v1/query_range` with the stream selector for OTLP-ingested logs (3.2.1). Adjust the helpers if a shape differs. (Prometheus/MailHog helpers were trimmed out of #157; they return with the delivery cases in #172.)
-- [ ] `VERIFY:` a host pytest/driver process exports OTLP over the published Collector port (`localhost:4317` gRPC) and reaches Tempo/Loki on their published localhost ports. For `T-REFUSE` the driver runs on the host (no containerized delivery needed), so the two Compose projects do not need a shared network here; #172 adds that wiring for the containerized-backend-delivers cases.
-- [ ] Note: the delivery-dependent cases — `T-JOURNEY-BE`, the MailHog forms of `I-OWNER-NOAWS`/`I-OWNER-SENDER`, `T-E6` and `T-DELIVER-TRACE` — are **not** in #157; they need the deployed backend container to deliver and are prerequisite **#172**. The `alert` and `responder` jobs are tasks 27 (#159) and 28 (#160); `make test-compose JOB=alert|responder` exits 3 with a "not implemented in #157" message until those land.
-- [ ] Also under `make verify` (no Docker): `tests/test_marker_hygiene.py` fails if the `compose` marker appears outside the allowed compose modules — the guard that stops an ordinary backend test being silently dropped from `make test`.
-- [ ] Close #157 when `make test-compose JOB=telemetry` (`T-REFUSE`) is green in CI (its acceptance criteria were narrowed to `T-REFUSE` + the selector on 2026-10-24; #172 carries the delivery cases and `T-JOURNEY-BE`). **Met** (QA PASS-with-unverified 6410124690; the unverified items are the CI runs above). Closing is the human's call, in #225.
-
-## #172 — feed-client wiring + VT_FEEDS fixture mode (task 40)
-
-PRs: #175, #178 (merged). Run in **CI (telemetry job) or a Codespace / Claude
-Code cloud / Docker host** (Docker). This is the containerized-backend-delivers
-harness that carries `T-JOURNEY-BE` and the MailHog `I-OWNER-*` forms.
-
-- [x] `make test-compose JOB=telemetry` green with the containerized backend delivering: `T-JOURNEY-BE` asserts one trace id across the Prometheus metric, the Tempo trace **and the Loki log**, and `I-OWNER-NOAWS` lands the owner email in MailHog. **Done in CI:** run 40188742150 at `fb24904`, job `telemetry`, 3 passed in 55.02s (checked from the job log, 2026-10-25).
-- [x] (Done in CI: the same Loki assertion passed in runs 40188742150 and 40291587781; #174 can close, in #225.) **Also confirms #174 and the log half of #177** (US-13 log leg). `T-JOURNEY-BE`'s Loki assertion is the only end-to-end proof that the backend (a) exports logs over OTLP (#174, `observability/logs.py::setup_logging`, commit `61837cb`) and (b) actually calls `log_event` on the scan/delivery journey (#177, `scan.finished` + `notification.deliver`, commit `970cdbf`; #177 was folded into #193 and closed on 2026-10-25). If this Loki leg does **not** carry the journey trace id, re-open #174 or #193 rather than only #172.
-- [ ] Watch for the known flake #185 (Tempo search drops leading zeros → `len(trace_id) == 32` fails ~1/16 runs); normalise the id where it is read from Tempo.
-- [ ] Close #172 when the telemetry CI job is green with `T-JOURNEY-BE` + `I-OWNER-NOAWS`. The criterion is met (run above); closing is the human's call (tasklist B5). **Update 2026-10-26:** QA ran on #172 and FAILed two criteria (the exemplar assertion; the `P-FLAG-GONE` rule), so it is not ready to close until those are decided (tasklist F5). The green run above rests on the orchestrator's CI note, which QA could not independently confirm. **Update 2026-10-26, later:** both decided (tasklist F5). The exemplar assertion was added and passed in the `telemetry` job of PR 224's run 40291587781 (3 passed), so `enable_open_metrics` and `exemplar-storage` work on the pinned images; the `P-FLAG-GONE` rule moved to #161. Next: a QA re-check against that run, then the human closes #172 (#225).
-
 ## #177 / #193 — delivery outcome signals on every branch (Loki leg)
 
 Commit: see the Engineer comment on #193. The span/log/counter for all eight
@@ -182,16 +135,6 @@ clean clone (the app steps use `make`; see `_docs/agent-kit/environments.md`).
 - [ ] **#210:** after a fresh demo run **with the stack already up** (start the stack, delete `backend/.scratch/vulntriage.db`, then `make demo OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 SERVICE_VERSION=local`), the US-13 journey dashboard's first panel ("Notifications (metric) ... running total") shows a line that steps up on **Last 1 hour**. The owner saw no improvement on 2026-10-26, so the cause may be the data: check Prometheus (`http://localhost:9090`, query `vt_notifications_total`). No rows means no notification was recorded after the stack came up; a row with a value means the panel query needs another look.
 - [ ] If the panel still shows nothing while Prometheus has the series, file an issue; the panel query is in `observability/grafana/dashboards/us13-journey.json` and is checked statically by `tests/test_us13_dashboard.py`.
 - [ ] On success: retake `g9-grafana-dashboard.png` (full dashboard, view mode) and `g9-grafana-trace.png` (one `scan.run` trace, single full-width Explore pane), link them in the README, and tick `#155` and `#199` above if the panels also show data there.
-
-## QA unverified items (2026-10-26): #157, #172, #218, #219
-
-Issue [#223](https://github.com/andrew-chung-au/vuln-triage/issues/223) is closed,
-replaced by [#225](https://github.com/andrew-chung-au/vuln-triage/issues/225)
-(2026-10-26). What happened to each group:
-
-- **A (Actions record):** evidence found and listed in #225. Telemetry runs 40188742150 and 40291587781 green (3 passed); negative-check runs 40073386642 and 40073409867 red as intended; the `check/157-refuse-negative-*` branches are already deleted; the `skipif` pair at `tests/test_compose_alert.py:136,179` is the rule-present/absent toggle (each is the exact opposite of the other on `_RULE_ABSENT`). The human confirms in #225.
-- **B (Docker host):** the telemetry run and the GitHub `verify` job with the responder tests are green in run 40291587781 (#225). The container form of `P-PROD-REFUSAL` (#218) and the real Grafana webhook body (#219) need the `responder` job, so they are criteria on #220 (comment 6411652241), not owner steps.
-- **C (decisions):** both decided 2026-10-26. The exemplar assertion is added and green (run 40291587781); the `P-FLAG-GONE` rule moved to #161, and its wording question is in #229.
 
 ---
 
