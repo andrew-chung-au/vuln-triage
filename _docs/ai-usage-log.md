@@ -2611,3 +2611,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): read the GitHub Actions run and job records and job logs for deploy runs #30, #31, #32, #33, #34 and the verify run 40214720806 through the GitHub API; read `deploy.yml`, `deploy-env.sh`, README, tasklist rows A6 to A14 and the session summary. Result 21 of 24 (was 17). NOT verified: the live dev and production URLs (the session proxy refused `*.sslip.io`), the `production` environment's reviewer rule, branch protection, any approver identity. Ran no tests and no Docker. No reviewer verdict.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none
+
+- date: 2026-10-25
+- task/issue: #219 (task 28b of #160): responder service in stub mode (webhook, bearer secret, repeat guard, action log, false-positive path)
+- agent role: Software Engineer (Claude Code cloud session, subagent in a worktree)
+- model: Claude Sonnet 5.5 (`claude-sonnet-5-5`)
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the launching agent's request to implement #219 in a new top-level `responder/` project without touching `backend/` or protected files. No new key prompt saved.
+- files changed: new `responder/` project (`pyproject.toml`, `uv.lock`, `vt_responder/` with config, guard, action log, API client, fakes, stub runner and app, `tests/` with 51 cases); `_docs/testing.md` (new `I-RESP-HOOK-*` rows); this log entry.
+- verification (tests run, reviewer verdict): `uv run --project responder pytest responder/tests` via `.scratch/responder_test.sh`: 51 passed. `make verify` PASS WITH WARNINGS (89 frontend, 496 backend tests, type check; the only warning is that BASE equals HEAD); it does not run the `responder/` tests, because the Makefile targets are protected and not yet added. Not run: any Docker or Compose run, a real Grafana webhook, the real runner (task 28d). No reviewer verdict, no QA run.
+- new dependencies: none new to the project. `responder/uv.lock` pins `fastapi`, `uvicorn`, `httpx` and `pytest` (and `starlette` as a constraint) at the versions in `backend/uv.lock`; other transitive versions were resolved fresh and may differ.
+- human review (what I checked or corrected, or `none`): none

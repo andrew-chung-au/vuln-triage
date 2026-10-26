@@ -175,6 +175,20 @@ Responder credential refused cases from the closed #50 contract (`_docs/api.md` 
 | `I-RESP-UNKNOWN` | An unknown finding id returns `404`; an unknown `findingId` query returns `200 []`; a missing `findingId` or an invalid `state` returns `422`. |
 | `I-RESP-SHAPE` | `ResponderNotificationJob` carries no recipient, owner contact, advisory summary or embedded finding; held states are never returned. |
 
+Responder service cases in stub mode (task 28b, #219; `responder/tests/`, run with `uv run --project responder pytest responder/tests` until the `make` targets are approved; no Docker, network, API key or SDK). The `I-RESP-*` rows above test the backend's side of the contract and are unchanged:
+
+| Case | Expected |
+|---|---|
+| `I-RESP-HOOK-AUTH` | A missing, malformed or wrong bearer token on the webhook gets `401` before the body is read, starts no run, reads no API and claims no fingerprint; the comparison is constant-time; the right secret is accepted. |
+| `I-RESP-HOOK-REPEAT` | The same alert fingerprint twice gives one run; the handled record is a file and survives a restart (a new app over the same file ignores it); a failed run is released so a re-sent alert retries. |
+| `I-RESP-HOOK-RESOLVED` | `status=resolved` starts no run, reads no API and does not claim the fingerprint. |
+| `I-RESP-HOOK-MALFORMED` | Invalid JSON, a wrong shape, or an unsafe fingerprint or `finding_id` gets `400` and no run (one bad alert refuses the whole payload); a body over the size limit, with or without `Content-Length`, gets `413`. |
+| `I-RESP-HOOK-STUBREAD` | In stub mode the run makes only `GET /responder/findings/{id}` and `GET /responder/notification-jobs?findingId=`, each with the responder bearer token. |
+| `I-RESP-HOOK-NOCHANGE` | An alert with no `finding_id`, an unknown finding, or a finding with no failed job logs `no_change` with an explanation of what was checked and why no defect was found; the fake git and GitHub clients record zero calls. |
+| `I-RESP-HOOK-DEFECT` | A finding with a failed job records branch `responder/<fingerprint>`, the intended test and fix files and a pull-request-opened event against the fake GitHub client; the fake git is never asked to push. |
+| `I-RESP-HOOK-LOG` | Every action is one JSON line carrying event, fingerprint, finding id and outcome; planted webhook and API secrets, a wrong presented token and advisory text from the API appear nowhere in the log; the log refuses fields outside its allowlist. |
+| `I-RESP-HOOK-MODE` | `RESPONDER_MODE` unset or not `stub`/`real` is refused at startup, and `real` is refused under `CI`, `DEPLOYMENT_ENVIRONMENT=test` or pytest; `stub` starts with `ANTHROPIC_API_KEY` absent and imports no Agent SDK module; missing secrets are refused. |
+
 ## End-to-end tests
 
 Future: `E-DELIVER` is the full-stack Compose journey (not counted in the submission totals). It is API-driven, not a browser; the UI stays with vitest, and this API-level journey satisfies the Stage 4 bullet.
