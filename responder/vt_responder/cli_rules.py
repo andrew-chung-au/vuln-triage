@@ -12,8 +12,11 @@ code.claude.com/docs/en/permissions on 2026-10-27 and are written up in
 prefix rule; ``Edit(dir/**)`` is anchored at the working directory.
 
 What a CLI rule CANNOT express (so the runner's diff gate, ``publisher.py``, is the control):
-* the arguments of ``git add`` (which path) or ``git commit`` (its flags): ``Bash(git add *)``
-  allows ``git add -A``; the docs call argument-constraining Bash rules fragile;
+* the arguments of ``git add`` and ``git commit`` are constrained only by prefix and substring
+  patterns (an allow per writable root, ``git commit -m *``, deny patterns for flags and protected
+  names; see ``_git_denials``). The docs call argument-constraining Bash rules fragile, so this is
+  best effort: a path the patterns do not know, or a differently cased protected name, is left to
+  the diff gate;
 * a program invoked in another form: ``/usr/bin/curl``, ``sh -c 'curl ...'``,
   ``git -C . push`` are not matched by ``Bash(curl *)`` / ``Bash(git push *)``. They are not
   ALLOWED either (dontAsk denies them), but code the agent writes into a test and ``make test``
@@ -35,7 +38,6 @@ from pathlib import Path
 
 from .policy import (
     CLI_GIT_READ,
-    CLI_GIT_WRITE,
     KNOWN_TOOLS,
     MAKE_TARGETS,
     PROTECTED_COMPONENTS,
@@ -73,13 +75,51 @@ class CliToolRules:
                 "--disallowedTools", ",".join(self.denied)]
 
 
+# Abbreviated on purpose: git accepts unambiguous prefixes of long options. ``--ou`` covers ``--output``
+# (writes a file outside the checkout), ``--no-i`` covers ``--no-index`` (reads outside it), ``--ext`` and
+# ``--text`` cover ``--ext-diff`` / ``--textconv`` (run external programs). ToolPolicy refuses every flag
+# outside its short read list; these are the same refusals for the prefix rules.
+GIT_READ_DENIED_FLAGS = ("--ou", "--no-i", "--ext", "--text")
+# Flags that must not follow ``git commit -m <msg>`` (a flag AFTER the message still matches ``-m *``).
+GIT_COMMIT_DENIED_FLAGS = (
+    "--amend", "--no-verify", "--all", "--allow-empty", "--author", "--date", "--file", "--template", "--fixup",
+    "--squash", "--reuse-message", "--reedit-message", "--no-edit", "--interactive", "--patch", "--include",
+    "--only", "--signoff", "--gpg-sign", "--no-gpg-sign",
+)
+GIT_COMMIT_DENIED_SHORT = "aCcFeinopqsStuvz"
+
+
+def _git_denials() -> list[str]:
+    denied = [f"Bash(git {sub} *{flag}*)" for sub in CLI_GIT_READ for flag in GIT_READ_DENIED_FLAGS]
+    # git add: no flag anywhere (-A, -u, -f, --force, --all), no ".", no "..", no absolute path, and no
+    # protected component, suffix, lockfile or the responder's own code in ANY argument.
+    denied += ["Bash(git add -*)", "Bash(git add * -*)", "Bash(git add .)", "Bash(git add . *)",
+               "Bash(git add * .)", "Bash(git add *..*)", "Bash(git add /*)", "Bash(git add * /*)",
+               "Bash(git add *.env*)", "Bash(git add *Dockerfile*)"]
+    for component in sorted(PROTECTED_COMPONENTS):
+        denied += [f"Bash(git add {component}/*)", f"Bash(git add */{component}/*)", f"Bash(git add * {component}/*)"]
+    for suffix in sorted(PROTECTED_SUFFIXES):
+        denied += [f"Bash(git add *{suffix})", f"Bash(git add *{suffix} *)"]
+    for name in sorted(PROTECTED_LOCKFILES):
+        denied += [f"Bash(git add *{name})", f"Bash(git add *{name} *)"]
+    denied += [f"Bash(git add *{prefix}*)" for prefix in PROTECTED_PATH_PREFIXES]
+    denied += [f"Bash(git commit *{flag}*)" for flag in GIT_COMMIT_DENIED_FLAGS]
+    denied += [f"Bash(git commit * -{letter}*)" for letter in GIT_COMMIT_DENIED_SHORT]
+    return denied
+
+
 def build_rules() -> CliToolRules:
     tools = tuple(sorted(KNOWN_TOOLS))
     allowed: list[str] = [f"Edit({root}/**)" for root in sorted(WRITABLE_ROOTS)]
     allowed += [f"Bash(make {target})" for target in sorted(MAKE_TARGETS)]
-    allowed += [f"Bash(git {sub} *)" for sub in (*CLI_GIT_READ, *CLI_GIT_WRITE)]
+    allowed += [f"Bash(git {sub} *)" for sub in CLI_GIT_READ]
+    # ``git add`` only with a path that starts under a writable root; ``git commit`` only as ``-m <message>``.
+    # Anything else (``-A``, ``.``, ``--force``, ``-am``, ``--amend``) matches no allow rule, so dontAsk refuses it.
+    allowed += [f"Bash(git add {root}/*)" for root in sorted(WRITABLE_ROOTS)]
+    allowed.append("Bash(git commit -m *)")
 
     denied: list[str] = list(DENIED_TOOLS)
+    denied += _git_denials()
     denied += [f"Bash({cmd} *)" for cmd in DENIED_COMMANDS]
     denied += [f"Bash({pattern})" for pattern in DENIED_MAKE]
     denied.append("Bash(*merge*)")  # policy: any command mentioning "merge" is refused

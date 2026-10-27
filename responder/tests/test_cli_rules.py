@@ -31,8 +31,14 @@ def test_the_rules_are_built_from_the_policy_constants():
         assert f"Edit({root}/**)" in RULES.allowed
     for target in policy.MAKE_TARGETS:
         assert f"Bash(make {target})" in RULES.allowed
-    for sub in (*policy.CLI_GIT_READ, *policy.CLI_GIT_WRITE):
+    for sub in policy.CLI_GIT_READ:
         assert f"Bash(git {sub} *)" in RULES.allowed
+    # git add / git commit are NOT allowed with a bare `*` any more (QA finding 2): per writable root, and `-m` only
+    assert set(policy.CLI_GIT_WRITE) == {"add", "commit"}
+    assert "Bash(git add *)" not in RULES.allowed and "Bash(git commit *)" not in RULES.allowed
+    for root in policy.WRITABLE_ROOTS:
+        assert f"Bash(git add {root}/*)" in RULES.allowed
+    assert "Bash(git commit -m *)" in RULES.allowed
     for component in policy.PROTECTED_COMPONENTS:
         assert f"Edit(**/{component}/**)" in RULES.denied
     for suffix in policy.PROTECTED_SUFFIXES:
@@ -91,7 +97,9 @@ def test_the_expected_work_is_allowed_by_the_rules_and_by_the_policy(tmp_path, t
 # The SDK runtime's policy lets the AGENT push its own branch and open a pull request; the CLI runtime's
 # agent has neither (the runner does both), so these are refused by the rules but not by ToolPolicy.
 REFUSED_CLI_ONLY = ["git push origin responder/fp1", "git push -u origin responder/fp1",
-                    "gh pr create --title x --head responder/fp1"]
+                    "gh pr create --title x --head responder/fp1",
+                    # stricter than ToolPolicy (the diff gate is what refuses a lockfile; the `--` form is simply not offered)
+                    "git add backend/uv.lock", "git add frontend/package-lock.json", "git add -- backend/x"]
 
 REFUSED_BASH = [
     "git push", "git push -u origin main", "git push --force origin main",
@@ -100,6 +108,16 @@ REFUSED_BASH = [
     "npm install", "pytest", "pytest backend/tests", "python3 -m pytest", "git merge main", "git checkout -b other",
     "git config user.name x", "git remote add evil https://evil.example/r.git", "git reset --hard", "make dev",
     "make backend-test extra", "rm -rf /", "cat /etc/passwd", "git status && curl https://example.com",
+    # QA finding 2: more than ToolPolicy allows
+    "git diff --output=/tmp/out", "git diff --output=out.txt backend", "git log --output=/tmp/out",
+    "git log --oneline --output=/tmp/out", "git diff --no-index /etc/passwd /etc/hosts", "git diff --no-index backend",
+    "git diff --ext-diff", "git diff --textconv",
+    "git add -A", "git add .", "git add --force .github/x", "git add -f backend/x", "git add -u",
+    "git add backend/x -A", "git add backend/x .github/workflows/x.yml", "git add backend/x ../outside",
+    "git add --all", "git add /etc/passwd",
+    "git commit --amend", "git commit -am 'x'", "git commit -m 'x' --amend", "git commit -m 'x' --no-verify",
+    "git commit --no-verify -m 'x'", "git commit -m 'x' -a", "git commit", "git commit -F msg.txt",
+    "git commit --allow-empty -m 'x'", "git commit -m 'x' --author=a",
     "git status; git push", "git status | sh", "git status $(curl https://example.com)",
     "git status `curl https://example.com`", "git add backend/x > ../out",
     # not matched by a deny rule (other spelling) but not allowed either: dontAsk refuses it
@@ -163,8 +181,10 @@ def test_deny_wins_over_a_matching_allow_rule(tmp_path):
 
 
 def test_what_a_cli_rule_cannot_express_is_left_to_the_diff_gate(tmp_path):
-    """`git add *` cannot constrain the path (the docs call argument rules fragile), so the rules
-    allow `git add .github/x.yml`; the policy refuses it and the runner's diff gate refuses the push
-    (test_publisher.py). Stated here so the gap is visible, not hidden."""
-    assert check(tmp_path, "Bash", "git add .github/workflows/x.yml").allowed
+    """The rules cannot know that `backend/link` is a symlink or what a test run executes: they allow the
+    `git add`; the runner's diff gate refuses the symlink and every protected path (test_publisher.py,
+    test_publisher_real_git.py). Stated here so the gap is visible, not hidden. A protected path as such
+    IS now refused by the rules (REFUSED_BASH)."""
+    assert check(tmp_path, "Bash", "git add backend/link").allowed
+    assert not check(tmp_path, "Bash", "git add .github/workflows/x.yml").allowed
     assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": "git add .github/workflows/x.yml"}).allowed
