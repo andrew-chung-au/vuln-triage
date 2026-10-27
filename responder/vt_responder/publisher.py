@@ -13,8 +13,9 @@ independent of what the CLI enforced, decides whether the commits may leave the 
   otherwise point the push, with the token, somewhere else); hooks and the fsmonitor setting are
   switched off for the runner's own git calls.
 
-Only then does the runner push ``<head sha>:refs/heads/responder/<fingerprint>`` (no force; the token
-reaches this one git call only, through ``git_auth_env``) and open the pull request through the
+Only then does the runner build ONE commit (the checked head's tree on ``base``, its own message: the
+agent's commits are never pushed) and push ``<that sha>:refs/heads/responder/<fingerprint>`` (no force;
+the runner gives the token to this one git call only, through ``git_auth_env``) and open the pull request through the
 REST client, with a title and body the runner composes. Any refusal raises ``PublishError`` with a
 short code; the runner treats it as a failed run (kill, remove the checkout, clean the branch).
 
