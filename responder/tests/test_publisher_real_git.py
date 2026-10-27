@@ -9,6 +9,7 @@ The pull request client is the in-memory fake.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -97,6 +98,21 @@ def test_a_clean_fix_is_pushed_to_the_responder_branch_of_the_local_remote(rig):
     rig.commit({"backend/app/service.py": "fixed\n"})
     assert rig.publish().endswith("/pull/100")
     assert rig.remote_branch() is not None
+
+
+# -- 1a: swapping a directory for a symlink after the last commit ----------------------------------
+
+@pytest.mark.parametrize("committed,directory,reason", [
+    (".github/workflows/evil.yml", ".github", "diff_path_github_dir"),
+    ("responder/vt_responder/policy.py", "responder/vt_responder", "diff_path_guard_module"),
+])
+def test_a_directory_swapped_for_a_symlink_after_the_commit_does_not_change_the_verdict(rig, committed, directory,
+                                                                                         reason):
+    """The gate judges the path the commit contains, never where the working tree would resolve it today."""
+    rig.commit({committed: "evil\n"})
+    shutil.rmtree(rig.work / directory)
+    (rig.work / directory).symlink_to(rig.work / "backend")
+    rig.refused(reason)
 
 
 # -- 1b: intermediate commits ----------------------------------------------------------------------

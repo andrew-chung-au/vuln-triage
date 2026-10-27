@@ -133,7 +133,10 @@ class ToolPolicy:
         real = resolve_in_checkout(self._root, raw)
         if real is None:
             return Decision.deny("path_outside_checkout")
-        parts = real.relative_to(self._root).parts
+        return self._check_write_parts(real.relative_to(self._root).parts)
+
+    def _check_write_parts(self, parts: tuple[str, ...]) -> Decision:
+        """The write rules for a path already split relative to the checkout (no filesystem access)."""
         if not parts:
             return Decision.deny("path_not_allowed")
         lowered_parts = tuple(p.lower() for p in parts)
@@ -149,14 +152,22 @@ class ToolPolicy:
 
     def check_publish_path(self, raw: str) -> Decision:
         """The runner-side gate for a path an agent commit changed (#260): the write rules
-        plus lockfiles and the responder's own code."""
-        decision = self.check_write_path(raw)
+        plus lockfiles and the responder's own code.
+
+        ``raw`` is the path string a commit contains, judged LEXICALLY: no ``realpath``, no filesystem
+        access. A working tree that was changed after the commit (a directory swapped for a symlink)
+        therefore cannot change the verdict. Absolute paths, ``..``, ``.`` and empty components are refused."""
+        if not isinstance(raw, str) or not raw or "\x00" in raw:
+            return Decision.deny("path_outside_checkout")
+        parts = tuple(raw.split("/"))
+        if raw.startswith("/") or any(p in ("", ".", "..") for p in parts):
+            return Decision.deny("path_outside_checkout")
+        decision = self._check_write_parts(parts)
         if not decision.allowed:
             return decision
-        real = resolve_in_checkout(self._root, raw)
-        rel = real.relative_to(self._root).as_posix() if real is not None else ""
-        if real is not None and real.name.lower() in PROTECTED_LOCKFILES:
+        if parts[-1].lower() in PROTECTED_LOCKFILES:
             return Decision.deny("lockfile")
+        rel = "/".join(parts)
         if any((rel.lower() + "/").startswith(prefix) for prefix in PROTECTED_PATH_PREFIXES):
             return Decision.deny("guard_module")
         return Decision.ok()
