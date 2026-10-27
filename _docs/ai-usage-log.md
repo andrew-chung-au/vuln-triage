@@ -2850,3 +2850,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the new B1, S1, S4 and S5 tests were run red against the unchanged code first (27 failed), then green after the fixes; the S2, S3 and S6 tests were written with their fixes and not run red first. `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 314; 0 assertion lines removed). No live SDK call was made, so the env merge was confirmed by reading `subprocess_cli.py` in the installed package, not by a run. No reviewer verdict (QA not yet run).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 headless `claude -p` runtime on the owner's login, runner pushes and opens the PR (amends F2)
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task brief for #260 (verify the real CLI first from `--help` and the docs, then `cli_session`, the CLI environment, rules generated from `policy.py`, the runner-side diff gate, runner push and PR, docs). The owner confirmed decisions 1 to 4 with "go" on the issue. No new key prompt saved.
+- files changed: new `responder/vt_responder/{cli_session,cli_rules,publisher}.py`; `responder/vt_responder/{config,envscrub,policy,prompt,real_runner,app,github_client,fakes}.py`; new `responder/tests/{fake_claude,test_cli_runtime,test_cli_rules,test_publisher}.py`; `responder/tests/test_mode.py` (the SDK cases now name `RESPONDER_RUNTIME=sdk`); `.env.example` (`RESPONDER_RUNTIME`, `RESPONDER_MAX_COMMITS`, empty); new `_docs/responder-cli-runtime.md`; `_docs/{responder-security-limits,drill-runbook,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md` (new); this entry.
+- verification (tests run, reviewer verdict): `make verify BASE=origin/main` (result recorded in the issue comment). The CLI flags were read from `claude --help` and `claude auth status` on the sandbox's `claude` 2.1.311 (no model call, no login created) and from code.claude.com/docs pages; they are not confirmed by a live run, and the `VERIFY:` list is in `_docs/responder-cli-runtime.md`. Every test uses a fake `claude` script; no login, no network and no model call was used. No reviewer verdict (QA not yet run).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
