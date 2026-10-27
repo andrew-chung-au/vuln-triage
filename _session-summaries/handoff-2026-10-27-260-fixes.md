@@ -1,5 +1,10 @@
 # Handoff: fix the four QA failures on #260, then merge (resume here)
 
+## UPDATE (later the same day): the fixes are DONE and pushed; QA re-check is the next step
+- The Engineer fixed all four findings plus the minor items, red-first, in commits `b953eb7`, `f26c80d`, `eeced57`, `616de97`, `250aa97`, `63a907d`, `c8051a2`, `82a187a`, `55c7fd0`. They are on `claude/260-cli-runtime` (draft PR #261) after a fast-forward and a merge of `main` (`27100b7`). `make verify` PASS WITH WARNINGS on the push (frontend 89, backend 561, responder 618); the warning is three rewritten assertions the Engineer explained (git add of a `.github` path is now refused; the pushed sha is now the runner-built squash commit).
+- Engineer comment with what each fix does and does NOT guarantee: #260 comment 6435176585. One squash commit built by the runner is now what is pushed; paths are judged as committed strings; every runner git call sets `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`, `--no-replace-objects`; PR-body paths must match a conservative pattern or the run fails.
+- **Next:** (1) QA re-check in a fresh worktree of only the changed criteria (steps in the section below, step 3), posting a new `QA:` comment on #260; (2) on PASS: `gh`-free path: `mcp__github__update_pull_request` for PR #261 with `draft: false` and the DRAFT/QA FAIL words removed from the title; (3) docs PR off `main` (human-tasklist F2/B14, cloud-tasklist, roadmap row, re-scope #256); (4) the owner merges #261 and runs the drill. The owner asked me to stop asking permission questions for obvious next steps: just do them and report.
+
 Written 2026-10-27 near the end of a session's usage limit. Everything below is committed and pushed; a fresh session needs only this file and the linked comments.
 
 ## Where things stand
