@@ -29,6 +29,7 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -48,7 +49,8 @@ REQUIRED_HELP_FLAGS = (
 # `claude auth status` reports how it would authenticate. Only a subscription login is wanted here:
 # anything else (an API key, a key helper, a cloud provider) may bill something other than the plan.
 PLAN_AUTH_METHODS = ("claude.ai", "oauth_token")
-_MAX_OUTPUT_BYTES = 5_000_000
+_MAX_OUTPUT_BYTES = 5_000_000  # per output file; more is a failed run (checked while the CLI runs, and after)
+_POLL_SECONDS = 0.25
 _MAX_EXPLANATION = 500
 _RESULT_LINE = re.compile(r"^RESULT:\s*(FIXED|FALSE_POSITIVE|ESCALATE)\b[ \t]*(.*)$", re.MULTILINE)
 # VERIFY: exact wording. The errors page lists "You've hit your session/weekly/Opus/Sonnet limit"; the
@@ -94,12 +96,14 @@ def preflight(environ: Mapping[str, str] | None = None, *, binary: str = BINARY,
         raise ConfigError("the 'claude' CLI is too old or not Claude Code: its --help lacks "
                           + (", ".join(missing) or "output"))
     method = ""
+    logged_out = False
     try:
         data = json.loads(status.stdout)
         method = str(data.get("authMethod", "")) if isinstance(data, dict) else ""
+        logged_out = isinstance(data, dict) and data.get("loggedIn") is False
     except ValueError:
         pass
-    if status.returncode != 0:
+    if status.returncode != 0 or logged_out:
         raise ConfigError("the 'claude' CLI is not logged in: run `claude auth login` as the user "
                           "that runs the responder")
     if method not in PLAN_AUTH_METHODS:
@@ -134,7 +138,7 @@ def parse_output(text: str, model: str) -> AgentResult:
         if data.get("subtype") == "error_max_turns":
             return AgentResult("error", served, reason="max_turns")
         return AgentResult("error", served, reason="agent_cli_error")
-    found = _RESULT_LINE.findall(body)
+    found = _RESULT_LINE.findall(_outside_fences(body))
     if not found:
         return AgentResult("error", served, reason="result_line_missing")
     kind, rest = found[-1]
@@ -144,6 +148,28 @@ def parse_output(text: str, model: str) -> AgentResult:
     if kind == "FALSE_POSITIVE":
         return AgentResult("no_change", served, explanation=summary)
     return AgentResult("error", served, reason="agent_escalated")
+
+
+def _too_big(*paths: Path) -> bool:
+    try:
+        return any(p.stat().st_size > _MAX_OUTPUT_BYTES for p in paths)
+    except OSError:
+        return False
+
+
+def _outside_fences(body: str) -> str:
+    """``body`` without fenced code blocks (``` or ~~~; an unclosed fence runs to the end): a ``RESULT:`` line
+    the agent quoted from a file or a log is not its verdict."""
+    kept: list[str] = []
+    fence: str | None = None
+    for line in body.splitlines():
+        marker = re.match(r"\s*(```|~~~)", line)
+        if marker:
+            fence = marker.group(1) if fence is None else (None if fence == marker.group(1) else fence)
+            continue
+        if fence is None:
+            kept.append(line)
+    return "\n".join(kept)
 
 
 def _kill_group(pid: int) -> None:
@@ -198,16 +224,26 @@ class CliSession:
                         proc.stdin.close()
                     except OSError:
                         pass  # the process ended early; its exit code tells the story
-                    try:
-                        code = proc.wait(timeout=max(self._ctx.timeout_seconds, 0.1))
-                    except subprocess.TimeoutExpired:
-                        _kill_group(proc.pid)
-                        proc.wait()
-                        raise TimeoutError("claude -p exceeded the run's time limit") from None
+                    deadline = time.monotonic() + max(self._ctx.timeout_seconds, 0.1)
+                    while True:  # poll, so a run that floods its output is stopped while it runs
+                        try:
+                            code = proc.wait(timeout=max(min(_POLL_SECONDS, deadline - time.monotonic()), 0.01))
+                            break
+                        except subprocess.TimeoutExpired:
+                            if _too_big(stdout_path, stderr_path):
+                                _kill_group(proc.pid)
+                                proc.wait()
+                                return AgentResult("error", self._model, reason="output_too_large")
+                            if time.monotonic() >= deadline:
+                                _kill_group(proc.pid)
+                                proc.wait()
+                                raise TimeoutError("claude -p exceeded the run's time limit") from None
                 finally:
                     if proc.poll() is None:  # any other exit path: do not leave it running
                         _kill_group(proc.pid)
                         proc.wait()
+            if _too_big(stdout_path, stderr_path):  # never a truncated read of a valid result
+                return AgentResult("error", self._model, reason="output_too_large")
             raw = stdout_path.read_bytes()[:_MAX_OUTPUT_BYTES].decode("utf-8", "replace")
             if code != 0:
                 limited = _USAGE_LIMIT.search(raw) or _USAGE_LIMIT.search(

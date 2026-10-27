@@ -46,7 +46,7 @@ if args[:2] == ["auth", "status"]:
     if status["exit"] != 0:
         print(json.dumps({"loggedIn": False, "authMethod": "none"}))
         sys.exit(status["exit"])
-    print(json.dumps({"loggedIn": True, "authMethod": status["method"]}))
+    print(json.dumps({"loggedIn": status.get("logged_in", True), "authMethod": status["method"]}))
     sys.exit(0)
 
 stdin = sys.stdin.read()
@@ -57,6 +57,9 @@ if run["spawn_child"]:
     child = subprocess.Popen(["sleep", "60"])
     entry["child_pid"] = child.pid
 log(entry)
+if run.get("flood"):
+    sys.stdout.write("x" * run["flood"])
+    sys.stdout.flush()
 if run["sleep"]:
     time.sleep(run["sleep"])
 sys.stdout.write(run["stdout"])
@@ -75,14 +78,15 @@ def result_json(text: str, **over: Any) -> str:
 
 def install(tmp_path: Path, *, stdout: str = "", stderr: str = "", exit: int = 0, sleep: float = 0.0,
             spawn_child: bool = False, login_exit: int = 0, method: str = "claude.ai",
-            help_missing: tuple[str, ...] = ()) -> Path:
+            help_missing: tuple[str, ...] = (), logged_in: bool = True, flood: int = 0) -> Path:
     bin_dir = tmp_path / "fakebin"
     bin_dir.mkdir()
     (bin_dir / "config.json").write_text(json.dumps({
         "log": str(tmp_path / "claude-calls.jsonl"),
         "help_flags": list(REQUIRED_HELP_FLAGS), "help_missing": list(help_missing),
-        "status": {"exit": login_exit, "method": method},
-        "run": {"stdout": stdout, "stderr": stderr, "exit": exit, "sleep": sleep, "spawn_child": spawn_child},
+        "status": {"exit": login_exit, "method": method, "logged_in": logged_in},
+        "run": {"stdout": stdout, "stderr": stderr, "exit": exit, "sleep": sleep, "spawn_child": spawn_child,
+                "flood": flood},
     }))
     script = bin_dir / "claude"
     script.write_text(SCRIPT.replace("@PYTHON@", sys.executable))

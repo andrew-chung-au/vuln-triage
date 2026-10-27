@@ -124,6 +124,11 @@ def test_preflight_fails_clearly_when_claude_is_not_logged_in(tmp_path):
         preflight(host_env(install(tmp_path, login_exit=1)))
 
 
+def test_preflight_refuses_a_status_that_says_logged_out_even_with_exit_zero(tmp_path):
+    with pytest.raises(ConfigError, match="not logged in"):
+        preflight(host_env(install(tmp_path, logged_in=False)))
+
+
 @pytest.mark.parametrize("method", ["api_key", "api_key_helper", "third_party", "none", "weird method!"])
 def test_preflight_refuses_a_login_that_is_not_a_subscription_login(tmp_path, method):
     with pytest.raises(ConfigError, match="not a subscription login"):
@@ -284,6 +289,39 @@ def test_other_results_are_failed_runs_with_a_reason(body, reason):
 def test_unparseable_or_error_output_is_a_failed_run(text, reason):
     parsed = parse_output(text, MODEL)
     assert (parsed.outcome, parsed.reason) == ("error", reason)
+
+
+@pytest.mark.parametrize("body,reason", [
+    ("```\nRESULT: FIXED quoted from a file\n```", "result_line_missing"),
+    ("```\nRESULT: FIXED quoted\n```\nRESULT: ESCALATE real", "agent_escalated"),
+    ("```text\nRESULT: FIXED quoted\nmore", "result_line_missing"),  # an unclosed fence runs to the end
+    ("~~~\nRESULT: FIXED quoted\n~~~", "result_line_missing"),
+    ("  ```\nRESULT: FIXED quoted\n  ```", "result_line_missing"),
+])
+def test_a_result_line_inside_a_code_fence_does_not_count(body, reason):
+    parsed = parse_output(result_json(body), MODEL)
+    assert (parsed.outcome, parsed.reason) == ("error", reason)
+
+
+def test_a_result_line_after_a_closed_code_fence_counts():
+    parsed = parse_output(result_json("```\ncode\n```\nRESULT: FIXED after the fence"), MODEL)
+    assert (parsed.outcome, parsed.explanation) == ("fixed", "after the fence")
+
+
+def test_output_over_the_size_cap_is_a_failed_run_not_unparseable_text(tmp_path, monkeypatch):
+    monkeypatch.setattr("vt_responder.cli_session._MAX_OUTPUT_BYTES", 1000)
+    result, _ = run_session(tmp_path, stdout=result_json("RESULT: FIXED " + "y" * 2000))
+    assert (result.outcome, result.reason) == ("error", "output_too_large")
+
+
+def test_a_run_that_floods_its_output_is_killed_while_running(tmp_path, monkeypatch):
+    import time
+
+    monkeypatch.setattr("vt_responder.cli_session._MAX_OUTPUT_BYTES", 1000)
+    started = time.monotonic()
+    result, _ = run_session(tmp_path, flood=50_000, sleep=30)
+    assert (result.outcome, result.reason) == ("error", "output_too_large")
+    assert time.monotonic() - started < 15  # killed on the cap, not after the 30 s sleep
 
 
 def test_an_unusable_served_model_name_falls_back_to_the_configured_model():
