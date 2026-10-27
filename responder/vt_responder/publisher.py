@@ -185,6 +185,10 @@ class SubprocessPublishGit:
 
     def _git(self, checkout: Path, args: list[str], *, with_token: bool = False, ok: tuple[int, ...] = (0,)):
         env = minimal_env(os.environ)
+        # The agent runs with the owner's real HOME and could have written ~/.gitconfig (a url.insteadOf,
+        # http.proxy, http.sslVerify=false ...): neither the global nor the system config is read here.
+        # Everything this module needs is passed with -c below or by git_auth_env.
+        env.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
         if with_token:
             env.update(git_auth_env(self._token))
         # Code the agent ran could have planted a hook or an fsmonitor command in .git/config:
