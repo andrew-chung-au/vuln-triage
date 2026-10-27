@@ -116,6 +116,18 @@ Verification: `make verify BASE=origin/main` PASS (see the final run in the issu
 
 Verification: see the final run in the issue comment. Commands that needed approval: none.
 
+## QA round 6 (2026-10-27, QA comment 6436601748): PASS at `12c5f0c`
+
+QA ran about 110 hand-written and 120,000 generated commands through real bash with a git shim; every allowed `git commit` reached git as `commit -m <one word>`. Mutating the rules made the differential test fail (one redundant `git add -*` deny survives mutation). `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 995). The orchestrator cleaned `.scratch/` (`make clean-scratch`) and pushed the branch; nothing is left running. Commands that needed approval across the QA and orchestrator roles in this round: none.
+
+Outside-criteria risks QA reported (the diff gate is the primary control; for the owner to decide whether to file follow-ups):
+
+1. `git add` allows `?` and `[...]` globs (documented in the module docstring); real bash expands them, so a path could reach a protected file such as `backend/uv.lock`; the diff gate refuses the resulting commit. Refusing `?` and `[` as `*` already is would close it.
+2. `git commit -m ""` is allowed by the rules but refused by `ToolPolicy`; harmless (git aborts).
+3. `~` in `git status|diff|log` expands to `HOME`; read-only.
+4. `git status ; git status` is allowed (each part matches an allow rule).
+5. The real CLI's rule matching (raw versus expanded text, quote handling) is unverified until the first live run (R4, `VERIFY:` list in `_docs/responder-cli-runtime.md`).
+
 ## Interruptions
 
 The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.
@@ -129,5 +141,5 @@ The session hit its usage limit once during finding 1d; the work resumed from th
 
 ## Follow-ups for the next session
 
-- QA on #260; then the owner's first live run (`VERIFY:` list in `_docs/responder-cli-runtime.md`, 11 items) on a fresh Pro allowance, then the recorded drill (task 39 / #163).
+- QA PASSED (round 6); the owner reviews and merges PR #261, then the owner's first live run (`VERIFY:` list in `_docs/responder-cli-runtime.md`, 11 items) on a fresh Pro allowance, then the recorded drill (task 39 / #163).
 - `human-tasklist.md` F2/B14 update in the PR that closes the issue.
