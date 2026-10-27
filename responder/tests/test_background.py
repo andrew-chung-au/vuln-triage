@@ -45,6 +45,7 @@ class Script:
         self.started: list[str] = []
         self.entered = threading.Event()
         self.release = threading.Event()
+        self.branches = None
 
     def block(self, s, fp):
         self.entered.set()
@@ -53,6 +54,8 @@ class Script:
 
     def make(self, model, ctx):
         script = self
+        if script.branches is not None:
+            script.branches.ref = "responder/" + ctx.fingerprint  # the PR "opened" is this run's (#244 S4)
 
         class Session:
             def run(self, system_prompt, task):
@@ -100,6 +103,15 @@ def wait_until(pred, timeout=10.0):
     raise AssertionError("condition not reached in time")
 
 
+class OwnPrBranches(FakeBranchClient):
+    """Any pull request number read back is a PR of the current run, in the configured repo."""
+
+    ref = ""
+
+    def get_pull_request(self, number):
+        return {"head": {"ref": self.ref, "repo": {"full_name": "owner/repo"}}}
+
+
 def real_rig(tmp_path: Path, behaviour=None, **over) -> Rig:
     settings = make_settings(tmp_path, mode="real", model=MODEL, repo="owner/repo",
                              anthropic_api_key="k", github_token="t", **over)
@@ -107,8 +119,9 @@ def real_rig(tmp_path: Path, behaviour=None, **over) -> Rig:
     backend.add_finding("42", ["failed"])
     api = ResponderApi(settings.api_url, settings.api_token, transport=httpx.MockTransport(backend.handler))
     script, lines = Script(behaviour), []
+    script.branches = OwnPrBranches()
     app = create_app(settings, api=api, log=ActionLog(lines.append), make_session=script.make,
-                     checkout_git=FakeCheckoutGit(), branches=FakeBranchClient())
+                     checkout_git=FakeCheckoutGit(), branches=script.branches)
     return Rig(app, TestClient(app), script, lines, settings)
 
 

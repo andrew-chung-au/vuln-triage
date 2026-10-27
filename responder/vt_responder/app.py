@@ -208,7 +208,7 @@ class _BackgroundRuns:
 
 def create_app(settings: Settings, *, api: ResponderApi | None = None, git: FakeGit | None = None,
                github: FakeGitHub | None = None, log: ActionLog | None = None,
-               make_session=None, checkout_git=None, branches=None) -> FastAPI:
+               make_session=None, checkout_git=None, branches=None, installer=None) -> FastAPI:
     if settings.mode not in ("stub", "real"):
         raise ConfigError("RESPONDER_MODE must be 'stub' or 'real'")
     log = log or ActionLog()
@@ -226,12 +226,21 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
             return build_default_session(model, ctx, api_key=settings.anthropic_api_key,
                                          github_token=settings.github_token)
 
+        from .installer import SubprocessInstaller
+
         runner = RealRunner(
             api, log, settings.model, make_session or default_session,
             git=checkout_git or SubprocessGit(settings.repo, settings.github_token),
             branches=branches or GitHubRestBranches(settings.repo, settings.github_token),
             max_turns=settings.max_turns, timeout_seconds=settings.run_timeout_seconds,
             repo=settings.repo,
+            # The real install runs only with the real git seam; an injected (fake) checkout
+            # git gets no installer unless the caller passes one.
+            installer=installer if installer is not None
+            else (SubprocessInstaller() if checkout_git is None else None),
+            secrets=[settings.api_token, settings.webhook_secret, settings.github_token,
+                     settings.anthropic_api_key],
+            max_budget_usd=settings.max_budget_usd,
         )
     else:
         git = git or FakeGit()
