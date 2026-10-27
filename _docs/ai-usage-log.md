@@ -2860,3 +2860,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify BASE=origin/main` (result recorded in the issue comment). The CLI flags were read from `claude --help` and `claude auth status` on the sandbox's `claude` 2.1.311 (no model call, no login created) and from code.claude.com/docs pages; they are not confirmed by a live run, and the `VERIFY:` list is in `_docs/responder-cli-runtime.md`. Every test uses a fake `claude` script; no login, no network and no model call was used. No reviewer verdict (QA not yet run).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 fixes for the four QA failures (comment 6433016307)
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-qa-fixes` from `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief, built on `_session-summaries/handoff-2026-10-27-260-fixes.md` (red test first per finding, one commit per finding, no push). No new key prompt saved.
+- files changed: `responder/vt_responder/{publisher,policy,cli_rules,cli_session}.py`; `responder/tests/{test_publisher_real_git (new),test_publisher,test_cli_rules,test_cli_runtime,fake_claude}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): each finding was reproduced red on the old code and green after the fix; `make responder-test` 618 passed. `make verify` did not pass in the worktree only because `frontend/node_modules` is missing (`make install` not authorized); frontend and backend suites were not run. No QA re-check yet; nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

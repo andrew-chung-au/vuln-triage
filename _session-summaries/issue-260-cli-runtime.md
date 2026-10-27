@@ -50,10 +50,28 @@ none. Proposed Makefile target (protected, not made): `responder-start` / `respo
 - Read-only (propose allowing): `make issue-dump`, `git fetch`, `which claude`, `claude --version`, `claude --help`, `claude auth --help`, `claude auth status` (reads the local login state, no model call), `ls`.
 - Writes to the record (keep asking): `make responder-install` and `make install` (network, git-ignored folders); `make issue-comment`.
 - Risky (propose denying): none.
+- QA-fix session: `make responder-install` in the new worktree (network, git-ignored `responder/.venv`; writes to the record, keep asking; explicitly allowed by the brief); `make issue-comment N=260 FILE=...` (keep asking). `make install` was NOT run (not authorized); `make verify` fails on the missing `frontend/node_modules` only.
+
+## QA fixes (2026-10-27, branch `claude/260-qa-fixes` from `claude/260-cli-runtime` at `1516c7c`)
+
+QA's FAIL (comment 6433016307) had four findings. Each was reproduced RED first with a test (new `responder/tests/test_publisher_real_git.py` drives the real `GitPublisher` and `SubprocessPublishGit` on local temp repositories and a local bare remote; the tool rules with `cli_rules.evaluate`), then fixed, one commit per finding:
+
+- **1d** global git config: every runner git call sets `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_CONFIG_NOSYSTEM=1`. Red: a `url.insteadOf` in `~/.gitconfig` and in the XDG config sent the push to another repository.
+- **1c** `git replace`: every runner git call passes `--no-replace-objects`. Red: the gate accepted a replaced evil commit.
+- **1b** intermediate commits: the runner builds ONE commit (`commit-tree` of the checked head's tree on the cloned base, its own message) and pushes that; the agent's commits are never pushed. Red: three commits including `.github/workflows/evil.yml`, a leak file and an executable were pushed. New `PublishGit.squash`; the fake-git tests now expect the squashed sha.
+- **1a** symlink swap: `check_publish_path` judges the committed path string lexically (no `realpath`, no filesystem). Red: a `.github` or `responder/vt_responder` directory swapped for a symlink after the commit passed.
+- **2** tool rules: `git add` allowed only under a writable root and with no flag, `.`, `..`, absolute or protected name; `git commit` only as `-m`, with trailing flags denied; `--output`, `--no-index`, `--ext-diff`, `--textconv` (and abbreviations) denied for status, diff and log. Red: 31 new refused cases were allowed. Two existing tests were adapted to the narrower allow list (the "built from policy constants" assertion for add/commit; the "cannot express" test, which used to assert that `git add .github/...` was allowed by the rules and now asserts it is refused and keeps `git add backend/link` as the remaining gap).
+- **3** PR body paths: a changed path must match `[A-Za-z0-9._/+=,~-]+` and be at most 200 characters, else the run fails before the push (`diff_path_odd_name`, `diff_path_too_long`).
+- **4** docs: the two overclaiming sentences in `_docs/responder-security-limits.md` softened, what the gate does and does not guarantee stated, the `--output` gap and its closure recorded; `_docs/responder-cli-runtime.md` updated.
+- **Minor, done**: preflight refuses `loggedIn:false` even with exit 0; a `RESULT:` line inside a code fence is ignored; output over 5 MB (checked while the CLI runs, polled every 0.25 s, and after) is a failed run `output_too_large` instead of an unparseable truncated read. Fake `claude` gained `logged_in` and `flood` options.
+
+Existing assertions changed (listed by `make verify` as removed or rewritten): `test_cli_rules.py` `assert check(... "git add .github/workflows/x.yml").allowed` (replaced by its refused opposite, finding 2); `test_cli_runtime.py` and `test_publisher.py` `pushed == [(head sha, BRANCH)]` (now the squashed sha plus an assertion on what was squashed, finding 1b). No assertion was weakened. The `sdk` runtime, stub mode and the other tests are unchanged.
+
+Verification here: `make responder-test` 618 passed. `make verify` could NOT pass in this worktree: `frontend/node_modules` is missing (`make install` needs network and was not authorized for this task), so the frontend test and type-check steps fail for that reason only; whitespace passes; the weakened-test warning is explained above. Backend tests were not run here (unchanged by this work).
 
 ## Interruptions
 
-none.
+The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.
 
 ## Unrelated problems noticed but not fixed
 
