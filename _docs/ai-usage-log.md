@@ -2830,3 +2830,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `python3 -m pytest tests/test_flag_gone.py --noconftest` → 19 passed (the repo `conftest.py` imports `sqlalchemy`, absent in this sandbox, so the suite is run isolated; `make test` runs it normally where deps are installed). `python3 ci/check_flag_gone.py .` → `P-FLAG-GONE: FAIL (103 findings)`, exit 1 — the expected result while the demo defect is present (proposal predicted ~78 on `main`; the tree has grown). No reviewer verdict.
 - new dependencies: none (stdlib + pytest).
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: spec notes from #63 (PR #252), approval records for the #161 `.github/` commits, closing #63 and #229, and the task-list update (this PR)
+- agent role: Orchestrator (Claude Code cloud session)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the owner's instructions in the session: walk through #229, draft the #63 diffs, "approve all" (the three diffs and the `P-FLAG-GONE` wording), review what changed after the owner's `.github/` commits, and bring the task lists up to date. No new key prompt saved.
+- files changed: `_docs/63-spec-notes-proposal.md` (new), `_docs/specs.md` and `_docs/architecture.md` (three owner-approved `HUMAN_APPROVED=1` commits, in PR #252), then `_docs/human-tasklist.md`, `_docs/cloud-tasklist.md`, `_docs/roadmap.md`; this entry.
+- verification (tests run, reviewer verdict): `make verify` PASS at each push (docs only). Approval records were generated from git (`git show`, `git rev-parse`) and posted on #63 (comments 6431115787, 6431117320, 6431117575) and on #161 (6431266406, 6431266643). The status of #222, #233, #241 and the `responder` workflow run was read from the issues and the Actions API, not assumed; the first `responder` CI run was still in progress when last read. The `P-FLAG-GONE` gate has not been exercised in a promotion. No reviewer verdict on the docs edits.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
