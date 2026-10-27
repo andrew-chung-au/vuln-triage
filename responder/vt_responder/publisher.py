@@ -40,6 +40,8 @@ from .policy import BRANCH_PREFIX, ToolPolicy
 MAX_FILES = 40
 MAX_SUMMARY_CHARS = 300
 BASE_BRANCH = "main"
+MAX_PATH_CHARS = 200
+_SAFE_PATH = re.compile(r"[A-Za-z0-9._/+=,~-]+", re.ASCII)
 _SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 REGULAR_MODES = ("100644", "100755")
 _IDENTITY = {
@@ -91,8 +93,12 @@ def check_changes(checkout: Path, fingerprint: str, changes: Iterable[Change]) -
     policy = ToolPolicy(checkout, fingerprint)
     paths: list[str] = []
     for change in changes:
-        if any(ord(c) < 32 or c == "\x7f" for c in change.path):
+        # The path goes into the pull request body as agent-controlled text: only a conservative ASCII set is
+        # published (no backtick, @, brackets, parentheses, <>, space, bidi or other format characters).
+        if not _SAFE_PATH.fullmatch(change.path):
             raise PublishError("diff_path_odd_name")
+        if len(change.path) > MAX_PATH_CHARS:
+            raise PublishError("diff_path_too_long")
         if change.status not in ("A", "M", "D"):
             raise PublishError("diff_type_change" if change.status == "T" else "diff_status_unexpected")
         if "120000" in (change.old_mode, change.new_mode):

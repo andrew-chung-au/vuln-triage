@@ -171,6 +171,29 @@ def test_a_symlink_submodule_type_change_or_unexpected_mode_refuses_the_push(tmp
     refused(tmp_path, FakePublishGit([change]), why)
 
 
+@pytest.mark.parametrize("path,why", [
+    ("backend/x` @octocat `.py", "diff_path_odd_name"),  # breaks out of the code span and @mentions
+    ("backend/@octocat.py", "diff_path_odd_name"),
+    ("backend/[x](https://evil.example).py", "diff_path_odd_name"),  # a link
+    ("backend/a‮b.py", "diff_path_odd_name"),  # bidi override
+    ("backend/a​b.py", "diff_path_odd_name"),
+    ("backend/café.py", "diff_path_odd_name"),  # not ASCII
+    ("backend/a b.py", "diff_path_odd_name"),
+    ("backend/<img src=x>.py", "diff_path_odd_name"),
+    ("backend/a|b.py", "diff_path_odd_name"),
+    ("backend/" + "a" * 300 + ".py", "diff_path_too_long"),
+])
+def test_a_path_that_could_inject_into_the_pull_request_body_refuses_the_push(tmp_path, path, why):
+    """The file list is the one agent-controlled text in the body outside the fenced summary."""
+    refused(tmp_path, FakePublishGit([Change("A", "000000", "100644", path)]), why)
+
+
+def test_a_conservative_path_is_still_published_and_listed(tmp_path):
+    good = "frontend/src/components/Alert-List_2.test.tsx"
+    _, branches = publish(tmp_path, FakePublishGit([Change("M", "100644", "100644", good)]))
+    assert f"- `{good}`" in branches.created[0]["body"]
+
+
 def test_deleting_a_symlink_is_refused(tmp_path):
     refused(tmp_path, FakePublishGit([Change("D", "120000", "000000", "backend/link")]), "diff_symlink")
 
