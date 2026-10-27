@@ -9,9 +9,10 @@ independent of what the CLI enforced, decides whether the commits may leave the 
   type change, no new executable, no mode change) and passes ``ToolPolicy.check_publish_path``: inside
   the writable roots, not ``.github/``, infrastructure, ``.env*``, Terraform, a lockfile, or the
   responder's own code;
-* ``.git/config`` is byte-identical to what it was right after the clone (code the agent runs could
-  otherwise point the push, with the token, somewhere else); hooks and the fsmonitor setting are
-  switched off for the runner's own git calls.
+* ``.git`` is a plain directory without ``commondir``, ``gitdir``, ``config.worktree``, ``info/grafts`` or
+  alternates, and ``.git/config`` is byte-identical to what it was right after the clone, checked at the start
+  and again immediately before the push; every runner git call names ``GIT_DIR`` and ``GIT_COMMON_DIR``
+  explicitly, ignores the global and system config, and switches hooks and fsmonitor off.
 
 Only then does the runner build ONE commit (the checked head's tree on ``base``, its own message: the
 agent's commits are never pushed) and push ``<that sha>:refs/heads/responder/<fingerprint>`` (no force;
@@ -45,6 +46,9 @@ MAX_PATH_CHARS = 200
 _SAFE_PATH = re.compile(r"[A-Za-z0-9._/+=,~-]+", re.ASCII)
 _SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 REGULAR_MODES = ("100644", "100755")
+# Entries a plain clone's .git never has: each makes git read config, objects or history from somewhere else.
+UNEXPECTED_GIT_ENTRIES = ("commondir", "gitdir", "config.worktree", "info/grafts", "objects/info/alternates",
+                          "objects/info/http-alternates")
 _IDENTITY = {
     "GIT_AUTHOR_NAME": "VulnTriage responder", "GIT_COMMITTER_NAME": "VulnTriage responder",
     "GIT_AUTHOR_EMAIL": "responder@users.noreply.github.com",
@@ -183,7 +187,12 @@ class GitPublisher:
             # ONE commit, built by the runner on the cloned base from the tree the gate checked: the agent's own
             # commits (and anything added then removed in them) are never pushed, and the message is ours.
             squashed = git.squash(checkout, snapshot.base, head, title)
+            # Read again immediately before the push: the first check was before the squash.
+            if git.config_digest(checkout) != snapshot.config:
+                raise PublishError("git_config_modified")
             git.push(checkout, squashed, branch)
+        except PublishError:
+            raise
         except Exception:  # noqa: BLE001 - git's stderr may echo a URL; not carried
             raise PublishError("push_failed") from None
         try:
@@ -207,6 +216,10 @@ class SubprocessPublishGit:
         # http.proxy, http.sslVerify=false ...): neither the global nor the system config is read here.
         # Everything this module needs is passed with -c below or by git_auth_env.
         env.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
+        # The checkout's own .git, named explicitly: a planted .git/commondir (or a gitdir: file) cannot make git
+        # read config, refs and objects from another directory.
+        git_dir = str(Path(os.path.abspath(checkout)) / ".git")
+        env.update({"GIT_DIR": git_dir, "GIT_COMMON_DIR": git_dir})
         if with_token:
             env.update(git_auth_env(self._token))
         # Code the agent ran could have planted a hook or an fsmonitor command in .git/config:
@@ -227,7 +240,16 @@ class SubprocessPublishGit:
         return sha
 
     def config_digest(self, checkout: Path) -> str:
-        return hashlib.sha256((checkout / ".git" / "config").read_bytes()).hexdigest()
+        """Digest of ``.git/config``, after refusing a ``.git`` that is not a plain directory of the usual shape."""
+        git_dir = checkout / ".git"
+        if git_dir.is_symlink() or not git_dir.is_dir():
+            raise PublishError("git_dir_unexpected")
+        if any(os.path.lexists(git_dir / name) for name in UNEXPECTED_GIT_ENTRIES):
+            raise PublishError("git_dir_unexpected")
+        config = git_dir / "config"
+        if config.is_symlink() or not config.is_file():
+            raise PublishError("git_dir_unexpected")
+        return hashlib.sha256(config.read_bytes()).hexdigest()
 
     def is_ancestor(self, checkout: Path, base: str, head: str) -> bool:
         return self._git(checkout, ["merge-base", "--is-ancestor", base, head], ok=(0, 1)).returncode == 0
