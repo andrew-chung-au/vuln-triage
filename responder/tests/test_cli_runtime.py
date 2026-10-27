@@ -238,13 +238,17 @@ def test_the_argv_uses_the_verified_flags_and_sends_the_task_on_stdin(tmp_path):
     assert "bypassPermissions" not in argv and "acceptEdits" not in argv
 
 
-def test_the_run_starts_in_the_checkout_in_its_own_process_group_and_leaves_no_file_behind(tmp_path):
+def test_the_run_starts_in_the_checkout_in_its_own_process_group_and_leaves_no_file_behind(tmp_path, monkeypatch):
+    # An isolated temp root, so another process's `vt-cli-*` directory in the shared /tmp cannot fail the test.
+    private_tmp = tmp_path / "private-tmp"
+    private_tmp.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(private_tmp))
     result, ctx = run_session(tmp_path)
     run = calls(tmp_path, "run")[0]
     assert Path(run["cwd"]).resolve() == ctx.checkout.resolve()
     assert run["pgid"] == run["pid"]  # its own group, so killpg never touches the responder
     assert list(ctx.checkout.iterdir()) == []  # the output went to a temp directory, not the checkout
-    assert not list(Path(tempfile.gettempdir()).glob("vt-cli-*"))
+    assert list(private_tmp.iterdir()) == []  # nothing left under the temp root the run used
 
 
 # -- result parsing and failures ---------------------------------------------------------------------
