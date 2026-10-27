@@ -115,6 +115,21 @@ def test_a_directory_swapped_for_a_symlink_after_the_commit_does_not_change_the_
     rig.refused(reason)
 
 
+# -- QA round 3, F2: an untracked .gitmodules must not hide a committed gitlink ----------------------
+
+@pytest.mark.parametrize("hide", [False, True])
+def test_a_committed_gitlink_is_refused_even_with_an_untracked_gitmodules_that_ignores_it(rig, hide):
+    """``git diff`` reads ``.gitmodules`` from the WORKING TREE: ``ignore = all`` there makes a plain diff skip the
+    gitlink (mode 160000). The agent's code can write that file without committing it; the gate must still see it."""
+    git(rig.work, "update-index", "--add", "--cacheinfo", f"160000,{rig.base},backend/sub")
+    write(rig.work, "backend/app/service.py", "fixed\n")
+    git(rig.work, "add", "--", "backend/app/service.py")
+    git(rig.work, "commit", "-m", "agent")
+    if hide:
+        write(rig.work, ".gitmodules", '[submodule "backend/sub"]\n\tpath = backend/sub\n\turl = ./x\n\tignore = all\n')
+    rig.refused("diff_submodule")
+
+
 # -- 1b: intermediate commits ----------------------------------------------------------------------
 
 def test_files_added_then_removed_in_intermediate_commits_never_reach_the_remote(rig):

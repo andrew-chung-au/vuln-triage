@@ -261,8 +261,10 @@ class SubprocessPublishGit:
         return int(self._git(checkout, ["rev-list", "--count", "--merges", f"{base}..{head}"]).stdout.strip())
 
     def changes(self, checkout: Path, base: str, head: str) -> list[Change]:
-        out = self._git(checkout, ["diff", "--raw", "--no-renames", "--no-ext-diff", "--no-textconv", "-z",
-                                   base, head]).stdout
+        # --ignore-submodules=none: git reads ``.gitmodules`` (``ignore = all``) from the WORKING TREE, which the agent's
+        # code can write, and would otherwise leave a committed gitlink (160000) out of the list.
+        out = self._git(checkout, ["diff", "--raw", "--no-renames", "--no-ext-diff", "--no-textconv",
+                                   "--ignore-submodules=none", "-z", base, head]).stdout
         tokens = out.split("\0")
         found: list[Change] = []
         i = 0
