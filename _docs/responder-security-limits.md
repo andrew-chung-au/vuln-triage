@@ -1,6 +1,31 @@
-# Responder security limits (#244)
+# Responder security limits (#244, #260)
 
-Status: written 2026-10-27 for the pre-drill hardening of the real runner (#244, follow-up to #221). Nothing here has been run against a live Agent SDK session.
+Status: written 2026-10-27 for the pre-drill hardening of the real runner (#244, follow-up to #221), and extended the same day for the `cli` runtime (#260). Nothing here has been run against a live Agent SDK session or a live `claude -p` run.
+
+There are two real-mode runtimes (`RESPONDER_RUNTIME`). **`cli` (the default, #260)** is described first; **`sdk` (#221)** is the Agent SDK session that needs `ANTHROPIC_API_KEY`, and everything from "The tool policy is a guardrail" on describes it unless a sentence says otherwise. The SDK runtime stays until the drill has been recorded.
+
+## The `cli` runtime (#260): what bounds the agent now
+
+The agent is a headless `claude -p` on the owner's own Claude login. It **only commits locally**. The runner pushes and opens the pull request. Compared with the SDK runtime this removes the largest exposure: **no GitHub token and no API key is in the agent's environment**, so code the agent runs cannot read a token that can push.
+
+What bounds it, in the order it acts:
+
+1. **No push credential in the agent.** The CLI's environment is built from scratch (`envscrub.cli_env`): allowlisted system names, `HOME`, `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_OAUTH_TOKEN`, the run marker and a git identity. `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`, `RESPONDER_*` and `GIT_CONFIG_*` are absent (a test plants each and asserts the fake CLI never sees it). The git token reaches only the runner's own `git push` call.
+2. **The allow and deny list.** Generated from `policy.py` (`cli_rules.py`): edits in the writable roots, `make backend-test|responder-test|test`, `git status|diff|log|add|commit`; `git push`, `gh`, `curl`, web tools, `make install`, `uv`, `npm`, `pytest`, protected paths denied; `--permission-mode dontAsk` denies the rest. This is a guardrail for a confused agent: what a CLI rule cannot express is listed in `_docs/responder-cli-runtime.md`.
+3. **The runner-side diff gate (`publisher.py`).** Independent of what the CLI enforced, before any push: the head descends from the cloned head, no merge commit, at most `RESPONDER_MAX_COMMITS` commits, every changed file inside the writable roots and off `.github/`, infrastructure, `.env*`, lockfiles and `responder/vt_responder/`, no symlink, submodule, type change, new executable or mode change, and `.git/config` unchanged since the clone. A refusal is a failed run, nothing is pushed. This is the control that does not depend on the CLI behaving.
+4. **The token's scope (#222) and `protect-main`.** The runner's token is a fine-grained, repository-only token and `main` is protected, so even a bug in the gate cannot change `main` without a reviewed merge. The runner pushes only `<sha>:refs/heads/responder/<fp>` and never forces.
+5. **Run limits.** A turn limit (`--max-turns`, `RESPONDER_MAX_TURNS`) and a wall-clock limit. **There is no dollar cap on a plan** (`RESPONDER_MAX_BUDGET_USD` applies to the `sdk` runtime only); a run that hits the plan's usage limit ends as a failed run. The CLI runs in its own process group, killed as a group on the time limit, and again by the per-run marker before the checkout is removed.
+6. **Branch and pull-request checks.** Cleanup deletes only a `responder/<fp>` branch this run created; the opened pull request is read back and must be this run's (S4). The pull request body is composed by the runner; the agent's summary is redacted, shortened to 300 characters and fenced.
+
+What does **not** bound it (known limits of the `cli` runtime):
+
+* **The Claude login is readable by code the agent runs.** `HOME` is the owner's real `HOME` and the CLI needs `~/.claude/.credentials.json` (or `CLAUDE_CONFIG_DIR`). Any process the agent starts (a test, a `conftest.py`, a package script run by `make test`) runs as the same user and can read that file, and so can the files of anything else under `HOME` (`~/.netrc`, `~/.aws`, `~/.config/gh`, SSH keys). The environment scrub covers variables only. A stolen login can use the owner's plan, which is the cost of "no API key" and is accepted for the supervised drill (#260 decision 3, as B13). Run the drill as an account whose `HOME` holds nothing else the agent should not reach, ideally a throwaway one.
+* **The agent's code has network.** Nothing restricts egress; the proxy and CA variables are allowlisted because the CLI needs the network. The container with limited egress (below) is still not built.
+* **Plan usage, not dollars.** A confused or looping agent spends the owner's plan allowance (bounded by the turn and time limits) rather than money. The first run should start with a fresh allowance.
+* **The runner's own git calls read the checkout** the agent wrote to. The gate switches off hooks and fsmonitor, disables external diff drivers and refuses a changed `.git/config`, but it is not a defence against every way a repository can make git run code; the install step (`make install` with network) and the tests the agent writes already run arbitrary code in the same checkout.
+* **The policy modules are protected from the agent, not from a human merge.** The gate refuses a diff touching `responder/vt_responder/`, so an agent cannot weaken the gate through a pull request it opens; a person can still change it.
+
+Owner decisions for this runtime (#260, 2026-10-27, "go"): the `cli` runtime is added beside the SDK one; the runner pushes and opens the PR; the CLI runs on the real login with the API-key variables removed, and the login files under `HOME` being readable by the agent's code is accepted for the supervised drill; the owner runs this on their own plan for their own coursework (the agent that wrote the issue did not read Anthropic's terms for it). Like B13, this acceptance is scoped to the **supervised, recorded drill** and must be revisited before any unattended or production use. These decisions supersede "Owner decision 2" below **for the `cli` runtime** only.
 
 ## The tool policy is a guardrail, not a sandbox
 
@@ -31,6 +56,8 @@ The owner decided to **accept the residual risk** and not run the drill in a con
 This acceptance is scoped to the **supervised, recorded drill on a throwaway demo defect** (task 39). It must be **revisited before any unattended or production use**: the revisit is to run the responder in a container whose network egress is limited to the Anthropic API and GitHub, which would also cover the Anthropic key and git token visibility described above. That container is not built and is out of scope for #244.
 
 ## Owner decision 2: the agent keeps `git push` and `gh pr create` for the drill (2026-10-27)
+
+(Superseded for the `cli` runtime by #260, above: there the runner pushes and the agent holds no git credential. It still describes the `sdk` runtime.)
 
 The owner decided to **keep it as is** for the drill: the agent runs `git push` and `gh pr create` itself through its Bash tool, and the runner does not take them over (#244 comment 6431746364). So the git credential and the Anthropic key stay visible to code the agent runs, as described under "What the scrub does not hide". The limits are the same as for B13: the repository-only fine-grained token (#222), `protect-main`, and the environment scrub for everything else.
 
