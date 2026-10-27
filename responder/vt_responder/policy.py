@@ -41,6 +41,17 @@ PROTECTED_COMPONENTS = frozenset(
 )
 PROTECTED_SUFFIXES = (".tf", ".tfvars", ".tfstate", ".tfplan")
 
+# The CLI runtime (#260): the runner's diff gate also refuses these, and the generated CLI
+# deny rules (cli_rules.py) are built from the same constants. Lockfiles change only by an
+# install the runner controls; the responder's own code is what bounds the agent.
+PROTECTED_LOCKFILES = frozenset(
+    {"package-lock.json", "npm-shrinkwrap.json", "uv.lock", "poetry.lock", "yarn.lock", "pnpm-lock.yaml"}
+)
+PROTECTED_PATH_PREFIXES = ("responder/vt_responder/",)
+# Git subcommands the CLI agent may run (it commits locally; the runner pushes).
+CLI_GIT_READ = ("status", "diff", "log")
+CLI_GIT_WRITE = ("add", "commit")
+
 READ_TOOLS = frozenset({"Read", "Glob", "Grep"})
 WRITE_TOOLS = frozenset({"Edit", "Write", "MultiEdit"})
 KNOWN_TOOLS = READ_TOOLS | WRITE_TOOLS | {"Bash"}
@@ -134,6 +145,20 @@ class ToolPolicy:
             return Decision.deny("infrastructure_path")
         if parts[0] not in WRITABLE_ROOTS:
             return Decision.deny("path_not_allowed")
+        return Decision.ok()
+
+    def check_publish_path(self, raw: str) -> Decision:
+        """The runner-side gate for a path an agent commit changed (#260): the write rules
+        plus lockfiles and the responder's own code."""
+        decision = self.check_write_path(raw)
+        if not decision.allowed:
+            return decision
+        real = resolve_in_checkout(self._root, raw)
+        rel = real.relative_to(self._root).as_posix() if real is not None else ""
+        if real is not None and real.name.lower() in PROTECTED_LOCKFILES:
+            return Decision.deny("lockfile")
+        if any((rel.lower() + "/").startswith(prefix) for prefix in PROTECTED_PATH_PREFIXES):
+            return Decision.deny("guard_module")
         return Decision.ok()
 
     # -- tools -----------------------------------------------------------

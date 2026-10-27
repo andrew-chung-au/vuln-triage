@@ -13,6 +13,12 @@ from pathlib import Path
 from typing import Mapping
 
 MODES = ("stub", "real")
+# Real-mode agent runtime (#260, amends F2). ``cli`` runs headless ``claude -p`` on the owner's own
+# Claude login (no API key; the runner pushes and opens the pull request). ``sdk`` is the Agent SDK
+# session of #221, which needs ANTHROPIC_API_KEY; it stays until the drill has been recorded.
+RUNTIMES = ("cli", "sdk")
+DEFAULT_RUNTIME = "cli"
+DEFAULT_MAX_COMMITS = 3  # commits an agent run may leave before the runner refuses to push
 DEFAULT_MAX_BODY_BYTES = 1_048_576  # 1 MiB; a Grafana alert body is a few KiB.
 DEFAULT_STATE_FILE = "responder-state/handled-fingerprints.json"
 DEFAULT_API_URL = "http://backend:8000"
@@ -81,6 +87,8 @@ class Settings:
     max_concurrent_runs: int = DEFAULT_MAX_CONCURRENT_RUNS
     max_queued_runs: int = DEFAULT_MAX_QUEUED_RUNS
     max_budget_usd: float = DEFAULT_MAX_BUDGET_USD
+    runtime: str = DEFAULT_RUNTIME
+    max_commits: int = DEFAULT_MAX_COMMITS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -104,16 +112,25 @@ class Settings:
                 "RESPONDER_MODEL is required in real mode (F4: pin the model, "
                 f"e.g. {PINNED_MODEL_HINT}); there is no default in code"
             )
+        # An unset or empty value means the default (.env.example lists the name empty); a typo is
+        # refused in every mode so it cannot silently pick a runtime.
+        runtime = env.get("RESPONDER_RUNTIME", "").strip() or DEFAULT_RUNTIME
+        if runtime not in RUNTIMES:
+            raise ConfigError("RESPONDER_RUNTIME must be 'cli' or 'sdk' (or empty for the default)")
         api_key = github_token = repo = ""
+        max_commits = DEFAULT_MAX_COMMITS
         max_turns, timeout = DEFAULT_MAX_TURNS, DEFAULT_RUN_TIMEOUT_SECONDS
         max_failed, max_concurrent, max_queued = (
             DEFAULT_MAX_FAILED_RUNS, DEFAULT_MAX_CONCURRENT_RUNS, DEFAULT_MAX_QUEUED_RUNS)
         if mode == "real":
-            # Both secrets come from the environment only. Messages name the variable,
-            # never a value.
-            api_key = env.get("ANTHROPIC_API_KEY", "").strip()
-            if not api_key:
-                raise ConfigError("ANTHROPIC_API_KEY is required in real mode (environment only)")
+            # Secrets come from the environment only. Messages name the variable, never a value.
+            # The cli runtime runs on the owner's login: it neither needs nor keeps an API key
+            # (an ANTHROPIC_API_KEY in the environment is ignored here and removed from the CLI's).
+            if runtime == "sdk":
+                api_key = env.get("ANTHROPIC_API_KEY", "").strip()
+                if not api_key:
+                    raise ConfigError("ANTHROPIC_API_KEY is required in real mode with RESPONDER_RUNTIME=sdk "
+                                      "(environment only)")
             github_token = env.get("RESPONDER_GITHUB_TOKEN", "").strip()
             if not github_token:
                 raise ConfigError("RESPONDER_GITHUB_TOKEN is required in real mode (environment only)")
@@ -137,6 +154,12 @@ class Settings:
                 raise ConfigError(
                     "RESPONDER_MAX_FAILED_RUNS, RESPONDER_MAX_CONCURRENT_RUNS and "
                     "RESPONDER_MAX_QUEUED_RUNS must be integers") from exc
+            try:
+                max_commits = int(env.get("RESPONDER_MAX_COMMITS", "").strip() or DEFAULT_MAX_COMMITS)
+            except ValueError as exc:
+                raise ConfigError("RESPONDER_MAX_COMMITS must be an integer") from exc
+            if max_commits <= 0:
+                raise ConfigError("RESPONDER_MAX_COMMITS must be positive")
             if max_failed <= 0 or max_concurrent <= 0 or max_queued < 0:
                 raise ConfigError(
                     "RESPONDER_MAX_FAILED_RUNS and RESPONDER_MAX_CONCURRENT_RUNS must be positive, "
@@ -174,4 +197,6 @@ class Settings:
             max_concurrent_runs=max_concurrent,
             max_queued_runs=max_queued,
             max_budget_usd=max_budget,
+            runtime=runtime,
+            max_commits=max_commits,
         )

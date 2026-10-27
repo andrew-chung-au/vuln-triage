@@ -208,7 +208,8 @@ class _BackgroundRuns:
 
 def create_app(settings: Settings, *, api: ResponderApi | None = None, git: FakeGit | None = None,
                github: FakeGitHub | None = None, log: ActionLog | None = None,
-               make_session=None, checkout_git=None, branches=None, installer=None) -> FastAPI:
+               make_session=None, checkout_git=None, branches=None, installer=None,
+               publish_git=None) -> FastAPI:
     if settings.mode not in ("stub", "real"):
         raise ConfigError("RESPONDER_MODE must be 'stub' or 'real'")
     log = log or ActionLog()
@@ -222,16 +223,39 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
         from .github_client import GitHubRestBranches
         from .real_runner import RealRunner, build_default_session
 
-        def default_session(model, ctx):
-            return build_default_session(model, ctx, api_key=settings.anthropic_api_key,
-                                         github_token=settings.github_token)
-
         from .installer import SubprocessInstaller
+
+        branch_client = branches or GitHubRestBranches(settings.repo, settings.github_token)
+        extra: dict[str, Any] = {}
+        if settings.runtime == "cli":
+            # #260: headless `claude -p` on the owner's login. The runner (not the agent) checks the
+            # commits, pushes and opens the PR, so the GitHub token is used only by the runner.
+            from .cli_session import CliSession, preflight
+            from .prompt import CLI_SYSTEM_PROMPT, build_cli_task
+            from .publisher import GitPublisher, SubprocessPublishGit
+
+            if make_session is None:
+                preflight()  # the binary exists and is logged in, or start-up fails with a clear message
+
+            def default_session(model, ctx):
+                return CliSession(model, ctx)
+
+            extra = dict(system_prompt=CLI_SYSTEM_PROMPT, task_builder=build_cli_task)
+            if make_session is None or publish_git is not None:
+                # (an injected fake session without a fake publish git never reports ``fixed``)
+                extra["publisher"] = GitPublisher(
+                    publish_git or SubprocessPublishGit(settings.repo, settings.github_token), branch_client,
+                    secrets=[settings.api_token, settings.webhook_secret, settings.github_token],
+                    max_commits=settings.max_commits)
+        else:
+            def default_session(model, ctx):
+                return build_default_session(model, ctx, api_key=settings.anthropic_api_key,
+                                             github_token=settings.github_token)
 
         runner = RealRunner(
             api, log, settings.model, make_session or default_session,
             git=checkout_git or SubprocessGit(settings.repo, settings.github_token),
-            branches=branches or GitHubRestBranches(settings.repo, settings.github_token),
+            branches=branch_client, **extra,
             max_turns=settings.max_turns, timeout_seconds=settings.run_timeout_seconds,
             repo=settings.repo,
             # The real install runs only with the real git seam; an injected (fake) checkout

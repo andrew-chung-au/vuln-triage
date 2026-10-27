@@ -73,6 +73,19 @@ class GitHubRestBranches:
         body = got.json()
         return body if isinstance(body, dict) else None
 
+    def create_pull_request(self, head: str, base: str, title: str, body: str) -> str:
+        """Open a pull request from ``head`` (a ``responder/<fp>`` branch) into ``base`` and return its
+        URL (#260: the runner opens it, not the agent). VERIFY: ``POST /repos/{repo}/pulls`` with
+        ``title``, ``head``, ``base``, ``body`` answers 201 with ``html_url``."""
+        checked_branch(head)
+        made = self._client.post(f"/repos/{self._repo}/pulls",
+                                 json={"title": title, "head": head, "base": base, "body": body})
+        made.raise_for_status()
+        url = made.json().get("html_url")
+        if not isinstance(url, str) or not url:
+            raise ValueError("no pull request URL in the reply")
+        return url
+
     def delete_branch_if_exists(self, branch: str) -> bool:
         ref = self._ref(branch)
         got = self._client.get(f"/repos/{self._repo}/git/ref/heads/{ref}")

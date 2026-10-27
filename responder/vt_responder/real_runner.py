@@ -16,7 +16,12 @@ limit; an error, timeout or "no change" removes a remote branch only if this run
 created it. The tool policy is a guardrail for a confused agent, not a sandbox
 for a hostile one: see ``_docs/responder-security-limits.md``.
 
-What the session does is defined by ``prompt.SYSTEM_PROMPT``: investigate via
+Two sessions sit behind the seam. ``sdk_session.SdkSession`` (``RESPONDER_RUNTIME=sdk``) opens the pull
+request itself. ``cli_session.CliSession`` (``cli``, the default, #260) runs headless ``claude -p`` and
+only commits locally: it reports ``fixed`` and THIS runner then stops the agent, has ``publisher`` check
+the commits, push and open the pull request, and applies the same S4 read-back as for the SDK.
+
+For the SDK runtime, what the session does is defined by ``prompt.SYSTEM_PROMPT``: investigate via
 the API, reproduce with a failing test, make the smallest fix, open a pull
 request on ``responder/<fingerprint>`` (never push to ``main``), or take the
 US-15 false-positive path and change nothing.
@@ -48,6 +53,7 @@ from .installer import InstallError, Installer
 from .policy import BRANCH_PREFIX, ToolPolicy
 from .procs import kill_marked_processes
 from .prompt import SYSTEM_PROMPT, build_task
+from .publisher import GitPublisher, PublishError, Snapshot
 
 _PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
 _UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
@@ -57,10 +63,13 @@ _UNKNOWN = object()  # the branch could not be inspected before the session: nev
 class AgentResult:
     """What a session reports back. ``model`` is the model the API actually served."""
 
-    outcome: str  # "pull_request_opened" | "no_change" | "error"
+    # "pull_request_opened" | "no_change" | "error", and (CLI runtime, #260) "fixed": the agent
+    # committed locally and the runner must check, push and open the pull request itself.
+    outcome: str
     model: str
     pull_request: str | None = None
     explanation: str | None = None
+    reason: str | None = None  # a short machine code for a failed run (CLI runtime); safe to log
 
 
 @dataclass(frozen=True)
@@ -130,8 +139,15 @@ class RealRunner:
                  timeout_grace_seconds: float = 5.0, repo: str | None = None,
                  installer: Installer | None = None, secrets: Sequence[str] = (),
                  max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
-                 kill_agent: Callable[[str], Any] = kill_marked_processes) -> None:
+                 kill_agent: Callable[[str], Any] = kill_marked_processes,
+                 publisher: GitPublisher | None = None, system_prompt: str = SYSTEM_PROMPT,
+                 task_builder: Callable[[str, str | None], str] = build_task) -> None:
         self._api = api
+        # CLI runtime (#260): with a publisher, a session may report ``fixed`` (committed locally);
+        # the runner then checks the commits, pushes and opens the pull request itself.
+        self._publisher = publisher
+        self._system_prompt = system_prompt
+        self._task_builder = task_builder
         # When set, a reported pull request must be a PR URL in this repository, and
         # (with a branch client) the pull request itself must be this run's (#244 S4).
         self._repo = repo
@@ -213,8 +229,8 @@ class RealRunner:
             return self._no_change(fingerprint, finding_id,
                                    result.explanation or "The agent found no reproducible defect.",
                                    model=served)
-        return self._finish_failed(fingerprint, finding_id, "agent_reported_error", model=served,
-                                   before=before)
+        return self._finish_failed(fingerprint, finding_id, result.reason or "agent_reported_error",
+                                   model=served, before=before)
 
     def _check_pull_request(self, fingerprint: str, url: str) -> str | None:
         """S4: the reported PR must be a pull request of this run. Returns a failure reason or None."""
@@ -255,24 +271,42 @@ class RealRunner:
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
                         return None, "agent_timeout"
+                # The cloned head and .git/config, recorded before the agent can touch either (#260).
+                snapshot = (self._publisher.snapshot(path)
+                            if path is not None and self._publisher is not None else None)
                 policy = ToolPolicy(path, fingerprint) if path is not None else None
                 ctx = RunContext(fingerprint, path, policy, self._log, self._max_turns, remaining,
                                  run_marker=marker, max_budget_usd=self._budget)
                 session = self._make_session(self._model, ctx)
                 try:
-                    return _call_with_timeout(
-                        lambda: session.run(SYSTEM_PROMPT, build_task(fingerprint, finding_id)),
-                        remaining + self._grace), None
+                    result = _call_with_timeout(
+                        lambda: session.run(self._system_prompt, self._task_builder(fingerprint, finding_id)),
+                        remaining + self._grace)
                 finally:
                     self._stop_agent(marker, fingerprint, finding_id)
+                if result.outcome == "fixed":
+                    # The agent is stopped; now the runner's own checks, push and pull request.
+                    result = self._publish(path, snapshot, fingerprint, finding_id, result)
+                return result, None
         except CheckoutError:
             return None, "checkout_failed"
         except InstallError:
             return None, "install_failed"
+        except PublishError as exc:
+            return None, exc.reason
         except (_RunTimeout, TimeoutError):
             return None, "agent_timeout"
         except Exception as exc:  # noqa: BLE001 - any session failure is a failed run
             return None, f"agent_session_failed:{type(exc).__name__}"
+
+    def _publish(self, path: Path | None, snapshot: Snapshot | None, fingerprint: str,
+                 finding_id: str | None, result: AgentResult) -> AgentResult:
+        if self._publisher is None or path is None or snapshot is None:
+            raise PublishError("publisher_missing")
+        url = self._publisher.publish(path, snapshot, fingerprint, finding_id, result.explanation)
+        self._log.emit("branch_pushed", outcome="ok", fingerprint=fingerprint, finding_id=finding_id,
+                       branch=BRANCH_PREFIX + fingerprint)
+        return AgentResult("pull_request_opened", result.model, pull_request=url)
 
     def _stop_agent(self, marker: str, fingerprint: str, finding_id: str | None) -> None:
         try:
