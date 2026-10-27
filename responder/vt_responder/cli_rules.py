@@ -79,23 +79,40 @@ class CliToolRules:
 # (writes a file outside the checkout), ``--no-i`` covers ``--no-index`` (reads outside it), ``--ext`` and
 # ``--text`` cover ``--ext-diff`` / ``--textconv`` (run external programs). ToolPolicy refuses every flag
 # outside its short read list; these are the same refusals for the prefix rules.
-GIT_READ_DENIED_FLAGS = ("--ou", "--no-i", "--ext", "--text")
-# Flags that must not follow ``git commit -m <msg>`` (a flag AFTER the message still matches ``-m *``).
+GIT_READ_DENIED_FLAGS = ("--ou", "--no-i", "--ext", "--text", "--or", "-O")
+# The long options behind those substrings. git also accepts any UNAMBIGUOUS prefix; every prefix of these (three
+# characters or more) is denied as a whole argument too (an ambiguous one is an error in git anyway).
+GIT_READ_DENIED_LONG = ("--output", "--no-index", "--ext-diff", "--textconv", "--orderfile")
+# Quote and backslash split a flag the substring patterns match on (``--o"utput=x"`` runs as ``--output=x``). In a rule,
+# ``\\`` is a literal backslash and ``\*`` a literal asterisk (VERIFY: the CLI's escape syntax; if it differs these
+# rules are inert and ToolPolicy and the diff gate are what refuse the forms).
+GIT_QUOTE_AND_BACKSLASH = ('"', "'", "\\\\")
+# Flags that must not follow ``git commit -m <msg>``. ``git commit * -*`` below refuses any flag after the first
+# argument (including abbreviations such as ``--am`` and ``--no-ver``) and ``--``; these named ones stay as a record.
 GIT_COMMIT_DENIED_FLAGS = (
     "--amend", "--no-verify", "--all", "--allow-empty", "--author", "--date", "--file", "--template", "--fixup",
     "--squash", "--reuse-message", "--reedit-message", "--no-edit", "--interactive", "--patch", "--include",
     "--only", "--signoff", "--gpg-sign", "--no-gpg-sign",
 )
-GIT_COMMIT_DENIED_SHORT = "aCcFeinopqsStuvz"
 
 
 def _git_denials() -> list[str]:
     denied = [f"Bash(git {sub} *{flag}*)" for sub in CLI_GIT_READ for flag in GIT_READ_DENIED_FLAGS]
-    # git add: no flag anywhere (-A, -u, -f, --force, --all), no ".", no "..", no absolute path, and no
+    for sub in CLI_GIT_READ:
+        for option in GIT_READ_DENIED_LONG:
+            for size in range(3, len(option) + 1):
+                prefix = option[:size]
+                denied += [f"Bash(git {sub} *{prefix})", f"Bash(git {sub} *{prefix} *)", f"Bash(git {sub} *{prefix}=*)"]
+        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH]
+    # git add: no flag anywhere (-A, -u, -f, --force, --all, ``--``), no ".", no "..", no absolute path, no quote,
+    # backslash, tab or ``*`` (they split or expand a protected name after the rule has looked at the text), and no
     # protected component, suffix, lockfile or the responder's own code in ANY argument.
     denied += ["Bash(git add -*)", "Bash(git add * -*)", "Bash(git add .)", "Bash(git add . *)",
                "Bash(git add * .)", "Bash(git add *..*)", "Bash(git add /*)", "Bash(git add * /*)",
-               "Bash(git add *.env*)", "Bash(git add *Dockerfile*)"]
+               "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\t*)", "Bash(git add *\\**)"]
+    denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH]
+    for extension in (".yaml", ".yml"):  # the policy's protected ``compose*.yaml`` / ``compose*.yml``
+        denied += [f"Bash(git add *compose*{extension})", f"Bash(git add *compose*{extension} *)"]
     for component in sorted(PROTECTED_COMPONENTS):
         denied += [f"Bash(git add {component}/*)", f"Bash(git add */{component}/*)", f"Bash(git add * {component}/*)"]
     for suffix in sorted(PROTECTED_SUFFIXES):
@@ -104,7 +121,9 @@ def _git_denials() -> list[str]:
         denied += [f"Bash(git add *{name})", f"Bash(git add *{name} *)"]
     denied += [f"Bash(git add *{prefix}*)" for prefix in PROTECTED_PATH_PREFIXES]
     denied += [f"Bash(git commit *{flag}*)" for flag in GIT_COMMIT_DENIED_FLAGS]
-    denied += [f"Bash(git commit * -{letter}*)" for letter in GIT_COMMIT_DENIED_SHORT]
+    # ONE quoted message and nothing else: any flag or ``--`` after the first argument, and any quote followed by a
+    # space (a second argument after the message), are refused. A message containing " -" or "' " is refused too.
+    denied += ["Bash(git commit * -*)", "Bash(git commit *' *)", 'Bash(git commit *" *)']
     return denied
 
 
@@ -116,7 +135,7 @@ def build_rules() -> CliToolRules:
     # ``git add`` only with a path that starts under a writable root; ``git commit`` only as ``-m <message>``.
     # Anything else (``-A``, ``.``, ``--force``, ``-am``, ``--amend``) matches no allow rule, so dontAsk refuses it.
     allowed += [f"Bash(git add {root}/*)" for root in sorted(WRITABLE_ROOTS)]
-    allowed.append("Bash(git commit -m *)")
+    allowed += ["Bash(git commit -m '*')", 'Bash(git commit -m "*")']  # one quoted message (VERIFY: CLI quote handling)
 
     denied: list[str] = list(DENIED_TOOLS)
     denied += _git_denials()
@@ -162,10 +181,23 @@ def _glob(pattern: str) -> "re.Pattern[str]":
 
 @lru_cache(maxsize=None)
 def _command_pattern(pattern: str) -> "re.Pattern[str]":
+    # ``*`` is a wildcard; ``\*`` and ``\\`` are a literal asterisk and backslash (VERIFY: the CLI's escape syntax).
+    parts, i = [""], 0
+    while i < len(pattern):
+        if pattern[i] == "\\" and pattern[i + 1:i + 2] in ("*", "\\"):
+            parts[-1] += pattern[i + 1]
+            i += 2
+        elif pattern[i] == "*":
+            parts.append("")
+            i += 1
+        else:
+            parts[-1] += pattern[i]
+            i += 1
     # "* " at the end also matches the bare command when it is the only wildcard.
-    bare = pattern.endswith(" *") and pattern.count("*") == 1
-    body = ".*".join(re.escape(part) for part in (pattern[:-2] if bare else pattern).split("*"))
-    return re.compile(body + ("(?: .*)?" if bare else ""), re.DOTALL)
+    bare = len(parts) == 2 and parts[1] == "" and parts[0].endswith(" ")
+    if bare:
+        parts = [parts[0][:-1]]
+    return re.compile(".*".join(re.escape(part) for part in parts) + ("(?: .*)?" if bare else ""), re.DOTALL)
 
 
 def _matches(rule: str, tool: str, arg: str) -> bool:

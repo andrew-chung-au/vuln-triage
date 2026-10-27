@@ -38,7 +38,9 @@ def test_the_rules_are_built_from_the_policy_constants():
     assert "Bash(git add *)" not in RULES.allowed and "Bash(git commit *)" not in RULES.allowed
     for root in policy.WRITABLE_ROOTS:
         assert f"Bash(git add {root}/*)" in RULES.allowed
-    assert "Bash(git commit -m *)" in RULES.allowed
+    # `-m` with ONE quoted message (round 2): an unquoted or trailing word cannot be a pathspec argument
+    assert "Bash(git commit -m '*')" in RULES.allowed and 'Bash(git commit -m "*")' in RULES.allowed
+    assert "Bash(git commit -m *)" not in RULES.allowed
     for component in policy.PROTECTED_COMPONENTS:
         assert f"Edit(**/{component}/**)" in RULES.denied
     for suffix in policy.PROTECTED_SUFFIXES:
@@ -99,7 +101,9 @@ def test_the_expected_work_is_allowed_by_the_rules_and_by_the_policy(tmp_path, t
 REFUSED_CLI_ONLY = ["git push origin responder/fp1", "git push -u origin responder/fp1",
                     "gh pr create --title x --head responder/fp1",
                     # stricter than ToolPolicy (the diff gate is what refuses a lockfile; the `--` form is simply not offered)
-                    "git add backend/uv.lock", "git add frontend/package-lock.json", "git add -- backend/x"]
+                    "git add backend/uv.lock", "git add frontend/package-lock.json", "git add -- backend/x",
+                    # broader than the policy's protected names (which start with "compose"), and quoted paths
+                    "git add backend/docker-compose.yml", "git add 'backend/x.py'"]
 
 REFUSED_BASH = [
     "git push", "git push -u origin main", "git push --force origin main",
@@ -126,7 +130,30 @@ REFUSED_BASH = [
 ]
 
 
-@pytest.mark.parametrize("command", REFUSED_BASH)
+# QA round 2, finding 2: forms the first patterns missed. Quote-split and backslash-split long options, every prefix
+# abbreviation of a denied long option, commit flag abbreviations and extra arguments, protected names the patterns did
+# not list, and glob/quote characters in `git add` paths.
+DENIED_LONG_OPTIONS = ("--output", "--no-index", "--ext-diff", "--textconv", "--orderfile")
+ABBREVIATIONS = [f"git {sub} {opt[:n]}{tail}" for sub in policy.CLI_GIT_READ for opt in DENIED_LONG_OPTIONS
+                 for n in range(3, len(opt) + 1) for tail in ("=/tmp/x", " /tmp/x")]
+REFUSED_BASH_ROUND2 = [
+    'git diff --o"utput=/tmp/x"', "git diff --o\\utput=/tmp/x", 'git diff --"output=/tmp/x"', "git diff --'output'=/tmp/x",
+    'git log --format=%B --o"utput=/tmp/x"', 'git status --o"utput=/tmp/x"', "git diff --ou\\tput /tmp/x",
+    "git diff --OUTPUT=/tmp/x", "git diff -O/tmp/x", "git diff -O /tmp/x", "git diff --orderfile=/tmp/x",
+    'git diff --no-"index" backend', 'git log --text"conv"',
+    "git commit --am -m 'x'", "git commit -m 'x' --am", "git commit -m 'x' --amen", "git commit -m 'x' --no-ver",
+    "git commit -m 'x' --al", "git commit -m 'x' --dry-run", "git commit -m 'x' --untracked-files",
+    "git commit -m 'x' -- .github/workflows/x.yml", "git commit -m 'x' -- backend/x.py", "git commit -m 'x' y",
+    "git commit -m x y", "git commit -m 'x' 'y'", 'git commit -m "x" y', "git commit -m 'x' backend/a.py",
+    "git commit -m", "git commit -m 'x' -p", "git commit -m 'x' -",
+    "git add backend/x -- .github/x", "git add tests/compose.yaml",
+    "git add responder/compose.yaml",
+    "git add backend/*", "git add responder/vt_resp*/x.py", "git add backend/x\t.github/workflows/x.yml",
+    'git add backend/.gi"thub"/x.yml', "git add backend/.gi\\thub/x.yml", "git add backend/.gi'thub'/x.yml",
+]
+
+
+@pytest.mark.parametrize("command", [*REFUSED_BASH, *REFUSED_BASH_ROUND2, *ABBREVIATIONS])
 def test_a_refused_command_is_refused_by_the_generated_rules_and_by_the_policy(tmp_path, command):
     assert not check(tmp_path, "Bash", command).allowed
     assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": command}).allowed
@@ -186,5 +213,10 @@ def test_what_a_cli_rule_cannot_express_is_left_to_the_diff_gate(tmp_path):
     test_publisher_real_git.py). Stated here so the gap is visible, not hidden. A protected path as such
     IS now refused by the rules (REFUSED_BASH)."""
     assert check(tmp_path, "Bash", "git add backend/link").allowed
+    # `?` and `[` globs are not refused by the generated rules (a `?` deny rule could be read as a wildcard by the
+    # CLI and refuse every add); ToolPolicy refuses them, and the diff gate is what stops a protected result.
+    for glob in ("git add responder/vt_responde?/x.py", "git add backend/[.]github/x"):
+        assert check(tmp_path, "Bash", glob).allowed
+        assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": glob}).allowed
     assert not check(tmp_path, "Bash", "git add .github/workflows/x.yml").allowed
     assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": "git add .github/workflows/x.yml"}).allowed
