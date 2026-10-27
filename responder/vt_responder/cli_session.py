@@ -161,14 +161,16 @@ def _outside_fences(body: str) -> str:
     """``body`` without fenced code blocks (``` or ~~~; an unclosed fence runs to the end): a ``RESULT:`` line
     the agent quoted from a file or a log is not its verdict."""
     kept: list[str] = []
-    fence: str | None = None
+    fence: str | None = None  # the opening run, e.g. "````" or "~~~"
     for line in body.splitlines():
-        marker = re.match(r"\s*(```|~~~)", line)
-        if marker:
-            fence = marker.group(1) if fence is None else (None if fence == marker.group(1) else fence)
-            continue
         if fence is None:
-            kept.append(line)
+            opening = re.match(r"\s*(`{3,}|~{3,})", line)  # lenient: any indent, any info string (hides more, not less)
+            if opening:
+                fence = opening.group(1)
+            else:
+                kept.append(line)
+        elif re.fullmatch(r"\s*" + fence[0] + "{" + str(len(fence)) + r",}\s*", line):
+            fence = None  # closed by the same character, at least as long, nothing else on the line
     return "\n".join(kept)
 
 
