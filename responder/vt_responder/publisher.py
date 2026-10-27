@@ -193,7 +193,9 @@ class SubprocessPublishGit:
             env.update(git_auth_env(self._token))
         # Code the agent ran could have planted a hook or an fsmonitor command in .git/config:
         # both are switched off for every call the runner makes here.
-        argv = ["git", "-c", f"core.hooksPath={os.devnull}", "-c", "core.fsmonitor=false", *args]
+        # --no-replace-objects: a refs/replace/* ref the agent made must not change what the gate reads.
+        argv = ["git", "--no-replace-objects", "-c", f"core.hooksPath={os.devnull}", "-c", "core.fsmonitor=false",
+                *args]
         done = subprocess.run(argv, cwd=checkout, env=env, stdin=subprocess.DEVNULL, capture_output=True,
                               text=True, timeout=300, check=False)
         if done.returncode not in ok:

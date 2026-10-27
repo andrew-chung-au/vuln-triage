@@ -99,6 +99,20 @@ def test_a_clean_fix_is_pushed_to_the_responder_branch_of_the_local_remote(rig):
     assert rig.remote_branch() is not None
 
 
+# -- 1c: git replace ------------------------------------------------------------------------------
+
+def test_a_replace_ref_cannot_make_the_gate_see_a_benign_tree(rig):
+    """``git replace evil benign`` makes ``git diff base evil`` show the benign tree. The runner reads objects
+    as they are, so the real (protected) change is seen and refused."""
+    evil = rig.commit({".github/workflows/evil.yml": "on: push\n"})
+    git(rig.work, "checkout", "-q", "-b", "benign", rig.base)
+    benign = rig.commit({"backend/app/service.py": "fine\n"})
+    git(rig.work, "checkout", "-q", "main")
+    git(rig.work, "replace", evil, benign)
+    assert git(rig.work, "rev-parse", "HEAD") == evil
+    rig.refused("diff_path_github_dir")
+
+
 # -- 1d: the owner's global git configuration -----------------------------------------------------
 
 def test_the_push_ignores_the_global_git_config_the_agent_could_have_written(rig, tmp_path):
