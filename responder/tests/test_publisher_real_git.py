@@ -99,6 +99,26 @@ def test_a_clean_fix_is_pushed_to_the_responder_branch_of_the_local_remote(rig):
     assert rig.remote_branch() is not None
 
 
+# -- 1b: intermediate commits ----------------------------------------------------------------------
+
+def test_files_added_then_removed_in_intermediate_commits_never_reach_the_remote(rig):
+    """The net diff is clean, so the gate passes it; what is pushed must be ONE commit the runner builds from
+    the checked tree, so the history of the agent's commits (a workflow, a leak, an executable) stays local."""
+    write(rig.work, "backend/run.sh", "#!/bin/sh\n")
+    (rig.work / "backend/run.sh").chmod(0o755)
+    rig.commit({".github/workflows/evil.yml": "on: push\n", "leak.txt": "SECRET-IN-HISTORY\n",
+                "backend/run.sh": "#!/bin/sh\n"}, "one")
+    rig.commit({".github/workflows/evil.yml": None, "leak.txt": None, "backend/run.sh": None}, "two")
+    rig.commit({"backend/app/service.py": "fixed\n"}, "three")
+    rig.publish()
+    assert git(rig.remote, "rev-list", "--count", f"{rig.base}..refs/heads/{BRANCH}") == "1"
+    pushed = git(rig.remote, "rev-list", "--objects", f"{rig.base}..refs/heads/{BRANCH}")
+    assert "evil.yml" not in pushed and "leak.txt" not in pushed and "run.sh" not in pushed
+    assert git(rig.remote, "show", f"refs/heads/{BRANCH}:backend/app/service.py") == "fixed"
+    assert git(rig.remote, "rev-parse", f"refs/heads/{BRANCH}^") == rig.base
+    assert git(rig.remote, "log", "-1", "--format=%an|%s", f"refs/heads/{BRANCH}").startswith("VulnTriage responder|")
+
+
 # -- 1c: git replace ------------------------------------------------------------------------------
 
 def test_a_replace_ref_cannot_make_the_gate_see_a_benign_tree(rig):

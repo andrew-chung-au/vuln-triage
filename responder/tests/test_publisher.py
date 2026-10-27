@@ -22,7 +22,7 @@ from vt_responder.publisher import (
 
 pytestmark = pytest.mark.unit
 
-BASE, NEW = "a" * 40, "b" * 40
+BASE, NEW, SQUASHED = "a" * 40, "b" * 40, "c" * 40
 BRANCH = "responder/fp1"
 GOOD = [Change("M", "100644", "100644", "backend/app/service.py"), Change("A", "000000", "100644", "tests/test_x.py")]
 
@@ -37,6 +37,7 @@ class FakePublishGit:
         self.digests, self.fail, self.fail_push, self.branches, self.new_head = digests, fail, fail_push, branches, new_head
         self.head_calls = self.digest_calls = 0
         self.pushed: list[tuple[str, str]] = []
+        self.squashed: list[tuple[str, str, str]] = []
 
     def _maybe_fail(self, name):
         if self.fail == name:
@@ -63,6 +64,10 @@ class FakePublishGit:
     def changes(self, checkout, base, head):
         self._maybe_fail("changes")
         return self.changes_list
+
+    def squash(self, checkout, base, head, message):
+        self.squashed.append((base, head, message))
+        return SQUASHED
 
     def push(self, checkout, sha, branch):
         if self.fail_push:
@@ -98,7 +103,9 @@ def refused(tmp_path, git, reason, **kw):
 def test_a_good_diff_is_pushed_to_the_responder_branch_and_a_pull_request_is_opened(tmp_path):
     git = FakePublishGit()
     url, branches = publish(tmp_path, git)
-    assert git.pushed == [(NEW, BRANCH)]  # the checked head sha, to responder/<fp>, nothing else
+    # ONE commit the runner built on the base from the checked head (not the agent's own commits), to responder/<fp>
+    assert git.squashed == [(BASE, NEW, "Fix undelivered notification for alert fp1")]
+    assert git.pushed == [(SQUASHED, BRANCH)]
     assert branches.created and branches.created[0]["head"] == BRANCH and branches.created[0]["base"] == "main"
     assert url == "https://github.com/owner/repo/pull/100"
     title, body = branches.created[0]["title"], branches.created[0]["body"]

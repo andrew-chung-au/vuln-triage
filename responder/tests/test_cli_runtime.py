@@ -31,7 +31,7 @@ from vt_responder.real_runner import AgentResult, RealRunner, RunContext
 import fake_claude
 from conftest import FakeBackend, make_settings
 from fake_claude import calls, host_env, install, is_dead, result_json
-from test_publisher import BASE, FakePublishGit
+from test_publisher import BASE, SQUASHED, FakePublishGit
 from test_real_runner_isolation import BRANCH, MODEL, FakeCheckoutGit, events
 
 pytestmark = pytest.mark.unit
@@ -359,7 +359,7 @@ def runner_rig(tmp_path, *, stdout=RESULT_FIXED, publish_git=None, branches=None
 def test_fixed_the_runner_pushes_and_opens_the_pull_request_and_applies_the_s4_check(tmp_path):
     runner, lines, branches, pgit, _ = runner_rig(tmp_path)
     assert runner.run("fp1", "42") == "pull_request_opened"
-    assert pgit.pushed == [("b" * 40, BRANCH)]
+    assert pgit.pushed == [(SQUASHED, BRANCH)]  # the runner's one commit, not the agent's head
     assert branches.created and branches.created[0]["head"] == BRANCH
     opened = [e for e in events(lines) if e["event"] == "pull_request_opened"]
     assert opened and opened[0]["pull_request"] == "https://github.com/owner/repo/pull/100"

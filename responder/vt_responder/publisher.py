@@ -42,6 +42,11 @@ MAX_SUMMARY_CHARS = 300
 BASE_BRANCH = "main"
 _SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 REGULAR_MODES = ("100644", "100755")
+_IDENTITY = {
+    "GIT_AUTHOR_NAME": "VulnTriage responder", "GIT_COMMITTER_NAME": "VulnTriage responder",
+    "GIT_AUTHOR_EMAIL": "responder@users.noreply.github.com",
+    "GIT_COMMITTER_EMAIL": "responder@users.noreply.github.com",
+}
 
 
 class PublishError(RuntimeError):
@@ -73,6 +78,7 @@ class PublishGit(Protocol):
     def commit_count(self, checkout: Path, base: str, head: str) -> int: ...
     def merge_count(self, checkout: Path, base: str, head: str) -> int: ...
     def changes(self, checkout: Path, base: str, head: str) -> list[Change]: ...
+    def squash(self, checkout: Path, base: str, head: str, message: str) -> str: ...
     def push(self, checkout: Path, sha: str, branch: str) -> None: ...
 
 
@@ -165,11 +171,14 @@ class GitPublisher:
         except Exception:  # noqa: BLE001 - a git failure while checking is a refusal, never a push
             raise PublishError("diff_check_failed") from None
         branch = BRANCH_PREFIX + fingerprint
+        title, body = compose_pull_request(fingerprint, finding_id, files, summary, self._secrets)
         try:
-            git.push(checkout, head, branch)
+            # ONE commit, built by the runner on the cloned base from the tree the gate checked: the agent's own
+            # commits (and anything added then removed in them) are never pushed, and the message is ours.
+            squashed = git.squash(checkout, snapshot.base, head, title)
+            git.push(checkout, squashed, branch)
         except Exception:  # noqa: BLE001 - git's stderr may echo a URL; not carried
             raise PublishError("push_failed") from None
-        title, body = compose_pull_request(fingerprint, finding_id, files, summary, self._secrets)
         try:
             return self._pulls.create_pull_request(branch, BASE_BRANCH, title, body)
         except Exception:  # noqa: BLE001
@@ -183,8 +192,10 @@ class SubprocessPublishGit:
         self._url = f"https://github.com/{repo}.git"
         self._token = token
 
-    def _git(self, checkout: Path, args: list[str], *, with_token: bool = False, ok: tuple[int, ...] = (0,)):
+    def _git(self, checkout: Path, args: list[str], *, with_token: bool = False, ok: tuple[int, ...] = (0,),
+             extra_env: dict[str, str] | None = None):
         env = minimal_env(os.environ)
+        env.update(extra_env or {})
         # The agent runs with the owner's real HOME and could have written ~/.gitconfig (a url.insteadOf,
         # http.proxy, http.sslVerify=false ...): neither the global nor the system config is read here.
         # Everything this module needs is passed with -c below or by git_auth_env.
@@ -231,6 +242,18 @@ class SubprocessPublishGit:
             found.append(Change(status[:1], old_mode, new_mode, tokens[i + 1]))
             i += 2
         return found
+
+    def squash(self, checkout: Path, base: str, head: str, message: str) -> str:
+        """One new commit: ``head``'s tree, parent ``base``, the runner's identity and message."""
+        if not _SHA.fullmatch(base) or not _SHA.fullmatch(head):
+            raise RuntimeError("refused")
+        tree = self._git(checkout, ["rev-parse", f"{head}^{{tree}}"]).stdout.strip()
+        if not _SHA.fullmatch(tree):
+            raise RuntimeError("unexpected tree")
+        sha = self._git(checkout, ["commit-tree", tree, "-p", base, "-m", message], extra_env=_IDENTITY).stdout.strip()
+        if not _SHA.fullmatch(sha):
+            raise RuntimeError("unexpected commit")
+        return sha
 
     def push(self, checkout: Path, sha: str, branch: str) -> None:
         if not _SHA.fullmatch(sha) or not branch.startswith(BRANCH_PREFIX):
