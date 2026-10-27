@@ -514,7 +514,7 @@ Tier A uses no Tier B or C component: it runs on SQLite with no Docker, Collecto
 - (A32) The telemetry attribute allowlist.
 - (A33) US-14 window 30 minutes, 1-minute evaluation.
 - (A34) The responder runs as a container in local Compose for submission (AWS only as future-development item X3); branch `responder/<fingerprint>`; failed jobs are retried each poll for up to 7 days.
-- (A35) The demo defect is switched by `VT_DEMO_DEFECT`, refused in production. "Production" is `DEPLOYMENT_ENVIRONMENT` not explicitly `dev`/`test` (the same fail-closed test as the `VT_FEEDS=fixtures` refusal, A42; closes T-A8).
+- (A35) The demo defect is switched by `VT_DEMO_DEFECT`, refused in production. "Production" is `DEPLOYMENT_ENVIRONMENT` not explicitly `dev`/`test` (the same fail-closed test as the `VT_FEEDS=fixtures` refusal, A42; closes T-A8). The demo defect is removed in a cleanup commit/PR before the first production promotion; a test proves the production startup refusal while it exists, and a later check (`P-FLAG-GONE`, task 29) proves the code path and variable are gone.
 - (A36) One EC2 server runs dev and prod as two Compose projects behind two `sslip.io` hostnames; Postgres in a container on EBS.
 - (A37) Budget amount set by the human; nightly stop of the server with an off switch; 24-hour catch-up at backend start; 7-day telemetry retention.
 - (A38) The pilot seed list is a data file in the repository, registered through the API.
