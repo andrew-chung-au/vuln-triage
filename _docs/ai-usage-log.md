@@ -2850,3 +2850,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the new B1, S1, S4 and S5 tests were run red against the unchanged code first (27 failed), then green after the fixes; the S2, S3 and S6 tests were written with their fixes and not run red first. `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 314; 0 assertion lines removed). No live SDK call was made, so the env merge was confirmed by reading `subprocess_cli.py` in the installed package, not by a run. No reviewer verdict (QA not yet run).
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26 - docs/227-a11-nightly-stop-cost-tag
+- task/issue: #227 (AWS console session, task A11), branch `docs/227-a11-nightly-stop-cost-tag`
+- agent role: Engineer (Kiro)
+- model: Auto
+- prompt or instruction given (or link to a file in `_docs/prompts/`): owner working #227 at the AWS console, confirming the nightly-stop decision and the cost-allocation tag. No new key prompt saved.
+- files changed: `_docs/human-tasklist.md` (A11 → done; A1 account note corrected from "member account" to "management account"; "Last updated" line), this entry.
+- verification (tests run, reviewer verdict): none — documentation-only edit recording the owner's console actions. The AWS state itself is the owner's; no agent has AWS access and none was claimed. `git diff --check` clean.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner confirmed at the console (management account) that the nightly stop is set (04:00 UTC default, off for grading) and the `project` cost-allocation tag is activated and applied; recorded as stated.
