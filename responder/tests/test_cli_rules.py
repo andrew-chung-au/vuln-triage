@@ -167,6 +167,39 @@ REFUSED_BASH_ROUND3 = [
 ]
 
 
+# QA round 4, N1: bash splits words on a TAB as well as a space, so the space-based `git commit` denials
+# (`* -*`, a quote then a space) did not see `git commit -m "x"<TAB>-a<TAB>-m "y"`; real git ran `-a`.
+# These smuggle an argument or flag by tab: refused by the rules AND by ToolPolicy (which splits like the shell).
+TAB_SMUGGLED = [
+    'git commit -m "x"\t-a\t-m "y"', 'git commit -m "x"\t-a "y"', "git commit -m 'x'\t-a", 'git commit\t-a -m "x"',
+    'git commit -m "x"\t--amend', 'git commit -m "x"\ty', 'git commit -m "x"\t-n', 'git commit -m "x"\t-s',
+    'git commit -m "x"\t-F\tmsg.txt', 'git commit -m "x"\t-C\tHEAD',
+    "git add backend/x\t-A", "git add backend/x\t.github/y", "git add backend/x\t-f",
+    "git status\t--output=/x", "git diff\t--output=/x", "git diff --stat\t--no-index\ta\tb", "git log\t-1\t--output=/x",
+    "git diff\t-O/x", "git log -1\t--ext-diff",
+]
+# Tab elsewhere, and the other ASCII whitespace controls. Bash does not split words on VT, FF or CR (only on space,
+# tab and newline), so these are literal characters, harmless to git; the rules refuse them anyway for every allowed
+# git command. ToolPolicy is not asserted: it treats a tab between words as the shell does (a legitimate commit).
+CONTROL_WHITESPACE = [
+    'git commit\t-m "x"', 'git commit -m\t"x"', 'git commit -m "x\ty"', "git add\tbackend/x", "git status\t--short",
+    *[f'git commit -m "x"{c}-a{c}-m "y"' for c in ("\x0b", "\x0c", "\r")],
+    *[f"git diff{c}--output=/x" for c in ("\x0b", "\x0c", "\r")],
+    *[f"git add backend/x{c}-A" for c in ("\x0b", "\x0c", "\r")],
+]
+
+
+@pytest.mark.parametrize("command", TAB_SMUGGLED)
+def test_a_tab_cannot_smuggle_an_argument_past_the_git_rules(tmp_path, command):
+    assert not check(tmp_path, "Bash", command).allowed
+    assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": command}).allowed
+
+
+@pytest.mark.parametrize("command", CONTROL_WHITESPACE)
+def test_the_git_rules_refuse_tab_and_the_ascii_whitespace_controls(tmp_path, command):
+    assert not check(tmp_path, "Bash", command).allowed
+
+
 @pytest.mark.parametrize("command", [*REFUSED_BASH, *REFUSED_BASH_ROUND2, *REFUSED_BASH_ROUND3, *ABBREVIATIONS])
 def test_a_refused_command_is_refused_by_the_generated_rules_and_by_the_policy(tmp_path, command):
     assert not check(tmp_path, "Bash", command).allowed

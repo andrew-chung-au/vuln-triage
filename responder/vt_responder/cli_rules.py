@@ -95,6 +95,11 @@ GIT_QUOTE_AND_BACKSLASH = ('"', "'", "\\\\")
 # backticks are handled separately: the inner command is checked as a subcommand. ``?``, ``[`` and ``]`` are not
 # refused here (a ``?`` in a rule may be read as a wildcard); see the module docstring.
 GIT_EXPANSION = ("$", "{", "}")
+# Bash splits words on a tab as well as a space, and the space-based patterns (``git commit * -*``, a quote then a space)
+# do not see a flag after a tab (``-m "x"<TAB>-a`` ran ``-a``; QA round 4). Tab is refused in every argument of the allowed
+# git commands, and so are vertical tab, form feed and carriage return (not word separators in bash, but control characters
+# no command here needs). Newline is a command separator in ``evaluate``. Unicode spaces are not separators in bash.
+GIT_CONTROL_WHITESPACE = ("\t", "\x0b", "\x0c", "\r")
 # Flags that must not follow ``git commit -m <msg>``. ``git commit * -*`` below refuses any flag after the first
 # argument (including abbreviations such as ``--am`` and ``--no-ver``) and ``--``; these named ones stay as a record.
 GIT_COMMIT_DENIED_FLAGS = (
@@ -111,7 +116,7 @@ def _git_denials() -> list[str]:
             for size in range(3, len(option) + 1):
                 prefix = option[:size]
                 denied += [f"Bash(git {sub} *{prefix})", f"Bash(git {sub} *{prefix} *)", f"Bash(git {sub} *{prefix}=*)"]
-        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
+        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION + GIT_CONTROL_WHITESPACE]
     # git add: no flag anywhere (-A, -u, -f, --force, --all, ``--``), no ".", no "..", no absolute path, no quote,
     # backslash, tab or ``*`` (they split or expand a protected name after the rule has looked at the text), and no
     # protected component, suffix, lockfile or the responder's own code in ANY argument.
@@ -119,7 +124,8 @@ def _git_denials() -> list[str]:
                "Bash(git add * .)", "Bash(git add *..*)", "Bash(git add /*)", "Bash(git add * /*)",
                "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\t*)", "Bash(git add *\\**)"]
     denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
-    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION]  # same refusal as ToolPolicy's shell-metacharacter one
+    denied += [f"Bash(git add *{char}*)" for char in GIT_CONTROL_WHITESPACE if char != "\t"]  # the tab rule is above
+    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION + GIT_CONTROL_WHITESPACE]  # ToolPolicy's metacharacter refusal, and N1
     for extension in (".yaml", ".yml"):  # the policy's protected ``compose*.yaml`` / ``compose*.yml``
         denied += [f"Bash(git add *compose*{extension})", f"Bash(git add *compose*{extension} *)"]
     for component in sorted(PROTECTED_COMPONENTS):
