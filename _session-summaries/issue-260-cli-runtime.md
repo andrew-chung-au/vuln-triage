@@ -69,6 +69,22 @@ Existing assertions changed (listed by `make verify` as removed or rewritten): `
 
 Verification here: `make responder-test` 618 passed. `make verify` could NOT pass in this worktree: `frontend/node_modules` is missing (`make install` needs network and was not authorized for this task), so the frontend test and type-check steps fail for that reason only; whitespace passes; the weakened-test warning is explained above. Backend tests were not run here (unchanged by this work).
 
+## QA round 2 (2026-10-27, branch `claude/260-qa-fixes-2` from `claude/260-cli-runtime`, QA comment 6435357864)
+
+One commit per item, each red first (a new failing test, watched failing, then the fix):
+
+- **1d residual (a)**: a `.git/commondir` pointing at a copy of `.git` with a `url.insteadOf` redirected the push while the `.git/config` digest matched. Red: 10 new real-git tests failed (push reached the evil remote, no refusal). Fixed: every `SubprocessPublishGit` call sets `GIT_DIR` and `GIT_COMMON_DIR` to the checkout's `.git`; `config_digest` refuses (`git_dir_unexpected`) a `.git` that is a symlink/not a directory, holds `commondir`, `gitdir`, `config.worktree`, `info/grafts`, `objects/info/alternates`, `objects/info/http-alternates`, or has a non-plain `config`; `GitPublisher.publish` re-reads the digest after the squash, immediately before the push (`git_config_modified`). Tests: commondir absolute and relative refused; the explicit `GIT_DIR` alone defeats a planted `commondir` (push called directly); four other entries refused; `.git` symlink refused; a config edit injected between squash and push refused.
+- **1d residual (b)**: `checkout.SubprocessGit` now sets `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_CONFIG_NOSYSTEM=1`. Red: a `url.insteadOf` in a temp HOME's `.gitconfig` made the clone fetch the other repository (`EVIL`).
+- **2 tool rules**: red: 100+ new refused cases were allowed by the model. Fixed in `cli_rules.py`: quote and backslash refused in any `git status|diff|log` and `git add` argument; every prefix (3+ characters) of `--output`, `--no-index`, `--ext-diff`, `--textconv`, `--orderfile` refused as a whole argument; `--or`, `-O` substrings; `git commit` allowed only as `-m '<msg>'` or `-m "<msg>"`, with `* -*` (any flag, abbreviation or `--`) and quote-then-space (a second argument) denied; `git add` also denies `compose*.yaml|yml`, tab, `*` (`\*` in a rule), and `--`. The model's pattern parser learned `\*` and `\\`. `ToolPolicy` now refuses `*?[]` in `git add` paths. `prompt.py` tells the agent the commit form. Not refused by the rules (documented): `?`/`[` globs, other-case protected names, symlinks (gate only).
+- **3 docs**: `_docs/responder-security-limits.md` items 2 and 3 and the git-limits bullet, `_docs/responder-cli-runtime.md` (`git_config_modified` row, new `git_dir_unexpected` row, allowed/denied lists, "cannot express", git-call paragraph) rewritten to say what is guaranteed and what is not, with R1 (straggler between re-check and push), R2 (gate reads a repository the agent can write to), R4 (the real CLI may not match `evaluate`), and two new `VERIFY:` items (`\*`/`\\` escape syntax, quote handling in `Bash(git commit -m '*')`).
+- **4 minor**: `_outside_fences` is now a fence parser (opening run of 3+ backticks or tildes, closed only by the same character, at least as long, nothing else on the line). Red: a 4-backtick fence containing a 3-backtick line, and a 3-backtick fence containing a ```` ```text ```` line, let a quoted `RESULT:` count.
+
+Existing assertion changed: `test_cli_rules.py` `assert "Bash(git commit -m *)" in RULES.allowed` became the two quoted forms plus an assertion that the unquoted rule is absent (the rule shape changed with item 2). No test weakened or skipped.
+
+Verification: `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 911; 182 assertion lines added, 0 removed). Commands that needed approval: `make install` (network install of git-ignored venvs and `node_modules` in this worktree).
+
+Still open: R1, R2, R4 as documented; nothing run against a live `claude`.
+
 ## Interruptions
 
 The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.

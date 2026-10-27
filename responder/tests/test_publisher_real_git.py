@@ -165,3 +165,115 @@ def test_the_push_ignores_the_global_git_config_the_agent_could_have_written(rig
     rig.publish()
     assert rig.remote_branch() is not None  # went where the runner said
     assert git(evil, "for-each-ref") == ""  # and nowhere else
+
+
+# -- 1d (round 2): git directory indirection and a config edit between the check and the push -------
+
+def _evil_remote(tmp_path: Path) -> Path:
+    evil = tmp_path / "evil.git"
+    evil.mkdir()
+    git(evil, "init", "--bare", "-b", "main")
+    return evil
+
+
+def _plant_commondir(rig: Rig, evil: Path, *, relative: bool = False) -> None:
+    """A copy of ``.git`` outside the checkout with a ``url.insteadOf``; ``.git/commondir`` points at it.
+    ``.git/config`` itself is untouched, so its digest still matches."""
+    copy = rig.work.parent / "git-copy"
+    shutil.copytree(rig.work / ".git", copy)
+    with (copy / "config").open("a") as handle:
+        handle.write(f'[url "{evil}"]\n\tinsteadOf = {rig.remote}\n')
+    target = os.path.relpath(copy, rig.work / ".git") if relative else str(copy)
+    (rig.work / ".git" / "commondir").write_text(target + "\n")
+
+
+@pytest.mark.parametrize("relative", [False, True])
+def test_a_commondir_file_in_dot_git_is_refused_and_nothing_is_pushed(rig, tmp_path, relative):
+    evil = _evil_remote(tmp_path)
+    rig.commit({"backend/app/service.py": "fixed\n"})
+    _plant_commondir(rig, evil, relative=relative)
+    with pytest.raises(PublishError) as err:
+        rig.publish()
+    assert err.value.reason == "git_dir_unexpected"
+    assert git(evil, "for-each-ref") == ""
+    assert rig.remote_branch() is None
+
+
+def test_the_runner_pushes_with_an_explicit_git_dir_so_a_commondir_file_is_ignored(rig, tmp_path):
+    """Defence in depth: even if the refusal were skipped, GIT_DIR and GIT_COMMON_DIR name the checkout's own
+    ``.git``, so git does not follow ``commondir`` to the planted copy."""
+    evil = _evil_remote(tmp_path)
+    head = rig.commit({"backend/app/service.py": "fixed\n"})
+    _plant_commondir(rig, evil)
+    sha = rig.seam.squash(rig.work, rig.base, head, "title")
+    rig.seam.push(rig.work, sha, BRANCH)
+    assert rig.remote_branch() == sha
+    assert git(evil, "for-each-ref") == ""
+
+
+@pytest.mark.parametrize("entry", ["gitdir", "config.worktree", "info/grafts", "objects/info/alternates"])
+def test_other_unexpected_entries_in_dot_git_are_refused(rig, entry):
+    rig.commit({"backend/app/service.py": "fixed\n"})
+    write(rig.work / ".git", entry, "/somewhere\n")
+    rig.refused("git_dir_unexpected")
+
+
+def test_dot_git_replaced_by_a_symlink_is_refused(rig, tmp_path):
+    rig.commit({"backend/app/service.py": "fixed\n"})
+    moved = tmp_path / "moved-git"
+    shutil.move(str(rig.work / ".git"), moved)
+    (rig.work / ".git").symlink_to(moved)
+    rig.refused("git_dir_unexpected")
+
+
+def test_a_config_edit_between_the_check_and_the_push_is_refused(rig, tmp_path):
+    """A straggler process can edit ``.git/config`` after the first check. The digest is read again right before
+    the push, after the commit is built."""
+    evil = _evil_remote(tmp_path)
+    rig.commit({"backend/app/service.py": "fixed\n"})
+    work = rig.work
+
+    class Racing(SubprocessPublishGit):
+        def squash(self, *args, **kwargs):
+            sha = super().squash(*args, **kwargs)
+            with (work / ".git" / "config").open("a") as handle:
+                handle.write(f'[url "{evil}"]\n\tinsteadOf = {rig.remote}\n')
+            return sha
+
+    racing = Racing("o/r", "TOK")
+    racing._url = str(rig.remote)
+    publisher = GitPublisher(racing, rig.pulls)
+    with pytest.raises(PublishError) as err:
+        publisher.publish(rig.work, rig.snapshot, "fp1", "42", "fixed")
+    assert err.value.reason == "git_config_modified"
+    assert git(evil, "for-each-ref") == ""
+    assert rig.remote_branch() is None
+
+
+# -- 1d (round 2): the runner's CLONE ignores the global git config --------------------------------
+
+def test_the_clone_ignores_the_global_git_config_the_agent_could_have_written(tmp_path, monkeypatch):
+    """The clone has the token in its environment and runs with the owner's HOME, where a previous run's agent could
+    have written ``~/.gitconfig``. A ``url.insteadOf`` there must not redirect it."""
+    from vt_responder.checkout import SubprocessGit
+
+    def make_repo(name: str, content: str) -> Path:
+        repo = tmp_path / name
+        repo.mkdir()
+        git(repo, "init", "-b", "main")
+        write(repo, "WHO", content)
+        git(repo, "add", "--", "WHO")
+        git(repo, "commit", "-m", "c")
+        return repo
+
+    real = make_repo("real", "REAL\n")
+    evil = make_repo("evil", "EVIL\n")
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".gitconfig").write_text(f'[url "{evil}"]\n\tinsteadOf = {real}\n')
+    monkeypatch.setenv("HOME", str(home))
+    seam = SubprocessGit("o/r", "TOK")
+    seam._url = str(real)
+    dest = tmp_path / "dest"
+    seam.clone(dest)
+    assert (dest / "WHO").read_text() == "REAL\n"

@@ -58,7 +58,8 @@ KNOWN_TOOLS = READ_TOOLS | WRITE_TOOLS | {"Bash"}
 MAKE_TARGETS = frozenset({"backend-test", "responder-test", "test"})
 
 _SHELL_META = re.compile(r"[;&|<>$`(){}\\\n\r]")
-_READ_FLAGS = frozenset({"--stat", "--short", "-s", "--oneline", "--name-only", "--cached", "--staged"})
+_GLOB = re.compile(r"[*?\[\]]")
+_READ_FLAGS =frozenset({"--stat", "--short", "-s", "--oneline", "--name-only", "--cached", "--staged"})
 
 
 @dataclass(frozen=True)
@@ -224,8 +225,8 @@ class ToolPolicy:
             return Decision.ok()
         if sub == "add":
             paths = rest[1:] if rest[:1] == ["--"] else rest
-            if not paths or any(p.startswith("-") for p in paths):
-                return Decision.deny("command_not_allowed")
+            if not paths or any(p.startswith("-") or _GLOB.search(p) for p in paths):
+                return Decision.deny("command_not_allowed")  # a glob would be expanded by the shell, after this check
             for p in paths:
                 d = self.check_write_path(p)
                 if not d.allowed:

@@ -297,6 +297,12 @@ def test_unparseable_or_error_output_is_a_failed_run(text, reason):
     ("```text\nRESULT: FIXED quoted\nmore", "result_line_missing"),  # an unclosed fence runs to the end
     ("~~~\nRESULT: FIXED quoted\n~~~", "result_line_missing"),
     ("  ```\nRESULT: FIXED quoted\n  ```", "result_line_missing"),
+    # a longer fence is closed only by a fence at least as long, with nothing but spaces after it
+    ("````\n```\nRESULT: FIXED quoted\n````", "result_line_missing"),
+    ("````\n```\n```\nRESULT: FIXED quoted\n````", "result_line_missing"),
+    ("~~~~\n~~~\nRESULT: FIXED quoted\n~~~~", "result_line_missing"),
+    ("```\n```text\nRESULT: FIXED quoted\n```", "result_line_missing"),  # an info string does not close a fence
+    ("```\n~~~\nRESULT: FIXED quoted\n```", "result_line_missing"),  # another character does not close it
 ])
 def test_a_result_line_inside_a_code_fence_does_not_count(body, reason):
     parsed = parse_output(result_json(body), MODEL)
@@ -305,6 +311,16 @@ def test_a_result_line_inside_a_code_fence_does_not_count(body, reason):
 
 def test_a_result_line_after_a_closed_code_fence_counts():
     parsed = parse_output(result_json("```\ncode\n```\nRESULT: FIXED after the fence"), MODEL)
+    assert (parsed.outcome, parsed.explanation) == ("fixed", "after the fence")
+
+
+@pytest.mark.parametrize("body", [
+    "````\n```\ncode\n```\n````\nRESULT: FIXED after the fence",
+    "```\ncode\n````\nRESULT: FIXED after the fence",  # a longer closing fence closes too
+    "```\ncode\n```   \nRESULT: FIXED after the fence",
+])
+def test_a_result_line_after_a_properly_closed_fence_counts(body):
+    parsed = parse_output(result_json(body), MODEL)
     assert (parsed.outcome, parsed.explanation) == ("fixed", "after the fence")
 
 

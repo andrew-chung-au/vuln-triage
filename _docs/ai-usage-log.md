@@ -2870,3 +2870,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): each finding was reproduced red on the old code and green after the fix; `make responder-test` 618 passed. `make verify` did not pass in the worktree only because `frontend/node_modules` is missing (`make install` not authorized); frontend and backend suites were not run. No QA re-check yet; nothing run against a live `claude`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 2 (comment 6435357864): 1d residual, tool-rule holes, docs overclaims, fence parser
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-qa-fixes-2` from `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first per item, one commit per item, no push, no protected files). No new key prompt saved.
+- files changed: `responder/vt_responder/{publisher,checkout,cli_rules,policy,prompt,cli_session}.py`; `responder/tests/{test_publisher_real_git,test_cli_rules,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): each item reproduced red, then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 911). Real git on local temp repositories only; nothing run against a live `claude`, login, model or GitHub. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
