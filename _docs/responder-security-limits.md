@@ -19,15 +19,22 @@ Status: written 2026-10-27 for the pre-drill hardening of the real runner (#244,
 - `ANTHROPIC_API_KEY` must reach the CLI, and every Bash child inherits the CLI's environment. Code the agent runs can read it.
 - `GH_TOKEN` and the `GIT_CONFIG_*` variables (the token, base64) are there because the policy lets the agent run `git push` and `gh pr create` itself. The SDK gives no way to set a variable for one Bash command only. So the git and `gh` credential is visible to code the agent runs. It is bounded only by items 1 and 2: the token can push `responder/*` branches and open pull requests in this one repository, and nothing else.
 - Proxy and CA variables are on the allowlist because the CLI needs the network; a proxy URL can carry credentials.
+- The scrub covers environment variables only, not files. Credentials stored under the responder's `HOME` (for example `~/.netrc`, `~/.aws`, `~/.config/gh`) are readable by code the agent runs. Run the drill on a host or account where those files hold nothing the agent should not reach, ideally a throwaway `HOME`.
 - `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` is a name inside the bundled CLI binary. Its error messages say it needs bubblewrap and a sandbox setup. It was not tried and nothing relies on it.
 
-The narrowest change that would hide the git credential from the agent's children is to have the runner, not the agent, do `git push` and open the pull request (the agent would commit locally and report). That changes the agent contract and the policy; it is not built. It is a question for the owner (see #244).
+The narrowest change that would hide the git credential from the agent's children is to have the runner, not the agent, do `git push` and open the pull request (the agent would commit locally and report). That changes the agent contract and the policy; it is not built. The owner has decided against it for the drill (decision 2 below).
 
 ## Owner decision B13: accept the residual risk for the drill (2026-10-27)
 
 The owner decided to **accept the residual risk** and not run the drill in a container with limited egress. The limits for the first live run are the environment scrub above, the repository-only fine-grained token (#222), and `protect-main`.
 
 This acceptance is scoped to the **supervised, recorded drill on a throwaway demo defect** (task 39). It must be **revisited before any unattended or production use**: the revisit is to run the responder in a container whose network egress is limited to the Anthropic API and GitHub, which would also cover the Anthropic key and git token visibility described above. That container is not built and is out of scope for #244.
+
+## Owner decision 2: the agent keeps `git push` and `gh pr create` for the drill (2026-10-27)
+
+The owner decided to **keep it as is** for the drill: the agent runs `git push` and `gh pr create` itself through its Bash tool, and the runner does not take them over (#244 comment 6431746364). So the git credential and the Anthropic key stay visible to code the agent runs, as described under "What the scrub does not hide". The limits are the same as for B13: the repository-only fine-grained token (#222), `protect-main`, and the environment scrub for everything else.
+
+This is scoped to the **supervised, recorded drill** (task 39). It must be **revisited before any unattended or production use**, together with the container option above: have the runner push and open the pull request while the agent only commits and reports, which would hide the git credential from the agent's children at the cost of changing the agent contract and the policy.
 
 ## Not covered
 
