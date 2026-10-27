@@ -183,7 +183,8 @@ someone looks at it.
 - Acceptance: a top-priority finding whose notification fails or does not
   complete within the agreed window (based on the `notification.deliver`
   outcome) fires exactly one alert naming the finding; a successful
-  notification fires none.
+  notification fires none. One alert means one firing episode for a finding;
+  a resolution notification for the same episode is not a second alert.
 
 ### US-15: A responder agent wakes on the alert and fixes it
 A responder agent wakes on the US-14 alert, reproduces a defect in VulnTriage's
