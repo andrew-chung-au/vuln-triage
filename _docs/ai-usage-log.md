@@ -2880,3 +2880,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): each item reproduced red, then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 911). Real git on local temp repositories only; nothing run against a live `claude`, login, model or GitHub. No QA re-check yet.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-26 - docs/227-a11-nightly-stop-cost-tag
+- task/issue: #227 (AWS console session, task A11), branch `docs/227-a11-nightly-stop-cost-tag`
+- agent role: Engineer (Kiro)
+- model: Auto
+- prompt or instruction given (or link to a file in `_docs/prompts/`): owner working #227 at the AWS console, confirming the nightly-stop decision and the cost-allocation tag. No new key prompt saved.
+- files changed: `_docs/human-tasklist.md` (A11 → done; A1 account note corrected from "member account" to "management account"; "Last updated" line), this entry.
+- verification (tests run, reviewer verdict): none — documentation-only edit recording the owner's console actions. The AWS state itself is the owner's; no agent has AWS access and none was claimed. `git diff --check` clean.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): the owner confirmed at the console (management account) that the nightly stop is set (04:00 UTC default, off for grading) and the `project` cost-allocation tag is activated and applied; recorded as stated.
