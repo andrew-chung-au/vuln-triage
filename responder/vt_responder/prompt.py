@@ -72,7 +72,7 @@ then run `make backend-test`.
 `git add .`; no wildcards or quotes in the path) and \
 `git commit -m "<message>"` with one double-quoted message and no other argument \
 (the message must not start with `-` and must not contain a double quote, a backslash, any of & ( ) ; < > $ { }, \
-a backtick, a tab or the word merge; an apostrophe is fine; use plain words). Stay on the \
+a backtick, a tab or the word merge; an apostrophe is fine, at most two; use plain words). Stay on the \
 branch you start on. NEVER run `git push`, never open a pull request, and never \
 merge: you have no credential for any of that. The runner checks your commits, \
 pushes them and opens the pull request; a human reviews and merges.

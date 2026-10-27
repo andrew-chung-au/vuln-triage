@@ -106,6 +106,16 @@ Still open: R1, R2, R4 as documented; nothing run against a live `claude`.
 
 Verification: `make verify BASE=origin/main` PASS (see the final run in the issue comment). Commands that needed approval: none. Still open: R1, R2, R4; nothing run against a live `claude`.
 
+## QA round 5 (2026-10-27, QA comment 6436421743): N2, fixed as a class
+
+- **N2 (low)**: `git commit -m "x"z "-a"`, `-m "x"-m "-a"`, `-m "x"z "README.md"` and the single-quote forms were allowed by `evaluate` (real bash and git committed `README.md`); `ToolPolicy` refused them. Third round of the same class (deny patterns for shell-parsed commit text), so no new deny pattern for the spelling. Red: the six forms.
+- **Structural fix (`cli_rules.py`)**: `git commit` is allowed in one shape only, `-m "<text>"` or `-m '<text>'`: the allow rule fixes the start and the end, and the deny rules make the text one word (no third quote of the same kind, no backslash, `$ { }`, tab/VT/FF/CR, no leading `-`). The old list (`GIT_COMMIT_DENIED_FLAGS`, `* -*`, quote-then-space) is removed; it also wrongly refused `Don't drop failed jobs`, which is allowed now. `git add` takes one path per command (`git add * *` denied; it allowed `git add backend/x README.md` before, so the "path beginning with a writable root" claim was false for a second argument). The model refuses a dangling separator (`git status ;`) and trims only space, tab and newline, so VT/FF/CR reach the deny rules. A glob cannot state a character set, so the rules express a shape; the charset check is `ToolPolicy`.
+- **Differential test** (`test_cli_rules_differential.py`, seed fixed, 6 000 generated commands from adjacent fragments plus the QA forms): (a) whenever the rules allow `git add|commit`, `ToolPolicy` allows it (carve-out: trimming leading/trailing space, tab, newline); (b) for `git status|diff|log`, where the rules deliberately allow more than the policy, no allowed command hands git a word that is or abbreviates `--output`, `--no-index`, `--ext-diff`, `--textconv`, `--orderfile` or `-O`. Disagreements found: 13 of 26 allowed commands on the first run (the 6 QA forms, dangling separators, a second `git add` path outside the writable roots); after the first fix, 13 of 946 on the richer generator (12 messages starting with `-`, which `ToolPolicy` refuses, and a trailing newline); none after. The read-side property found none.
+- **Prompt, docs**: `prompt.py` now says one path per `git add`, no leading `-`, no double quote or backslash, at most two apostrophes, no `& ( ) ; < > $ { }`, backtick, tab or the word merge (the rules refuse any command containing `merge`); `_docs/responder-security-limits.md` item 2 and `_docs/responder-cli-runtime.md` state the positive-match model.
+- Existing test changed: `test_cli_rules.py` ALLOWED `git add backend/app/service.py tests/test_x.py` became two single-path commands (the rule shape changed). No assertion was removed or weakened.
+
+Verification: see the final run in the issue comment. Commands that needed approval: none.
+
 ## Interruptions
 
 The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.

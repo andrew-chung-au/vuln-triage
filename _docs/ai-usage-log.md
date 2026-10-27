@@ -2907,6 +2907,16 @@ Copy this template for each new entry:
 - model: claude-sonnet-5-5
 - prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first, fix, docs, optional prompt line, no push). No new key prompt saved.
 - files changed: `responder/vt_responder/{cli_rules,prompt}.py`; `responder/tests/{test_cli_rules,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
-- verification (tests run, reviewer verdict): the new whitespace cases were red (16 allowed by `evaluate`), then green; `make verify BASE=origin/main` run after the records (result in the issue comment). Nothing run against a live `claude`. No QA re-check yet.
+- verification (tests run, reviewer verdict): the new whitespace cases were red (16 allowed by `evaluate`), then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 973). Nothing run against a live `claude`. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 5 (comment 6436421743), N2: more `git commit` spellings; fixed as a class
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (no new deny pattern; one allowed commit shape by positive match; a seeded differential test between the rules and `ToolPolicy`; docs and records). No new key prompt saved.
+- files changed: `responder/vt_responder/{cli_rules,prompt}.py`; `responder/tests/{test_cli_rules,test_cli_rules_differential (new),test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the six QA forms and the differential test were red, then green (differential disagreements found: 13 of 26 allowed commands, then 13 of 946 after the first fix, then none); `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 995). Nothing run against a live `claude`. No QA re-check yet.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
