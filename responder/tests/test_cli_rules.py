@@ -153,7 +153,21 @@ REFUSED_BASH_ROUND2 = [
 ]
 
 
-@pytest.mark.parametrize("command", [*REFUSED_BASH, *REFUSED_BASH_ROUND2, *ABBREVIATIONS])
+# QA round 3, finding F1: shell expansion (`$`, `{`, `}`) rebuilds a denied flag or a protected path after the rules
+# have looked at the raw text (`--${u}output=x` runs as `--output=x` when `u` is unset; `{a,b}` is brace expansion).
+REFUSED_BASH_ROUND3 = [
+    "git diff --${u}output=/x", "git diff --o${u}utput=/x", "git diff -${u}-output=/x",
+    "git log -1 --format=%B --${u}output=/x", "git status --${u}output=/x", "git diff --${u}no-index /etc/passwd /etc/hosts",
+    "git diff --${u}ext-diff", "git diff --${u}textconv", "git log --${u}orderfile=/x", "git diff -${u}O/x",
+    "git diff --o{u,u}tput=/x", "git diff --o$u" + "tput=/x", "git diff $HOME", "git log {a,b}", "git status }",
+    "git add backend/.en${u}v", "git add backend/x .git${u}hub/y", "git add backend/{.github,x}/y",
+    "git add backend/x ${u}-A", "git add backend/x ${u}-f", "git add backend/$HOME", "git add backend/x{,}",
+    "git commit -m 'x' ${u}--amend", 'git commit -m "x" ${u}-a', "git commit -m '$HOME'", 'git commit -m "${u}"',
+    "git commit -m '{x}'",
+]
+
+
+@pytest.mark.parametrize("command", [*REFUSED_BASH, *REFUSED_BASH_ROUND2, *REFUSED_BASH_ROUND3, *ABBREVIATIONS])
 def test_a_refused_command_is_refused_by_the_generated_rules_and_by_the_policy(tmp_path, command):
     assert not check(tmp_path, "Bash", command).allowed
     assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": command}).allowed

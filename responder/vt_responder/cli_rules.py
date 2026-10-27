@@ -21,7 +21,9 @@ What a CLI rule CANNOT express (so the runner's diff gate, ``publisher.py``, is 
   ``git -C . push`` are not matched by ``Bash(curl *)`` / ``Bash(git push *)``. They are not
   ALLOWED either (dontAsk denies them), but code the agent writes into a test and ``make test``
   runs is not seen by any rule;
-* case-insensitive path matching (the gate is case-insensitive, the rules are not).
+* case-insensitive path matching (the gate is case-insensitive, the rules are not);
+* ``?``, ``[`` and ``]`` globs in ``git add`` (not refused; the diff gate refuses the result). ``$``, ``{`` and ``}`` ARE
+  refused in the git arguments (``GIT_EXPANSION``), because shell expansion rebuilds a denied flag after the rules look.
 
 ``evaluate`` below is this repository's MODEL of the documented semantics, used by the tests to
 check every refused case against the generated list. The CLI itself is the authority; the model
@@ -87,6 +89,12 @@ GIT_READ_DENIED_LONG = ("--output", "--no-index", "--ext-diff", "--textconv", "-
 # ``\\`` is a literal backslash and ``\*`` a literal asterisk (VERIFY: the CLI's escape syntax; if it differs these
 # rules are inert and ToolPolicy and the diff gate are what refuse the forms).
 GIT_QUOTE_AND_BACKSLASH = ('"', "'", "\\\\")
+# Shell expansion: ``$`` (``--${u}output=x`` runs as ``--output=x`` when ``u`` is unset) and brace expansion (``{a,b}``)
+# rebuild a denied flag or a protected path AFTER the rules matched the raw text, so the three characters are refused
+# in every argument of ``git status|diff|log|add|commit`` (ToolPolicy refuses them as shell metacharacters). ``$(`` and
+# backticks are handled separately: the inner command is checked as a subcommand. ``?``, ``[`` and ``]`` are not
+# refused here (a ``?`` in a rule may be read as a wildcard); see the module docstring.
+GIT_EXPANSION = ("$", "{", "}")
 # Flags that must not follow ``git commit -m <msg>``. ``git commit * -*`` below refuses any flag after the first
 # argument (including abbreviations such as ``--am`` and ``--no-ver``) and ``--``; these named ones stay as a record.
 GIT_COMMIT_DENIED_FLAGS = (
@@ -103,14 +111,15 @@ def _git_denials() -> list[str]:
             for size in range(3, len(option) + 1):
                 prefix = option[:size]
                 denied += [f"Bash(git {sub} *{prefix})", f"Bash(git {sub} *{prefix} *)", f"Bash(git {sub} *{prefix}=*)"]
-        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH]
+        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
     # git add: no flag anywhere (-A, -u, -f, --force, --all, ``--``), no ".", no "..", no absolute path, no quote,
     # backslash, tab or ``*`` (they split or expand a protected name after the rule has looked at the text), and no
     # protected component, suffix, lockfile or the responder's own code in ANY argument.
     denied += ["Bash(git add -*)", "Bash(git add * -*)", "Bash(git add .)", "Bash(git add . *)",
                "Bash(git add * .)", "Bash(git add *..*)", "Bash(git add /*)", "Bash(git add * /*)",
                "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\t*)", "Bash(git add *\\**)"]
-    denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH]
+    denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
+    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION]  # same refusal as ToolPolicy's shell-metacharacter one
     for extension in (".yaml", ".yml"):  # the policy's protected ``compose*.yaml`` / ``compose*.yml``
         denied += [f"Bash(git add *compose*{extension})", f"Bash(git add *compose*{extension} *)"]
     for component in sorted(PROTECTED_COMPONENTS):
