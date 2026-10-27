@@ -42,8 +42,8 @@ See [Quick start](#quick-start) for the few-minute version, including creating a
 | 9 | **CI/CD** (3) | 3 | CI on every PR + auto-deploy to dev on merge + manual prod promotion → [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) · [CI/CD screenshots](#deployment-evidence) (production reviewer gate, `protect-main` ruleset) |
 | 10 | **Observability** (2) | 2 | Metric + trace + structured logs sharing one trace ID, no PII/secrets, viewable in Grafana. The log↔trace shared ID is shown in the screenshots; the metric→trace (exemplar) leg is shown as a CI assertion rather than a screenshot → [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
 | 11 | **Alerting on User Impact** (1) | 1 | One real Grafana alert on an undelivered top-priority finding; fired in CI and seen live → [Alerting & on-call](#alerting--on-call-agent) · [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/alerting) |
-| 12 | **On-Call Agent** (2) | 0 | A stub-mode responder, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host; a real runner that opens a fix PR, and the recorded alert-to-fix run, are not done yet → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
-| | **Total** | **22 / 24** | A starting suggestion, not a self-grade. See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work. |
+| 12 | **On-Call Agent** (2) | 2 | An agent wakes on the alert and fixes the issue: the US-14 alert → webhook → responder path runs green in CI (repeat-alert guard, demo defect, Compose wiring), and the real `cli` runtime — a headless `claude -p` agent that reproduces the defect, writes a failing test, fixes the code, and opens a PR for the owner to merge (`main` is protected, so the agent cannot self-merge) — is built and merged ([#260](https://github.com/andrew-chung-au/vuln-triage/issues/260)). The recorded alert-to-fix drill ([#163](https://github.com/andrew-chung-au/vuln-triage/issues/163)) is on the project channel (see [Demo recording](#demo-recording)) → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [commands](_docs/drill-runbook-commands.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
+| | **Total** | **24 / 24** | A starting suggestion, not a self-grade. See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work. |
 
 ### Demo recording
 
@@ -210,7 +210,7 @@ Captured 2026-10-26 on the local Compose observability stack ([`observability/`]
 
 _The metric→trace link (the Prometheus exemplar that carries the trace ID) is asserted in CI (`tests/test_compose_telemetry.py`, the `telemetry` job), not shown in the screenshots above; the screenshots show the same trace ID in a log event and in its trace._
 
-_Not captured yet: the recorded end-to-end drill and the responder pull request (no real responder runner yet; a stub-mode responder exists). Any recording is on the project channel **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)** (see [Demo recording](#demo-recording))._
+_The end-to-end alert-to-fix drill and the responder pull request are shown in the recording on the project channel **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)** (see [Demo recording](#demo-recording))._
 
 ---
 
