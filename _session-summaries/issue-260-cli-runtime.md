@@ -98,6 +98,14 @@ No existing assertion was changed or removed. Verification: `make verify BASE=or
 
 Still open: R1, R2, R4 as documented; nothing run against a live `claude`.
 
+## QA round 4 (2026-10-27, branch `claude/260-cli-runtime` at `7b5a3e0`, QA comment 6436304070)
+
+- **N1 (low)**: `git commit -m "x"<TAB>-a<TAB>-m "y"` was allowed by `evaluate` (the commit denials are space-based; real git ran `-a`). Red: 16 of the new whitespace cases were allowed. Fixed in `cli_rules.py`: `GIT_CONTROL_WHITESPACE` (tab, VT, FF, CR) is denied in any argument of `git status|diff|log|add|commit`. Tests: tab-smuggled forms are refused by `evaluate` and `ToolPolicy`; tab elsewhere and VT/FF/CR are refused by `evaluate` only (`ToolPolicy` splits like the shell, so a tab between words is a legitimate commit there). Newline is already a separator; Unicode spaces (NBSP, em space) are not word separators in bash and are not refused (documented).
+- **Prompt**: `prompt.py` now tells the agent a commit message may not contain `& ( ) ; < > $ { }`, a backtick or a tab; a test checks the sentence.
+- **Docs**: `_docs/responder-security-limits.md` item 2 (commit bullet, new whitespace bullet, `~` and `*` in the not-guaranteed list, from QA's omissions) and `_docs/responder-cli-runtime.md` (whitespace sentence); the item 2 `git commit` sentence holds as modelled.
+
+Verification: `make verify BASE=origin/main` PASS (see the final run in the issue comment). Commands that needed approval: none. Still open: R1, R2, R4; nothing run against a live `claude`.
+
 ## Interruptions
 
 The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.
