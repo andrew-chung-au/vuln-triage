@@ -25,6 +25,9 @@ PINNED_MODEL_HINT = "claude-sonnet-5-5"
 # Run bounds for the real runner (#221): safe defaults, overridable from the environment.
 DEFAULT_MAX_TURNS = 30
 DEFAULT_RUN_TIMEOUT_SECONDS = 600
+# Spend cap per run in US dollars (#244 S3), passed to the SDK as ``max_budget_usd``.
+# A safe default for one bounded investigation; the owner can lower or raise it.
+DEFAULT_MAX_BUDGET_USD = 3.0
 # Background-run bounds for real mode (#241). No secret in any of them.
 DEFAULT_MAX_FAILED_RUNS = 3  # consecutive failed runs per fingerprint before it stops being retried
 DEFAULT_MAX_CONCURRENT_RUNS = 1  # real agent runs in flight at once, per process
@@ -77,6 +80,7 @@ class Settings:
     max_failed_runs: int = DEFAULT_MAX_FAILED_RUNS
     max_concurrent_runs: int = DEFAULT_MAX_CONCURRENT_RUNS
     max_queued_runs: int = DEFAULT_MAX_QUEUED_RUNS
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -137,6 +141,16 @@ class Settings:
                 raise ConfigError(
                     "RESPONDER_MAX_FAILED_RUNS and RESPONDER_MAX_CONCURRENT_RUNS must be positive, "
                     "RESPONDER_MAX_QUEUED_RUNS must not be negative")
+        max_budget = DEFAULT_MAX_BUDGET_USD
+        if mode == "real":
+            raw_budget = env.get("RESPONDER_MAX_BUDGET_USD", "").strip()
+            if raw_budget:
+                try:
+                    max_budget = float(raw_budget)
+                except ValueError as exc:
+                    raise ConfigError("RESPONDER_MAX_BUDGET_USD must be a number") from exc
+                if not (0 < max_budget < float("inf")):  # also rejects nan
+                    raise ConfigError("RESPONDER_MAX_BUDGET_USD must be a positive number")
         try:
             max_body = int(env.get("RESPONDER_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES)))
         except ValueError as exc:
@@ -159,4 +173,5 @@ class Settings:
             max_failed_runs=max_failed,
             max_concurrent_runs=max_concurrent,
             max_queued_runs=max_queued,
+            max_budget_usd=max_budget,
         )

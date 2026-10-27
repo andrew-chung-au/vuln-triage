@@ -97,7 +97,8 @@ def rig_with_repo(behaviour, repo):
     backend.add_finding("42", ["failed"])
     api = ResponderApi("http://backend.test", "tok", transport=httpx.MockTransport(backend.handler))
     lines: list[str] = []
-    branches = FakeBranchClient()
+    # #244 S4: the reported pull request is read back and must be this run's (PR 7 here).
+    branches = FakeBranchClient(pulls={7: {"head": {"ref": BRANCH, "repo": {"full_name": "owner/repo"}}}})
     runner = RealRunner(api, ActionLog(lines.append), MODEL, lambda m, ctx: Session(behaviour),
                         git=FakeCheckoutGit(), branches=branches, timeout_seconds=5,
                         timeout_grace_seconds=0.0, repo=repo)
@@ -187,9 +188,10 @@ def test_fresh_checkout_helper_raises_checkout_error_when_unclean(tmp_path):
 # -- bounded run, no partial branch -----------------------------------------
 
 def test_an_agent_error_is_a_logged_failure_and_deletes_the_partial_branch(tmp_path):
-    branches = FakeBranchClient({BRANCH})
+    branches = FakeBranchClient()  # absent before the run (#244 S1): this run creates it
 
     def behaviour(s):
+        branches.push(BRANCH)
         raise RuntimeError("agent crashed after pushing")
 
     runner, lines, _, branches, _ = rig(tmp_path, behaviour, branches=branches)
@@ -201,8 +203,13 @@ def test_an_agent_error_is_a_logged_failure_and_deletes_the_partial_branch(tmp_p
 
 
 def test_an_agent_reported_error_deletes_the_partial_branch(tmp_path):
-    runner, lines, _, branches, _ = rig(tmp_path, lambda s: AgentResult("error", MODEL),
-                                        branches=FakeBranchClient({BRANCH}))
+    branches = FakeBranchClient()
+
+    def behaviour(s):
+        branches.push(BRANCH)
+        return AgentResult("error", MODEL)
+
+    runner, lines, _, branches, _ = rig(tmp_path, behaviour, branches=branches)
     assert runner.run("fp1", "42") == "error"
     assert branches.deleted == [BRANCH]
 
@@ -214,14 +221,15 @@ def test_pull_request_outcome_without_a_url_is_an_error_not_a_success(tmp_path):
 
 def test_a_time_limit_ends_the_run_as_a_failure_and_deletes_the_branch(tmp_path):
     release = threading.Event()
+    branches = FakeBranchClient()
 
     def behaviour(s):
+        branches.push(BRANCH)  # pushed before the limit hit
         release.wait(10)
         return AgentResult("pull_request_opened", MODEL, pull_request="https://pr/1")
 
     try:
-        runner, lines, git, branches, _ = rig(tmp_path, behaviour, timeout=0.2,
-                                              branches=FakeBranchClient({BRANCH}))
+        runner, lines, git, branches, _ = rig(tmp_path, behaviour, timeout=0.2, branches=branches)
         assert runner.run("fp1", "42") == "error"
     finally:
         release.set()
@@ -231,8 +239,13 @@ def test_a_time_limit_ends_the_run_as_a_failure_and_deletes_the_branch(tmp_path)
 
 
 def test_false_positive_with_a_pushed_branch_leaves_no_branch(tmp_path):
-    runner, lines, _, branches, _ = rig(tmp_path, lambda s: AgentResult("no_change", MODEL, explanation="fine"),
-                                        branches=FakeBranchClient({BRANCH}))
+    branches = FakeBranchClient()
+
+    def behaviour(s):
+        branches.push(BRANCH)
+        return AgentResult("no_change", MODEL, explanation="fine")
+
+    runner, lines, _, branches, _ = rig(tmp_path, behaviour, branches=branches)
     assert runner.run("fp1", "42") == "no_change"
     assert branches.deleted == [BRANCH]
 
@@ -256,6 +269,13 @@ def test_no_agent_or_checkout_for_an_obvious_false_positive(tmp_path):
 
 def test_a_failing_branch_cleanup_is_logged_but_the_run_still_ends_as_error(tmp_path):
     class Broken:
+        def __init__(self):
+            self.reads = 0
+
+        def get_branch_sha(self, branch):
+            self.reads += 1
+            return None if self.reads == 1 else "created-by-this-run"  # absent before, present after
+
         def delete_branch_if_exists(self, branch):
             raise RuntimeError("network down")
 

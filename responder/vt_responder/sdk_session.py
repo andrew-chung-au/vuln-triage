@@ -15,6 +15,11 @@ How the allowlist is enforced (two layers, one policy: ``policy.ToolPolicy``):
 ``tools`` also limits the built-in tool set, and ``permission_mode`` stays
 ``default`` with no ``allowed_tools`` so nothing is pre-approved around them.
 
+Limit: this policy guards a confused agent, not a hostile or prompt-injected one; the
+agent's own model key and git token stay visible to the code it runs. What bounds a
+hostile agent, and the owner's accepted residual risk, is in
+``_docs/responder-security-limits.md``.
+
 The agent ends its final message with one line, ``RESULT: PULL_REQUEST <url>``
 or ``RESULT: NO_CHANGE <explanation>`` (see ``prompt.py``); anything else, an
 error result, or hitting the turn limit is an ``error``.
@@ -31,17 +36,22 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import os
 import re
-from typing import Any
+from typing import Any, Mapping
 
 from .actlog import ActionLog
 from .checkout import git_auth_env
+from .envscrub import blank_non_allowlisted
+from .procs import MARKER_VAR
 from .policy import KNOWN_TOOLS, Decision, ToolPolicy
 from .real_runner import AgentResult, RunContext
 
 # The built-in tools the agent gets; everything else (web, sub-agents, MCP) is absent.
 BUILTIN_TOOLS = ["Read", "Glob", "Grep", "Edit", "Write", "MultiEdit", "Bash"]
-_PR_URL = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
+# Anchored (#244 S4): the URL must start the text after PULL_REQUEST and end at
+# whitespace or the end, so ``/pull/12abc``, ``/pull/12/files`` and ``/pull/12?x`` are refused.
+_PR_URL = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+(?=\s|$)")
 _RESULT_LINE = re.compile(r"^RESULT:\s*(PULL_REQUEST|NO_CHANGE)\b[ \t]*(.*)$", re.MULTILINE)
 _MAX_EXPLANATION = 500
 
@@ -63,7 +73,7 @@ def parse_result(text: str | None, model: str) -> AgentResult:
         return AgentResult(outcome="error", model=model)
     kind, rest = matches[-1]
     if kind == "PULL_REQUEST":
-        url = _PR_URL.search(rest)
+        url = _PR_URL.match(rest.lstrip())
         if not url:
             return AgentResult(outcome="error", model=model)
         return AgentResult(outcome="pull_request_opened", model=model, pull_request=url.group(0))
@@ -72,7 +82,7 @@ def parse_result(text: str | None, model: str) -> AgentResult:
 
 
 def build_options(sdk: Any, *, model: str, system_prompt: str, ctx: RunContext,
-                  api_key: str, github_token: str) -> Any:
+                  api_key: str, github_token: str, environ: Mapping[str, str] | None = None) -> Any:
     """Build the SDK options for one run. Pure apart from reading the ``sdk`` classes."""
     if ctx.checkout is None or ctx.policy is None:
         raise RuntimeError("a live session needs a fresh checkout and a policy")
@@ -94,9 +104,17 @@ def build_options(sdk: Any, *, model: str, system_prompt: str, ctx: RunContext,
             "permissionDecisionReason": f"denied by responder policy: {decision.reason}",
         }}
 
+    # B1 (#244): the SDK starts the CLI with {**os.environ, **options.env}, so a responder
+    # secret is kept out by overriding it with "". Everything not on the allowlist is
+    # blanked first; the few names below are then set on purpose.
     env = {
+        **blank_non_allowlisted(os.environ if environ is None else environ),
         "ANTHROPIC_API_KEY": api_key,
+        # LIMIT: the agent runs `git push` and `gh pr create` itself through Bash, and every
+        # Bash child inherits the CLI's environment, so these two cannot be hidden from the
+        # code the agent runs. Bounded only by the token's scope (#222) and protect-main.
         "GH_TOKEN": github_token,
+        MARKER_VAR: ctx.run_marker,  # lets the runner stop this run's processes (procs.py)
         # VERIFY: a commit needs an identity; the checkout has no git config of its own.
         "GIT_AUTHOR_NAME": "VulnTriage responder",
         "GIT_COMMITTER_NAME": "VulnTriage responder",
@@ -109,6 +127,7 @@ def build_options(sdk: Any, *, model: str, system_prompt: str, ctx: RunContext,
         system_prompt=system_prompt,
         model=model,
         max_turns=ctx.max_turns,
+        max_budget_usd=ctx.max_budget_usd,  # VERIFY: the SDK passes it as --max-budget-usd (subprocess_cli.py)
         cwd=str(ctx.checkout),
         permission_mode="default",
         can_use_tool=can_use_tool,

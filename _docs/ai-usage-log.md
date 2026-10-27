@@ -2840,3 +2840,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make verify` PASS at each push (docs only). Approval records were generated from git (`git show`, `git rev-parse`) and posted on #63 (comments 6431115787, 6431117320, 6431117575) and on #161 (6431266406, 6431266643). The status of #222, #233, #241 and the `responder` workflow run was read from the issues and the Actions API, not assumed; the first `responder` CI run was still in progress when last read. The `P-FLAG-GONE` gate has not been exercised in a promotion. No reviewer verdict on the docs edits.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #244 pre-drill hardening of the real runner (findings B1, S1 to S6 from the review of PR #242)
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/244-hardening`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task brief for #244 (priority order B1 env scrub, B1 limits note, S1, S4, S3, S2, S5/S6; no container or egress build; owner decision B13 = accept the residual risk, relayed mid-task). No new key prompt saved.
+- files changed: `responder/vt_responder/{real_runner,sdk_session,github_client,checkout,config,fakes,app}.py`, new `responder/vt_responder/{envscrub,procs,installer}.py`, `responder/tests/{test_hardening_244,test_hardening_244_runner}.py` (new), `responder/tests/{test_real_runner_isolation,test_background}.py` (adapted to the new branch/PR checks), `.env.example` (name `RESPONDER_MAX_BUDGET_USD`, empty), `_docs/responder-security-limits.md` (new), `_docs/roadmap.md`, `_session-summaries/issue-244-hardening.md` (new), this entry.
+- verification (tests run, reviewer verdict): the new B1, S1, S4 and S5 tests were run red against the unchanged code first (27 failed), then green after the fixes; the S2, S3 and S6 tests were written with their fixes and not run red first. `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 314; 0 assertion lines removed). No live SDK call was made, so the env merge was confirmed by reading `subprocess_cli.py` in the installed package, not by a run. No reviewer verdict (QA not yet run).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

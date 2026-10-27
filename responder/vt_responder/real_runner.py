@@ -12,7 +12,9 @@ SDK, so ``test_mode_stub_imports_no_agent_sdk`` still holds.
 
 Per alert: a fresh temporary checkout (``checkout.py``), a ``ToolPolicy`` for
 ``responder/<fingerprint>`` (``policy.py``), a turn limit and a wall-clock
-limit; an error, timeout or "no change" leaves no remote branch.
+limit; an error, timeout or "no change" removes a remote branch only if this run
+created it. The tool policy is a guardrail for a confused agent, not a sandbox
+for a hostile one: see ``_docs/responder-security-limits.md``.
 
 What the session does is defined by ``prompt.SYSTEM_PROMPT``: investigate via
 the API, reproduce with a failing test, make the smallest fix, open a pull
@@ -26,21 +28,29 @@ is read, logged, or passed to the agent as data it must act on.
 
 from __future__ import annotations
 
-import concurrent.futures
 import os
 import re
+import threading
+import time
+import uuid
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Protocol
+from typing import Any, Callable, Mapping, Protocol, Sequence
 
 from .actlog import ActionLog
 from .api_client import ApiError, ResponderApi
 from .checkout import CheckoutError, CheckoutGit, fresh_checkout
-from .config import DEFAULT_MAX_TURNS, DEFAULT_RUN_TIMEOUT_SECONDS
+from .config import DEFAULT_MAX_BUDGET_USD, DEFAULT_MAX_TURNS, DEFAULT_RUN_TIMEOUT_SECONDS
+from .envscrub import redact
 from .github_client import BranchClient
+from .installer import InstallError, Installer
 from .policy import BRANCH_PREFIX, ToolPolicy
+from .procs import kill_marked_processes
 from .prompt import SYSTEM_PROMPT, build_task
+
+_PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
+_UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
 
 
 @dataclass(frozen=True)
@@ -63,6 +73,34 @@ class RunContext:
     log: ActionLog
     max_turns: int
     timeout_seconds: int
+    run_marker: str = ""  # tags every process of the run so the runner can stop them (procs.py)
+    max_budget_usd: float = DEFAULT_MAX_BUDGET_USD
+
+
+class _RunTimeout(Exception):
+    """The session did not finish inside the run's time limit."""
+
+
+def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
+    """Run ``fn`` on a daemon thread. A worker that never finishes is abandoned, and
+    because it is a daemon thread it cannot keep the interpreter from exiting (#244 S3)."""
+    box: dict[str, Any] = {}
+    done = threading.Event()
+
+    def target() -> None:
+        try:
+            box["value"] = fn()
+        except BaseException as exc:  # noqa: BLE001 - handed to the caller
+            box["error"] = exc
+        finally:
+            done.set()
+
+    threading.Thread(target=target, name="responder-session", daemon=True).start()
+    if not done.wait(timeout):
+        raise _RunTimeout()
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
 
 
 class AgentSession(Protocol):
@@ -78,21 +116,33 @@ class RealRunner:
     production it builds ``sdk_session.SdkSession`` through ``build_default_session``.
     With ``git`` set, each run gets a fresh temporary checkout that is deleted
     afterwards (also on error). The run is bounded by ``timeout_seconds``; any
-    session error or timeout is a failed run (``error``), and a failed or
-    no-change run never leaves a ``responder/<fingerprint>`` branch behind.
+    session error or timeout is a failed run (``error``). A failed or no-change
+    run deletes a ``responder/<fingerprint>`` branch only if THIS run created it
+    (absent before the session, or its SHA changed); a branch that existed and is
+    unchanged is kept and logged as ``branch_preserved`` (#244 S1). The agent's
+    processes are stopped before the checkout is removed and the branch deleted.
     """
 
     def __init__(self, api: ResponderApi, log: ActionLog, model: str, make_session, *,
                  git: CheckoutGit | None = None, branches: BranchClient | None = None,
                  max_turns: int = DEFAULT_MAX_TURNS,
                  timeout_seconds: int = DEFAULT_RUN_TIMEOUT_SECONDS,
-                 timeout_grace_seconds: float = 5.0, repo: str | None = None) -> None:
+                 timeout_grace_seconds: float = 5.0, repo: str | None = None,
+                 installer: Installer | None = None, secrets: Sequence[str] = (),
+                 max_budget_usd: float = DEFAULT_MAX_BUDGET_USD,
+                 kill_agent: Callable[[str], Any] = kill_marked_processes) -> None:
         self._api = api
-        # When set, a reported pull request must be a PR URL in this repository.
+        # When set, a reported pull request must be a PR URL in this repository, and
+        # (with a branch client) the pull request itself must be this run's (#244 S4).
+        self._repo = repo
         self._pr_url = (
             re.compile(rf"https://github\.com/{re.escape(repo)}/pull/[0-9]+", re.IGNORECASE)
             if repo else None
         )
+        self._installer = installer
+        self._secrets = tuple(s for s in secrets if s)
+        self._budget = max_budget_usd
+        self._kill_agent = kill_agent
         self._log = log
         self._model = model
         self._make_session = make_session
@@ -136,54 +186,126 @@ class RealRunner:
                 + "), so there is no defect to reproduce.",
             )
 
-        # A failed job exists: hand the task to the agent session.
+        # A failed job exists: hand the task to the agent session. First record whether
+        # responder/<fp> already exists and where it points (S1), so cleanup only ever
+        # removes what this run created.
+        before = self._snapshot_branch(fingerprint, finding_id)
         result, failure = self._run_session(fingerprint, finding_id)
         if result is None:
-            return self._finish_failed(fingerprint, finding_id, failure or "agent_session_failed")
+            return self._finish_failed(fingerprint, finding_id, failure or "agent_session_failed",
+                                       before=before)
 
         served = result.model or self._model
         if result.outcome == "pull_request_opened" and result.pull_request:
             if self._pr_url and not self._pr_url.fullmatch(result.pull_request):
                 return self._finish_failed(fingerprint, finding_id, "pull_request_url_invalid",
-                                           model=served)
+                                           model=served, before=before)
+            problem = self._check_pull_request(fingerprint, result.pull_request)
+            if problem:
+                return self._finish_failed(fingerprint, finding_id, problem, model=served, before=before)
             log.emit("pull_request_opened", outcome="agent", fingerprint=fingerprint,
-                     finding_id=finding_id, pull_request=result.pull_request, model=served)
+                     finding_id=finding_id, pull_request=redact(result.pull_request, self._secrets),
+                     model=served)
             return "pull_request_opened"
         if result.outcome == "no_change":
-            # US-15: no change plus an explanation, and no branch even if one was pushed.
-            self._cleanup_branch(fingerprint, finding_id)
+            # US-15: no change plus an explanation, and no branch this run created.
+            self._cleanup_branch(fingerprint, finding_id, before)
             return self._no_change(fingerprint, finding_id,
                                    result.explanation or "The agent found no reproducible defect.",
                                    model=served)
-        return self._finish_failed(fingerprint, finding_id, "agent_reported_error", model=served)
+        return self._finish_failed(fingerprint, finding_id, "agent_reported_error", model=served,
+                                   before=before)
+
+    def _check_pull_request(self, fingerprint: str, url: str) -> str | None:
+        """S4: the reported PR must be a pull request of this run. Returns a failure reason or None."""
+        if not self._repo or self._branches is None:
+            return None  # not configured to verify (tests and stub-like wiring)
+        found = _PR_NUMBER.fullmatch(url)
+        if not found:
+            return "pull_request_url_invalid"
+        try:
+            pull = self._branches.get_pull_request(int(found.group(1)))
+        except Exception:  # noqa: BLE001
+            return "pull_request_unreadable"
+        if not isinstance(pull, dict):
+            return "pull_request_unreadable"
+        head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
+        head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
+        same_repo = str(head_repo.get("full_name", "")).lower() == self._repo.lower()
+        if head.get("ref") != BRANCH_PREFIX + fingerprint or not same_repo:
+            return "pull_request_not_this_runs"
+        return None
 
     def _run_session(self, fingerprint: str, finding_id: str | None):
-        """Run one bounded session in a fresh checkout. Returns ``(result, failure_reason)``."""
-        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        """Run one bounded session in a fresh checkout. Returns ``(result, failure_reason)``.
+
+        Order on every exit (S3): stop the agent's processes, then the checkout is
+        removed (leaving the ``with``), then the caller deletes the branch.
+        """
+        marker = uuid.uuid4().hex
+        deadline = time.monotonic() + self._timeout
         try:
             cm = fresh_checkout(self._git) if self._git is not None else nullcontext(None)
             with cm as path:
+                remaining = self._timeout
+                if path is not None and self._installer is not None:
+                    # S2: clone -> install -> session. The runner installs, with no secret in
+                    # the environment; the install counts against the run's time limit.
+                    self._installer.install(path, timeout=self._timeout)
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return None, "agent_timeout"
                 policy = ToolPolicy(path, fingerprint) if path is not None else None
-                ctx = RunContext(fingerprint, path, policy, self._log, self._max_turns, self._timeout)
+                ctx = RunContext(fingerprint, path, policy, self._log, self._max_turns, remaining,
+                                 run_marker=marker, max_budget_usd=self._budget)
                 session = self._make_session(self._model, ctx)
-                future = pool.submit(session.run, SYSTEM_PROMPT, build_task(fingerprint, finding_id))
                 try:
-                    return future.result(timeout=self._timeout + self._grace), None
-                except concurrent.futures.TimeoutError:
-                    return None, "agent_timeout"
+                    return _call_with_timeout(
+                        lambda: session.run(SYSTEM_PROMPT, build_task(fingerprint, finding_id)),
+                        remaining + self._grace), None
+                finally:
+                    self._stop_agent(marker, fingerprint, finding_id)
         except CheckoutError:
             return None, "checkout_failed"
-        except Exception:  # noqa: BLE001 - any session failure is a failed run
-            return None, "agent_session_failed"
-        finally:
-            pool.shutdown(wait=False, cancel_futures=True)
+        except InstallError:
+            return None, "install_failed"
+        except (_RunTimeout, TimeoutError):
+            return None, "agent_timeout"
+        except Exception as exc:  # noqa: BLE001 - any session failure is a failed run
+            return None, f"agent_session_failed:{type(exc).__name__}"
 
-    def _cleanup_branch(self, fingerprint: str, finding_id: str | None) -> None:
-        """Delete ``responder/<fingerprint>`` on the remote if the run created it."""
+    def _stop_agent(self, marker: str, fingerprint: str, finding_id: str | None) -> None:
+        try:
+            self._kill_agent(marker)
+        except Exception:  # noqa: BLE001 - a failed kill must not stop the cleanup after it
+            self._log.emit("agent_kill_failed", outcome="error", fingerprint=fingerprint,
+                           finding_id=finding_id)
+
+    def _snapshot_branch(self, fingerprint: str, finding_id: str | None):
+        """The head SHA of ``responder/<fp>`` now, ``None`` if absent, ``_UNKNOWN`` if unreadable."""
+        if self._branches is None:
+            return None
+        try:
+            return self._branches.get_branch_sha(BRANCH_PREFIX + fingerprint)
+        except Exception:  # noqa: BLE001
+            return _UNKNOWN
+
+    def _cleanup_branch(self, fingerprint: str, finding_id: str | None, before: Any = None) -> None:
+        """Delete ``responder/<fp>`` only if this run created it: it was absent before the
+        session, or its head SHA changed. Otherwise leave it and log ``branch_preserved``."""
         if self._branches is None:
             return
         branch = BRANCH_PREFIX + fingerprint
         try:
+            if before is _UNKNOWN:
+                self._preserved(fingerprint, finding_id, branch, "not_inspectable_before_run")
+                return
+            now = self._branches.get_branch_sha(branch)
+            if now is None:
+                return  # nothing there
+            if before is not None and now == before:
+                self._preserved(fingerprint, finding_id, branch, "existed_before_run_unchanged")
+                return
             deleted = self._branches.delete_branch_if_exists(branch)
         except Exception:  # noqa: BLE001
             self._log.emit("branch_cleanup_failed", outcome="error", fingerprint=fingerprint,
@@ -193,13 +315,18 @@ class RealRunner:
             self._log.emit("branch_deleted", outcome="ok", fingerprint=fingerprint,
                            finding_id=finding_id, branch=branch)
 
-    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None) -> str:
-        self._cleanup_branch(fingerprint, finding_id)
+    def _preserved(self, fingerprint, finding_id, branch, reason) -> None:
+        self._log.emit("branch_preserved", outcome="kept", fingerprint=fingerprint,
+                       finding_id=finding_id, branch=branch, reason=reason)
+
+    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None) -> str:
+        self._cleanup_branch(fingerprint, finding_id, before)
         return self._error(fingerprint, finding_id, reason, model=model)
 
     def _no_change(self, fingerprint, finding_id, explanation, *, model=None) -> str:
         self._log.emit("no_change", outcome="no_change", fingerprint=fingerprint,
-                       finding_id=finding_id, explanation=explanation, model=model or self._model)
+                       finding_id=finding_id, explanation=redact(explanation, self._secrets),
+                       model=model or self._model)
         return "no_change"
 
     def _error(self, fingerprint, finding_id, reason, *, model=None) -> str:

@@ -19,6 +19,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Protocol
 
+from .envscrub import minimal_env
+
 
 class CheckoutError(RuntimeError):
     """The checkout could not be made or did not start clean."""
@@ -73,7 +75,8 @@ class SubprocessGit:
     def _run(self, args: list[str], cwd: Path | None = None) -> str:
         import os
 
-        env = {**os.environ, **git_auth_env(self._token)}
+        # The runner's own git call: the git credential plus allowlisted names only.
+        env = {**minimal_env(os.environ), **git_auth_env(self._token)}
         done = subprocess.run(["git", *args], cwd=cwd, env=env, check=False,
                               capture_output=True, text=True, timeout=300)
         if done.returncode != 0:
