@@ -27,11 +27,24 @@ class FakeGit:
 class FakeBranchClient:
     """Real-mode fake: records branches the 'agent' pushed and their deletion; no network."""
 
-    def __init__(self, existing: set[str] | None = None, *, pulls: dict[int, dict[str, Any]] | None = None) -> None:
+    def __init__(self, existing: set[str] | None = None, *, pulls: dict[int, dict[str, Any]] | None = None,
+                 repo: str = "owner/repo") -> None:
         self.branches: dict[str, str] = {b: "sha-0" for b in (existing or ())}  # branch -> head SHA
         self.pulls: dict[int, dict[str, Any]] = dict(pulls or {})
         self.deleted: list[str] = []
+        self.created: list[dict[str, str]] = []  # pull requests the RUNNER opened (#260)
+        self.fail_create = False
+        self._repo = repo
         self._pushes = 0
+
+    def create_pull_request(self, head: str, base: str, title: str, body: str) -> str:
+        if self.fail_create:
+            raise RuntimeError("422")
+        number = 100 + len(self.created)
+        self.created.append({"head": head, "base": base, "title": title, "body": body})
+        self.pulls[number] = {"number": number, "state": "open",
+                              "head": {"ref": head, "repo": {"full_name": self._repo}}}
+        return f"https://github.com/{self._repo}/pull/{number}"
 
     def push(self, branch: str) -> None:
         """What the agent's ``git push`` does: create the branch or move its head."""

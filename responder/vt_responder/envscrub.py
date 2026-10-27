@@ -49,6 +49,33 @@ def minimal_env(environ: Mapping[str, str]) -> dict[str, str]:
     return {name: value for name, value in environ.items() if is_allowlisted(name)}
 
 
+# The CLI runtime (#260). Docs read 2026-10-27 (code.claude.com/docs/en/authentication): the
+# saved login is ``~/.claude/.credentials.json`` (Linux) under ``HOME``, or under
+# ``CLAUDE_CONFIG_DIR`` when that is set; ``CLAUDE_CODE_OAUTH_TOKEN`` is a login token from
+# ``claude setup-token``. Those three are the whole of "what the CLI needs to find its login".
+CLI_LOGIN_VARS = frozenset({"CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN"})
+# Never in the CLI's environment, even if someone adds them to an allowlist: an API key or
+# bearer token overrides the saved login and bills the API (authentication precedence in the
+# same page), and the git/gh tokens must not reach the agent at all (the runner pushes).
+CLI_FORBIDDEN = frozenset({
+    "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "ANTHROPIC_PROFILE",
+    "ANTHROPIC_FEDERATION_RULE_ID", "ANTHROPIC_ORGANIZATION_ID", "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY",
+    "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_PAT",
+})
+
+
+def cli_env(environ: Mapping[str, str], extra: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The whole environment of a ``claude -p`` run: allowlisted names, the login variables,
+    then ``extra`` (the run marker, git identity). Built from scratch, so no responder secret,
+    API key, or git token can be in it; ``CLI_FORBIDDEN`` is removed last as a second line."""
+    env = {n: v for n, v in environ.items() if is_allowlisted(n) or n in CLI_LOGIN_VARS}
+    env.update(extra or {})
+    for name in CLI_FORBIDDEN:
+        env.pop(name, None)
+    return env
+
+
 def secret_forms(secret: str) -> set[str]:
     """The secret, its base64, and the base64 git sends (``x-access-token:<secret>``)."""
     if len(secret) < MIN_REDACTED_LENGTH:

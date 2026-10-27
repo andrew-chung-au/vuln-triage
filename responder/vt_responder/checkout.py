@@ -76,7 +76,10 @@ class SubprocessGit:
         import os
 
         # The runner's own git call: the git credential plus allowlisted names only.
-        env = {**minimal_env(os.environ), **git_auth_env(self._token)}
+        # The token is in this environment, and HOME is the owner's real one, where an earlier run's agent could have
+        # written ~/.gitconfig (url.insteadOf, http.proxy ...): neither the global nor the system config is read.
+        env = {**minimal_env(os.environ), **git_auth_env(self._token),
+               "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
         done = subprocess.run(["git", *args], cwd=cwd, env=env, check=False,
                               capture_output=True, text=True, timeout=300)
         if done.returncode != 0:

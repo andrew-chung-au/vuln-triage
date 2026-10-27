@@ -41,13 +41,25 @@ PROTECTED_COMPONENTS = frozenset(
 )
 PROTECTED_SUFFIXES = (".tf", ".tfvars", ".tfstate", ".tfplan")
 
+# The CLI runtime (#260): the runner's diff gate also refuses these, and the generated CLI
+# deny rules (cli_rules.py) are built from the same constants. Lockfiles change only by an
+# install the runner controls; the responder's own code is what bounds the agent.
+PROTECTED_LOCKFILES = frozenset(
+    {"package-lock.json", "npm-shrinkwrap.json", "uv.lock", "poetry.lock", "yarn.lock", "pnpm-lock.yaml"}
+)
+PROTECTED_PATH_PREFIXES = ("responder/vt_responder/",)
+# Git subcommands the CLI agent may run (it commits locally; the runner pushes).
+CLI_GIT_READ = ("status", "diff", "log")
+CLI_GIT_WRITE = ("add", "commit")
+
 READ_TOOLS = frozenset({"Read", "Glob", "Grep"})
 WRITE_TOOLS = frozenset({"Edit", "Write", "MultiEdit"})
 KNOWN_TOOLS = READ_TOOLS | WRITE_TOOLS | {"Bash"}
 MAKE_TARGETS = frozenset({"backend-test", "responder-test", "test"})
 
 _SHELL_META = re.compile(r"[;&|<>$`(){}\\\n\r]")
-_READ_FLAGS = frozenset({"--stat", "--short", "-s", "--oneline", "--name-only", "--cached", "--staged"})
+_GLOB = re.compile(r"[*?\[\]]")
+_READ_FLAGS =frozenset({"--stat", "--short", "-s", "--oneline", "--name-only", "--cached", "--staged"})
 
 
 @dataclass(frozen=True)
@@ -122,7 +134,10 @@ class ToolPolicy:
         real = resolve_in_checkout(self._root, raw)
         if real is None:
             return Decision.deny("path_outside_checkout")
-        parts = real.relative_to(self._root).parts
+        return self._check_write_parts(real.relative_to(self._root).parts)
+
+    def _check_write_parts(self, parts: tuple[str, ...]) -> Decision:
+        """The write rules for a path already split relative to the checkout (no filesystem access)."""
         if not parts:
             return Decision.deny("path_not_allowed")
         lowered_parts = tuple(p.lower() for p in parts)
@@ -134,6 +149,28 @@ class ToolPolicy:
             return Decision.deny("infrastructure_path")
         if parts[0] not in WRITABLE_ROOTS:
             return Decision.deny("path_not_allowed")
+        return Decision.ok()
+
+    def check_publish_path(self, raw: str) -> Decision:
+        """The runner-side gate for a path an agent commit changed (#260): the write rules
+        plus lockfiles and the responder's own code.
+
+        ``raw`` is the path string a commit contains, judged LEXICALLY: no ``realpath``, no filesystem
+        access. A working tree that was changed after the commit (a directory swapped for a symlink)
+        therefore cannot change the verdict. Absolute paths, ``..``, ``.`` and empty components are refused."""
+        if not isinstance(raw, str) or not raw or "\x00" in raw:
+            return Decision.deny("path_outside_checkout")
+        parts = tuple(raw.split("/"))
+        if raw.startswith("/") or any(p in ("", ".", "..") for p in parts):
+            return Decision.deny("path_outside_checkout")
+        decision = self._check_write_parts(parts)
+        if not decision.allowed:
+            return decision
+        if parts[-1].lower() in PROTECTED_LOCKFILES:
+            return Decision.deny("lockfile")
+        rel = "/".join(parts)
+        if any((rel.lower() + "/").startswith(prefix) for prefix in PROTECTED_PATH_PREFIXES):
+            return Decision.deny("guard_module")
         return Decision.ok()
 
     # -- tools -----------------------------------------------------------
@@ -188,8 +225,8 @@ class ToolPolicy:
             return Decision.ok()
         if sub == "add":
             paths = rest[1:] if rest[:1] == ["--"] else rest
-            if not paths or any(p.startswith("-") for p in paths):
-                return Decision.deny("command_not_allowed")
+            if not paths or any(p.startswith("-") or _GLOB.search(p) for p in paths):
+                return Decision.deny("command_not_allowed")  # a glob would be expanded by the shell, after this check
             for p in paths:
                 d = self.check_write_path(p)
                 if not d.allowed:

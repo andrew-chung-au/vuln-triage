@@ -2851,6 +2851,36 @@ Copy this template for each new entry:
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
 
+- date: 2026-10-27
+- task/issue: #260 headless `claude -p` runtime on the owner's login, runner pushes and opens the PR (amends F2)
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's task brief for #260 (verify the real CLI first from `--help` and the docs, then `cli_session`, the CLI environment, rules generated from `policy.py`, the runner-side diff gate, runner push and PR, docs). The owner confirmed decisions 1 to 4 with "go" on the issue. No new key prompt saved.
+- files changed: new `responder/vt_responder/{cli_session,cli_rules,publisher}.py`; `responder/vt_responder/{config,envscrub,policy,prompt,real_runner,app,github_client,fakes}.py`; new `responder/tests/{fake_claude,test_cli_runtime,test_cli_rules,test_publisher}.py`; `responder/tests/test_mode.py` (the SDK cases now name `RESPONDER_RUNTIME=sdk`); `.env.example` (`RESPONDER_RUNTIME`, `RESPONDER_MAX_COMMITS`, empty); new `_docs/responder-cli-runtime.md`; `_docs/{responder-security-limits,drill-runbook,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md` (new); this entry.
+- verification (tests run, reviewer verdict): `make verify BASE=origin/main` (result recorded in the issue comment). The CLI flags were read from `claude --help` and `claude auth status` on the sandbox's `claude` 2.1.311 (no model call, no login created) and from code.claude.com/docs pages; they are not confirmed by a live run, and the `VERIFY:` list is in `_docs/responder-cli-runtime.md`. Every test uses a fake `claude` script; no login, no network and no model call was used. No reviewer verdict (QA not yet run).
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 fixes for the four QA failures (comment 6433016307)
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-qa-fixes` from `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief, built on `_session-summaries/handoff-2026-10-27-260-fixes.md` (red test first per finding, one commit per finding, no push). No new key prompt saved.
+- files changed: `responder/vt_responder/{publisher,policy,cli_rules,cli_session}.py`; `responder/tests/{test_publisher_real_git (new),test_publisher,test_cli_rules,test_cli_runtime,fake_claude}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): each finding was reproduced red on the old code and green after the fix; `make responder-test` 618 passed. `make verify` did not pass in the worktree only because `frontend/node_modules` is missing (`make install` not authorized); frontend and backend suites were not run. No QA re-check yet; nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 2 (comment 6435357864): 1d residual, tool-rule holes, docs overclaims, fence parser
+- agent role: Engineer (Claude Code subagent, worktree branch `claude/260-qa-fixes-2` from `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first per item, one commit per item, no push, no protected files). No new key prompt saved.
+- files changed: `responder/vt_responder/{publisher,checkout,cli_rules,policy,prompt,cli_session}.py`; `responder/tests/{test_publisher_real_git,test_cli_rules,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): each item reproduced red, then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 911). Real git on local temp repositories only; nothing run against a live `claude`, login, model or GitHub. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
 - date: 2026-10-26 - docs/227-a11-nightly-stop-cost-tag
 - task/issue: #227 (AWS console session, task A11), branch `docs/227-a11-nightly-stop-cost-tag`
 - agent role: Engineer (Kiro)
@@ -2860,3 +2890,33 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): none — documentation-only edit recording the owner's console actions. The AWS state itself is the owner's; no agent has AWS access and none was claimed. `git diff --check` clean.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the owner confirmed at the console (management account) that the nightly stop is set (04:00 UTC default, off for grading) and the `project` cost-allocation tag is activated and applied; recorded as stated.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 3 (comment 6436104728): shell expansion in the CLI git rules, gitlink hidden by an untracked `.gitmodules`, docs corrections, flaky temp-dir test
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first per item, one commit per item, no push, no protected files). No new key prompt saved.
+- files changed: `responder/vt_responder/{cli_rules,publisher}.py`; `responder/tests/{test_cli_rules,test_publisher_real_git,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): F1 and F2 reproduced red, then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 940). Real git on local temp repositories only; nothing run against a live `claude`, login, model or GitHub. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 4 (comment 6436304070), N1: a tab let a flag past the `git commit` rule
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first, fix, docs, optional prompt line, no push). No new key prompt saved.
+- files changed: `responder/vt_responder/{cli_rules,prompt}.py`; `responder/tests/{test_cli_rules,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the new whitespace cases were red (16 allowed by `evaluate`), then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 973). Nothing run against a live `claude`. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 5 (comment 6436421743), N2: more `git commit` spellings; fixed as a class
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (no new deny pattern; one allowed commit shape by positive match; a seeded differential test between the rules and `ToolPolicy`; docs and records). No new key prompt saved.
+- files changed: `responder/vt_responder/{cli_rules,prompt}.py`; `responder/tests/{test_cli_rules,test_cli_rules_differential (new),test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the six QA forms and the differential test were red, then green (differential disagreements found: 13 of 26 allowed commands, then 13 of 946 after the first fix, then none); `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 995). Nothing run against a live `claude`. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

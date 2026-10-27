@@ -44,7 +44,9 @@ def test_mode_real_requires_a_pinned_model():
         Settings.from_env({**GOOD, "RESPONDER_MODE": "real"})
 
 
-REAL = {**GOOD, "RESPONDER_MODE": "real", "RESPONDER_MODEL": "claude-sonnet-5-5",
+# #260: the default real-mode runtime is now `cli`, which needs no API key; these cases are the SDK
+# runtime's (unchanged) requirements, so they name it. The cli runtime's are in test_cli_runtime.py.
+REAL = {**GOOD, "RESPONDER_MODE": "real", "RESPONDER_RUNTIME": "sdk", "RESPONDER_MODEL": "claude-sonnet-5-5",
         "ANTHROPIC_API_KEY": "PLANTED-ANTHROPIC-KEY", "RESPONDER_GITHUB_TOKEN": "PLANTED-GH-TOKEN",
         "RESPONDER_GITHUB_REPO": "owner/repo"}
 
