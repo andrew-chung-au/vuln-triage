@@ -520,7 +520,7 @@ def test_the_cli_prompt_tells_the_agent_not_to_push_and_to_end_with_the_result_l
     flat = " ".join(CLI_SYSTEM_PROMPT.split())
     for needle in ("NEVER run `git push`", "never open a pull request", "RESULT: FIXED", "RESULT: FALSE_POSITIVE",
                    "RESULT: ESCALATE", "explicit paths", "change and commit nothing",
-                   "& ( ) ; < > $ { }", "a backtick", "a tab"):  # the characters a commit message may not hold
+                   "& ( ) ; < > $ { }", "a backtick", "a tab", "ONE path per `git add`", "a backslash", "must not start with `-`"):  # the characters a commit message may not hold
         assert needle in flat, needle
     assert "git push -u" not in flat and "gh pr create`" not in flat  # the SDK instructions are not reused
     task = build_cli_task("fp1", "42")

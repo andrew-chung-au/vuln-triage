@@ -72,7 +72,9 @@ def test_argv_passes_each_list_as_one_comma_joined_value():
 ALLOWED = [
     ("Bash", "make backend-test"), ("Bash", "make responder-test"), ("Bash", "make test"),
     ("Bash", "git status"), ("Bash", "git status --short"), ("Bash", "git diff --stat"),
-    ("Bash", "git log --oneline"), ("Bash", "git add backend/app/service.py tests/test_x.py"),
+    ("Bash", "git log --oneline"), ("Bash", "git add backend/app/service.py"), ("Bash", "git add tests/test_x.py"),
+    ("Bash", 'git commit -m "Don\'t drop failed jobs"'), ("Bash", 'git commit -m "Fix: handle None in notifier"'),
+    ("Bash", "git commit -m 'fix #123: retry the job'"),
     ("Bash", "git commit -m 'fix the retry'"),
     ("Edit", "backend/app/service.py"), ("Write", "tests/test_retry.py"), ("MultiEdit", "frontend/src/a.ts"),
     ("Edit", "responder/tests/test_x.py"),

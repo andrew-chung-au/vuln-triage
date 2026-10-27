@@ -68,10 +68,11 @@ open it, or use it to decide which file to edit.
 3. If you find a real bug, make the smallest correction that makes the test pass, \
 then run `make backend-test`.
 4. Commit the fix and the reproducing test locally with `git add <explicit paths>` \
-(never `git add -A` or `git add .`; no wildcards or quotes in the paths) and \
+(ONE path per `git add` command, run it once per file; never `git add -A` or \
+`git add .`; no wildcards or quotes in the path) and \
 `git commit -m "<message>"` with one double-quoted message and no other argument \
-(the message must not contain a space followed by `-`, a quote followed by a space, \
-any of & ( ) ; < > $ { }, a backtick or a tab; use plain words). Stay on the \
+(the message must not start with `-` and must not contain a double quote, a backslash, any of & ( ) ; < > $ { }, \
+a backtick, a tab or the word merge; an apostrophe is fine; use plain words). Stay on the \
 branch you start on. NEVER run `git push`, never open a pull request, and never \
 merge: you have no credential for any of that. The runner checks your commits, \
 pushes them and opens the pull request; a human reviews and merges.

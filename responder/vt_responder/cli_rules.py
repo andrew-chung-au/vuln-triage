@@ -100,13 +100,14 @@ GIT_EXPANSION = ("$", "{", "}")
 # git commands, and so are vertical tab, form feed and carriage return (not word separators in bash, but control characters
 # no command here needs). Newline is a command separator in ``evaluate``. Unicode spaces are not separators in bash.
 GIT_CONTROL_WHITESPACE = ("\t", "\x0b", "\x0c", "\r")
-# Flags that must not follow ``git commit -m <msg>``. ``git commit * -*`` below refuses any flag after the first
-# argument (including abbreviations such as ``--am`` and ``--no-ver``) and ``--``; these named ones stay as a record.
-GIT_COMMIT_DENIED_FLAGS = (
-    "--amend", "--no-verify", "--all", "--allow-empty", "--author", "--date", "--file", "--template", "--fixup",
-    "--squash", "--reuse-message", "--reedit-message", "--no-edit", "--interactive", "--patch", "--include",
-    "--only", "--signoff", "--gpg-sign", "--no-gpg-sign",
-)
+# ``git commit`` is NOT guarded by a list of bad flags (three QA rounds each found a spelling the list missed). It is
+# allowed in exactly one SHAPE, by a positive match: ``git commit -m "<text>"`` or ``git commit -m '<text>'`` and nothing
+# else. The allow rule fixes the start (``-m`` and an opening quote) and the end (the closing quote); the deny rules
+# below make the text a single shell word: no third quote of the same kind (so the closing quote is the one that
+# matches the opening one and nothing sits outside them), no backslash (it could escape the closing quote), and
+# none of ``$ { }`` (expansion), a backtick, a separator or a control whitespace character. A rule is a glob and cannot
+# state a character set, so ToolPolicy (which tokenises like the shell) is the stricter check; the differential test
+# ``test_cli_rules_differential.py`` asserts the rules never allow what ToolPolicy refuses.
 
 
 def _git_denials() -> list[str]:
@@ -125,7 +126,10 @@ def _git_denials() -> list[str]:
                "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\t*)", "Bash(git add *\\**)"]
     denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
     denied += [f"Bash(git add *{char}*)" for char in GIT_CONTROL_WHITESPACE if char != "\t"]  # the tab rule is above
-    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION + GIT_CONTROL_WHITESPACE]  # ToolPolicy's metacharacter refusal, and N1
+    # git add: ONE path per command (a second argument is where the text-based patterns stop being reliable; the
+    # agent runs ``git add`` once per file). The allow rule fixes the start, this refuses any space after the path.
+    denied += ["Bash(git add * *)"]
+    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION + GIT_CONTROL_WHITESPACE + ("\\\\",)]
     for extension in (".yaml", ".yml"):  # the policy's protected ``compose*.yaml`` / ``compose*.yml``
         denied += [f"Bash(git add *compose*{extension})", f"Bash(git add *compose*{extension} *)"]
     for component in sorted(PROTECTED_COMPONENTS):
@@ -135,10 +139,10 @@ def _git_denials() -> list[str]:
     for name in sorted(PROTECTED_LOCKFILES):
         denied += [f"Bash(git add *{name})", f"Bash(git add *{name} *)"]
     denied += [f"Bash(git add *{prefix}*)" for prefix in PROTECTED_PATH_PREFIXES]
-    denied += [f"Bash(git commit *{flag}*)" for flag in GIT_COMMIT_DENIED_FLAGS]
-    # ONE quoted message and nothing else: any flag or ``--`` after the first argument, and any quote followed by a
-    # space (a second argument after the message), are refused. A message containing " -" or "' " is refused too.
-    denied += ["Bash(git commit * -*)", "Bash(git commit *' *)", 'Bash(git commit *" *)']
+    # git commit: a third quote of the same kind means something sits outside the message's quotes (``-m "x"z "-a"``).
+    denied += ["Bash(git commit *\"*\"*\"*)", "Bash(git commit *'*'*'*)"]
+    # A message starting with ``-`` is refused (ToolPolicy refuses it): it reads as a flag to anything that re-parses it.
+    denied += ['Bash(git commit -m "-*)', "Bash(git commit -m '-*)"]
     return denied
 
 
@@ -255,9 +259,11 @@ def evaluate(rules: CliToolRules, checkout: Path, tool: str, arg: str) -> Decisi
             return Decision.deny("redirection_not_modelled")  # the CLI checks targets against Edit rules
         # Substitutions and subshells: the inner commands are checked as subcommands too.
         flattened = arg.replace("$(", ";").replace("`", ";").replace("(", ";").replace(")", ";")
-        parts = [p.strip() for p in _SEPARATORS.split(flattened) if p.strip()]
-        if not parts:
-            return Decision.deny("command_not_allowed")
+        # Only space, tab and newline are trimmed: other control whitespace stays in the text for the deny rules.
+        raw_parts = [p.strip(" \t\n") for p in _SEPARATORS.split(flattened.strip(" \t\n"))]
+        if not raw_parts or not all(raw_parts):
+            return Decision.deny("command_not_allowed")  # nothing to run, or a dangling separator (``git status ;``)
+        parts = raw_parts
         for part in parts:  # a deny rule applies if ANY subcommand matches; allow needs EACH to match
             if _denied(rules, "Bash", part):
                 return Decision.deny("denied_by_rule")
