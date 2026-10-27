@@ -1,0 +1,49 @@
+name: responder
+# The US-15 responder Compose job (issue #161, task 29): the real Grafana alert
+# reaches the responder (stub mode), and the P-DEMO-BE loop runs twice (the cases
+# in tests/test_compose_responder.py: P-DEMO-BE, P-PROD-REFUSAL, the Grafana body
+# shape, the 401 cases). It takes about 8 to 10 minutes per take and about 20 in
+# all, so it runs nightly and on demand (Actions -> responder -> Run workflow),
+# not on every push/PR, the same split as the alert job (alert.yml, human decision
+# 2026-10-25). The pull-request gate is the unit and SQLite cases in verify.yml.
+on:
+  schedule:
+    - cron: "30 17 * * *" # 17:30 UTC daily, after the alert job (17:00)
+  workflow_dispatch:
+
+# No secret or live feed: the stack is local, with throwaway env set in
+# ci/test-compose.sh (RESPONDER_MODE=stub, no model key, no GitHub token). A
+# read-only token is all CI gets.
+permissions:
+  contents: read
+
+jobs:
+  # The app + observability + responder stack (compose.yaml + compose.telemetry.yaml
+  # + compose.alert.yaml + compose.responder.yaml). ubuntu-latest ships Docker +
+  # Docker Compose.
+  responder:
+    runs-on: ubuntu-latest
+    # About 20 minutes of cases plus the image builds and the heartbeat wait. NOT
+    # yet measured in CI (the 8 to 10 minutes per take were measured on the
+    # owner's host, #233). Re-size after the first recorded run to about twice the
+    # observed time. Without this line a hung run holds a runner for 6 hours.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v5
+        with: { version: "0.13.1" }
+      - run: make backend-install
+      - run: make test-compose JOB=responder
+      # ci/test-compose.sh removes the Compose project on exit, so on a failure it
+      # first saves the stack's logs to this file (the ci/test-compose.sh hunk in
+      # the proposal). Without that hunk there is nothing to upload.
+      - name: Upload the Compose logs of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responder-compose-logs
+          path: .scratch/compose-logs-vt-responder.txt
+          if-no-files-found: ignore
+          retention-days: 7
