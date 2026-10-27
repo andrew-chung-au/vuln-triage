@@ -2890,3 +2890,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): none — documentation-only edit recording the owner's console actions. The AWS state itself is the owner's; no agent has AWS access and none was claimed. `git diff --check` clean.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): the owner confirmed at the console (management account) that the nightly stop is set (04:00 UTC default, off for grading) and the `project` cost-allocation tag is activated and applied; recorded as stated.
+
+- date: 2026-10-27
+- task/issue: #260 QA round 3 (comment 6436104728): shell expansion in the CLI git rules, gitlink hidden by an untracked `.gitmodules`, docs corrections, flaky temp-dir test
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (red test first per item, one commit per item, no push, no protected files). No new key prompt saved.
+- files changed: `responder/vt_responder/{cli_rules,publisher}.py`; `responder/tests/{test_cli_rules,test_publisher_real_git,test_cli_runtime}.py`; `_docs/{responder-security-limits,responder-cli-runtime,roadmap}.md`; `_session-summaries/issue-260-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): F1 and F2 reproduced red, then green; `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 940). Real git on local temp repositories only; nothing run against a live `claude`, login, model or GitHub. No QA re-check yet.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

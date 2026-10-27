@@ -85,6 +85,19 @@ Verification: `make verify BASE=origin/main` PASS (frontend 89, backend 561, res
 
 Still open: R1, R2, R4 as documented; nothing run against a live `claude`.
 
+## QA round 3 (2026-10-27, branch `claude/260-cli-runtime` at `973f054`, QA comment 6436104728)
+
+One commit per item, red first:
+
+- **F1 (medium)**: shell expansion rebuilt a denied flag after the rules looked (`git diff --${u}output=/x`, `--o{u,u}tput`, `git add backend/.en${u}v`, `backend/{.github,x}/y`, `$HOME`). Red: 25 new refused cases were allowed by `cli_rules.evaluate`. Fixed in `cli_rules.py`: `$`, `{` and `}` are denied in any `git status|diff|log|add|commit` argument (`GIT_EXPANSION`); `ToolPolicy` already refused them as shell metacharacters, and the new cases are asserted against both. `git commit` got the same refusal so the rules and the policy agree (a message containing `$` or braces is refused). `make` targets are exact-match rules and needed nothing. `?`, `[`, `]` are still not refused (documented).
+- **F2 (low to medium)**: `changes()` now passes `--ignore-submodules=none`, so an untracked `.gitmodules` with `ignore = all` cannot hide a committed gitlink. Red: a real-git test published the run with the gitlink pushed. Other runner git calls checked: `rev-list`, `merge-base`, `rev-parse`, `commit-tree`, `push` do not read submodule settings; `checkout.is_clean` (`git status --porcelain`) runs right after the clone, before any agent code exists, so it needs no change.
+- **3 docs**: `_docs/responder-security-limits.md` item 3 no longer says paths are judged "never through the working tree" (the one known working-tree input, `.gitmodules`, is named and closed; others are not examined, R2); item 2 lists the expansion refusal; `_docs/responder-cli-runtime.md` has the expansion paragraph with a `VERIFY:` (raw or expanded text matched by the real CLI) and the `diff_submodule` row mentions the flag.
+- **4 minor**: `test_the_run_starts_in_the_checkout_in_its_own_process_group_and_leaves_no_file_behind` now points `tempfile.tempdir` at an empty directory under `tmp_path` and asserts that directory is empty afterwards, so another process's `vt-cli-*` in `/tmp` cannot fail it; it still fails if the run leaves its output directory behind.
+
+No existing assertion was changed or removed. Verification: `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 940; 182 assertion lines added, 0 removed). Commands that needed approval: none.
+
+Still open: R1, R2, R4 as documented; nothing run against a live `claude`.
+
 ## Interruptions
 
 The session hit its usage limit once during finding 1d; the work resumed from the uncommitted state with no loss.
