@@ -21,7 +21,7 @@ from vulntriage.ingest.settings import (
     get_demo_defect,
     require_demo_defect_allowed,
 )
-from vulntriage.mail.message import DemoDefectError, build_message
+from vulntriage.mail.message import build_message
 
 pytestmark = pytest.mark.unit
 
@@ -110,11 +110,10 @@ def test_p_prod_refusal_process_exits_non_zero_and_logs(env: str | None) -> None
     assert "VT_DEMO_DEFECT" in result.stderr
 
 
-def test_formatter_fails_only_for_no_fix_with_defect_on(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_formatter_handles_no_fix_with_defect_on(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     kwargs = dict(sender="s@x.example", recipient="r@x.example", finding_id="1", tier="P1")
     monkeypatch.setenv("VT_DEMO_DEFECT", "notify_no_fix")
-    with pytest.raises(DemoDefectError):
-        build_message(**kwargs, fixed_version=None)
+    assert "Fixed version: none" in build_message(**kwargs, fixed_version=None).body
     assert build_message(**kwargs, fixed_version="1.2.3").body  # fixed version still formats
     monkeypatch.delenv("VT_DEMO_DEFECT")
     assert "Fixed version: none" in build_message(**kwargs, fixed_version=None).body

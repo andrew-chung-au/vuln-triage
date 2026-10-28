@@ -692,28 +692,18 @@ def _set_fixed_version(factory: sessionmaker[Session], value: str | None) -> Non
         session.commit()
 
 
-def test_demo_defect_no_fix_finding_fails_sends_nothing_and_logs_no_advisory_text(
-    factory, monkeypatch, captured_logs
+def test_no_fix_finding_with_demo_defect_env_set_still_delivers(
+    factory, monkeypatch
 ) -> None:  # type: ignore[no-untyped-def]
     _seed_p1_asset(factory)
-    _taint_advisory(factory)
     _set_fixed_version(factory, None)
     monkeypatch.setenv("VT_DEMO_DEFECT", "notify_no_fix")
     monkeypatch.setenv("DEPLOYMENT_ENVIRONMENT", "dev")
 
     sink = RecordingTransport(VERIFIED_SENDER)
-    sent = _worker(factory, sink).deliver_pending()
-
-    assert sent == 0
-    assert sink.sent == []  # nothing is sent
-    job = _only_job(factory)
-    assert job.state == NotificationState.FAILED.value
-    assert job.last_error_code == "format_failed"
-    logs = _deliver_logs(captured_logs())
-    assert len(logs) == 1
-    attrs = dict(logs[0].attributes or {})
-    assert attrs.get("vt.outcome") == "failed" and attrs.get("vt.error.code") == "format_failed"
-    assert "SECRETADVISORYTEXT" not in repr(logs[0].body) + repr(attrs)
+    assert _worker(factory, sink).deliver_pending() == 1
+    assert "Fixed version: none" in sink.sent[0].body
+    assert _only_job(factory).state == NotificationState.SENT.value
 
 
 def test_demo_defect_finding_with_fixed_version_still_delivers(

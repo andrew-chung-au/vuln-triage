@@ -31,8 +31,6 @@ import re
 from dataclasses import dataclass
 from email.message import EmailMessage
 
-from vulntriage.ingest.settings import DEMO_DEFECT_NOTIFY_NO_FIX, get_demo_defect
-
 
 class HeaderInjectionError(ValueError):
     """A header value contained a CR or LF; the send is refused (A31)."""
@@ -161,12 +159,6 @@ def build_message(
     """
     _reject_header_control_chars(finding_id)
     _reject_header_control_chars(tier)
-
-    # DEMO DEFECT (task 28a / #218, A35): deliberate bug for the US-15 demo,
-    # active only with VT_DEMO_DEFECT=notify_no_fix (start-up refuses it outside
-    # dev/test). Removed by the cleanup commit (#161).
-    if fixed_version is None and get_demo_defect() == DEMO_DEFECT_NOTIFY_NO_FIX:
-        raise DemoDefectError("demo defect notify_no_fix: no fixed version to format")
 
     subject = f"VulnTriage: top-tier finding {finding_id} ({tier}) needs an owner decision"
 
