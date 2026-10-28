@@ -219,7 +219,7 @@ Expect: `written`.
 ```bash
 if [ -f .scratch/responder.pid ] && kill -0 "$(cat .scratch/responder.pid)" 2>/dev/null; then kill "$(cat .scratch/responder.pid)"; for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$(cat .scratch/responder.pid)" 2>/dev/null || break; sleep 1; done; fi
 docker compose -p vt-drill down --volumes --remove-orphans
-rm -rf .scratch/responder-state .scratch/responder.pid .scratch/responder.log .scratch/cookie.txt .scratch/login.hdr .scratch/findings.json
+rm -rf .scratch/responder-state .scratch/responder.pid .scratch/responder.log .scratch/cookie.txt .scratch/login.hdr .scratch/findings.json .scratch/events.base
 echo clean
 ```
 Expect: `clean` (earlier lines may say nothing to remove).
@@ -367,9 +367,10 @@ Then browser `http://localhost:8025`: one email to `oncall@drill.test`, subject 
 
 ### B20. Wait for the responder to open the pull request
 ```bash
-for i in $(seq 1 80); do grep -E '"event": ?"(pull_request_opened|run_failed|no_change|retry_cap_reached)"' .scratch/responder.log | tail -n 1 | cut -c1-400 | grep . && break; sleep 10; done
+B=$(cat .scratch/events.base 2>/dev/null || echo 0)
+for i in $(seq 1 80); do n=$(grep -cE '"event": ?"(pull_request_opened|run_failed|no_change|retry_cap_reached)"' .scratch/responder.log); [ "$n" -gt "$B" ] && { grep -E '"event": ?"(pull_request_opened|run_failed|no_change|retry_cap_reached)"' .scratch/responder.log | tail -n 1 | grep -oE '"(event|reason|pull_request|explanation)": ?"[^"]*"'; break; }; sleep 10; done
 ```
-Expect: one log line with `"pull_request_opened"` and a `pull_request` URL. Wait: starts within seconds of the alert; the run is limited to 10 minutes plus checkout and push: allow up to 13 minutes (the Pro-plan duration is unverified). A `run_failed` or `no_change` line: see TROUBLESHOOTING. No line after 13 minutes: look at Terminal 2.
+(This waits for a NEW result line, so it also works after a replay; it prints only the event, and the reason, explanation or PR URL.) Expect: `"event": "pull_request_opened"` and a `"pull_request"` URL. Wait: starts within seconds of the alert; the run is limited to 10 minutes plus checkout and push: allow up to 13 minutes (the Pro-plan duration is unverified). A `run_failed` or `no_change` line: see TROUBLESHOOTING. No line after 13 minutes: look at Terminal 2.
 Evidence (runbook step 4): screenshot Terminal 2 showing `run_started` (with `model`), `branch_pushed`, `pull_request_opened`.
 
 ### B21. Open the pull request
@@ -517,6 +518,7 @@ FID=PASTE_FINDING_ID_HERE
 if [ "${FP#PASTE_}" != "$FP" ] || [ "${FID#PASTE_}" != "$FID" ]; then
   echo "STOPPED: replace PASTE_FINGERPRINT_HERE and PASTE_FINDING_ID_HERE first"
 else
+  grep -cE '"event": ?"(pull_request_opened|run_failed|no_change|retry_cap_reached)"' .scratch/responder.log > .scratch/events.base || true
   WH=$(grep '^VT_RESPONDER_WEBHOOK_TOKEN=' .env | cut -d= -f2-)
   curl -sS -X POST http://127.0.0.1:9100/webhook/grafana -H "Authorization: Bearer $WH" -H 'Content-Type: application/json' -d "{\"status\":\"firing\",\"alerts\":[{\"status\":\"firing\",\"fingerprint\":\"$FP\",\"labels\":{\"finding_id\":\"$FID\",\"tier\":\"P1\"}}]}"
   unset WH
