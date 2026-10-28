@@ -1,5 +1,12 @@
 # On-call drill and evidence-capture runbook (owner-run)
 
+> **Status (2026-10-28): the drill has been run.** The evidence is in the README's
+> [On-call drill evidence](../README.md#on-call-drill-evidence) section and the recording
+> linked there; the steps actually followed are in [`drill-video-steps.md`](drill-video-steps.md).
+> The checkboxes below are the original plan and were not ticked; where this runbook says to
+> put the link in README placeholders or that the metric-to-trace leg is only CI-asserted, that
+> is out of date.
+
 Runbook for issue [#163](https://github.com/andrew-chung-au/vuln-triage/issues/163)
 (task 39). You run every step on a Docker host that is **not** the sandbox; an
 agent cannot (it needs your Claude login, your token, and a live Compose stack).

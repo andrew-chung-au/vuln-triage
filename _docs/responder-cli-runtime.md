@@ -1,6 +1,6 @@
 # Responder CLI runtime: what was verified, and what the first live run must settle (#260)
 
-Status: written 2026-10-27 for #260 (amends F2). **Nothing here has been run against a login or a model from this repository.** The CLI facts below were read from `claude --help` and `claude auth` on the sandbox's installed `claude` 2.1.311, and from Anthropic's documentation pages named under each heading (fetched 2026-10-27). Anything not established is marked `VERIFY:` and stays marked until the owner's first live run (task 39 / #163).
+Status: written 2026-10-27 for #260 (amends F2). **The first live run (the on-call drill, owner-run on 2026-10-28) has since happened and settled some of the items below; they have not been re-marked here, so every item still marked `VERIFY:` is one the drill did not confirm.** The live run also measured how the real CLI reads whitespace in rule patterns (item 6). The CLI facts below were originally read from `claude --help` and `claude auth` on the sandbox's installed `claude` 2.1.311, and from Anthropic's documentation pages named under each heading (fetched 2026-10-27). Anything not established is marked `VERIFY:` and stays marked until the owner's first live run (task 39 / #163).
 
 ## What the runtime is
 

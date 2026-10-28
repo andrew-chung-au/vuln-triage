@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml/badge.svg)](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)
 
-> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI). **On-call responder agent (US-15): no real runner yet.** A stub-mode responder service, its repeat-alert guard, the demo defect and the Compose wiring exist and run green on a Docker host; the real runner (Claude Agent SDK) and a recorded alert-to-fix run are the remaining work ([#160](https://github.com/andrew-chung-au/vuln-triage/issues/160)). The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). The LLM brief, n8n workflows and MCP server are future development, planned after submission and marked as such throughout (older documents call this track "Showcase").
+> **Status.** Implemented: a full-stack app (React + FastAPI + Postgres), Docker Compose, CI, OpenTelemetry→Grafana observability and a US-14 alert (verified in CI and seen live). **On-call responder agent (US-15): runs live.** On the alert, a real headless `claude -p` agent fixed a planted defect and the runner opened a pull request ([#265](https://github.com/andrew-chung-au/vuln-triage/pull/265)) for the owner to merge; the run is in the [demo video](https://youtu.be/B4OvaHqAeyI) and the [drill evidence](#on-call-drill-evidence). It is a scripted drill (the agent is told the defect is planted), and a few details of the real CLI are still unverified ([CLI runtime notes](_docs/responder-cli-runtime.md); tracking issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160)), and independent QA of the final merged runtime code was not completed (earlier QA rounds found and fixed issues; see the [roadmap](_docs/roadmap.md) check-ins). The **dev** environment is live on AWS at https://dev.52-206-221-145.sslip.io and **production** at https://app.52-206-221-145.sslip.io (both deployed by the GitHub workflow on 2026-10-25, with a rehearsed rollback; see [Deployment](#deployment--rollback)). The LLM brief, n8n workflows and MCP server are future development, planned after submission and marked as such throughout (older documents call this track "Showcase").
 
 ---
 
@@ -17,7 +17,7 @@
 **Run it (one command each):**
 
 ```sh
-make install     # frontend (npm ci) + backend (uv sync)
+make install     # frontend (npm ci) + backend and responder (uv sync)
 make dev         # run the whole app locally on SQLite — no Docker
 make compose-up  # OR run the full stack (frontend + backend + Postgres) in Docker
 make test        # run the unit + integration suites
@@ -27,7 +27,7 @@ See [Quick start](#quick-start) for the few-minute version, including creating a
 
 ### Where to find each criterion
 
-**For the peer reviewer.** For each of the 12 criteria, this points to what exists and where to see it. The "Suggested" column is the score we think the evidence supports (out of the max in brackets) — a starting point only; please judge it yourself against [`_docs/rubric.md`](_docs/rubric.md). The rubric has 24 points; 10 to pass. An independent in-repo audit of the evidence is in [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md), updated only by the Rubric Evidence Auditor role.
+**For the peer reviewer.** For each of the 12 criteria, this points to what exists and where to see it. The "Suggested" column is the score we think the evidence supports (out of the max in brackets) — a starting point only; please judge it yourself against [`_docs/rubric.md`](_docs/rubric.md). The rubric has 24 points; 10 to pass. An independent in-repo audit of the evidence is in [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md), updated only by the Rubric Evidence Auditor role. That audit on file was run on 2026-10-26, before the on-call drill: it scores 22 of 24 and lists On-Call Agent as missing; the [drill evidence](#on-call-drill-evidence) supersedes that row until the auditor re-runs.
 
 | # | Criterion (max) | Suggested | What exists, and the proof to open |
 |---|---|---|---|
@@ -40,14 +40,14 @@ See [Quick start](#quick-start) for the few-minute version, including creating a
 | 7 | **Containerization** (2) | 2 | Full system incl. Postgres via Compose, one command: `make compose-up` → [`compose.yaml`](compose.yaml) · [Quick start — Option B](#option-b--full-stack-in-docker-make-compose-up) |
 | 8 | **Deployment** (2) | 2 | Deployed and reachable at public URLs → **dev** https://dev.52-206-221-145.sslip.io (reviewer login below) · **prod** https://app.52-206-221-145.sslip.io · [Deployment](#deployment--rollback) · [deployment screenshots](#deployment-evidence) |
 | 9 | **CI/CD** (3) | 3 | CI on every PR + auto-deploy to dev on merge + manual prod promotion → [Testing & CI](#testing--ci) · [Deployment](#deployment--rollback) · [CI/CD screenshots](#deployment-evidence) (production reviewer gate, `protect-main` ruleset) |
-| 10 | **Observability** (2) | 2 | Metric + trace + structured logs sharing one trace ID, no PII/secrets, viewable in Grafana. The log↔trace shared ID is shown in the screenshots; the metric→trace (exemplar) leg is shown as a CI assertion rather than a screenshot → [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
+| 10 | **Observability** (2) | 2 | Metric + trace + structured logs sharing one trace ID, no PII/secrets, viewable in Grafana. The log↔trace shared ID is shown in the screenshots; the metric→trace (exemplar) leg is asserted in CI and shown in the [on-call drill evidence](#on-call-drill-evidence) (an exemplar carrying the trace ID) → [Observability](#observability) · [Observability evidence](#observability-evidence) · [`observability/`](observability/) |
 | 11 | **Alerting on User Impact** (1) | 1 | One real Grafana alert on an undelivered top-priority finding; fired in CI and seen live → [Alerting & on-call](#alerting--on-call-agent) · [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/alerting) |
-| 12 | **On-Call Agent** (2) | 2 | An agent wakes on the alert and fixes the issue: the US-14 alert → webhook → responder path runs green in CI (repeat-alert guard, demo defect, Compose wiring), and the real `cli` runtime — a headless `claude -p` agent that reproduces the defect, writes a failing test, fixes the code, and opens a PR for the owner to merge (`main` is protected, so the agent cannot self-merge) — is built and merged ([#260](https://github.com/andrew-chung-au/vuln-triage/issues/260)). The recorded alert-to-fix drill ([#163](https://github.com/andrew-chung-au/vuln-triage/issues/163)) is the video [VulnTriage Demo Responder](https://youtu.be/B4OvaHqAeyI) (see [Demo recording](#demo-recording)) → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [video steps](_docs/drill-video-steps.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
+| 12 | **On-Call Agent** (2) | 2 | An agent wakes on the alert and fixes the issue: the US-14 alert → webhook → responder path runs green in the nightly/on-demand `alert` and `responder` CI workflows (repeat-alert guard, demo defect, Compose wiring), and the real `cli` runtime — a headless `claude -p` agent that investigates the failure, adds a test and fixes the code, with the runner then opening a PR for the owner to merge (`main` is protected, so the agent cannot self-merge) — is built and merged ([#260](https://github.com/andrew-chung-au/vuln-triage/issues/260)) and ran live on 2026-10-28: the agent fixed the planted defect and the runner opened [#265](https://github.com/andrew-chung-au/vuln-triage/pull/265), which the owner merged. The recorded alert-to-fix drill ([#163](https://github.com/andrew-chung-au/vuln-triage/issues/163)) is the video [VulnTriage Demo Responder](https://youtu.be/B4OvaHqAeyI) (see [Demo recording](#demo-recording)) with its [screenshots](#on-call-drill-evidence) → [Alerting & on-call](#alerting--on-call-agent) · [drill runbook](_docs/drill-runbook.md) · [video steps](_docs/drill-video-steps.md) · [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160) |
 | | **Total** | **24 / 24** | A starting suggestion, not a self-grade. See also [Beyond the rubric](#beyond-the-rubric) for out-of-scope work. |
 
 ### Demo recording
 
-📹 **[VulnTriage Demo Responder](https://youtu.be/B4OvaHqAeyI)**: the recorded on-call drill (metric at 1 → one alert naming the finding → responder PR → owner email in MailHog → alert resolves). Other recordings are on the project channel: **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)**.
+📹 **[VulnTriage Demo Responder](https://youtu.be/B4OvaHqAeyI)** (unlisted video): the recorded on-call drill (metric at 1 → one alert naming the finding → responder PR → owner email in MailHog → alert resolves). Other recordings are on the project channel: **[youtube.com/@cloudaisolutions](https://www.youtube.com/@cloudaisolutions)**.
 
 ---
 
@@ -73,7 +73,7 @@ The submission path runs end to end: inventory → match → enrich → rank →
 4. **Rank.** Give every finding a deterministic, explainable rank with a reason. No AI.
 5. **Route.** The backend refreshes KEV/EPSS daily on its own scheduler, re-scores findings, and notifies the owner of a new top-priority finding.
 6. **Re-scan.** Close a finding automatically when a re-scan shows the fixed version is in place.
-7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent (stub mode only so far; the real agent is not built yet) is meant to wake on it, open a fix PR, and log its actions (promotion to production stays manual). No customer data, advisory text or credentials go to telemetry.
+7. **Watch & respond.** The scan→notification journey emits metrics, traces and structured logs sharing a trace ID, viewable in Grafana. An alert fires when a top-priority finding is not delivered; a responder agent wakes on it, investigates, and the runner opens a fix PR for the owner to merge, logging every action (promotion to production stays manual; see [Alerting & on-call agent](#alerting--on-call-agent)). No customer data, advisory text or credentials go to telemetry.
 
 A **web dashboard** lists findings per asset with status (`open`, `risk accepted`, `fixed`, `withdrawn`) and an audit trail; only a human can set `risk accepted`.
 
@@ -89,7 +89,7 @@ VulnTriage does **not** actively scan networks/applications, does **not** patch 
 - An ownerless asset's findings are still recorded and ranked; the notification is held and the dashboard flags the asset as ownerless.
 - If an OSV/KEV/EPSS feed is unavailable, last-known data is kept and marked stale, the scheduled run retries, and no findings are deleted.
 - Only a human can set `risk accepted`; the audit trail records who, when and the previous value.
-- An undelivered top-priority finding fires **exactly one** alert. Once the real responder agent exists (only a stub does so far), its actions will be logged; production promotion stays manual.
+- An undelivered top-priority finding fires **exactly one** alert. The responder agent's actions are logged (one line per event: run started, branch pushed, pull request opened, or the reason a run failed); production promotion stays manual.
 
 ---
 
@@ -185,7 +185,7 @@ The app running on its one-command local path (`make dev`: SQLite, no Docker), s
 
 ### Deployment evidence
 
-Captured 2026-10-25 and 2026-10-26 from the live deployment and the GitHub settings pages.
+Captured 2026-10-25 to 2026-10-28 from the live deployment and the GitHub settings pages.
 
 | What it shows | Screenshot |
 |---|---|
@@ -193,18 +193,18 @@ Captured 2026-10-25 and 2026-10-26 from the live deployment and the GitHub setti
 | **A production deploy waiting for approval** (run #33): the job stops at "waiting for review" until the reviewer approves | ![deploy #33 waiting for review](docs/images/g2-github-actions-deploy33-review.png) |
 | **Dev deploys automatically on merge** (run #30, triggered by a push to `main`): build and dev deploy run, production is skipped | ![deploy #30, automatic dev deploy](docs/images/g3-github-actions-deploy30-auto-dev-deploy.png) |
 | **Rollback rehearsal** (run #32, attempt 1): production was deployed from an earlier image tag through the approval gate, approved by the owner | ![deploy #32, rollback rehearsal](docs/images/g4-github-actions-deploy32-rollback-rehearsal.png) |
-| **`main` is protected** by the `protect-main` ruleset: pull request required, status checks required, no force pushes, no deletion | ![protect-main ruleset](docs/images/g5-github-settings-rulesets-protect-main.png) |
+| **`main` is protected** by the `protect-main` ruleset: pull request required, bypass list empty, no force pushes, no deletion, and seven required status checks (`verify`, `unit`, `frontend`, `sqlite-integration`, `postgres-integration`, `telemetry`, `openapi-validation`) | ![protect-main ruleset](docs/images/g5-github-settings-rulesets-protect-main.png) |
 | **Dev only deploys from `main`** (no reviewer, since dev deploys automatically) | ![dev environment rules](docs/images/g5-github-settings-environments-dev.png) |
 | **The live dev site**, signed in as the public reviewer, showing ranked findings for the demo repositories | ![live dev findings](docs/images/g7-vuln-triage-dev-findings.png) |
 | **The live production site**: the sign-in page at `app.52-206-221-145.sslip.io` over HTTPS (production has no public account) | ![live production sign-in page](docs/images/g6-vuln-triage-production-login.png) |
 
 ### Observability evidence
 
-Captured 2026-10-26 on the local Compose observability stack ([`observability/`](observability/)) after one journey run of `make demo` against the recorded fixtures (`VT_FEEDS=fixtures`), so the findings are demo data. One trace ID, `42f5161ee955e543e2f5f355e410c247`, appears in both the log event and the trace below.
+The log event and trace below were captured 2026-10-26 on the local Compose observability stack ([`observability/`](observability/)) after one journey run of `make demo` against the recorded fixtures (`VT_FEEDS=fixtures`), so the findings are demo data; the dashboard screenshot was re-captured on 2026-10-28 during the on-call drill. One trace ID, `42f5161ee955e543e2f5f355e410c247`, appears in both the log event and the trace below.
 
 | What it shows | Screenshot |
 |---|---|
-| **The US-13 dashboard** with data in all three panes: the notifications metric (`top tier/held` green, `top tier/sent` yellow), recent `scan.run` traces from Tempo and backend events from Loki. The Environment and Version dropdowns visible here were removed afterwards: they were not connected to any panel (issue #199) | ![US-13 journey dashboard with metric, trace and log panes](docs/images/g9-grafana-dashboard-dev-local.png) |
+| **The US-13 dashboard** with data in all three panes, re-captured on 2026-10-28 during the on-call drill (after the Environment and Version dropdowns were removed, issue #199): the notifications metric (`top tier/failed` green, `top tier/sent` yellow), recent `scan.run` traces from Tempo and backend events from Loki | ![US-13 journey dashboard with metric, trace and log panes](docs/images/g9-grafana-dashboard-dev-local.png) |
 | **One `notification.deliver` log event in Loki**, expanded: it carries `trace_id` `42f5161ee955e543e2f5f355e410c247`, `vt_outcome` `sent` and `vt_tier` `P1` | ![Expanded notification.deliver log event with its trace id](docs/images/g9-grafana-trace-scan-loki-expandedlog.png) |
 | **The same trace in Tempo** (Grafana Explore, TraceQL): `scan.run` with 7 spans. The list is cut off after `notification.enqueue`; the seventh span is `notification.deliver`. The visible spans take milliseconds; the trace's overall duration is 29.34 s | ![The scan.run trace in Tempo with 7 spans](docs/images/g9-grafana-tempo-trace.png) |
 
@@ -216,16 +216,16 @@ Captured 2026-10-28 on the local Compose stack (`vt-drill`) with the planted `VT
 
 | Step | What it shows | Screenshot |
 |---|---|---|
-| B5 | **The stack is up**: every container healthy; `migrations` is a one-shot job and shows `Exited (0)` | ![Containers healthy](docs/images/drill-b5-show-the-containers.png) |
+| B5 | **The stack is up**: every started container healthy; `migrations` is a one-shot job and shows `Exited (0)` | ![Containers healthy](docs/images/drill-b5-show-the-containers.png) |
 | B12 | **Defect on, responder started, dashboard user created**: the backend reports `VT_DEMO_DEFECT=notify_no_fix`; the responder logs show it refusing a request with a wrong token (401); the demo user is created | ![Stack, defect flag and responder start](docs/images/drill-b12-create-the-dashboard-user-includes-b8.png) |
 | B14 | **The failing asset is registered and scanned**: a top-tier (`P1`) finding with no fixed version | ![Asset registered and finding with no fix](docs/images/drill-b14-register-the-failing-asset-this-starts-the-scan.png) |
 | B16 | **The overdue metric reaches 1** (`vt_top_tier_notification_overdue`): Prometheus, graph and table | ![Metric at 1](docs/images/drill-b16-watch-the-metric-reach-1.png) ![Metric at 1, table](docs/images/drill-b16-watch-the-metric-reach-1-table-tab.png) |
-| B18 | **Exactly one Grafana alert fires**, naming the finding | ![Grafana alert firing](docs/images/drill-b18-show-the-grafana-alert.png) |
+| B18 | **Exactly one Grafana alert fires** (the Alert rules list shows 1 firing); the next row's email names the finding | ![Grafana alert firing](docs/images/drill-b18-show-the-grafana-alert.png) |
 | B19 | **The alert email** arrives in MailHog | ![MailHog inbox](docs/images/drill-b19-wait-for-the-alert-email-inbox.png) ![Alert email](docs/images/drill-b19-wait-for-the-alert-email-email.png) |
 | B21 | **The responder opened a pull request** with a fix and a test: the runner pushed `responder/<fingerprint>` after its diff gate and opened [#265](https://github.com/andrew-chung-au/vuln-triage/pull/265) | ![Responder pull request](docs/images/drill-b21-open-the-pull-request.png) ![Responder pull request, full screen](docs/images/drill-b21-open-the-pull-request-full-screen.png) |
 | B22 | **The owner merges it** (the responder cannot) | ![Merging the pull request](docs/images/drill-b22-merge-the-pull-request.png) |
 | B24 | **The backend is restarted with the defect off** | ![Backend restarted, defect off](docs/images/drill-b24-restart-the-backend-with-the-defect-off.png) |
-| B25 | **The owner notification is delivered** (second email in MailHog) | ![Owner email delivered](docs/images/drill-b25-wait-for-the-owner-email.png) |
+| B25 | **The owner notification is delivered**: the MailHog message count reaches 2 (terminal) | ![Owner email delivered](docs/images/drill-b25-wait-for-the-owner-email.png) |
 | B26 | **The metric returns to 0** | ![Metric back to 0](docs/images/drill-b26-wait-for-the-metric-to-return-to-0-prometheus.png) |
 | B27 | **The alert resolves.** The right-hand terminal is the responder's action log for the run: `run_started` 07:14:20 UTC, `branch_pushed` 07:15:54, `pull_request_opened` 07:15:55, then `alert_ignored` with outcome `resolved` at 07:32:16 and no new run | ![Alert resolved in Grafana](docs/images/drill-b27-show-the-resolved-alert-grafana.png) ![Responder log and terminals](docs/images/drill-b27-show-the-resolved-alert-terminals.png) |
 | B30 | **Metric → trace**: an exemplar on `vt_notifications_total` (the `sent` series) carries a `trace_id` and `span_id`; the query view has Exemplars switched on | ![Exemplar with trace id](docs/images/drill-b30-metric-to-trace-and-trace-to-logs-prometheus-exemplar.png) ![Exemplars query](docs/images/drill-b30-metric-to-trace-and-trace-to-logs-prometheus-query.png) |
@@ -240,7 +240,7 @@ Work done **outside** the 12 scored criteria — not required by the rubric. Lis
 
 **Engineering depth beyond "it works"**
 - **Deterministic, explainable, AI-free ranking.** Findings are ranked by real-world-exploitation evidence (CISA KEV + FIRST EPSS) plus asset criticality/exposure, each with a human-readable reason — and **no AI in the ranking path**, so the scores are reproducible and auditable. → [What it does](#what-it-does) · `backend/vulntriage/`
-- **Fail-closed safety switches throughout.** `VT_FEEDS=fixtures` and the `VT_DEMO_DEFECT` demo switch both refuse to run outside `dev`/`test` (an unset/`prod`/unknown value stops start-up), so test-only behaviour can never reach production. `P-FLAG-GONE` fails the production promotion if the demo defect is still in the tree. → [`_docs/architecture.md`](_docs/architecture.md)
+- **Fail-closed safety switches throughout.** `VT_FEEDS=fixtures` and the `VT_DEMO_DEFECT` demo switch both refuse to run outside `dev`/`test` (an unset/`prod`/unknown value stops start-up), so test-only behaviour can never reach production. `P-FLAG-GONE` fails the production promotion if the demo defect is still in the tree (the cleanup of the remaining switch is pending). → [`_docs/architecture.md`](_docs/architecture.md)
 - **Telemetry privacy enforced in code, not just policy.** A code-level allowlist **plus** a Collector processor strip customer data, advisory text, contact details, URLs and credentials; a CI case (`T-REFUSE`) asserts the excluded keys are absent from Collector output, Tempo and Loki. → [`observability/`](observability/)
 - **Idempotency and exactly-once notifications.** A new top-priority finding yields **exactly one** owner notification; re-scans close findings only when the fixed version is actually present. → [Expected behaviour](#expected-behaviour)
 
@@ -254,7 +254,7 @@ Work done **outside** the 12 scored criteria — not required by the rubric. Lis
 - **Append-only AI-usage log and key-prompt archive.** Every AI-assisted task is recorded; role-defining prompts are saved verbatim. → [`_docs/ai-usage-log.md`](_docs/ai-usage-log.md) · [`_docs/prompts/`](_docs/prompts)
 - **Infrastructure as code for a cost-controlled single server** (dev + prod projects, GHCR images, `sslip.io` hostnames, no domain purchase). → [`terraform/`](terraform)
 
-**Self-audit.** The repo ships an [independent in-repo rubric audit](_docs/rubric-evidence.md) that records where the evidence is strong and where it is thin (including the On-Call Agent gap and the Observability metric-leg note), so the claims above can be checked rather than taken on trust.
+**Self-audit.** The repo ships an [independent in-repo rubric audit](_docs/rubric-evidence.md) that records where the evidence is strong and where it is thin, so the claims above can be checked rather than taken on trust. It dates from 2026-10-26 (22 of 24, On-Call Agent not yet evidenced) and predates the drill, so read its On-Call and Observability-metric rows together with the [on-call drill evidence](#on-call-drill-evidence).
 
 > Scope note: the LLM owner-brief (with a fixed-version guardrail), n8n routing workflows, a read-only MCP server, and deploying observability to AWS are **planned future development**, not claimed here. → [spec, future development](_docs/specs.md#future-development-after-submission)
 
@@ -262,7 +262,7 @@ Work done **outside** the 12 scored criteria — not required by the rubric. Lis
 
 ## Architecture
 
-The backend ingests assets, reads their lockfiles with a read-only GitHub token, matches against OSV, enriches with KEV/EPSS, ranks deterministically, and delivers owner notifications. A background scheduler runs the daily refresh and re-scan. Telemetry flows from the backend over OTLP to an OpenTelemetry Collector, then to Prometheus (metrics), Tempo (traces) and Loki (logs), surfaced in Grafana. For submission the observability stack and the alert run in local Docker Compose (the responder is planned to join them); the app itself (frontend + backend + Postgres) also deploys to AWS via Terraform.
+The backend ingests assets, reads their lockfiles with a read-only GitHub token, matches against OSV, enriches with KEV/EPSS, ranks deterministically, and delivers owner notifications. A background scheduler runs the daily refresh and re-scan. Telemetry flows from the backend over OTLP to an OpenTelemetry Collector, then to Prometheus (metrics), Tempo (traces) and Loki (logs), surfaced in Grafana. For submission the observability stack and the alert run in local Docker Compose (the real responder runs on the host beside them; its Compose service is stub-only); the app itself (frontend + backend + Postgres) also deploys to AWS via Terraform.
 
 Full detail: [`_docs/architecture.md`](_docs/architecture.md) · API contract: [`_docs/openapi.yaml`](_docs/openapi.yaml) ([endpoint table](_docs/api.md)).
 
@@ -271,7 +271,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
                                                              │
    OpenTelemetry (trace id shared) ──▶ Collector ──▶ Prometheus / Tempo / Loki ──▶ Grafana
                                                              │
-                               undelivered top-tier finding ─▶ alert ─▶ (planned) responder agent ─▶ fix PR
+                               undelivered top-tier finding ─▶ alert ─▶ responder agent ─▶ fix PR
 ```
 
 ---
@@ -290,7 +290,7 @@ assets ─▶ scan (OSV match) ─▶ enrich (KEV/EPSS) ─▶ rank ─▶ notif
 
 ## Testing & CI
 
-- **One command:** `make test` runs the frontend (Vitest) and backend (pytest) suites.
+- **One command:** `make test` runs the frontend (Vitest), backend (pytest) and responder (pytest) suites.
 - **Unit + integration.** Backend unit cases and SQLite-integration cases run under `make test`; the Postgres-integration suite runs with `make test-integration`; the Docker Compose journeys (telemetry / alert / responder) run with `make test-compose JOB=<telemetry|alert|responder>`.
 - **CI** runs the suites on every push and pull request via [`verify.yml`](.github/workflows/verify.yml) ([recent runs](https://github.com/andrew-chung-au/vuln-triage/actions/workflows/verify.yml)).
 - Backend tests use a network guard (any outbound HTTP call fails the test) and stubbed feeds, so they need no live network or secret.
@@ -302,7 +302,7 @@ The key journey — a scan through to the owner notification — is instrumented
 ## Alerting & on-call agent
 
 - **Alert (US-14).** When a top-priority finding is not delivered within the window, a provisioned Grafana rule fires **exactly one** alert naming the finding — to the owner's email and the responder — from real stored job state (not a simulation). Held jobs are exempt. Rule: [`observability/grafana/provisioning/alerting/`](observability/grafana/provisioning/).
-- **On-call agent (US-15).** A responder agent wakes on that alert, investigates the failed notification job in a fresh checkout, writes a failing test, fixes the code and commits locally; the runner, not the agent, then checks the commits (a diff gate), pushes `responder/<fingerprint>` and opens the pull request, and logs every action. A person reviews and merges (`main` is protected, so the responder cannot); promotion to production stays manual. It has a stub mode (no model, a fake GitHub client, used in CI) and a real mode (`RESPONDER_RUNTIME=cli`: a headless `claude -p` agent on the owner's Claude login, no API key). The real mode ran live on 2026-10-28: the alert reached the responder, the agent fixed the planted defect and the runner opened [#265](https://github.com/andrew-chung-au/vuln-triage/pull/265); the owner merged it and the alert resolved. See the [recording](https://youtu.be/B4OvaHqAeyI), the [drill evidence](#on-call-drill-evidence), the [CLI runtime notes](_docs/responder-cli-runtime.md) (including what is still unverified) and the [security limits](_docs/responder-security-limits.md). Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
+- **On-call agent (US-15).** A responder agent wakes on that alert, investigates the failed notification job in a fresh checkout, adds a test, fixes the code and commits locally; the runner, not the agent, then checks the commits (a diff gate), pushes `responder/<fingerprint>` and opens the pull request, and logs every action. A person reviews and merges (`main` is protected, so the responder cannot); promotion to production stays manual. It has a stub mode (no model, a fake GitHub client, used in CI) and a real mode (`RESPONDER_RUNTIME=cli`: a headless `claude -p` agent on the owner's Claude login, no API key). The real mode ran live on 2026-10-28: the alert reached the responder, the agent fixed the planted defect and the runner opened [#265](https://github.com/andrew-chung-au/vuln-triage/pull/265); the owner merged it and the alert resolved. See the [recording](https://youtu.be/B4OvaHqAeyI), the [drill evidence](#on-call-drill-evidence), the [CLI runtime notes](_docs/responder-cli-runtime.md) (including what is still unverified) and the [security limits](_docs/responder-security-limits.md). Progress is tracked in issue [#160](https://github.com/andrew-chung-au/vuln-triage/issues/160).
 
 ---
 

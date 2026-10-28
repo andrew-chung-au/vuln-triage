@@ -1,8 +1,8 @@
 # Responder security limits (#244, #260)
 
-Status: written 2026-10-27 for the pre-drill hardening of the real runner (#244, follow-up to #221), and extended the same day for the `cli` runtime (#260). Nothing here has been run against a live Agent SDK session or a live `claude -p` run.
+Status: written 2026-10-27 for the pre-drill hardening of the real runner (#244, follow-up to #221), and extended the same day for the `cli` runtime (#260). The `cli` runtime then ran live in the owner's on-call drill on 2026-10-28; the `sdk` runtime has never been run against a live session.
 
-There are two real-mode runtimes (`RESPONDER_RUNTIME`). **`cli` (the default, #260)** is described first; **`sdk` (#221)** is the Agent SDK session that needs `ANTHROPIC_API_KEY`, and everything from "The tool policy is a guardrail" on describes it unless a sentence says otherwise. The SDK runtime stays until the drill has been recorded.
+There are two real-mode runtimes (`RESPONDER_RUNTIME`). **`cli` (the default, #260)** is described first; **`sdk` (#221)** is the Agent SDK session that needs `ANTHROPIC_API_KEY`, and everything from "The tool policy is a guardrail" on describes it unless a sentence says otherwise. The SDK runtime stays until a later cleanup (the drill has now been recorded).
 
 ## The `cli` runtime (#260): what bounds the agent now
 
