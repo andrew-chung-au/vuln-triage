@@ -256,7 +256,7 @@ def test_the_run_starts_in_the_checkout_in_its_own_process_group_and_leaves_no_f
 @pytest.mark.parametrize("text,outcome,explanation", [
     ("RESULT: FIXED the retry loop swallowed the error", "fixed", "the retry loop swallowed the error"),
     ("notes\nRESULT: FALSE_POSITIVE nothing failed, the job was retried", "no_change", "nothing failed, the job was retried"),
-    ("RESULT: FALSE_POSITIVE", "no_change", None),
+    ("RESULT: FALSE_POSITIVE", "no_change", "RESULT: FALSE_POSITIVE"),  # no text: the message's end
     ("RESULT: FALSE_POSITIVE x\nRESULT: FIXED y", "fixed", "y"),  # the last line wins
 ])
 def test_the_result_line_is_parsed(text, outcome, explanation):
@@ -405,7 +405,7 @@ def runner_rig(tmp_path, *, stdout=RESULT_FIXED, publish_git=None, branches=None
 
     def make(model, ctx):
         sessions.append(ctx)
-        return CliSession(model, ctx, environ=host_env(bin_dir))
+        return CliSession(model, ctx, environ=host_env(bin_dir), secrets=list(secrets))
 
     runner = RealRunner(api, ActionLog(lines.append), MODEL, make, git=FakeCheckoutGit(), branches=branches,
                         timeout_seconds=timeout, timeout_grace_seconds=0.0, repo="owner/repo",
@@ -471,10 +471,11 @@ def test_an_escalation_logs_the_agents_explanation_in_run_failed(tmp_path):
     assert failed["explanation"] == "the failing job needs a database migration I cannot make"
 
 
-def test_an_escalation_with_no_text_logs_no_explanation(tmp_path):
+def test_an_escalation_with_no_text_logs_the_end_of_the_final_message_instead(tmp_path):
+    # superseded: it used to assert no explanation; the live drill showed an unreadable empty escalation
     runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE"))
     runner.run("fp1", "42")
-    assert "explanation" not in run_failed_events(lines)[0]
+    assert run_failed_events(lines)[0]["explanation"] == "RESULT: ESCALATE"
 
 
 def test_a_planted_secret_in_the_escalation_text_is_redacted(tmp_path):

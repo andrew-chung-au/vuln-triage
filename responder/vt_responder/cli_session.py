@@ -33,11 +33,11 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .cli_rules import CliToolRules, build_rules
 from .config import ConfigError
-from .envscrub import cli_env
+from .envscrub import cli_env, redacted_window
 from .procs import MARKER_VAR
 from .real_runner import AgentResult, RunContext
 
@@ -58,6 +58,8 @@ _TEXT_REASONS = ("agent_cli_error", "result_line_missing", "agent_escalated")
 # (RESULT: line text) or last (final-message tail) real_runner.MAX_FAILURE_TEXT characters of it.
 _MAX_HEAD = 800
 _MAX_TAIL = 800
+_FALLBACK_TAIL = 500  # end of the final message logged when a verdict carries no (or hardly any) text
+_MIN_ESCALATION_TEXT = 20  # an ESCALATE text shorter than this is not an explanation
 _RESULT_LINE = re.compile(r"^RESULT:\s*(FIXED|FALSE_POSITIVE|ESCALATE)\b[ \t]*(.*)$", re.MULTILINE)
 # VERIFY: exact wording. The errors page lists "You've hit your session/weekly/Opus/Sonnet limit"; the
 # exit code and JSON shape of a headless run that hits one are not documented there.
@@ -120,12 +122,13 @@ def preflight(environ: Mapping[str, str] | None = None, *, binary: str = BINARY,
     return method
 
 
-def _tail(body: str) -> str | None:
+def _tail(body: str, secrets: Sequence[str] = (), size: int = _MAX_TAIL) -> str | None:
     """The last ``_MAX_TAIL`` printable characters of the final message, whitespace collapsed, for the
-    failure log. Untrusted text: the runner redacts it, keeps the last 500 characters and logs it
-    JSON-encoded. It is longer than what is kept so a secret cut by this window is redacted whole first."""
+    failure log. Untrusted text: the whole sanitised message is REDACTED FIRST and only then cut, so a
+    secret straddling the window edge cannot survive as a fragment; the runner redacts again, keeps the
+    last 500 characters and logs it JSON-encoded."""
     flat = " ".join("".join(c if c.isprintable() else " " for c in body).split())
-    return flat[-_MAX_TAIL:].strip() or None
+    return redacted_window(flat, secrets, size, tail=True).strip() or None
 
 
 _TOOL_NAME = re.compile(r"[A-Za-z0-9_.:-]{1,40}")
@@ -134,7 +137,7 @@ _MAX_DENIALS = 5
 _MAX_DENIAL_WINDOW = 400  # characters of the command or path; the runner redacts, then keeps 200 of the whole entry
 
 
-def _denials(data: dict[str, Any]) -> tuple[str, ...]:
+def _denials(data: dict[str, Any], secrets: Sequence[str] = ()) -> tuple[str, ...]:
     """The refused tool calls from the result object's ``permission_denials`` (each entry
     ``{tool_name, tool_use_id, tool_input}``), as at most five ``Tool: <command or path>`` windows.
     Only the tool name (a short token) and ONE string field of ``tool_input`` are read, sanitised like the
@@ -159,15 +162,18 @@ def _denials(data: dict[str, Any]) -> tuple[str, ...]:
             for field in _DENIAL_FIELDS:
                 if isinstance(tool_input.get(field), str):
                     value = " ".join("".join(c if c.isprintable() else " " for c in tool_input[field]).split())
-                    value = value[:_MAX_DENIAL_WINDOW]
+                    value = redacted_window(value, secrets, _MAX_DENIAL_WINDOW, tail=False)  # redact, THEN cut
                     break
         found.append(f"{name}: {value}" if value else name)
     return tuple(found)
 
 
-def parse_output(text: str, model: str) -> AgentResult:
+def parse_output(text: str, model: str, secrets: Sequence[str] = ()) -> AgentResult:
     """The result of a finished run from the ``--output-format json`` object. Anything not clearly a
-    success with a ``RESULT:`` line is an error with a short reason code (a failed run)."""
+    success with a ``RESULT:`` line is an error with a short reason code (a failed run).
+
+    ``secrets`` are the responder's configured secret values: every agent-text field of the result
+    (explanation, denied calls) is redacted in full BEFORE it is cut to its window."""
     try:
         data: Any = json.loads(text)
     except ValueError:
@@ -183,25 +189,34 @@ def parse_output(text: str, model: str) -> AgentResult:
         first = str(next(iter(usage)))
         if re.fullmatch(r"[A-Za-z0-9_.:\[\]-]{1,80}", first):
             served = first
-    denied = _denials(data)  # logged only when the run fails; a success never reads it
+    denied = _denials(data, secrets)  # logged only when the run fails; a success never reads it
     if data.get("is_error") or data.get("subtype") not in (None, "success"):
         if _USAGE_LIMIT.search(body):
             return AgentResult("error", served, reason="plan_usage_limit", denied_calls=denied)
         if data.get("subtype") == "error_max_turns":
             return AgentResult("error", served, reason="max_turns", denied_calls=denied)
-        return AgentResult("error", served, reason="agent_cli_error", explanation=_tail(body), denied_calls=denied)
+        return AgentResult("error", served, reason="agent_cli_error", explanation=_tail(body, secrets),
+                           denied_calls=denied)
     found = _RESULT_LINE.findall(_outside_fences(body))
     if not found:
-        return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body),
+        return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body, secrets),
                            denied_calls=denied)
     kind, rest = found[-1]
-    # A wider window than anything logs or publishes: the runner redacts the whole window FIRST and
-    # only then cuts it (to 500 characters), so a secret straddling the final cut is never half-kept.
-    summary = "".join(c for c in rest if c.isprintable())[:_MAX_HEAD].strip() or None
+    # Redact the whole line FIRST, then cut it to the 800-character window: a secret straddling the
+    # window edge is never half-kept, and the window is wider than what is logged or published (the
+    # runner redacts again and cuts to 500, the pull request body to 300).
+    clean = "".join(c for c in rest if c.isprintable())
+    summary = redacted_window(clean, secrets, _MAX_HEAD, tail=False).strip() or None
     if kind == "FIXED":
         return AgentResult("fixed", served, explanation=summary, denied_calls=denied)
+    # An escalation or a no-change verdict with no text (or, for an escalation, hardly any) would leave
+    # the owner unable to see why: fall back to the redacted end of the final message instead.
     if kind == "FALSE_POSITIVE":
+        if summary is None:
+            summary = _tail(body, secrets, _FALLBACK_TAIL)
         return AgentResult("no_change", served, explanation=summary, denied_calls=denied)
+    if summary is None or len(summary) < _MIN_ESCALATION_TEXT:
+        summary = _tail(body, secrets, _FALLBACK_TAIL) or summary
     return AgentResult("error", served, reason="agent_escalated", explanation=summary,  # why, for the log
                        denied_calls=denied)
 
@@ -242,9 +257,10 @@ class CliSession:
 
     def __init__(self, model: str, ctx: RunContext, *, environ: Mapping[str, str] | None = None,
                  binary: str = BINARY, rules: CliToolRules | None = None,
-                 output_root: Path | None = None) -> None:
+                 output_root: Path | None = None, secrets: Sequence[str] = ()) -> None:
         if ctx.checkout is None:
             raise RuntimeError("a live session needs a fresh checkout")
+        self._secrets = tuple(s for s in secrets if s)  # redacted out of every agent-text field, before any cut
         self._model = model
         self._ctx = ctx
         self._environ = os.environ if environ is None else environ
@@ -308,13 +324,13 @@ class CliSession:
                     stderr_path.read_bytes()[:_MAX_OUTPUT_BYTES].decode("utf-8", "replace"))
                 if limited:
                     return AgentResult("error", self._model, reason="plan_usage_limit")
-                parsed = parse_output(raw, self._model)
+                parsed = parse_output(raw, self._model, self._secrets)
                 if parsed.reason == "max_turns":
                     return AgentResult("error", self._model, reason="max_turns", denied_calls=parsed.denied_calls)
                 # a non-zero exit is never a success; stdout's final message (not stderr) says why
                 return AgentResult("error", self._model, reason="cli_exit_nonzero",
                                    explanation=parsed.explanation if parsed.reason in _TEXT_REASONS else None,
                                    denied_calls=parsed.denied_calls)
-            return parse_output(raw, self._model)
+            return parse_output(raw, self._model, self._secrets)
         finally:
             shutil.rmtree(out_dir, ignore_errors=True)

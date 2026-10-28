@@ -38,11 +38,11 @@ import asyncio
 import importlib
 import os
 import re
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .actlog import ActionLog
 from .checkout import git_auth_env
-from .envscrub import blank_non_allowlisted
+from .envscrub import blank_non_allowlisted, redacted_window
 from .procs import MARKER_VAR
 from .policy import KNOWN_TOOLS, Decision, ToolPolicy
 from .real_runner import AgentResult, RunContext
@@ -66,8 +66,9 @@ def enforce(policy: ToolPolicy, log: ActionLog, fingerprint: str, tool_name: str
     return decision
 
 
-def parse_result(text: str | None, model: str) -> AgentResult:
-    """Read the agent's final ``RESULT:`` line. Anything unparseable is an error."""
+def parse_result(text: str | None, model: str, secrets: Sequence[str] = ()) -> AgentResult:
+    """Read the agent's final ``RESULT:`` line. Anything unparseable is an error. A no-change
+    explanation is redacted with ``secrets`` BEFORE it is cut to its window (#260 redact-first)."""
     matches = _RESULT_LINE.findall(text or "")
     if not matches:
         return AgentResult(outcome="error", model=model)
@@ -77,7 +78,8 @@ def parse_result(text: str | None, model: str) -> AgentResult:
         if not url:
             return AgentResult(outcome="error", model=model)
         return AgentResult(outcome="pull_request_opened", model=model, pull_request=url.group(0))
-    explanation = "".join(c for c in rest if c.isprintable())[:_MAX_EXPLANATION].strip()
+    explanation = redacted_window("".join(c for c in rest if c.isprintable()), secrets, _MAX_EXPLANATION,
+                                  tail=False).strip()
     return AgentResult(outcome="no_change", model=model, explanation=explanation or None)
 
 
@@ -141,7 +143,8 @@ class SdkSession:
     """One headless Agent SDK run for one alert."""
 
     def __init__(self, model: str, ctx: RunContext, *, api_key: str, github_token: str,
-                 sdk: Any = None) -> None:
+                 sdk: Any = None, secrets: Sequence[str] = ()) -> None:
+        self._secrets = tuple(s for s in (api_key, github_token, *secrets) if s)
         self._model = model
         self._ctx = ctx
         self._api_key = api_key
@@ -168,4 +171,4 @@ class SdkSession:
         model = served or self._model
         if final is None or final.is_error or final.subtype != "success":
             return AgentResult(outcome="error", model=model)  # includes error_max_turns
-        return parse_result(final.result, model)
+        return parse_result(final.result, model, self._secrets)

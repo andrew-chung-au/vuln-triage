@@ -2990,3 +2990,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the new tests failed before the change (the model now reads a pattern control character as a space, which flagged the old patterns); then the rules and differential tests passed. `make responder-test` result is in the hand-over. No model call and no real claude run were made here; the real-CLI facts are the owner's probe results as reported to me.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 QA finding: agent text was cut to a window before exact-match redaction (a secret bisected by the window edge survived); plus the live-drill finding that an `agent_escalated` run logged no explanation
+- agent role: Engineer (Claude Code subagent, branch `claude/260-redact-first`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief and its follow-up (redact-first for every sink; fall back to the redacted tail of the final message when a verdict has no text). No new key prompt saved.
+- files changed: `responder/vt_responder/envscrub.py` (`redacted_window`), `cli_session.py`, `sdk_session.py`, `real_runner.py`, `app.py`, `responder/tests/test_cli_redact_first.py` (new), `responder/tests/test_cli_runtime.py` (rig passes the secrets to the session; two assertions changed on purpose: a verdict with no text now logs the end of the message instead of nothing), `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): `make responder-test` (result in the hand-over). A mutation run on a scratch copy of `responder/` applied 29 single-line mutants (first-occurrence-only redaction, escalation using the tail, limit-error text logged, byte caps, cut-before-redact in each sink, session ignoring the secrets, fallback removed or weakened, SDK and `create_app` wiring); all 29 were killed by the new and existing tests. The redact-first change itself was written before its tests, so the straddle tests were checked against the old behaviour through the cut-before-redact and ignore-the-secrets mutants, not by a run on the old code; only the empty-verdict fallback tests were run red first. A first version that bounded the redaction region and dropped edge characters was found by a test to still bisect a secret, and was replaced by redacting the whole text. No model call and no real claude run were made.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

@@ -84,13 +84,30 @@ def secret_forms(secret: str) -> set[str]:
     return {secret, b64(secret), b64(f"x-access-token:{secret}")}
 
 
+def _all_forms(secrets: Iterable[str]) -> set[str]:
+    forms: set[str] = set()
+    for secret in secrets:
+        forms |= secret_forms(secret or "")
+    return forms
+
+
 def redact(text: str | None, secrets: Iterable[str]) -> str | None:
     """``text`` with every known secret value (and its base64 forms) replaced by ``[REDACTED]``."""
     if not text:
         return text
-    forms: set[str] = set()
-    for secret in secrets:
-        forms |= secret_forms(secret or "")
-    for form in sorted(forms, key=len, reverse=True):  # longest first
+    for form in sorted(_all_forms(secrets), key=len, reverse=True):  # longest first
         text = text.replace(form, "[REDACTED]")
     return text
+
+
+def redacted_window(text: str, secrets: Iterable[str], size: int, *, tail: bool) -> str:
+    """The first (or, with ``tail``, last) ``size`` characters of ``text`` AFTER redaction.
+
+    Redaction comes first and the cut second, so a secret that straddles the cut is replaced whole
+    and no fragment of it can survive; redaction may shrink the text, so ``size`` is counted on the
+    redacted text. The WHOLE text is redacted, never a bounded region of it: cutting a region first
+    would bisect a secret at the region's edge (dropping characters there does not help, the new edge
+    bisects the next copy). The cost is bounded already, by the 5 MB output limit on the text, and
+    ``str.replace`` over that is milliseconds."""
+    text = redact(text, secrets) or ""
+    return text[-size:] if tail else text[:size]
