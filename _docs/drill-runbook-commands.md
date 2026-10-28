@@ -500,49 +500,9 @@ commits (hooks installed via `make hooks`) — follow `_docs/161-owner-apply-com
 
 ---
 
-## Part 2 — protect Observability (criterion 10)
+## Parts 2 and 3
 
-Same stack still up. Open Grafana `http://localhost:3000` (admin /
-`$GRAFANA_ADMIN_PASSWORD`).
-
-### 2.1 Re-load and re-capture the US-13 dashboard
-
-```sh
-# Confirm the committed JSON is the current one:
-jq '.title' "$REPO/observability/grafana/dashboards/us13-journey.json"
-```
-
-In Grafana: **Dashboards → New → Import → Upload JSON file** →
-`observability/grafana/dashboards/us13-journey.json` → Import. Open it, confirm
-all three panes render (metric / Tempo traces / Loki logs), switch to **view
-mode** (the eye icon / `d v`), and screenshot. Replace
-`docs/images/g9-grafana-dashboard-dev-local.png` with this capture so the
-committed screenshot matches the current JSON (no stale Environment/Version
-dropdowns).
-
-### 2.2 Metric→trace leg (exemplar)
-
-In a metric panel, enable **Exemplars** and hover a dot to follow it to a Tempo
-trace, or use Explore → Prometheus → the metric → the exemplar link. ✓
-screenshot if it shows. If the exemplar will not render in the UI, leave the
-existing README note — the leg is already CI-asserted
-(`tests/test_compose_telemetry.py`, the `telemetry` job), which is honest
-evidence.
-
-### 2.3 Trace→logs link
-
-Open a Tempo trace → a span → **Logs for this span** (the trace→Loki link). ✓
-screenshot if it resolves to the matching Loki log line (same trace id).
-
----
-
-## Part 3 — protect CI/CD (criterion 9), ~2 min
-
-GitHub → repo **Settings → Rules → Rulesets → `protect-main`** → open the
-**"Require status checks to pass"** section so the required check names are
-visible. ✓ screenshot to replace/supplement
-`docs/images/g5-github-settings-rulesets-protect-main.png`, so a grader can see
-which checks gate the merge.
+Moved: see steps B29 to B31 in [`_docs/drill-video-steps.md`](drill-video-steps.md).
 
 ---
 

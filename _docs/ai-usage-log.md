@@ -2930,3 +2930,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `docker compose config --quiet` and `--services` ran OK against the `.env` and override file produced by the doc's own A8 and A10 blocks, in a temp copy under `.scratch/`; all 44 bash blocks and both generated scripts pass `bash -n`; the cookie-extraction line tested on a sample header. The Docker daemon is not available in this sandbox, so no container, image pull, user, asset, scan, metric, alert, mail or responder step was run, and the Grafana-image `wget` check is unverified. Nothing run against a live `claude`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #163 / #260 QA fixes F1-F7 and nits N1-N11 on `_docs/drill-video-steps.md`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's QA-fix brief. No new key prompt saved.
+- files changed: `_docs/drill-video-steps.md`; Part 2/3 body replaced by a pointer in `_docs/drill-runbook-commands.md`; Part 1 step 1 body replaced by a pointer in `_docs/drill-runbook.md`; this entry.
+- verification (tests run, reviewer verdict): the doc's own env and override blocks regenerated in a temp copy under `.scratch/`; `docker compose config --quiet` and `--services` OK; all bash blocks and both generated scripts pass `bash -n`. No Docker daemon here, so no container, GitHub, Grafana or responder step was run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
