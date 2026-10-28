@@ -94,6 +94,11 @@ def test_whenever_the_rules_allow_git_add_or_commit_the_policy_allows_it_too(tmp
     for command in _generate():
         if not command.startswith(("git add", "git commit")) or not evaluate(RULES, tmp_path, "Bash", command).allowed:
             continue
+        # Documented residual (2026-10-28): the deny patterns for tab/VT/FF/CR were removed because the real CLI reads a
+        # control character in a pattern as a space. These forms are caught only by ToolPolicy and the runner's diff gate
+        # (VERIFY), so the rules are not compared with the policy for them.
+        if any(c in command.strip(" \t\n") for c in "\t\x0b\x0c\r"):
+            continue
         allowed_by_rules += 1
         # Carve-out: leading and trailing space, tab and newline are trimmed (the shell ignores them too); ToolPolicy
         # refuses a newline anywhere, so the comparison is on the trimmed command.
