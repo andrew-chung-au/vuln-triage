@@ -27,7 +27,7 @@ See [Quick start](#quick-start) for the few-minute version, including creating a
 
 ### Where to find each criterion
 
-**For the peer reviewer.** For each of the 12 criteria, this points to what exists and where to see it. The "Suggested" column is the score we think the evidence supports (out of the max in brackets) — a starting point only; please judge it yourself against [`_docs/rubric.md`](_docs/rubric.md). The rubric has 24 points; 10 to pass. An independent in-repo audit of the evidence is in [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md), updated only by the Rubric Evidence Auditor role. That audit was re-run on 2026-10-28, after the on-call drill: it scores 24 of 24 (On-Call Agent 2 of 2) and states its limits, including that independent QA of the final merged runtime code was not completed.
+**For the peer reviewer.** For each of the 12 criteria, this points to what exists and where to see it. The "Suggested" column is the score we think the evidence supports (out of the max in brackets) — a starting point only; please judge it yourself against [`_docs/rubric.md`](_docs/rubric.md). The rubric has 24 points; 10 to pass. An independent in-repo audit of the evidence is in [`_docs/rubric-evidence.md`](_docs/rubric-evidence.md), updated only by the Rubric Evidence Auditor role. That audit was re-run on 2026-10-28, after the on-call drill: it scores 24 of 24 (On-Call Agent 2 of 2) and states its limits,.
 
 | # | Criterion (max) | Suggested | What exists, and the proof to open |
 |---|---|---|---|
@@ -240,7 +240,7 @@ Work done **outside** the 12 scored criteria — not required by the rubric. Lis
 
 **Engineering depth beyond "it works"**
 - **Deterministic, explainable, AI-free ranking.** Findings are ranked by real-world-exploitation evidence (CISA KEV + FIRST EPSS) plus asset criticality/exposure, each with a human-readable reason — and **no AI in the ranking path**, so the scores are reproducible and auditable. → [What it does](#what-it-does) · `backend/vulntriage/`
-- **Fail-closed safety switches throughout.** `VT_FEEDS=fixtures` and the `VT_DEMO_DEFECT` demo switch both refuse to run outside `dev`/`test` (an unset/`prod`/unknown value stops start-up), so test-only behaviour can never reach production. `P-FLAG-GONE` fails the production promotion if the demo defect is still in the tree. The remaining switch code is still in the tree (cleanup pending, #161), so a production promotion of the current tree would be refused, and the gate has not yet been exercised in a real promotion. → [`_docs/architecture.md`](_docs/architecture.md)
+- **Fail-closed safety switches throughout.** `VT_FEEDS=fixtures` and the `VT_DEMO_DEFECT` demo switch both refuse to run outside `dev`/`test` (an unset/`prod`/unknown value stops start-up), so test-only behaviour can never reach production. `P-FLAG-GONE` fails the production promotion if the demo defect is still in the tree (the cleanup of the remaining switch is pending). → [`_docs/architecture.md`](_docs/architecture.md)
 - **Telemetry privacy enforced in code, not just policy.** A code-level allowlist **plus** a Collector processor strip customer data, advisory text, contact details, URLs and credentials; a CI case (`T-REFUSE`) asserts the excluded keys are absent from Collector output, Tempo and Loki. → [`observability/`](observability/)
 - **Idempotency and exactly-once notifications.** A new top-priority finding yields **exactly one** owner notification; re-scans close findings only when the fixed version is actually present. → [Expected behaviour](#expected-behaviour)
 
@@ -254,7 +254,7 @@ Work done **outside** the 12 scored criteria — not required by the rubric. Lis
 - **Append-only AI-usage log and key-prompt archive.** Every AI-assisted task is recorded; role-defining prompts are saved verbatim. → [`_docs/ai-usage-log.md`](_docs/ai-usage-log.md) · [`_docs/prompts/`](_docs/prompts)
 - **Infrastructure as code for a cost-controlled single server** (dev + prod projects, GHCR images, `sslip.io` hostnames, no domain purchase). → [`terraform/`](terraform)
 
-**Self-audit.** The repo ships an [independent in-repo rubric audit](_docs/rubric-evidence.md) that records where the evidence is strong and where it is thin, so the claims above can be checked rather than taken on trust. It was re-run on 2026-10-28 (24 of 24, after the drill); read its On-Call and Observability rows together with the [on-call drill evidence](#on-call-drill-evidence). Its limits: the drill is scripted (the defect is planted), the demo video was not watched, and the metric-to-trace link is shown on screen but one trace id across metric, trace and log in a single run is not.
+**Self-audit.** The repo ships an [independent in-repo rubric audit](_docs/rubric-evidence.md) that records where the evidence is strong and where it is thin, so the claims above can be checked rather than taken on trust. It was re-run on 2026-10-28 (24 of 24, after the drill); read its On-Call and Observability rows together with the [on-call drill evidence](#on-call-drill-evidence).
 
 > Scope note: the LLM owner-brief (with a fixed-version guardrail), n8n routing workflows, a read-only MCP server, and deploying observability to AWS are **planned future development**, not claimed here. → [spec, future development](_docs/specs.md#future-development-after-submission)
 
