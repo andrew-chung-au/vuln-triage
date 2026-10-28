@@ -39,9 +39,10 @@ Expect: no output.
 git branch --show-current
 git pull --ff-only
 git log --oneline -1
+[ "$(git branch --show-current)" = "claude/260-cli-runtime" ] && echo "BRANCH OK" || echo "STOP: you are on the wrong branch. Run the three commands at the top of this file, then repeat A2."
 ls _docs/drill-video-steps.md
 ```
-Expect: the branch `claude/260-cli-runtime` (or `main` once merged), `Already up to date.` or a list of updated files, one commit line, and `_docs/drill-video-steps.md`. If `git pull` says local changes would be overwritten or cannot fast-forward: `git status --short`, tell the orchestrator the output, and do not continue. If the file is missing, use the two commands at the top of this file, then repeat A2.
+Expect: the branch `claude/260-cli-runtime`, `Already up to date.` or a list of updated files, one commit line, `BRANCH OK`, and `_docs/drill-video-steps.md`. A fresh clone starts on `main`, which does NOT have the drill prompt, the commit-rule fix or the logging, so a run from `main` fails for the wrong reasons: never continue past `STOP`. (Once this branch has been merged into `main`, `main` is the right branch and this check can be ignored.) If `git pull` says local changes would be overwritten or cannot fast-forward: `git status --short`, tell the orchestrator the output, and do not continue. If the file is missing, use the three commands at the top of this file, then repeat A2.
 
 ### A3. Check the tools are installed
 ```bash
