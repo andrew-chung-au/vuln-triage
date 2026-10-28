@@ -2960,3 +2960,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the new straddle tests were run on the unfixed code first and the escalation, false-positive and 800-bound tests failed; after the fix `make verify BASE=origin/main` PASS (responder 1387 passed). Seven mutants of the fix (`.scratch/mutate2.py`, on a copy) each fail the suite. Nothing run against a live `claude`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: log the tool calls the CLI refused (`denied_calls` in `run_failed`) after the live drill's escalation over a denied `git commit`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/vt_responder/actlog.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the new tests were run on the unchanged code first and the logging tests failed; then the responder suite passed and `make verify BASE=origin/main` was run (result in the commit's hand-over). Fourteen mutants (`.scratch/mutate3.py`, on a copy) each fail the suite. The `permission_denials` field shape was read from strings in the installed claude 2.1.311 binary (`grep -a`); no model call and no login was used. The command-form table came from `.scratch/commit_forms.py` (`cli_rules.evaluate` and `ToolPolicy.check_command`); the real CLI's behaviour for those forms is unverified.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

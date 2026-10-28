@@ -128,6 +128,43 @@ def _tail(body: str) -> str | None:
     return flat[-_MAX_TAIL:].strip() or None
 
 
+_TOOL_NAME = re.compile(r"[A-Za-z0-9_.:-]{1,40}")
+_DENIAL_FIELDS = ("command", "file_path", "path")  # the one field of tool_input worth logging, by priority
+_MAX_DENIALS = 5
+_MAX_DENIAL_WINDOW = 400  # characters of the command or path; the runner redacts, then keeps 200 of the whole entry
+
+
+def _denials(data: dict[str, Any]) -> tuple[str, ...]:
+    """The refused tool calls from the result object's ``permission_denials`` (each entry
+    ``{tool_name, tool_use_id, tool_input}``), as at most five ``Tool: <command or path>`` windows.
+    Only the tool name (a short token) and ONE string field of ``tool_input`` are read, sanitised like the
+    other agent text; anything else in the entry (file contents, other fields) is ignored, as is any
+    entry or value of an unexpected type. VERIFY: the field names are those of the CLI's result schema
+    (found in the 2.1.311 binary); a live run confirms which refusals it records."""
+    raw = data.get("permission_denials")
+    if not isinstance(raw, list):
+        return ()
+    found: list[str] = []
+    for entry in raw:
+        if len(found) >= _MAX_DENIALS:
+            break
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("tool_name")
+        if not isinstance(name, str) or not _TOOL_NAME.fullmatch(name):
+            continue
+        tool_input = entry.get("tool_input")
+        value = ""
+        if isinstance(tool_input, dict):
+            for field in _DENIAL_FIELDS:
+                if isinstance(tool_input.get(field), str):
+                    value = " ".join("".join(c if c.isprintable() else " " for c in tool_input[field]).split())
+                    value = value[:_MAX_DENIAL_WINDOW]
+                    break
+        found.append(f"{name}: {value}" if value else name)
+    return tuple(found)
+
+
 def parse_output(text: str, model: str) -> AgentResult:
     """The result of a finished run from the ``--output-format json`` object. Anything not clearly a
     success with a ``RESULT:`` line is an error with a short reason code (a failed run)."""
@@ -146,24 +183,27 @@ def parse_output(text: str, model: str) -> AgentResult:
         first = str(next(iter(usage)))
         if re.fullmatch(r"[A-Za-z0-9_.:\[\]-]{1,80}", first):
             served = first
+    denied = _denials(data)  # logged only when the run fails; a success never reads it
     if data.get("is_error") or data.get("subtype") not in (None, "success"):
         if _USAGE_LIMIT.search(body):
-            return AgentResult("error", served, reason="plan_usage_limit")
+            return AgentResult("error", served, reason="plan_usage_limit", denied_calls=denied)
         if data.get("subtype") == "error_max_turns":
-            return AgentResult("error", served, reason="max_turns")
-        return AgentResult("error", served, reason="agent_cli_error", explanation=_tail(body))
+            return AgentResult("error", served, reason="max_turns", denied_calls=denied)
+        return AgentResult("error", served, reason="agent_cli_error", explanation=_tail(body), denied_calls=denied)
     found = _RESULT_LINE.findall(_outside_fences(body))
     if not found:
-        return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body))
+        return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body),
+                           denied_calls=denied)
     kind, rest = found[-1]
     # A wider window than anything logs or publishes: the runner redacts the whole window FIRST and
     # only then cuts it (to 500 characters), so a secret straddling the final cut is never half-kept.
     summary = "".join(c for c in rest if c.isprintable())[:_MAX_HEAD].strip() or None
     if kind == "FIXED":
-        return AgentResult("fixed", served, explanation=summary)
+        return AgentResult("fixed", served, explanation=summary, denied_calls=denied)
     if kind == "FALSE_POSITIVE":
-        return AgentResult("no_change", served, explanation=summary)
-    return AgentResult("error", served, reason="agent_escalated", explanation=summary)  # why, for the log
+        return AgentResult("no_change", served, explanation=summary, denied_calls=denied)
+    return AgentResult("error", served, reason="agent_escalated", explanation=summary,  # why, for the log
+                       denied_calls=denied)
 
 
 def _too_big(*paths: Path) -> bool:
@@ -270,10 +310,11 @@ class CliSession:
                     return AgentResult("error", self._model, reason="plan_usage_limit")
                 parsed = parse_output(raw, self._model)
                 if parsed.reason == "max_turns":
-                    return AgentResult("error", self._model, reason="max_turns")
+                    return AgentResult("error", self._model, reason="max_turns", denied_calls=parsed.denied_calls)
                 # a non-zero exit is never a success; stdout's final message (not stderr) says why
                 return AgentResult("error", self._model, reason="cli_exit_nonzero",
-                                   explanation=parsed.explanation if parsed.reason in _TEXT_REASONS else None)
+                                   explanation=parsed.explanation if parsed.reason in _TEXT_REASONS else None,
+                                   denied_calls=parsed.denied_calls)
             return parse_output(raw, self._model)
         finally:
             shutil.rmtree(out_dir, ignore_errors=True)

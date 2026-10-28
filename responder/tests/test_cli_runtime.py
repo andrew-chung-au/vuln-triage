@@ -591,6 +591,118 @@ def test_the_text_the_session_hands_over_is_bounded_at_800_characters():
         assert parsed.explanation is not None and 500 < len(parsed.explanation) <= 800
 
 
+# -- denied tool calls in run_failed (permission_denials of the CLI's result object) ----------------------
+
+def denial(command, tool="Bash", **more):
+    return {"tool_name": tool, "tool_use_id": "toolu_01", "tool_input": {"command": command, **more}}
+
+
+def run_with_denials(tmp_path, denials, *, body="RESULT: ESCALATE could not commit", secrets=("ghp_PLANTEDsecretvalue123",),
+                     **fake):
+    over = {} if denials is _ABSENT else {"permission_denials": denials}
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body, **over), secrets=secrets, **fake)
+    runner.run("fp1", "42")
+    return lines, run_failed_events(lines)
+
+
+_ABSENT = object()
+
+
+def test_denied_calls_are_logged_in_run_failed_as_short_strings(tmp_path):
+    denials = [denial('git commit -m "Fix the formatter (no-fix findings): #12"'),
+               {"tool_name": "Edit", "tool_use_id": "t2", "tool_input": {"file_path": "backend/app.py", "new_string": "SECRET-BODY"}},
+               {"tool_name": "Read", "tool_use_id": "t3", "tool_input": {"path": "/etc/passwd"}}]
+    _, (failed,) = run_with_denials(tmp_path, denials)
+    assert failed["reason"] == "agent_escalated"
+    assert failed["denied_calls"] == ['Bash: git commit -m "Fix the formatter (no-fix findings): #12"',
+                                      "Edit: backend/app.py", "Read: /etc/passwd"]
+    assert "SECRET-BODY" not in json.dumps(failed) and "toolu_" not in json.dumps(failed)
+
+
+@pytest.mark.parametrize("fake,body,reason", [
+    ({}, "no verdict line here", "result_line_missing"),
+    ({"exit": 1}, "RESULT: ESCALATE x", "cli_exit_nonzero"),
+])
+def test_denied_calls_are_logged_for_other_parsed_failures(tmp_path, fake, body, reason):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git commit -a")], body=body, **fake)
+    assert failed["reason"] == reason and failed["denied_calls"] == ["Bash: git commit -a"]
+
+
+def test_denied_calls_are_logged_when_the_turn_limit_ended_the_run(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, exit=1, stdout=result_json(
+        "", subtype="error_max_turns", is_error=True, permission_denials=[denial("git commit -a")]))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "max_turns" and failed["denied_calls"] == ["Bash: git commit -a"]
+
+
+@pytest.mark.parametrize("denials", [
+    _ABSENT, None, "git commit", 7, {"tool_name": "Bash", "tool_input": {"command": "x"}}, [], ["x", 3, None, {}, []],
+    [{"tool_name": 5, "tool_input": {"command": "x"}}], [{"tool_input": {"command": "x"}}],
+    [{"tool_name": "bad name!", "tool_input": {"command": "x"}}], [{"tool_name": "x" * 80, "tool_input": {"command": "x"}}],
+])
+def test_absent_or_malformed_denials_log_no_key(tmp_path, denials):
+    _, (failed,) = run_with_denials(tmp_path, denials)
+    assert failed["reason"] == "agent_escalated" and "denied_calls" not in failed
+
+
+def test_a_denial_without_a_usable_input_logs_just_the_tool_name(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [{"tool_name": "Bash", "tool_input": "oops"},
+                                               {"tool_name": "Write", "tool_input": {"content": "FILE-BODY"}},
+                                               {"tool_name": "Bash", "tool_input": {"command": 5}}])
+    assert failed["denied_calls"] == ["Bash", "Write", "Bash"] and "FILE-BODY" not in json.dumps(failed)
+
+
+def test_at_most_five_denials_are_logged(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial(f"git commit -m c{i}") for i in range(9)])
+    assert failed["denied_calls"] == [f"Bash: git commit -m c{i}" for i in range(5)]
+
+
+def test_each_denied_call_is_cut_to_200_characters_with_whitespace_collapsed(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git   commit\n\n-m   " + "w" * 1000)])
+    (entry,) = failed["denied_calls"]
+    assert len(entry) <= 200 and entry.startswith("Bash: git commit -m w")
+
+
+def test_denied_calls_are_untrusted_text_stripped_of_control_characters_and_kept_inside_the_json(tmp_path):
+    nasty = 'git commit -m "a\x1b[31m\x00\x07‮' + '"}{"event":"forged","outcome":"x"}'
+    lines, (failed,) = run_with_denials(tmp_path, [denial(nasty)])
+    (entry,) = failed["denied_calls"]
+    assert all(c.isprintable() for c in entry) and "\x1b" not in entry
+    assert len(lines[-1].splitlines()) == 1 and [e["event"] for e in events(lines)].count("forged") == 0
+
+
+@pytest.mark.parametrize("name,pad", [(n, o) for n, o in case_grid(194)])
+def test_a_secret_in_a_denied_command_across_the_200_character_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]  # the entry is "Bash: " + the command, so the cut falls 6 characters earlier in the command
+    _, (failed,) = run_with_denials(tmp_path, [denial("x" * pad + secret + " tail " + "y" * 600)], secrets=(secret,))
+    (entry,) = failed["denied_calls"]
+    assert len(entry) <= 200 and not leaked(entry, secret) and secret not in json.dumps(failed)
+
+
+def test_a_secret_in_a_denied_command_is_redacted(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git commit -m 'ghp_PLANTEDsecretvalue123'")])
+    assert failed["denied_calls"] == ["Bash: git commit -m '[REDACTED]'"]
+
+
+def test_the_runner_itself_caps_the_denied_calls_it_logs_at_five(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path)
+    runner._error("fp1", "42", "agent_escalated", denied_calls=[f"Bash: c{i}" for i in range(9)])
+    assert run_failed_events(lines)[0]["denied_calls"] == [f"Bash: c{i}" for i in range(5)]
+
+
+def test_the_text_the_session_hands_over_for_a_denial_is_bounded():
+    parsed = parse_output(result_json("RESULT: ESCALATE x", permission_denials=[denial("w" * 5000)] * 9), MODEL)
+    assert len(parsed.denied_calls) == 5 and all(200 < len(e) <= 410 for e in parsed.denied_calls)
+
+
+def test_a_successful_run_logs_no_denied_calls(tmp_path):
+    out = result_json("RESULT: FIXED the retry loop", permission_denials=[denial("git commit -a")])
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    assert runner.run("fp1", "42") == "pull_request_opened"
+    assert "denied_calls" not in "\n".join(lines)
+
+
 def test_a_non_zero_exit_logs_no_text_unless_the_message_is_a_failure_message(tmp_path):
     out = result_json("RESULT: FALSE_POSITIVE the job simply passed on retry")
     runner, lines, *_ = runner_rig(tmp_path, stdout=out, exit=1)

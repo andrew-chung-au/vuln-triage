@@ -57,6 +57,7 @@ from .publisher import GitPublisher, PublishError, Snapshot
 
 _PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
 MAX_FAILURE_TEXT = 500  # most agent text a run_failed line carries
+MAX_DENIED_CALL_CHARS = 200  # each denied tool call in run_failed (at most 5 of them)
 _UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
 
 
@@ -71,6 +72,9 @@ class AgentResult:
     pull_request: str | None = None
     explanation: str | None = None
     reason: str | None = None  # a short machine code for a failed run (CLI runtime); safe to log
+    # CLI runtime: the tool calls the CLI refused, as "Tool: <command or path>" windows of agent text
+    # (at most 5). Untrusted: the runner redacts each, then cuts it to MAX_DENIED_CALL_CHARS.
+    denied_calls: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -231,7 +235,8 @@ class RealRunner:
                                    result.explanation or "The agent found no reproducible defect.",
                                    model=served)
         return self._finish_failed(fingerprint, finding_id, result.reason or "agent_reported_error",
-                                   model=served, before=before, explanation=result.explanation)
+                                   model=served, before=before, explanation=result.explanation,
+                                   denied_calls=result.denied_calls)
 
     def _check_pull_request(self, fingerprint: str, url: str) -> str | None:
         """S4: the reported PR must be a pull request of this run. Returns a failure reason or None."""
@@ -355,9 +360,10 @@ class RealRunner:
                        finding_id=finding_id, branch=branch, reason=reason)
 
     def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None,
-                       explanation: str | None = None) -> str:
+                       explanation: str | None = None, denied_calls: Sequence[str] = ()) -> str:
         self._cleanup_branch(fingerprint, finding_id, before)
-        return self._error(fingerprint, finding_id, reason, model=model, explanation=explanation)
+        return self._error(fingerprint, finding_id, reason, model=model, explanation=explanation,
+                           denied_calls=denied_calls)
 
     def _no_change(self, fingerprint, finding_id, explanation, *, model=None) -> str:
         # redact the whole text, then cut: the session hands over up to 800 characters
@@ -367,8 +373,14 @@ class RealRunner:
                        model=model or self._model)
         return "no_change"
 
-    def _error(self, fingerprint, finding_id, reason, *, model=None, explanation: str | None = None) -> str:
+    def _error(self, fingerprint, finding_id, reason, *, model=None, explanation: str | None = None,
+               denied_calls: Sequence[str] = ()) -> str:
         extra: dict[str, Any] = {}
+        # Each refused tool call: redact the whole window, then cut it (same order as the explanation).
+        denied = [(redact(call, self._secrets) or "")[:MAX_DENIED_CALL_CHARS].strip() for call in denied_calls[:5]]
+        denied = [call for call in denied if call]
+        if denied:
+            extra["denied_calls"] = denied
         if explanation:
             # Untrusted agent text: redact the WHOLE window first, then cut (a secret straddling the cut
             # must not survive as a fragment). The RESULT: line text keeps its start, a final-message tail its end.
