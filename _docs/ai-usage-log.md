@@ -3000,3 +3000,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): `make responder-test` (result in the hand-over). A mutation run on a scratch copy of `responder/` applied 29 single-line mutants (first-occurrence-only redaction, escalation using the tail, limit-error text logged, byte caps, cut-before-redact in each sink, session ignoring the secrets, fallback removed or weakened, SDK and `create_app` wiring); all 29 were killed by the new and existing tests. The redact-first change itself was written before its tests, so the straddle tests were checked against the old behaviour through the cut-before-redact and ignore-the-secrets mutants, not by a run on the old code; only the empty-verdict fallback tests were run red first. A first version that bounded the redaction region and dropped edge characters was found by a test to still bisect a secret, and was replaced by redacting the whole text. No model call and no real claude run were made.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: rubric evidence re-audit at `83e0703` (merged PR #269), after the on-call drill
+- agent role: Rubric Evidence Auditor (Claude Code subagent, branch `claude/ecstatic-newton-b7whlf`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (re-run the audit, fix the scores for criteria 9, 10 and 12 only where the evidence supports them, check the README's claims, keep the incomplete QA of #266 honest). No new key prompt saved.
+- files changed: `_docs/rubric-evidence.md` (rewritten); this entry.
+- verification (tests run, reviewer verdict): no test suite run and no live system touched. Read through the GitHub API: PR #265, PR #266, the `verify`, `deploy`, `responder` and `alert` workflow run lists. Opened with the image reader: `drill-b16` (table), `drill-b18`, `drill-b19` (email), `drill-b21`, `drill-b22`, `drill-b27` (Grafana and terminals), `drill-b30` (exemplar), `g5-github-settings-rulesets-protect-main.png`, `g9-grafana-dashboard-dev-local.png`. Not opened: the other drill screenshots, the YouTube video, issue comments. Result: 24 of 24 evidenced (On-Call Agent 0 to 2; criteria 9 and 10 unchanged at their maximum); the file lists the limits and six README claims that are stale or not fully supported. Independent QA of the final merged runtime code (#266) was not completed and is stated as such.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
