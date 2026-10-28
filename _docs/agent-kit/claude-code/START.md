@@ -13,6 +13,7 @@ The process, roles, verify gate and git hooks are the core kit's and apply uncha
 | `hooks/guard_git.py` | Runs in place from the kit | Before any shell command: blocks `git add .`/`-A`/`-u`, `git commit -a`, `--no-verify`, `git commit -n`, `git push` and changes to `core.hooksPath`, with the reason and the allowed alternative |
 | `hooks/verify_on_stop.py` | Runs in place from the kit | When the Engineer tries to finish: runs `make verify` and sends it back to fix any failure, up to three times, then lets it stop and warns you |
 | `settings.json` | Merged into `.claude/settings.json` | Pre-approves `make` targets and read-only git; asks before edits to protected files; blocks reading `.env` files and `git push`; registers the git guard; sets commit attribution |
+| `cloud-session/` | Not installed by default | Optional: lets a Claude Code cloud session push only its own `claude/*` branch; see `cloud-session/README.md` |
 
 The hooks run from `_docs/agent-kit/claude-code/hooks/`, so upgrading the kit upgrades them too.
 
@@ -31,6 +32,16 @@ Setup does this when you say you use Claude Code (`setup.md`, step 4). To do it 
    - `/permissions` shows the rules.
 
    To test the guard, ask Claude to run `git add .`. It should be blocked with the message "Stage explicit paths only".
+
+## Cloud sessions (optional)
+
+The core kit's guard blocks every push. If the project runs in a Claude Code cloud session and wants the agent to push its session branch for review, enable the optional module in `cloud-session/`:
+
+1. Merge `cloud-session/settings.fragment.json` into `.claude/settings.json`.
+2. Remove the blanket `Bash(git push *)` deny rule, keeping the rules for `main`, force-push and delete.
+3. Read `cloud-session/README.md` for the exact push form and the limits.
+
+The module allows only `git push -u origin <current claude/* branch>`; the human still reviews the pull request and merges it. Local sessions stay no-push.
 
 ## Limits
 

@@ -5,8 +5,10 @@ Blocks, with the reason and the allowed alternative:
 - broad staging: `git add .`, `-A`, `--all`, `-u`, `--update`, `:/`, `*`
 - `git commit -a` / `--all` (also in clusters such as `-am`)
 - skipping hooks: `--no-verify`, and `git commit -n` (also in clusters such as `-nm`)
-- `git push`, except `git push -u origin <current branch>` in a Claude Code cloud
-  session (`CLAUDE_CODE_REMOTE=true`) on a `claude/*` branch other than `main`
+- `git push`, except `git push -u origin <current branch>` when the optional
+  cloud-session module is enabled (`AGENT_KIT_CLOUD_PUSH=1`) in a Claude Code
+  cloud session (`CLAUDE_CODE_REMOTE=true`) on a `claude/*` branch other than
+  `main`
 - changing `core.hooksPath` (would switch off the kit's git hooks)
 
 `HUMAN_APPROVED=1 git commit ...` is allowed: Claude Code asks the human before
@@ -101,6 +103,11 @@ def push_reason(args, cwd) -> str:
     The exact form `git push -u origin <current branch>` is required, so force,
     delete, refspec and extra-argument variants all fall through to a refusal.
     """
+    if os.environ.get("AGENT_KIT_CLOUD_PUSH") != "1":
+        return (
+            "Don't push: pushing is off unless the project enables the optional "
+            "cloud-session module (AGENT_KIT_CLOUD_PUSH=1). The human reviews and pushes."
+        )
     if os.environ.get("CLAUDE_CODE_REMOTE") != "true":
         return "Don't push outside a Claude Code cloud session. The human reviews and pushes locally."
     branch = current_branch(cwd)

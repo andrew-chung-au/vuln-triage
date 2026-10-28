@@ -10,7 +10,7 @@ A sweep turns the approvals that sessions recorded into one decision about the s
 ## Steps
 
 1. Read the last sweep's commit from `_docs/permission-sweeps.md` (the last line). If no sweep has happened yet, use the commit before the first session summary you want counted.
-2. Run `make permission-report SINCE=<that commit>`. It reads session summaries only, counts distinct summaries per command pattern in each group, and lists summaries with no Permission review section or with "none" only. `SINCE` is exclusive.
+2. Run `make permission-report SINCE=<that commit>`. It reads session summaries only, counts distinct summaries per command pattern in each group, and lists summaries with no Permission review section or with "none" only. `SINCE` is exclusive. Summaries that used the older three groups are read as read-only, protected record writes and risky.
 3. Read the report next to the current `.claude/settings.json` and `opencode.json`. A pattern already allowed or asked is not a candidate; check the report's "Uncategorised or to read by hand" lines yourself.
 4. Apply the decision rules below to each pattern.
 5. Write the exact diffs for both settings files. Where the two tools should agree, say so, or write down the reason they differ.
@@ -20,10 +20,13 @@ A sweep turns the approvals that sessions recorded into one decision about the s
 
 ## Decision rules
 
-- Read-only patterns: propose allowing a pattern once it has come up in three distinct session summaries. Fewer than three: leave it.
+- Read-only patterns: propose allowing a pattern once it has come up in three distinct session summaries. Fewer than three: leave it. Prefer a validated `make` target (`make branches`, `make ci`, `make ci-run`, `make file-at`) over a broad shell pattern.
+- Routine issue writes (append-only comments and issue creation): already allowed through `make issue-comment` and `make issue-create`; do not add a rule. If a summary records one, treat it as stale wording, not a candidate.
+- Protected record writes (issue edits and closes, protected commits, pushes): keep on ask. Issue comments and creation are the only routine issue writes; editing, closing and deleting stay `ask`/`deny`.
+- System and external changes (installs, processes, network, settings outside the repo): keep on ask. A check that keeps coming back becomes a `make` target proposed to the human.
 - `python3 .scratch/*` and `bash .scratch/*`: never allow. They run whatever code the agent writes. A check that keeps coming back becomes a `make` target proposed to the human (`make *` is already allowed and the `Makefile` is protected). The report labels these "make target, never allow".
-- Writes to the record (comments, issue edits, protected commits, pushes): stay on ask.
 - Risky items (a refused push, a destructive command): propose a deny rule. A risky item that just happened is not left for the sweep; the orchestrator brings it to the human at the decision point of its own issue.
+- Cloud push is not a sweep candidate. It is off unless the project enables the optional `claude-code/cloud-session/` module (`AGENT_KIT_CLOUD_PUSH=1`), and then only the session's `claude/*` branch. The core kit stays no-push.
 - Never propose an allow rule with a `*` inside the arguments of a command that can write. The Claude Code permissions page calls argument patterns fragile: `Bash(gh api repos/*)` let flag-after-path writes run unprompted (#60). Prefer a `make` target, or ask.
 - When the same command is allowed in one tool and asked in the other, either make them agree or write the reason in the diff.
 

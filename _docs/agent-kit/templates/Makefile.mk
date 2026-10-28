@@ -20,6 +20,11 @@ clean-scratch: ## Empty .scratch/ at the end of an issue (refuses while a starte
 	@for f in .scratch/*.pid; do if [ -f "$$f" ] && kill -0 "$$(cat "$$f")" 2>/dev/null; then echo "$$f: process $$(cat "$$f") is still running; stop it first"; exit 1; fi; done
 	@mkdir -p .scratch && find .scratch -mindepth 1 -delete && echo ".scratch/ is now empty"
 
+check-scripts: ## Syntax-check the kit scripts and hooks (read-only)
+	@for f in _docs/agent-kit/scripts/*.sh _docs/agent-kit/claude-code/hooks/*.sh _docs/agent-kit/environments/local-sandbox/pre-push; do bash -n "$$f" || exit 1; done
+	@python3 -c 'import ast, sys; [ast.parse(open(f, encoding="utf-8").read(), f) for f in sys.argv[1:]]' _docs/agent-kit/claude-code/hooks/*.py _docs/agent-kit/scripts/*.py
+	@for f in .claude/settings.json opencode.json; do if [ -f "$$f" ]; then jq empty "$$f"; fi; done
+
 # --- When the stack is known (wrap the project's own commands) -------------
 
 install: ## Install dependencies

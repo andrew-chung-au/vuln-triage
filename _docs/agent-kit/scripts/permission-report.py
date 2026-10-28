@@ -30,7 +30,9 @@ USAGE = "Usage: make permission-report SINCE=<commit>  (7 to 40 lowercase hex ch
 
 GROUPS = [
     ("read-only", "Read-only", "propose allowing"),
-    ("writes", "Writes to the record", "keep asking"),
+    ("issue-writes", "Routine issue writes", "already allowed; not a candidate"),
+    ("record-writes", "Protected record writes", "keep asking"),
+    ("system", "System and external changes", "keep asking"),
     ("risky", "Risky", "propose denying"),
 ]
 ALLOWED_GIT = {"log", "show", "rev-parse"}
@@ -66,8 +68,12 @@ def group_of(head):
     h = head.lower()
     if h.startswith("read-only"):
         return "read-only"
-    if h.startswith("writes to the record"):
-        return "writes"
+    if h.startswith(("routine issue", "issue comments", "issue writes")):
+        return "issue-writes"
+    if h.startswith(("protected", "record writes", "writes to the record")):
+        return "record-writes"
+    if h.startswith(("system", "external")):
+        return "system"
     if h.startswith("risky"):
         return "risky"
     return None
@@ -76,10 +82,13 @@ def group_of(head):
 def bullets(lines):
     """Yield (group, text) pairs: one per item bullet of each group.
 
-    A group bullet is a top-level '- Read-only ...', '- Writes ...' or
-    '- Risky ...' line. Its own text after the first ':' and any nested bullets
-    under it are items. Text starting with 'none' is no item. Other top-level
-    bullets (Proposed ..., Sources ...) and prose are not approvals.
+    A group bullet is a top-level '- Read-only ...', '- Routine issue writes
+    ...', '- Protected record writes ...', '- System and external changes ...'
+    or '- Risky ...' line. Older summaries' '- Writes to the record ...' line
+    is read as protected record writes. Its own text after the first ':' and any
+    nested bullets under it are items. Text starting with 'none' is no item.
+    Other top-level bullets (Proposed ..., Sources ...) and prose are not
+    approvals.
     """
     group = None
     result = []
@@ -135,12 +144,22 @@ def keys_of(text):
                 keys.add("git push")
         elif s.startswith("gh issue"):
             sub = s.split()[2].rstrip("*") if len(s.split()) > 2 else ""
-            if sub in ("comment",):
-                keys.add("gh issue comment | make issue-comment")
+            if sub in ("comment", "create"):
+                keys.add("gh issue %s | make issue-%s" % (sub, sub))
             elif sub:
                 keys.add("gh issue " + sub)
         elif s.startswith("make issue-comment"):
             keys.add("gh issue comment | make issue-comment")
+        elif s.startswith("make issue-create"):
+            keys.add("gh issue create | make issue-create")
+        elif s.startswith("gh run"):
+            keys.add("gh run")
+        elif s.startswith("git remote"):
+            keys.add("git remote")
+        elif s.startswith("git cat-file"):
+            keys.add("git cat-file")
+        elif s.startswith("sha256sum"):
+            keys.add("sha256sum")
         elif s.startswith("make "):
             parts = s.split()
             if len(parts) > 1 and parts[1] != "*":
@@ -171,7 +190,9 @@ def label_for(group, key, count):
         return "make target, never allow"
     if group == "read-only":
         return "allow candidate (3+ sessions)" if count >= 3 else "below the 3-session threshold"
-    if group == "writes":
+    if group == "issue-writes":
+        return "already allowed; not a candidate"
+    if group in ("record-writes", "system"):
         return "keep asking"
     return "deny proposal"
 
@@ -222,7 +243,16 @@ def fmt_wait(seconds):
 def prompt_label(key, sessions):
     if key == SCRATCH_KEY:
         return "make target, never allow"
-    if key.startswith(("gh ", "make issue-", "HUMAN_APPROVED", "git push", "GitHub MCP")):
+    if key in ("gh issue comment | make issue-comment", "gh issue create | make issue-create"):
+        return "already allowed; not a candidate"
+    if key.startswith(("gh issue edit", "gh issue close", "gh issue delete", "gh api",
+                       "make issue-close", "make issue-edit", "HUMAN_APPROVED", "git push", "GitHub MCP")):
+        return "keep asking"
+    if key.startswith(("gh run", "gh issue view", "gh issue list", "gh pr", "gh label", "gh repo",
+                       "git remote", "git cat-file", "sha256sum", "make branches", "make ci",
+                       "make file-at", "make permission-report")):
+        return "unlisted: candidate for an allow rule" if sessions >= 3 else "unlisted: below the 3-session threshold"
+    if key.startswith("gh "):
         return "keep asking"
     return "unlisted: candidate for an allow rule or a make target" if sessions >= 3 else "unlisted: below the 3-session threshold"
 

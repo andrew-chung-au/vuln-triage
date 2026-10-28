@@ -43,7 +43,7 @@ Other commands run
 - `make run`, then `make stop`; `make assert-clean` → PASS
 
 Commands and changes that required approval
-- Each command or change, what it was for, and its basis (a merits request or the matched `ask` rule), or "none"; do not record whether it was granted
+- Each command or change, what it was for, and its basis (a merits request or the matched `ask` rule), or "none"; do not record whether it was granted. Posting this comment is routine and is not an approval, so do not list it.
 
 Outside the criteria
 - Risks no criterion covers, each with how you found it, or "none"
