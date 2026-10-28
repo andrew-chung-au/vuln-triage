@@ -17,6 +17,8 @@ webhook -> 202 -> background run:
 
 Files: `responder/vt_responder/cli_session.py` (the session and the preflight), `cli_rules.py` (rules generated from `policy.py`), `publisher.py` (diff gate, push, PR), `envscrub.py` (`cli_env`), `prompt.py` (`CLI_SYSTEM_PROMPT`). Tests drive a fake `claude` (`responder/tests/fake_claude.py`).
 
+**The drill agent is told the defect is planted.** `CLI_SYSTEM_PROMPT` states that this is a demonstration repository and that code gated by `VT_DEMO_DEFECT` (the `notify_no_fix` branch in `backend/vulntriage/mail/message.py`) is a deliberately planted defect for drilling the on-call process, so fixing it is the agent's task (remove that branch, update only the tests asserting the planted failure, keep the settings machinery for cleanup #161). Without this, a live run escalated because the defect looked deliberate. Describe the evidence honestly: the agent fixes a bug it was told was planted; it still has to find it, reproduce it and keep to every other rule.
+
 ## The flags used, and the source of each
 
 Source key: **help** = `claude --help` / `claude auth --help` on 2.1.311 in this sandbox; **headless** = code.claude.com/docs/en/headless; **cli-ref** = code.claude.com/docs/en/cli-reference; **perm** = code.claude.com/docs/en/permissions; **auth** = code.claude.com/docs/en/authentication; **errors** = code.claude.com/docs/en/errors.

@@ -794,6 +794,25 @@ def test_the_cli_prompt_tells_the_agent_not_to_push_and_to_end_with_the_result_l
     assert "fp1" in task and "42" in task
 
 
+def test_the_cli_prompt_states_the_planted_defect_mandate_and_keeps_every_limit():
+    flat = " ".join(CLI_SYSTEM_PROMPT.split())
+    for needle in ("demonstration repository", "VT_DEMO_DEFECT", "deliberately planted", "notify_no_fix",
+                   "fixing it IS your task", "a finding with no fixed version",
+                   "update only the tests that assert the planted failure",
+                   "Do not remove the settings machinery", "does NOT trace to the planted defect",
+                   "under 12 words"):
+        assert needle in flat, needle
+    for kept in ("NEVER run `git push`", "never open a pull request", "never touch .github/",
+                 "lockfiles", "responder/vt_responder", "any .env file", "ONE path per `git add`",
+                 "Never include secrets", "RESULT: ESCALATE"):
+        assert kept in flat, kept
+
+
+def test_the_cli_task_line_does_not_name_the_defect():
+    task = build_cli_task("fp1", "42")
+    assert "VT_DEMO_DEFECT" not in task and "planted" not in task
+
+
 def test_env_example_lists_the_runtime_names_with_no_value():
     text = (Path(__file__).resolve().parents[2] / ".env.example").read_text()
     for name in ("RESPONDER_RUNTIME", "RESPONDER_MAX_COMMITS"):

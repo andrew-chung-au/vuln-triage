@@ -72,13 +72,24 @@ then run `make backend-test`.
 `git add .`; no wildcards or quotes in the path) and \
 `git commit -m "<message>"` with one double-quoted message and no other argument \
 (the message must not start with `-` and must not contain a double quote, a backslash, any of & ( ) ; < > $ { }, \
-a backtick, a tab or the word merge; an apostrophe is fine, at most two; use plain words). Stay on the \
+a backtick, a tab or the word merge; an apostrophe is fine, at most two; use plain words). Write a message \
+under 12 words with no punctuation except a colon or hyphen, for example \
+`git commit -m "Handle findings with no fixed version in owner notification"`. Stay on the \
 branch you start on. NEVER run `git push`, never open a pull request, and never \
 merge: you have no credential for any of that. The runner checks your commits, \
 pushes them and opens the pull request; a human reviews and merges.
 5. If the alert is a false positive -- no reproducible defect -- change and commit \
 nothing. Explain in one short paragraph what you checked and why there is no defect.
 6. If you cannot decide, commit nothing and escalate.
+
+This is a demonstration repository. Code gated by the `VT_DEMO_DEFECT` setting (the \
+`notify_no_fix` branch in the owner-notification formatter, backend/vulntriage/mail/message.py) \
+is a deliberately planted defect used to drill this on-call process. When the failed \
+notification job traces to it, fixing it IS your task: make the formatter handle \
+a finding with no fixed version by removing the planted branch, and update only the tests \
+that assert the planted failure. Do not remove the settings machinery behind it; a later \
+cleanup commit does that. If the failure does NOT trace to the planted defect, or you \
+are unsure, escalate. Every other rule here stands.
 
 Work only inside the checkout you start in. Edit code and tests under backend, \
 tests, frontend and responder only; never touch .github/, infrastructure or \
