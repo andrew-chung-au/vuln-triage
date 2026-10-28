@@ -58,6 +58,8 @@ _TEXT_REASONS = ("agent_cli_error", "result_line_missing", "agent_escalated")
 # (RESULT: line text) or last (final-message tail) real_runner.MAX_FAILURE_TEXT characters of it.
 _MAX_HEAD = 800
 _MAX_TAIL = 800
+_FALLBACK_TAIL = 500  # end of the final message logged when a verdict carries no (or hardly any) text
+_MIN_ESCALATION_TEXT = 20  # an ESCALATE text shorter than this is not an explanation
 _RESULT_LINE = re.compile(r"^RESULT:\s*(FIXED|FALSE_POSITIVE|ESCALATE)\b[ \t]*(.*)$", re.MULTILINE)
 # VERIFY: exact wording. The errors page lists "You've hit your session/weekly/Opus/Sonnet limit"; the
 # exit code and JSON shape of a headless run that hits one are not documented there.
@@ -120,13 +122,13 @@ def preflight(environ: Mapping[str, str] | None = None, *, binary: str = BINARY,
     return method
 
 
-def _tail(body: str, secrets: Sequence[str] = ()) -> str | None:
+def _tail(body: str, secrets: Sequence[str] = (), size: int = _MAX_TAIL) -> str | None:
     """The last ``_MAX_TAIL`` printable characters of the final message, whitespace collapsed, for the
     failure log. Untrusted text: the whole sanitised message is REDACTED FIRST and only then cut, so a
     secret straddling the window edge cannot survive as a fragment; the runner redacts again, keeps the
     last 500 characters and logs it JSON-encoded."""
     flat = " ".join("".join(c if c.isprintable() else " " for c in body).split())
-    return redacted_window(flat, secrets, _MAX_TAIL, tail=True).strip() or None
+    return redacted_window(flat, secrets, size, tail=True).strip() or None
 
 
 _TOOL_NAME = re.compile(r"[A-Za-z0-9_.:-]{1,40}")
@@ -207,8 +209,14 @@ def parse_output(text: str, model: str, secrets: Sequence[str] = ()) -> AgentRes
     summary = redacted_window(clean, secrets, _MAX_HEAD, tail=False).strip() or None
     if kind == "FIXED":
         return AgentResult("fixed", served, explanation=summary, denied_calls=denied)
+    # An escalation or a no-change verdict with no text (or, for an escalation, hardly any) would leave
+    # the owner unable to see why: fall back to the redacted end of the final message instead.
     if kind == "FALSE_POSITIVE":
+        if summary is None:
+            summary = _tail(body, secrets, _FALLBACK_TAIL)
         return AgentResult("no_change", served, explanation=summary, denied_calls=denied)
+    if summary is None or len(summary) < _MIN_ESCALATION_TEXT:
+        summary = _tail(body, secrets, _FALLBACK_TAIL) or summary
     return AgentResult("error", served, reason="agent_escalated", explanation=summary,  # why, for the log
                        denied_calls=denied)
 

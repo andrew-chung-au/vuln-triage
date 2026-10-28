@@ -16,7 +16,6 @@ import re
 
 import pytest
 
-from vt_responder import envscrub
 from vt_responder.actlog import ActionLog
 from vt_responder.cli_session import parse_output
 from vt_responder.envscrub import redact, redacted_window, secret_forms
@@ -191,11 +190,10 @@ def test_redact_replaces_every_occurrence_of_every_form(name):
 def test_redacted_window_counts_the_size_on_the_redacted_text():
     secret = SECRETS["github"]
     text = "A" + secret + "B" + secret + "C"
-    assert redacted_window(text, [secret], 14, tail=True) == "B[REDACTED]C"[:14] or True
     assert redacted_window(text, [secret], 100, tail=True) == "A[REDACTED]B[REDACTED]C"
     assert redacted_window(text, [secret], 100, tail=False) == "A[REDACTED]B[REDACTED]C"
-    assert redacted_window(text, [secret], 12, tail=False) == "A[REDACTED]"[:12]
-    assert redacted_window(text, [secret], 3, tail=True) == "D]C"[1:] or True
+    assert redacted_window(text, [secret], 12, tail=False) == "A[REDACTED]B"
+    assert redacted_window(text, [secret], 12, tail=True) == "B[REDACTED]C"
 
 
 def test_redacted_window_cuts_head_and_tail_by_characters_not_bytes():
@@ -205,20 +203,17 @@ def test_redacted_window_cuts_head_and_tail_by_characters_not_bytes():
 
 
 @pytest.mark.parametrize("name", SECRETS)
-def test_a_text_bounded_by_the_region_never_starts_or_ends_with_part_of_a_secret(name, monkeypatch):
-    """With the region lowered, redaction shrinks the text so the bound itself falls in the kept window."""
-    monkeypatch.setattr(envscrub, "WINDOW_REGION", 600)
+def test_the_whole_text_is_redacted_so_no_edge_of_any_region_can_bisect_a_secret(name):
+    """Thousands of copies, the window far inside the text: every offset of every form, both ends."""
     secret = SECRETS[name]
-    only_redacted = re.compile(r"(\[REDACTED\]|[ q])*")
+    allowed = set("[REDACTED] q")  # the window may cut INSIDE a "[REDACTED]", which is harmless
     for form in sorted(secret_forms(secret)):
         unit = form + " "
-        for lead in range(len(unit)):  # the bound falls on every offset of the copy it cuts
-            tail_text = "q" * lead + unit * (2000 // len(unit) + 5)
-            out = redacted_window(tail_text, [secret], 5000, tail=True)
-            assert only_redacted.fullmatch(out), (len(form), lead, out[:40])
-            head_text = unit * (2000 // len(unit) + 5) + "q" * lead
-            out = redacted_window(head_text, [secret], 5000, tail=False)
-            assert only_redacted.fullmatch(out), (len(form), lead, out[-40:])
+        for lead in range(len(unit)):
+            text = "q" * lead + unit * 3000
+            for tail in (True, False):
+                out = redacted_window(text, [secret], 800, tail=tail)
+                assert len(out) == 800 and set(out) <= allowed and not leaked(out, secret)
 
 
 def test_a_huge_final_message_is_redacted_near_its_end_and_bounded():
@@ -390,23 +385,120 @@ def test_the_session_windows_are_counted_in_characters_for_every_field():
     assert parsed.denied_calls == ("Bash: " + "€" * 400,)
 
 
-def test_the_logged_caps_are_counted_in_characters_for_every_sink(tmp_path):
-    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE " + "€" * 900))
+@pytest.mark.parametrize("kind", ["escalate", "tail", "no_change", "fixed", "denied"])
+def test_the_logged_caps_are_counted_in_characters_for_every_sink(tmp_path, kind):
+    euro = "€"
+    out = {"escalate": result_json("RESULT: ESCALATE " + euro * 900), "tail": result_json(euro * 900),
+           "no_change": result_json("RESULT: FALSE_POSITIVE " + euro * 900),
+           "fixed": result_json("RESULT: FIXED " + euro * 900),
+           "denied": result_json("RESULT: ESCALATE x", permission_denials=[denial(euro * 900)])}[kind]
+    runner, lines, branches, *_ = runner_rig(tmp_path, stdout=out)
     runner.run("fp1", "42")
-    assert run_failed_events(lines)[0]["explanation"] == "€" * 500
-    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("€" * 900))
-    runner.run("fp1", "42")
-    assert run_failed_events(lines)[0]["explanation"] == "€" * 500
-    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: FALSE_POSITIVE " + "€" * 900))
-    runner.run("fp1", "42")
-    assert [e for e in events(lines) if e["event"] == "no_change"][-1]["explanation"] == "€" * 500
-    runner, lines, branches, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: FIXED " + "€" * 900))
-    runner.run("fp1", "42")
-    assert "€" * 300 in branches.created[0]["body"] and "€" * 301 not in branches.created[0]["body"]
-    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE x", permission_denials=[denial("€" * 900)]))
-    runner.run("fp1", "42")
-    assert run_failed_events(lines)[0]["denied_calls"] == ["Bash: " + "€" * 194]
+    if kind in ("escalate", "tail"):
+        assert run_failed_events(lines)[0]["explanation"] == euro * 500
+    elif kind == "no_change":
+        assert [e for e in events(lines) if e["event"] == "no_change"][-1]["explanation"] == euro * 500
+    elif kind == "fixed":
+        assert euro * 300 in branches.created[0]["body"] and euro * 301 not in branches.created[0]["body"]
+    else:
+        assert run_failed_events(lines)[0]["denied_calls"] == ["Bash: " + euro * 194]
 
 
 def test_the_branch_name_helper_is_importable():
     assert BRANCH == "responder/fp1"
+
+
+@pytest.mark.parametrize("name", SECRETS)
+def test_the_runner_alone_still_redacts_then_cuts_text_it_is_handed(name):
+    """Defence in depth: whatever a session hands over, the runner redacts before it cuts."""
+    secret = SECRETS[name]
+    for pad in (480, 490, 495, 499, 500, 190, 194, 199):
+        text = "x" * pad + secret + " tail"
+        runner = SINKS.runner
+        SINKS.lines.clear()
+        runner._error("fp1", "42", "result_line_missing", explanation=text,
+                      denied_calls=["Bash: " + text])
+        failed = events(SINKS.lines)[-1]
+        assert not leaked(json.dumps(failed), secret)
+        SINKS.lines.clear()
+        runner._error("fp1", "42", "agent_escalated", explanation=text)
+        assert not leaked(json.dumps(events(SINKS.lines)[-1]), secret)
+        SINKS.lines.clear()
+        runner._no_change("fp1", "42", text)
+        assert not leaked("\n".join(SINKS.lines), secret)
+
+
+# -- an escalation or no-change verdict with no (or almost no) text still shows what the agent said ---------
+
+PARAGRAPH = "I read the failing job and the retry code. " * 12  # about 500 characters
+
+
+@pytest.mark.parametrize("verdict_text", ["", "   ", "\t \x1b\x00\x07", "\x1b[0m", "ok", "n/a"])
+def test_an_escalation_with_empty_or_tiny_text_logs_the_tail_of_the_final_message(tmp_path, verdict_text):
+    body = "START-MARK " + PARAGRAPH + " LAST-WORDS\nRESULT: ESCALATE " + verdict_text
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "agent_escalated"
+    assert "LAST-WORDS" in failed["explanation"] and "RESULT: ESCALATE" in failed["explanation"]
+    assert len(failed["explanation"]) <= 500 and "START-MARK" not in failed["explanation"]
+
+
+def test_an_escalation_with_a_real_explanation_still_logs_only_that_explanation(tmp_path):
+    body = PARAGRAPH + "\nRESULT: ESCALATE the fix needs a schema migration, which I may not run"
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    assert run_failed_events(lines)[0]["explanation"] == "the fix needs a schema migration, which I may not run"
+
+
+@pytest.mark.parametrize("verdict_text", ["", " \x1b "])
+def test_a_false_positive_with_no_text_logs_the_tail_of_the_final_message(tmp_path, verdict_text):
+    body = PARAGRAPH + " LAST-WORDS\nRESULT: FALSE_POSITIVE " + verdict_text
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    assert runner.run("fp1", "42") == "no_change"
+    text = [e for e in events(lines) if e["event"] == "no_change"][-1]["explanation"]
+    assert "LAST-WORDS" in text and len(text) <= 500
+
+
+def test_a_fixed_verdict_with_no_text_adds_no_agent_summary_to_the_pull_request(tmp_path):
+    runner, lines, branches, *_ = runner_rig(tmp_path, stdout=result_json(PARAGRAPH + "\nRESULT: FIXED"))
+    assert runner.run("fp1", "42") == "pull_request_opened"
+    assert "Agent summary" not in branches.created[0]["body"]
+
+
+@pytest.mark.parametrize("name", SECRETS)
+def test_the_fallback_tail_is_redacted_before_it_is_cut(name):
+    secret = SECRETS[name]
+    for form in sorted(secret_forms(secret)):
+        for k in (1, 4, 10):
+            for j in offsets(len(form), full=False):
+                body = tail_body(form, k, j, "", " ", 500)
+                if body is None:
+                    continue
+                for verdict in ("RESULT: ESCALATE", "RESULT: FALSE_POSITIVE  "):
+                    parsed = parse_output(result_json(body + "\n" + verdict), MODEL, ALL)
+                    logged = SINKS.failed(parsed).get("explanation", "") if parsed.reason else \
+                        SINKS.no_change(parsed)
+                    assert not leaked(logged, secret) and 0 < len(logged) <= 500
+
+
+def test_a_verdict_inside_a_code_fence_is_not_a_verdict_and_its_tail_is_logged(tmp_path):
+    body = "I ran the script:\n```\nRESULT: ESCALATE quoted from a log\n```\nthen I stopped. FINAL-WORDS"
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "result_line_missing" and failed["explanation"].endswith("FINAL-WORDS")
+
+
+def test_text_after_the_verdict_line_does_not_replace_its_explanation(tmp_path):
+    body = "RESULT: ESCALATE needs a human to approve the migration\nsome trailing remarks " + "t" * 900
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    assert run_failed_events(lines)[0]["explanation"] == "needs a human to approve the migration"
+
+
+def test_a_short_escalation_text_with_trailing_remarks_logs_the_tail_too(tmp_path):
+    body = "RESULT: ESCALATE hmm\nbut here is why: " + "w" * 100 + " WHY-END"
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    assert "WHY-END" in run_failed_events(lines)[0]["explanation"]
