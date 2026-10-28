@@ -458,6 +458,97 @@ def test_a_failed_cli_run_is_a_failed_runner_run_and_pushes_nothing(tmp_path, st
     assert not sessions[0].checkout.exists()  # the checkout is removed
 
 
+def run_failed_events(lines):
+    return [e for e in events(lines) if e["event"] == "run_failed"]
+
+
+def test_an_escalation_logs_the_agents_explanation_in_run_failed(tmp_path):
+    out = result_json("looked around\nRESULT: ESCALATE the failing job needs a database migration I cannot make")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    assert runner.run("fp1", "42") == "error"
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "agent_escalated"
+    assert failed["explanation"] == "the failing job needs a database migration I cannot make"
+
+
+def test_an_escalation_with_no_text_logs_no_explanation(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE"))
+    runner.run("fp1", "42")
+    assert "explanation" not in run_failed_events(lines)[0]
+
+
+def test_a_planted_secret_in_the_escalation_text_is_redacted(tmp_path):
+    out = result_json("RESULT: ESCALATE the env has ghp_PLANTEDsecretvalue123 in it")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert "ghp_PLANTED" not in json.dumps(failed) and "[REDACTED]" in failed["explanation"]
+
+
+def test_escalation_text_is_stripped_of_control_characters_capped_and_json_encoded(tmp_path):
+    nasty = "a\x1b[31mred\x00\x07 b‮" + "x" * 5000 + '"}{"event":"forged"'
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE " + nasty))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    text = failed["explanation"]
+    assert len(text) <= 500 and "\x1b" not in text and "\x00" not in text and "\x07" not in text
+    assert all(c.isprintable() for c in text)
+    assert len(lines[-1].splitlines()) == 1  # one log line, however the agent text looks
+    assert [e["event"] for e in events(lines)].count("forged") == 0
+
+
+@pytest.mark.parametrize("stdout,fake,reason", [
+    (result_json("I got lost.\nThe tests are flaky and I gave up with no verdict line"), {}, "result_line_missing"),
+    (result_json("API Error: model overloaded, try later", is_error=True), {"exit": 1}, "cli_exit_nonzero"),
+    (result_json("API Error: model overloaded, try later", is_error=True), {}, "agent_cli_error"),
+])
+def test_other_failures_log_a_bounded_redacted_tail_of_the_final_message(tmp_path, stdout, fake, reason):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=stdout, **fake)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == reason
+    body = json.loads(stdout)["result"]
+    assert failed["explanation"] == " ".join(body.split())
+
+
+def test_the_final_message_tail_is_only_the_last_part_redacted_stripped_and_capped(tmp_path):
+    body = "START-MARKER " + "y" * 3000 + " token ghp_PLANTEDsecretvalue123 \x1b[0m\x00 END-MARKER"
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    text = failed["explanation"]
+    assert failed["reason"] == "result_line_missing"
+    assert len(text) <= 500 and text.endswith("END-MARKER") and "START-MARKER" not in text
+    assert "ghp_PLANTED" not in json.dumps(failed) and "[REDACTED]" in text
+    assert "\x1b" not in text and "\x00" not in text
+
+
+def test_a_secret_cut_by_the_tail_window_leaves_no_fragment(tmp_path):
+    secret = "ghp_PLANTEDsecretvalue123"
+    for pad in range(0, 40, 3):  # slide the secret across the session's cut point
+        body = "z" * 700 + "-" * pad + secret + " " + "q" * 60
+        here = tmp_path / f"p{pad}"
+        here.mkdir()
+        runner, lines, *_ = runner_rig(here, stdout=result_json(body))
+        runner.run("fp1", "42")
+        text = run_failed_events(lines)[0]["explanation"]
+        assert "ghp_PLANTED"[:6] not in text.replace("[REDACTED]", "") and "secretvalue" not in text
+
+
+def test_stderr_is_never_logged(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, stdout="", exit=1, stderr="token PLANTED-LEAK in the message")
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "cli_exit_nonzero" and "explanation" not in failed
+    assert "PLANTED-LEAK" not in json.dumps(failed)
+
+
+def test_usage_limit_and_max_turns_log_no_agent_text(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("You've hit your session limit", is_error=True), exit=1)
+    runner.run("fp1", "42")
+    assert "explanation" not in run_failed_events(lines)[0]
+
+
 def test_a_refused_diff_is_a_failed_run_and_the_branch_this_run_created_is_cleaned_up(tmp_path):
     from vt_responder.publisher import Change
 

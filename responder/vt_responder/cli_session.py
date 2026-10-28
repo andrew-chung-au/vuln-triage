@@ -17,7 +17,9 @@ authentication), read 2026-10-27 and never run against a login or a model:
 The process is started in its own session (process group) and killed as a group on the time limit;
 every process also carries ``VT_RUN_MARKER`` so the runner can stop stragglers (``procs.py``).
 Output goes to files in a temporary directory OUTSIDE the checkout and is deleted afterwards; only
-the exit code, turn count and a failure code are logged, never agent text beyond the ``RESULT:`` line.
+the exit code, turn count and a failure code are logged, plus (on a failed run) a short snippet of the
+agent's final message: the ``RESULT: ESCALATE`` text, or the last characters of the message when there
+is no ``RESULT:`` line or the CLI reported an error. The runner redacts and caps it; stderr is never logged.
 """
 
 from __future__ import annotations
@@ -52,6 +54,8 @@ PLAN_AUTH_METHODS = ("claude.ai", "oauth_token")
 _MAX_OUTPUT_BYTES = 5_000_000  # per output file; more is a failed run (checked while the CLI runs, and after)
 _POLL_SECONDS = 0.25
 _MAX_EXPLANATION = 500
+_TEXT_REASONS = ("agent_cli_error", "result_line_missing", "agent_escalated")
+_MAX_TAIL = 800 # the runner keeps the last 500 of this after redacting (real_runner.MAX_FAILURE_TEXT)
 _RESULT_LINE = re.compile(r"^RESULT:\s*(FIXED|FALSE_POSITIVE|ESCALATE)\b[ \t]*(.*)$", re.MULTILINE)
 # VERIFY: exact wording. The errors page lists "You've hit your session/weekly/Opus/Sonnet limit"; the
 # exit code and JSON shape of a headless run that hits one are not documented there.
@@ -114,6 +118,14 @@ def preflight(environ: Mapping[str, str] | None = None, *, binary: str = BINARY,
     return method
 
 
+def _tail(body: str) -> str | None:
+    """The last ``_MAX_TAIL`` printable characters of the final message, whitespace collapsed, for the
+    failure log. Untrusted text: the runner redacts it, keeps the last 500 characters and logs it
+    JSON-encoded. It is longer than what is kept so a secret cut by this window is redacted whole first."""
+    flat = " ".join("".join(c if c.isprintable() else " " for c in body).split())
+    return flat[-_MAX_TAIL:].strip() or None
+
+
 def parse_output(text: str, model: str) -> AgentResult:
     """The result of a finished run from the ``--output-format json`` object. Anything not clearly a
     success with a ``RESULT:`` line is an error with a short reason code (a failed run)."""
@@ -137,17 +149,17 @@ def parse_output(text: str, model: str) -> AgentResult:
             return AgentResult("error", served, reason="plan_usage_limit")
         if data.get("subtype") == "error_max_turns":
             return AgentResult("error", served, reason="max_turns")
-        return AgentResult("error", served, reason="agent_cli_error")
+        return AgentResult("error", served, reason="agent_cli_error", explanation=_tail(body))
     found = _RESULT_LINE.findall(_outside_fences(body))
     if not found:
-        return AgentResult("error", served, reason="result_line_missing")
+        return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body))
     kind, rest = found[-1]
     summary = "".join(c for c in rest if c.isprintable())[:_MAX_EXPLANATION].strip() or None
     if kind == "FIXED":
         return AgentResult("fixed", served, explanation=summary)
     if kind == "FALSE_POSITIVE":
         return AgentResult("no_change", served, explanation=summary)
-    return AgentResult("error", served, reason="agent_escalated")
+    return AgentResult("error", served, reason="agent_escalated", explanation=summary)  # why, for the log
 
 
 def _too_big(*paths: Path) -> bool:
@@ -253,8 +265,11 @@ class CliSession:
                 if limited:
                     return AgentResult("error", self._model, reason="plan_usage_limit")
                 parsed = parse_output(raw, self._model)
-                known = parsed.reason if parsed.reason == "max_turns" else "cli_exit_nonzero"
-                return AgentResult("error", self._model, reason=known)  # a non-zero exit is never a success
+                if parsed.reason == "max_turns":
+                    return AgentResult("error", self._model, reason="max_turns")
+                # a non-zero exit is never a success; stdout's final message (not stderr) says why
+                return AgentResult("error", self._model, reason="cli_exit_nonzero",
+                                   explanation=parsed.explanation if parsed.reason in _TEXT_REASONS else None)
             return parse_output(raw, self._model)
         finally:
             shutil.rmtree(out_dir, ignore_errors=True)

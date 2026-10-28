@@ -2940,3 +2940,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the doc's own env and override blocks regenerated in a temp copy under `.scratch/`; `docker compose config --quiet` and `--services` OK; all bash blocks and both generated scripts pass `bash -n`. No Docker daemon here, so no container, GitHub, Grafana or responder step was run.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: log why a CLI run failed (first live drill showed `run_failed` `agent_escalated` with no cause)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief to keep and log the ESCALATE explanation and, if safe, a snippet for the other failure reasons. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): tests were written alongside the code (the red run before the change was not separately captured); `make responder-test` 1006 passed; `make verify BASE=origin/main` PASS. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

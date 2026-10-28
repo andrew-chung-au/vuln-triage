@@ -56,7 +56,8 @@ from .prompt import SYSTEM_PROMPT, build_task
 from .publisher import GitPublisher, PublishError, Snapshot
 
 _PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
-_UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
+MAX_FAILURE_TEXT = 500  # most agent text a run_failed line carries
+_UNKNOWN = object() # the branch could not be inspected before the session: never delete it
 
 
 @dataclass(frozen=True)
@@ -230,7 +231,7 @@ class RealRunner:
                                    result.explanation or "The agent found no reproducible defect.",
                                    model=served)
         return self._finish_failed(fingerprint, finding_id, result.reason or "agent_reported_error",
-                                   model=served, before=before)
+                                   model=served, before=before, explanation=result.explanation)
 
     def _check_pull_request(self, fingerprint: str, url: str) -> str | None:
         """S4: the reported PR must be a pull request of this run. Returns a failure reason or None."""
@@ -353,9 +354,10 @@ class RealRunner:
         self._log.emit("branch_preserved", outcome="kept", fingerprint=fingerprint,
                        finding_id=finding_id, branch=branch, reason=reason)
 
-    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None) -> str:
+    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None,
+                       explanation: str | None = None) -> str:
         self._cleanup_branch(fingerprint, finding_id, before)
-        return self._error(fingerprint, finding_id, reason, model=model)
+        return self._error(fingerprint, finding_id, reason, model=model, explanation=explanation)
 
     def _no_change(self, fingerprint, finding_id, explanation, *, model=None) -> str:
         self._log.emit("no_change", outcome="no_change", fingerprint=fingerprint,
@@ -363,9 +365,15 @@ class RealRunner:
                        model=model or self._model)
         return "no_change"
 
-    def _error(self, fingerprint, finding_id, reason, *, model=None) -> str:
+    def _error(self, fingerprint, finding_id, reason, *, model=None, explanation: str | None = None) -> str:
+        extra: dict[str, Any] = {}
+        if explanation:
+            # Untrusted agent text: redacted first, then only the last MAX_FAILURE_TEXT characters.
+            shown = (redact(explanation, self._secrets) or "")[-MAX_FAILURE_TEXT:].strip()
+            if shown:
+                extra["explanation"] = shown
         self._log.emit("run_failed", outcome="error", fingerprint=fingerprint,
-                       finding_id=finding_id, reason=reason, model=model or self._model)
+                       finding_id=finding_id, reason=reason, model=model or self._model, **extra)
         return "error"
 
 
