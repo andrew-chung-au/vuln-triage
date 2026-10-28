@@ -405,7 +405,7 @@ def runner_rig(tmp_path, *, stdout=RESULT_FIXED, publish_git=None, branches=None
 
     def make(model, ctx):
         sessions.append(ctx)
-        return CliSession(model, ctx, environ=host_env(bin_dir))
+        return CliSession(model, ctx, environ=host_env(bin_dir), secrets=list(secrets))
 
     runner = RealRunner(api, ActionLog(lines.append), MODEL, make, git=FakeCheckoutGit(), branches=branches,
                         timeout_seconds=timeout, timeout_grace_seconds=0.0, repo="owner/repo",

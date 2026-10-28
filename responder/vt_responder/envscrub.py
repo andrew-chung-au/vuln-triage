@@ -84,13 +84,40 @@ def secret_forms(secret: str) -> set[str]:
     return {secret, b64(secret), b64(f"x-access-token:{secret}")}
 
 
+def _all_forms(secrets: Iterable[str]) -> set[str]:
+    forms: set[str] = set()
+    for secret in secrets:
+        forms |= secret_forms(secret or "")
+    return forms
+
+
 def redact(text: str | None, secrets: Iterable[str]) -> str | None:
     """``text`` with every known secret value (and its base64 forms) replaced by ``[REDACTED]``."""
     if not text:
         return text
-    forms: set[str] = set()
-    for secret in secrets:
-        forms |= secret_forms(secret or "")
-    for form in sorted(forms, key=len, reverse=True):  # longest first
+    for form in sorted(_all_forms(secrets), key=len, reverse=True):  # longest first
         text = text.replace(form, "[REDACTED]")
     return text
+
+
+# Most characters of agent text that are redacted before a window is cut from them (#260 redact-first).
+# Far above every window (800) and every secret form (< 200), so the region is only ever a bound on cost
+# for text near the 5 MB output limit; tests lower it to exercise the edge.
+WINDOW_REGION = 200_000
+
+
+def redacted_window(text: str, secrets: Iterable[str], size: int, *, tail: bool) -> str:
+    """The first (or, with ``tail``, last) ``size`` characters of ``text`` AFTER redaction.
+
+    Redaction comes first and the cut second, so a secret that straddles the cut is replaced whole
+    and no fragment of it can survive; redaction may shrink the text, so ``size`` is counted on the
+    redacted text. Only the nearest ``WINDOW_REGION`` characters can contribute. When that bounds the
+    text, the ``longest form - 1`` characters at the bounded side are dropped as well: a secret that
+    straddles that bound has every character it has inside the region within them, so no partial
+    secret reaches the redaction as its first or last characters."""
+    secrets = list(secrets)
+    guard = max((len(f) for f in _all_forms(secrets)), default=1) - 1
+    if len(text) > WINDOW_REGION:
+        text = text[len(text) - WINDOW_REGION + guard:] if tail else text[:WINDOW_REGION - guard]
+    text = redact(text, secrets) or ""
+    return text[-size:] if tail else text[:size]

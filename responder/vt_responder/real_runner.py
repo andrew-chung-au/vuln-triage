@@ -395,7 +395,8 @@ class RealRunner:
 
 
 def build_default_session(model: str, ctx: RunContext, *, api_key: str, github_token: str,
-                          env: Mapping[str, str] | None = None, sdk: Any = None) -> AgentSession:
+                          env: Mapping[str, str] | None = None, sdk: Any = None,
+                          secrets: Sequence[str] = ()) -> AgentSession:
     """Build the real Claude Agent SDK session (F2). The SDK is imported lazily, inside.
 
     Refused (``ConfigError``) in a CI or test environment and when the API key or
@@ -410,4 +411,4 @@ def build_default_session(model: str, ctx: RunContext, *, api_key: str, github_t
         raise ConfigError("ANTHROPIC_API_KEY and RESPONDER_GITHUB_TOKEN are required for a live session")
     from .sdk_session import SdkSession
 
-    return SdkSession(model, ctx, api_key=api_key, github_token=github_token, sdk=sdk)
+    return SdkSession(model, ctx, api_key=api_key, github_token=github_token, sdk=sdk, secrets=secrets)
