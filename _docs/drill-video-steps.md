@@ -4,9 +4,11 @@ This file supersedes Part 1 step 1 of `_docs/drill-runbook.md` and all of `_docs
 
 This file lives on branch `claude/260-cli-runtime` until that branch is merged. If step A2 shows a different branch or `ls _docs/drill-video-steps.md` fails, run these (once):
 ```bash
+git remote set-branches --add origin claude/260-cli-runtime
 git fetch origin claude/260-cli-runtime
 git checkout claude/260-cli-runtime
 ```
+Expect: `branch 'claude/260-cli-runtime' set up to track 'origin/claude/260-cli-runtime'.` (The first line is needed if your clone was made with `--single-branch`; it is harmless otherwise.)
 After the branch is merged into `main`, use `git checkout main` instead and `git pull --ff-only`.
 
 Setup: WSL2 Ubuntu bash, repo at `~/clone/vuln-triage`, your own Claude login (Pro plan). Paste one block per step. Stay in `~/clone/vuln-triage` unless a step says otherwise. Part A and steps marked OFF CAMERA are not recorded. If you get stuck, tell the step number (for example "B13") and the last output.
@@ -350,7 +352,7 @@ Evidence (runbook step 2): in the browser open `http://localhost:9090`, query `v
 ```bash
 grep '^GRAFANA_ADMIN_PASSWORD=' .env | cut -d= -f2- | tr -d '\n' | clip.exe && echo copied
 ```
-Expect: `copied`. If `clip.exe` is not found: pause recording, open `.env` in an editor, copy the value after `GRAFANA_ADMIN_PASSWORD=`, close the editor, resume. Do not copy anything else before B18.
+Expect: `copied`. If `clip.exe` is not found: pause recording, open `.env` in an editor, copy the value after `GRAFANA_ADMIN_PASSWORD=`, close the editor, resume. Do not copy anything else before B18. After the recording, clear the Windows clipboard history (Win+V, then "Clear all"), because it keeps the GitHub token from B9 and this password.
 
 ### B18. Show the Grafana alert
 Browser: `http://localhost:3000`, user `admin`, paste the password (Ctrl+V), then menu Alerting, Alert rules.
@@ -416,9 +418,9 @@ Expect: the video file exists. Upload it and add the link to the README placehol
 
 ### B29. Dashboard re-capture (runbook Part 2; stack must still be up; screenshots only)
 Browser: `http://localhost:3000/d/us13-journey/us-13-journey` (already loaded by Grafana). Set the time range to "Last 1 hour". Use the viewing mode (the dashboard is not in edit mode). Take a screenshot of the whole dashboard and save it as a PNG (for example in your Windows Downloads folder).
-Expect: three panes visible (metric, Tempo traces, Loki logs) with no stale Environment or Version dropdowns. Then copy the PNG over the committed screenshot (replace `YOUR_WINDOWS_USER` and `YOUR_FILE.png`; the block refuses to run until you do):
+Expect: three panes visible (metric, Tempo traces, Loki logs) with no stale Environment or Version dropdowns. Then copy the PNG over the committed screenshot (replace `YOUR_WINDOWS_USER` and `YOUR_FILE.png`, and keep the double quotes because Windows screenshot names contain spaces; the block refuses to run until you do):
 ```bash
-SHOT=/mnt/c/Users/YOUR_WINDOWS_USER/Downloads/YOUR_FILE.png
+SHOT="/mnt/c/Users/YOUR_WINDOWS_USER/Downloads/YOUR_FILE.png"
 if [ -f "$SHOT" ]; then cp "$SHOT" docs/images/g9-grafana-dashboard-dev-local.png && echo "screenshot copied"; else echo "EDIT SHOT FIRST: file not found"; fi
 ```
 Expect: `screenshot copied`. (Committing it is a separate task for the orchestrator.)
