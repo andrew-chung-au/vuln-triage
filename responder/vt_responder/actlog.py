@@ -3,8 +3,11 @@
 Fields are an allowlist: ``event``, ``fingerprint``, ``finding_id``,
 ``outcome`` and a few short machine fields. Callers pass only those; there is
 no free-form payload parameter, so tokens, secrets and advisory text have no
-way in. ``explanation`` is text the responder itself wrote (what it checked),
-never text read from the API.
+way in. ``explanation`` is either text the responder itself wrote (what it checked) or, for the CLI
+runtime, UNTRUSTED text from the agent's final message: the caller redacts it and caps it at 500
+characters, and it is JSON-encoded here. It is never text read from the API. ``denied_calls`` is the
+same kind of text: at most five ``"Tool: command or path"`` strings of at most 200 characters each,
+redacted by the caller.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ _ALLOWED = frozenset(
         "pull_request",
         "job_states",
         "reason",
+        "denied_calls",
         "model",
         "tool",
     }

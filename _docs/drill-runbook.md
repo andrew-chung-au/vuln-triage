@@ -15,12 +15,10 @@ This runbook does two jobs in one sitting:
 
 Do them in this order; the drill is the long part.
 
-> **Running it?** For the exact, copy-pasteable commands at each step (stack
-> bring-up with the right `-f` file list, starting the real responder, the
-> login/asset API calls, the metric/alert/MailHog checks, and the screen
-> recording), follow the command-by-command companion:
-> [`_docs/drill-runbook-commands.md`](drill-runbook-commands.md). This file
-> stays the checklist and the *why*.
+> **Running it?** For the video, follow only
+> [`_docs/drill-video-steps.md`](drill-video-steps.md): the single, copy-paste
+> step list (it supersedes Part 1 step 1 below and the older
+> `drill-runbook-commands.md`). This file stays the checklist and the *why*.
 
 ## Prerequisites (must be true before you start)
 
@@ -53,37 +51,10 @@ Do them in this order; the drill is the long part.
 
 Record the screen for this whole part (screenshots at each ✓, or a short video).
 
-1. [ ] Bring up the stack with the **real** responder **on the host**, not in
-   Compose. The Compose `responder` service (`compose.responder.yaml`) is
-   **stub-only**: it is built from the backend image, which has no `claude` CLI, no
-   login and no GitHub token (it passes none of the real-mode settings through), so
-   a real start there cannot run an agent. So:
-   - Start the rest of the stack with `VT_DEMO_DEFECT=notify_no_fix` on, over the
-     recorded fixtures (`compose.yaml` + `compose.telemetry.yaml` +
-     `compose.alert.yaml`), **without** `compose.responder.yaml` (it would also hold
-     port 9100). Wait for all containers healthy.
-   - Run the real responder from the `responder/` project on the host, as the user
-     whose Claude login you want to use, with `RESPONDER_MODE=real`,
-     `RESPONDER_MODEL=claude-sonnet-5-5`, the webhook secret
-     (`RESPONDER_WEBHOOK_SECRET` = the value of `VT_RESPONDER_WEBHOOK_TOKEN`),
-     `RESPONDER_API_TOKEN`, `RESPONDER_API_URL` pointing at the backend as the host
-     sees it (VERIFY: `http://127.0.0.1:8000` if the backend publishes that port),
-     `RESPONDER_GITHUB_TOKEN` and `RESPONDER_GITHUB_REPO`, for example
-     `responder/.venv/bin/uvicorn vt_responder.app:create_app_from_env --factory
-     --host 0.0.0.0 --port 9100` from the `responder/` directory with those
-     variables exported (there is no `make` target for this yet; see the proposal in
-     the #260 comment). It must listen on an address Grafana's container can reach,
-     so not `127.0.0.1`.
-   - Point Grafana at it: set `VT_RESPONDER_WEBHOOK_URL` to
-     `http://172.17.0.1:9100/webhook/grafana`. On Linux, `172.17.0.1` is the
-     default Docker bridge gateway address (the host as seen from a container on the
-     default bridge); on a Compose project network the gateway differs, and Docker
-     Desktop uses `host.docker.internal`. VERIFY: check with
-     `docker network inspect <network>` and from inside the Grafana container, and
-     allow the port through any host firewall.
-   - A start-up message beginning "the 'claude' CLI" means the preflight failed
-     (not installed, too old, not logged in, or not a subscription login); fix it
-     and start again.
+1. [ ] Bring up the stack with the **real** responder **on the host** (not in
+   Compose; the Compose `responder` service is stub-only). The exact steps,
+   values and checks are in [`_docs/drill-video-steps.md`](drill-video-steps.md)
+   (Parts A and B); that file replaces the older text of this step.
 2. [ ] **Metric reaches 1.** The no-fixed-version top-tier finding's notification
    job fails; `vt_top_tier_notification_overdue` goes to 1 in Prometheus/Grafana.
    ✓ capture the metric at 1.

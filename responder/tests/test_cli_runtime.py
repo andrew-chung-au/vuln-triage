@@ -256,7 +256,7 @@ def test_the_run_starts_in_the_checkout_in_its_own_process_group_and_leaves_no_f
 @pytest.mark.parametrize("text,outcome,explanation", [
     ("RESULT: FIXED the retry loop swallowed the error", "fixed", "the retry loop swallowed the error"),
     ("notes\nRESULT: FALSE_POSITIVE nothing failed, the job was retried", "no_change", "nothing failed, the job was retried"),
-    ("RESULT: FALSE_POSITIVE", "no_change", None),
+    ("RESULT: FALSE_POSITIVE", "no_change", "RESULT: FALSE_POSITIVE"),  # no text: the message's end
     ("RESULT: FALSE_POSITIVE x\nRESULT: FIXED y", "fixed", "y"),  # the last line wins
 ])
 def test_the_result_line_is_parsed(text, outcome, explanation):
@@ -405,7 +405,7 @@ def runner_rig(tmp_path, *, stdout=RESULT_FIXED, publish_git=None, branches=None
 
     def make(model, ctx):
         sessions.append(ctx)
-        return CliSession(model, ctx, environ=host_env(bin_dir))
+        return CliSession(model, ctx, environ=host_env(bin_dir), secrets=list(secrets))
 
     runner = RealRunner(api, ActionLog(lines.append), MODEL, make, git=FakeCheckoutGit(), branches=branches,
                         timeout_seconds=timeout, timeout_grace_seconds=0.0, repo="owner/repo",
@@ -456,6 +456,274 @@ def test_a_failed_cli_run_is_a_failed_runner_run_and_pushes_nothing(tmp_path, st
     assert [e["reason"] for e in events(lines) if e["event"] == "run_failed"] == [reason]
     assert pgit.pushed == [] and branches.created == []
     assert not sessions[0].checkout.exists()  # the checkout is removed
+
+
+def run_failed_events(lines):
+    return [e for e in events(lines) if e["event"] == "run_failed"]
+
+
+def test_an_escalation_logs_the_agents_explanation_in_run_failed(tmp_path):
+    out = result_json("looked around\nRESULT: ESCALATE the failing job needs a database migration I cannot make")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    assert runner.run("fp1", "42") == "error"
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "agent_escalated"
+    assert failed["explanation"] == "the failing job needs a database migration I cannot make"
+
+
+def test_an_escalation_with_no_text_logs_the_end_of_the_final_message_instead(tmp_path):
+    # superseded: it used to assert no explanation; the live drill showed an unreadable empty escalation
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE"))
+    runner.run("fp1", "42")
+    assert run_failed_events(lines)[0]["explanation"] == "RESULT: ESCALATE"
+
+
+def test_a_planted_secret_in_the_escalation_text_is_redacted(tmp_path):
+    out = result_json("RESULT: ESCALATE the env has ghp_PLANTEDsecretvalue123 in it")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert "ghp_PLANTED" not in json.dumps(failed) and "[REDACTED]" in failed["explanation"]
+
+
+def test_escalation_text_is_stripped_of_control_characters_capped_and_json_encoded(tmp_path):
+    nasty = "a\x1b[31mred\x00\x07 b‮" + "x" * 5000 + '"}{"event":"forged"'
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("RESULT: ESCALATE " + nasty))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    text = failed["explanation"]
+    assert len(text) <= 500 and "\x1b" not in text and "\x00" not in text and "\x07" not in text
+    assert all(c.isprintable() for c in text)
+    assert len(lines[-1].splitlines()) == 1  # one log line, however the agent text looks
+    assert [e["event"] for e in events(lines)].count("forged") == 0
+
+
+@pytest.mark.parametrize("stdout,fake,reason", [
+    (result_json("I got lost.\nThe tests are flaky and I gave up with no verdict line"), {}, "result_line_missing"),
+    (result_json("API Error: model overloaded, try later", is_error=True), {"exit": 1}, "cli_exit_nonzero"),
+    (result_json("API Error: model overloaded, try later", is_error=True), {}, "agent_cli_error"),
+])
+def test_other_failures_log_a_bounded_redacted_tail_of_the_final_message(tmp_path, stdout, fake, reason):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=stdout, **fake)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == reason
+    body = json.loads(stdout)["result"]
+    assert failed["explanation"] == " ".join(body.split())
+
+
+def test_the_final_message_tail_is_only_the_last_part_redacted_stripped_and_capped(tmp_path):
+    body = "START-MARKER " + "y" * 3000 + " token ghp_PLANTEDsecretvalue123 \x1b[0m\x00 END-MARKER"
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    text = failed["explanation"]
+    assert failed["reason"] == "result_line_missing"
+    assert len(text) <= 500 and text.endswith("END-MARKER") and "START-MARKER" not in text
+    assert "ghp_PLANTED" not in json.dumps(failed) and "[REDACTED]" in text
+    assert "\x1b" not in text and "\x00" not in text
+
+
+SECRETS = {  # the three configured secrets of the responder: GitHub token, API token, webhook secret
+    "github": "ghp_PLANTEDsecretvalue123",
+    "api": "vt-api-PLANTED-0123456789abcdef",
+    "webhook": "whsec_PLANTED_0123456789",
+}
+
+
+def leaked(text, secret, size=8):
+    """True if any ``size`` consecutive characters of ``secret`` appear in ``text``."""
+    return any(secret[i:i + size] in text for i in range(len(secret) - size + 1))
+
+
+def straddle(cut, secret):
+    """Offsets that put ``secret`` before, across and after the character position ``cut``."""
+    return range(cut - len(secret) - 2, cut + 3)
+
+
+def case_grid(cut):
+    return [(name, off) for name, secret in SECRETS.items() for off in straddle(cut, secret)]
+
+
+def run_logged(tmp_path, body, secret):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body), secrets=(secret,))
+    runner.run("fp1", "42")
+    return run_failed_events(lines)[0]
+
+
+@pytest.mark.parametrize("name,pad", case_grid(500))
+def test_an_escalation_secret_across_the_500_character_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]
+    failed = run_logged(tmp_path, "RESULT: ESCALATE " + "x" * pad + secret + " and more text " + "y" * 600, secret)
+    assert failed["reason"] == "agent_escalated" and len(failed["explanation"]) <= 500
+    assert not leaked(failed["explanation"], secret) and secret not in json.dumps(failed)
+
+
+@pytest.mark.parametrize("name,after", case_grid(500))
+def test_a_secret_across_the_500_character_tail_cut_is_redacted_whole(tmp_path, name, after):
+    secret = SECRETS[name]  # `after` characters follow the secret, so the cut falls inside it
+    failed = run_logged(tmp_path, "z" * 900 + secret + "q" * after, secret)
+    assert failed["reason"] == "result_line_missing" and len(failed["explanation"]) <= 500
+    assert not leaked(failed["explanation"], secret)
+
+
+@pytest.mark.parametrize("name,after", case_grid(800))
+def test_a_secret_across_the_800_character_tail_window_is_never_kept_as_a_fragment(tmp_path, name, after):
+    secret = SECRETS[name]
+    failed = run_logged(tmp_path, "z" * 1200 + secret + "q" * after, secret)
+    assert not leaked(failed.get("explanation", ""), secret)
+
+
+@pytest.mark.parametrize("name,pad", case_grid(500))
+def test_a_false_positive_explanation_secret_across_the_500_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]
+    runner, lines, *_ = runner_rig(
+        tmp_path, stdout=result_json("RESULT: FALSE_POSITIVE " + "x" * pad + secret + " tail " + "y" * 600),
+        secrets=(secret,))
+    assert runner.run("fp1", "42") == "no_change"
+    text = [e for e in events(lines) if e["event"] == "no_change"][-1]["explanation"]
+    assert len(text) <= 500 and not leaked(text, secret)
+
+
+def test_the_text_the_session_hands_over_is_bounded_at_800_characters():
+    huge = "w" * 5000
+    for body in ("RESULT: ESCALATE " + huge, "RESULT: FALSE_POSITIVE " + huge, "RESULT: FIXED " + huge, huge):
+        parsed = parse_output(result_json(body), MODEL)
+        assert parsed.explanation is not None and 500 < len(parsed.explanation) <= 800
+
+
+# -- denied tool calls in run_failed (permission_denials of the CLI's result object) ----------------------
+
+def denial(command, tool="Bash", **more):
+    return {"tool_name": tool, "tool_use_id": "toolu_01", "tool_input": {"command": command, **more}}
+
+
+def run_with_denials(tmp_path, denials, *, body="RESULT: ESCALATE could not commit", secrets=("ghp_PLANTEDsecretvalue123",),
+                     **fake):
+    over = {} if denials is _ABSENT else {"permission_denials": denials}
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body, **over), secrets=secrets, **fake)
+    runner.run("fp1", "42")
+    return lines, run_failed_events(lines)
+
+
+_ABSENT = object()
+
+
+def test_denied_calls_are_logged_in_run_failed_as_short_strings(tmp_path):
+    denials = [denial('git commit -m "Fix the formatter (no-fix findings): #12"'),
+               {"tool_name": "Edit", "tool_use_id": "t2", "tool_input": {"file_path": "backend/app.py", "new_string": "SECRET-BODY"}},
+               {"tool_name": "Read", "tool_use_id": "t3", "tool_input": {"path": "/etc/passwd"}}]
+    _, (failed,) = run_with_denials(tmp_path, denials)
+    assert failed["reason"] == "agent_escalated"
+    assert failed["denied_calls"] == ['Bash: git commit -m "Fix the formatter (no-fix findings): #12"',
+                                      "Edit: backend/app.py", "Read: /etc/passwd"]
+    assert "SECRET-BODY" not in json.dumps(failed) and "toolu_" not in json.dumps(failed)
+
+
+@pytest.mark.parametrize("fake,body,reason", [
+    ({}, "no verdict line here", "result_line_missing"),
+    ({"exit": 1}, "RESULT: ESCALATE x", "cli_exit_nonzero"),
+])
+def test_denied_calls_are_logged_for_other_parsed_failures(tmp_path, fake, body, reason):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git commit -a")], body=body, **fake)
+    assert failed["reason"] == reason and failed["denied_calls"] == ["Bash: git commit -a"]
+
+
+def test_denied_calls_are_logged_when_the_turn_limit_ended_the_run(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, exit=1, stdout=result_json(
+        "", subtype="error_max_turns", is_error=True, permission_denials=[denial("git commit -a")]))
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "max_turns" and failed["denied_calls"] == ["Bash: git commit -a"]
+
+
+@pytest.mark.parametrize("denials", [
+    _ABSENT, None, "git commit", 7, {"tool_name": "Bash", "tool_input": {"command": "x"}}, [], ["x", 3, None, {}, []],
+    [{"tool_name": 5, "tool_input": {"command": "x"}}], [{"tool_input": {"command": "x"}}],
+    [{"tool_name": "bad name!", "tool_input": {"command": "x"}}], [{"tool_name": "x" * 80, "tool_input": {"command": "x"}}],
+])
+def test_absent_or_malformed_denials_log_no_key(tmp_path, denials):
+    _, (failed,) = run_with_denials(tmp_path, denials)
+    assert failed["reason"] == "agent_escalated" and "denied_calls" not in failed
+
+
+def test_a_denial_without_a_usable_input_logs_just_the_tool_name(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [{"tool_name": "Bash", "tool_input": "oops"},
+                                               {"tool_name": "Write", "tool_input": {"content": "FILE-BODY"}},
+                                               {"tool_name": "Bash", "tool_input": {"command": 5}}])
+    assert failed["denied_calls"] == ["Bash", "Write", "Bash"] and "FILE-BODY" not in json.dumps(failed)
+
+
+def test_at_most_five_denials_are_logged(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial(f"git commit -m c{i}") for i in range(9)])
+    assert failed["denied_calls"] == [f"Bash: git commit -m c{i}" for i in range(5)]
+
+
+def test_each_denied_call_is_cut_to_200_characters_with_whitespace_collapsed(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git   commit\n\n-m   " + "w" * 1000)])
+    (entry,) = failed["denied_calls"]
+    assert len(entry) <= 200 and entry.startswith("Bash: git commit -m w")
+
+
+def test_denied_calls_are_untrusted_text_stripped_of_control_characters_and_kept_inside_the_json(tmp_path):
+    nasty = 'git commit -m "a\x1b[31m\x00\x07‮' + '"}{"event":"forged","outcome":"x"}'
+    lines, (failed,) = run_with_denials(tmp_path, [denial(nasty)])
+    (entry,) = failed["denied_calls"]
+    assert all(c.isprintable() for c in entry) and "\x1b" not in entry
+    assert len(lines[-1].splitlines()) == 1 and [e["event"] for e in events(lines)].count("forged") == 0
+
+
+@pytest.mark.parametrize("name,pad", [(n, o) for n, o in case_grid(194)])
+def test_a_secret_in_a_denied_command_across_the_200_character_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]  # the entry is "Bash: " + the command, so the cut falls 6 characters earlier in the command
+    _, (failed,) = run_with_denials(tmp_path, [denial("x" * pad + secret + " tail " + "y" * 600)], secrets=(secret,))
+    (entry,) = failed["denied_calls"]
+    assert len(entry) <= 200 and not leaked(entry, secret) and secret not in json.dumps(failed)
+
+
+def test_a_secret_in_a_denied_command_is_redacted(tmp_path):
+    _, (failed,) = run_with_denials(tmp_path, [denial("git commit -m 'ghp_PLANTEDsecretvalue123'")])
+    assert failed["denied_calls"] == ["Bash: git commit -m '[REDACTED]'"]
+
+
+def test_the_runner_itself_caps_the_denied_calls_it_logs_at_five(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path)
+    runner._error("fp1", "42", "agent_escalated", denied_calls=[f"Bash: c{i}" for i in range(9)])
+    assert run_failed_events(lines)[0]["denied_calls"] == [f"Bash: c{i}" for i in range(5)]
+
+
+def test_the_text_the_session_hands_over_for_a_denial_is_bounded():
+    parsed = parse_output(result_json("RESULT: ESCALATE x", permission_denials=[denial("w" * 5000)] * 9), MODEL)
+    assert len(parsed.denied_calls) == 5 and all(200 < len(e) <= 410 for e in parsed.denied_calls)
+
+
+def test_a_successful_run_logs_no_denied_calls(tmp_path):
+    out = result_json("RESULT: FIXED the retry loop", permission_denials=[denial("git commit -a")])
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out)
+    assert runner.run("fp1", "42") == "pull_request_opened"
+    assert "denied_calls" not in "\n".join(lines)
+
+
+def test_a_non_zero_exit_logs_no_text_unless_the_message_is_a_failure_message(tmp_path):
+    out = result_json("RESULT: FALSE_POSITIVE the job simply passed on retry")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out, exit=1)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "cli_exit_nonzero" and "explanation" not in failed
+
+
+def test_stderr_is_never_logged(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, stdout="", exit=1, stderr="token PLANTED-LEAK in the message")
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "cli_exit_nonzero" and "explanation" not in failed
+    assert "PLANTED-LEAK" not in json.dumps(failed)
+
+
+def test_usage_limit_and_max_turns_log_no_agent_text(tmp_path):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json("You've hit your session limit", is_error=True), exit=1)
+    runner.run("fp1", "42")
+    assert "explanation" not in run_failed_events(lines)[0]
 
 
 def test_a_refused_diff_is_a_failed_run_and_the_branch_this_run_created_is_cleaned_up(tmp_path):
@@ -525,6 +793,25 @@ def test_the_cli_prompt_tells_the_agent_not_to_push_and_to_end_with_the_result_l
     assert "git push -u" not in flat and "gh pr create`" not in flat  # the SDK instructions are not reused
     task = build_cli_task("fp1", "42")
     assert "fp1" in task and "42" in task
+
+
+def test_the_cli_prompt_states_the_planted_defect_mandate_and_keeps_every_limit():
+    flat = " ".join(CLI_SYSTEM_PROMPT.split())
+    for needle in ("demonstration repository", "VT_DEMO_DEFECT", "deliberately planted", "notify_no_fix",
+                   "fixing it IS your task", "a finding with no fixed version",
+                   "update only the tests that assert the planted failure",
+                   "Do not remove the settings machinery", "does NOT trace to the planted defect",
+                   "under 12 words"):
+        assert needle in flat, needle
+    for kept in ("NEVER run `git push`", "never open a pull request", "never touch .github/",
+                 "lockfiles", "responder/vt_responder", "any .env file", "ONE path per `git add`",
+                 "Never include secrets", "RESULT: ESCALATE"):
+        assert kept in flat, kept
+
+
+def test_the_cli_task_line_does_not_name_the_defect():
+    task = build_cli_task("fp1", "42")
+    assert "VT_DEMO_DEFECT" not in task and "planted" not in task
 
 
 def test_env_example_lists_the_runtime_names_with_no_value():

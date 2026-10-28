@@ -238,7 +238,9 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
                 preflight()  # the binary exists and is logged in, or start-up fails with a clear message
 
             def default_session(model, ctx):
-                return CliSession(model, ctx)
+                # the session redacts agent text with these BEFORE cutting it to a window
+                return CliSession(model, ctx, secrets=[settings.api_token, settings.webhook_secret,
+                                                       settings.github_token, settings.anthropic_api_key])
 
             extra = dict(system_prompt=CLI_SYSTEM_PROMPT, task_builder=build_cli_task)
             if make_session is None or publish_git is not None:
@@ -250,7 +252,8 @@ def create_app(settings: Settings, *, api: ResponderApi | None = None, git: Fake
         else:
             def default_session(model, ctx):
                 return build_default_session(model, ctx, api_key=settings.anthropic_api_key,
-                                             github_token=settings.github_token)
+                                             github_token=settings.github_token,
+                                             secrets=[settings.api_token, settings.webhook_secret])
 
         runner = RealRunner(
             api, log, settings.model, make_session or default_session,

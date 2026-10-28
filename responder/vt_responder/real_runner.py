@@ -56,6 +56,8 @@ from .prompt import SYSTEM_PROMPT, build_task
 from .publisher import GitPublisher, PublishError, Snapshot
 
 _PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
+MAX_FAILURE_TEXT = 500  # most agent text a run_failed line carries
+MAX_DENIED_CALL_CHARS = 200  # each denied tool call in run_failed (at most 5 of them)
 _UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
 
 
@@ -70,6 +72,9 @@ class AgentResult:
     pull_request: str | None = None
     explanation: str | None = None
     reason: str | None = None  # a short machine code for a failed run (CLI runtime); safe to log
+    # CLI runtime: the tool calls the CLI refused, as "Tool: <command or path>" windows of agent text
+    # (at most 5). Untrusted: the runner redacts each, then cuts it to MAX_DENIED_CALL_CHARS.
+    denied_calls: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -230,7 +235,8 @@ class RealRunner:
                                    result.explanation or "The agent found no reproducible defect.",
                                    model=served)
         return self._finish_failed(fingerprint, finding_id, result.reason or "agent_reported_error",
-                                   model=served, before=before)
+                                   model=served, before=before, explanation=result.explanation,
+                                   denied_calls=result.denied_calls)
 
     def _check_pull_request(self, fingerprint: str, url: str) -> str | None:
         """S4: the reported PR must be a pull request of this run. Returns a failure reason or None."""
@@ -353,24 +359,44 @@ class RealRunner:
         self._log.emit("branch_preserved", outcome="kept", fingerprint=fingerprint,
                        finding_id=finding_id, branch=branch, reason=reason)
 
-    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None) -> str:
+    def _finish_failed(self, fingerprint, finding_id, reason, *, model=None, before: Any = None,
+                       explanation: str | None = None, denied_calls: Sequence[str] = ()) -> str:
         self._cleanup_branch(fingerprint, finding_id, before)
-        return self._error(fingerprint, finding_id, reason, model=model)
+        return self._error(fingerprint, finding_id, reason, model=model, explanation=explanation,
+                           denied_calls=denied_calls)
 
     def _no_change(self, fingerprint, finding_id, explanation, *, model=None) -> str:
+        # redact the whole text, then cut: the session hands over up to 800 characters
+        shown = (redact(explanation, self._secrets) or "")[:MAX_FAILURE_TEXT].strip()
         self._log.emit("no_change", outcome="no_change", fingerprint=fingerprint,
-                       finding_id=finding_id, explanation=redact(explanation, self._secrets),
+                       finding_id=finding_id, explanation=shown,
                        model=model or self._model)
         return "no_change"
 
-    def _error(self, fingerprint, finding_id, reason, *, model=None) -> str:
+    def _error(self, fingerprint, finding_id, reason, *, model=None, explanation: str | None = None,
+               denied_calls: Sequence[str] = ()) -> str:
+        extra: dict[str, Any] = {}
+        # Each refused tool call: redact the whole window, then cut it (same order as the explanation).
+        denied = [(redact(call, self._secrets) or "")[:MAX_DENIED_CALL_CHARS].strip() for call in denied_calls[:5]]
+        denied = [call for call in denied if call]
+        if denied:
+            extra["denied_calls"] = denied
+        if explanation:
+            # Untrusted agent text: redact the WHOLE window first, then cut (a secret straddling the cut
+            # must not survive as a fragment). The RESULT: line text keeps its start, a final-message tail its end.
+            whole = redact(explanation, self._secrets) or ""
+            shown = (whole[:MAX_FAILURE_TEXT] if reason == "agent_escalated"
+                     else whole[-MAX_FAILURE_TEXT:]).strip()
+            if shown:
+                extra["explanation"] = shown
         self._log.emit("run_failed", outcome="error", fingerprint=fingerprint,
-                       finding_id=finding_id, reason=reason, model=model or self._model)
+                       finding_id=finding_id, reason=reason, model=model or self._model, **extra)
         return "error"
 
 
 def build_default_session(model: str, ctx: RunContext, *, api_key: str, github_token: str,
-                          env: Mapping[str, str] | None = None, sdk: Any = None) -> AgentSession:
+                          env: Mapping[str, str] | None = None, sdk: Any = None,
+                          secrets: Sequence[str] = ()) -> AgentSession:
     """Build the real Claude Agent SDK session (F2). The SDK is imported lazily, inside.
 
     Refused (``ConfigError``) in a CI or test environment and when the API key or
@@ -385,4 +411,4 @@ def build_default_session(model: str, ctx: RunContext, *, api_key: str, github_t
         raise ConfigError("ANTHROPIC_API_KEY and RESPONDER_GITHUB_TOKEN are required for a live session")
     from .sdk_session import SdkSession
 
-    return SdkSession(model, ctx, api_key=api_key, github_token=github_token, sdk=sdk)
+    return SdkSession(model, ctx, api_key=api_key, github_token=github_token, sdk=sdk, secrets=secrets)

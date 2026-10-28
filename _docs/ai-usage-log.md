@@ -2920,3 +2920,83 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the six QA forms and the differential test were red, then green (differential disagreements found: 13 of 26 allowed commands, then 13 of 946 after the first fix, then none); `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 995). Nothing run against a live `claude`. No QA re-check yet.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #163 / #260 owner drill: one source-of-truth step list for the video (`_docs/drill-video-steps.md`)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (single copy-paste doc; one `.env`; check step; simple one-action steps; supersede the older commands doc). No new key prompt saved.
+- files changed: `_docs/drill-video-steps.md` (new); pointer lines in `_docs/drill-runbook-commands.md`, `_docs/drill-runbook.md`, `README.md`; this entry.
+- verification (tests run, reviewer verdict): `docker compose config --quiet` and `--services` ran OK against the `.env` and override file produced by the doc's own A8 and A10 blocks, in a temp copy under `.scratch/`; all 44 bash blocks and both generated scripts pass `bash -n`; the cookie-extraction line tested on a sample header. The Docker daemon is not available in this sandbox, so no container, image pull, user, asset, scan, metric, alert, mail or responder step was run, and the Grafana-image `wget` check is unverified. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #163 / #260 QA fixes F1-F7 and nits N1-N11 on `_docs/drill-video-steps.md`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's QA-fix brief. No new key prompt saved.
+- files changed: `_docs/drill-video-steps.md`; Part 2/3 body replaced by a pointer in `_docs/drill-runbook-commands.md`; Part 1 step 1 body replaced by a pointer in `_docs/drill-runbook.md`; this entry.
+- verification (tests run, reviewer verdict): the doc's own env and override blocks regenerated in a temp copy under `.scratch/`; `docker compose config --quiet` and `--services` OK; all bash blocks and both generated scripts pass `bash -n`. No Docker daemon here, so no container, GitHub, Grafana or responder step was run.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: log why a CLI run failed (first live drill showed `run_failed` `agent_escalated` with no cause)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief to keep and log the ESCALATE explanation and, if safe, a snippet for the other failure reasons. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): tests were written alongside the code (the red run before the change was not separately captured); `make responder-test` 1006 passed; `make verify BASE=origin/main` PASS. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 QA fix for ff691bc: F1 (ESCALATE and `no_change` text cut to 500 before redaction) and F2 (tests did not guard redact-before-cut)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's relay of the QA verdict. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/vt_responder/actlog.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the new straddle tests were run on the unfixed code first and the escalation, false-positive and 800-bound tests failed; after the fix `make verify BASE=origin/main` PASS (responder 1387 passed). Seven mutants of the fix (`.scratch/mutate2.py`, on a copy) each fail the suite. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: log the tool calls the CLI refused (`denied_calls` in `run_failed`) after the live drill's escalation over a denied `git commit`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/vt_responder/actlog.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the new tests were run on the unchanged code first and the logging tests failed; then the responder suite passed and `make verify BASE=origin/main` was run (result in the commit's hand-over). Fourteen mutants (`.scratch/mutate3.py`, on a copy) each fail the suite. The `permission_denials` field shape was read from strings in the installed claude 2.1.311 binary (`grep -a`); no model call and no login was used. The command-form table came from `.scratch/commit_forms.py` (`cli_rules.evaluate` and `ToolPolicy.check_command`); the real CLI's behaviour for those forms is unverified.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: tell the drill agent that code gated by `VT_DEMO_DEFECT` is a planted defect it should fix (owner decision after two live runs escalated)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-drill-mandate`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief. No new key prompt saved.
+- files changed: `responder/vt_responder/prompt.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`, `_docs/drill-video-steps.md`; this entry.
+- verification (tests run, reviewer verdict): simulated the minimal fix (removed the `raise` branch in `backend/vulntriage/mail/message.py`) and ran `make backend-test`: 2 tests failed (`test_formatter_fails_only_for_no_fix_with_defect_on`, `test_demo_defect_no_fix_finding_fails_sends_nothing_and_logs_no_advisory_text`), 559 passed; the simulation was then reverted. The new prompt test failed first, then `make responder-test` was re-run (result in the hand-over). No model call was made.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: remove the control-whitespace deny patterns that the real claude CLI read as spaces and denied every plain `git commit -m "..."`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-drill-mandate`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief, based on the owner's probe results (V0/V1/V3/V8a/W1-W5). No new key prompt saved.
+- files changed: `responder/vt_responder/cli_rules.py`, `responder/tests/test_cli_rules.py`, `responder/tests/test_cli_rules_differential.py`, `_docs/responder-security-limits.md`, `_docs/responder-cli-runtime.md`, `_docs/drill-video-steps.md`; this entry.
+- verification (tests run, reviewer verdict): the new tests failed before the change (the model now reads a pattern control character as a space, which flagged the old patterns); then the rules and differential tests passed. `make responder-test` result is in the hand-over. No model call and no real claude run were made here; the real-CLI facts are the owner's probe results as reported to me.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 QA finding: agent text was cut to a window before exact-match redaction (a secret bisected by the window edge survived); plus the live-drill finding that an `agent_escalated` run logged no explanation
+- agent role: Engineer (Claude Code subagent, branch `claude/260-redact-first`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief and its follow-up (redact-first for every sink; fall back to the redacted tail of the final message when a verdict has no text). No new key prompt saved.
+- files changed: `responder/vt_responder/envscrub.py` (`redacted_window`), `cli_session.py`, `sdk_session.py`, `real_runner.py`, `app.py`, `responder/tests/test_cli_redact_first.py` (new), `responder/tests/test_cli_runtime.py` (rig passes the secrets to the session; two assertions changed on purpose: a verdict with no text now logs the end of the message instead of nothing), `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): `make responder-test` (result in the hand-over). A mutation run on a scratch copy of `responder/` applied 29 single-line mutants (first-occurrence-only redaction, escalation using the tail, limit-error text logged, byte caps, cut-before-redact in each sink, session ignoring the secrets, fallback removed or weakened, SDK and `create_app` wiring); all 29 were killed by the new and existing tests. The redact-first change itself was written before its tests, so the straddle tests were checked against the old behaviour through the cut-before-redact and ignore-the-secrets mutants, not by a run on the old code; only the empty-verdict fallback tests were run red first. A first version that bounded the redaction region and dropped edge characters was found by a test to still bisect a secret, and was replaced by redacting the whole text. No model call and no real claude run were made.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
