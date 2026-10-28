@@ -1,5 +1,7 @@
 # On-call drill — granular command-by-command companion (owner-run)
 
+> **SUPERSEDED for the video.** Use [`_docs/drill-video-steps.md`](drill-video-steps.md) only. This file has value mismatches (webhook secret, shell exports, gateway URL, step order) that the new file fixes; it is kept for reference and for Parts 2 and 3 only.
+
 Companion to [`_docs/drill-runbook.md`](drill-runbook.md) for issue
 [#163](https://github.com/andrew-chung-au/vuln-triage/issues/163) (task 39).
 The parent runbook is the checklist and the *why*; this file is the exact

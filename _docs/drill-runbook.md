@@ -15,12 +15,10 @@ This runbook does two jobs in one sitting:
 
 Do them in this order; the drill is the long part.
 
-> **Running it?** For the exact, copy-pasteable commands at each step (stack
-> bring-up with the right `-f` file list, starting the real responder, the
-> login/asset API calls, the metric/alert/MailHog checks, and the screen
-> recording), follow the command-by-command companion:
-> [`_docs/drill-runbook-commands.md`](drill-runbook-commands.md). This file
-> stays the checklist and the *why*.
+> **Running it?** For the video, follow only
+> [`_docs/drill-video-steps.md`](drill-video-steps.md): the single, copy-paste
+> step list (it supersedes Part 1 step 1 below and the older
+> `drill-runbook-commands.md`). This file stays the checklist and the *why*.
 
 ## Prerequisites (must be true before you start)
 

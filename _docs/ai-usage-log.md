@@ -2920,3 +2920,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): the six QA forms and the differential test were red, then green (differential disagreements found: 13 of 26 allowed commands, then 13 of 946 after the first fix, then none); `make verify BASE=origin/main` PASS (frontend 89, backend 561, responder 995). Nothing run against a live `claude`. No QA re-check yet.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #163 / #260 owner drill: one source-of-truth step list for the video (`_docs/drill-video-steps.md`)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief (single copy-paste doc; one `.env`; check step; simple one-action steps; supersede the older commands doc). No new key prompt saved.
+- files changed: `_docs/drill-video-steps.md` (new); pointer lines in `_docs/drill-runbook-commands.md`, `_docs/drill-runbook.md`, `README.md`; this entry.
+- verification (tests run, reviewer verdict): `docker compose config --quiet` and `--services` ran OK against the `.env` and override file produced by the doc's own A8 and A10 blocks, in a temp copy under `.scratch/`; all 44 bash blocks and both generated scripts pass `bash -n`; the cookie-extraction line tested on a sample header. The Docker daemon is not available in this sandbox, so no container, image pull, user, asset, scan, metric, alert, mail or responder step was run, and the Grafana-image `wget` check is unverified. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
