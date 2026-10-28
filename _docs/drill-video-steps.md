@@ -409,7 +409,7 @@ Then browser `http://localhost:8025`: open the new email to `pip-owner@team.exam
 for i in $(seq 1 60); do out=$(curl -sS --get 'http://localhost:9090/api/v1/query' --data-urlencode 'query=vt_top_tier_notification_overdue == 1'); echo "$out" | grep -q '"result":\[\]' && { echo "no series at 1 after about $(((i-1)*10))s"; break; }; sleep 10; done
 curl -sS --get 'http://localhost:9090/api/v1/query' --data-urlencode 'query=vt_top_tier_notification_overdue' | grep -o '"value":\[[^]]*\]'
 ```
-Expect: `no series at 1 after about ...s`, then `"value"` lines ending in `"0"`. Wait: about 75 seconds (gives up after 10 minutes). Evidence: screenshot of Prometheus showing 0.
+Expect: `no series at 1 after about ...s`, then `"value"` lines ending in `"0"`. Wait: about 75 seconds (gives up after 10 minutes). Evidence: screenshot of the Prometheus web page (browser, `http://localhost:9090`, not Grafana and not the terminal): enter the query `vt_top_tier_notification_overdue` (without `== 1`), click Execute, open the Table tab, and capture the value `0`.
 
 ### B27. Show the resolved alert
 Browser: Grafana, Alerting, Alert rules, refresh.
