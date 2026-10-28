@@ -95,11 +95,21 @@ GIT_QUOTE_AND_BACKSLASH = ('"', "'", "\\\\")
 # backticks are handled separately: the inner command is checked as a subcommand. ``?``, ``[`` and ``]`` are not
 # refused here (a ``?`` in a rule may be read as a wildcard); see the module docstring.
 GIT_EXPANSION = ("$", "{", "}")
-# Bash splits words on a tab as well as a space, and the space-based patterns (``git commit * -*``, a quote then a space)
-# do not see a flag after a tab (``-m "x"<TAB>-a`` ran ``-a``; QA round 4). Tab is refused in every argument of the allowed
-# git commands, and so are vertical tab, form feed and carriage return (not word separators in bash, but control characters
-# no command here needs). Newline is a command separator in ``evaluate``. Unicode spaces are not separators in bash.
-GIT_CONTROL_WHITESPACE = ("\t", "\x0b", "\x0c", "\r")
+# NO deny pattern may contain a control-whitespace character (tab, VT, FF, CR). Measured 2026-10-28 with the real claude
+# 2.1.311 (owner's probe, W1): the CLI reads such a character in a PATTERN as a plain space, so ``Bash(git commit *<TAB>*)``
+# behaved as ``git commit * *`` and denied every commit whose message had a space. The earlier tab/VT/FF/CR denies (QA round 4,
+# N1: ``-m "x"<TAB>-a`` ran ``-a`` in bash) are therefore gone, and what they covered is now caught only by:
+#   * git commit: the positive shape. The allow rule needs ``git commit -m "`` at the start and ``"`` at the end, and the
+#     third-quote denies refuse a quote of the same kind outside the message, so a flag or second argument cannot sit outside
+#     the quotes after a tab; a tab INSIDE the quotes is part of the message word (harmless). Not independently re-verified
+#     against the real CLI for a tab in the COMMAND text.
+#   * git add: ``Bash(git add * *)`` refuses a second argument after a SPACE. Whether the CLI normalises a real tab in the
+#     command text before matching is unverified (VERIFY), so ``git add backend/x<TAB>README.md`` may match the ``backend/*``
+#     allow. The runner's diff gate (publisher.py) refuses any committed path outside the writable roots and is the backstop.
+#   * git status/diff/log: the flag denies (--output, --no-index, ...) were never tab-dependent, but a tab before a flag
+#     may hide it from the space-based ``* --ou*`` forms only if the CLI does not match raw text; residual risk, limited by the
+#     read-only nature of these commands and the checkout-only working directory (VERIFY).
+# Newline is a command separator in ``evaluate``. Unicode spaces are not separators in bash.
 # ``git commit`` is NOT guarded by a list of bad flags (three QA rounds each found a spelling the list missed). It is
 # allowed in exactly one SHAPE, by a positive match: ``git commit -m "<text>"`` or ``git commit -m '<text>'`` and nothing
 # else. The allow rule fixes the start (``-m`` and an opening quote) and the end (the closing quote); the deny rules
@@ -117,19 +127,18 @@ def _git_denials() -> list[str]:
             for size in range(3, len(option) + 1):
                 prefix = option[:size]
                 denied += [f"Bash(git {sub} *{prefix})", f"Bash(git {sub} *{prefix} *)", f"Bash(git {sub} *{prefix}=*)"]
-        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION + GIT_CONTROL_WHITESPACE]
+        denied += [f"Bash(git {sub} *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
     # git add: no flag anywhere (-A, -u, -f, --force, --all, ``--``), no ".", no "..", no absolute path, no quote,
     # backslash, tab or ``*`` (they split or expand a protected name after the rule has looked at the text), and no
     # protected component, suffix, lockfile or the responder's own code in ANY argument.
     denied += ["Bash(git add -*)", "Bash(git add * -*)", "Bash(git add .)", "Bash(git add . *)",
                "Bash(git add * .)", "Bash(git add *..*)", "Bash(git add /*)", "Bash(git add * /*)",
-               "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\t*)", "Bash(git add *\\**)"]
+               "Bash(git add *.env*)", "Bash(git add *Dockerfile*)", "Bash(git add *\\**)"]
     denied += [f"Bash(git add *{char}*)" for char in GIT_QUOTE_AND_BACKSLASH + GIT_EXPANSION]
-    denied += [f"Bash(git add *{char}*)" for char in GIT_CONTROL_WHITESPACE if char != "\t"]  # the tab rule is above
     # git add: ONE path per command (a second argument is where the text-based patterns stop being reliable; the
     # agent runs ``git add`` once per file). The allow rule fixes the start, this refuses any space after the path.
     denied += ["Bash(git add * *)"]
-    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION + GIT_CONTROL_WHITESPACE + ("\\\\",)]
+    denied += [f"Bash(git commit *{char}*)" for char in GIT_EXPANSION + ("\\\\",)]
     for extension in (".yaml", ".yml"):  # the policy's protected ``compose*.yaml`` / ``compose*.yml``
         denied += [f"Bash(git add *compose*{extension})", f"Bash(git add *compose*{extension} *)"]
     for component in sorted(PROTECTED_COMPONENTS):
@@ -201,6 +210,9 @@ def _glob(pattern: str) -> "re.Pattern[str]":
 @lru_cache(maxsize=None)
 def _command_pattern(pattern: str) -> "re.Pattern[str]":
     # ``*`` is a wildcard; ``\*`` and ``\\`` are a literal asterisk and backslash (VERIFY: the CLI's escape syntax).
+    # Measured with the real CLI 2.1.311 (probe W1, 2026-10-28): a control-whitespace character INSIDE A PATTERN is read
+    # as a plain space (``git commit *<TAB>*`` behaved as ``git commit * *``). The COMMAND text is matched raw.
+    pattern = "".join(" " if c in "\t\x0b\x0c\r" else c for c in pattern)
     parts, i = [""], 0
     while i < len(pattern):
         if pattern[i] == "\\" and pattern[i + 1:i + 2] in ("*", "\\"):

@@ -10,9 +10,11 @@ generated rules and the policy cannot drift apart unnoticed.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from vt_responder import policy
+from vt_responder import cli_rules, policy
 from vt_responder.cli_rules import DENIED_TOOLS, build_rules, evaluate
 
 pytestmark = pytest.mark.unit
@@ -150,7 +152,7 @@ REFUSED_BASH_ROUND2 = [
     "git commit -m", "git commit -m 'x' -p", "git commit -m 'x' -",
     "git add backend/x -- .github/x", "git add tests/compose.yaml",
     "git add responder/compose.yaml",
-    "git add backend/*", "git add responder/vt_resp*/x.py", "git add backend/x\t.github/workflows/x.yml",
+    "git add backend/*", "git add responder/vt_resp*/x.py",
     'git add backend/.gi"thub"/x.yml', "git add backend/.gi\\thub/x.yml", "git add backend/.gi'thub'/x.yml",
 ]
 
@@ -176,7 +178,6 @@ TAB_SMUGGLED = [
     'git commit -m "x"\t-a\t-m "y"', 'git commit -m "x"\t-a "y"', "git commit -m 'x'\t-a", 'git commit\t-a -m "x"',
     'git commit -m "x"\t--amend', 'git commit -m "x"\ty', 'git commit -m "x"\t-n', 'git commit -m "x"\t-s',
     'git commit -m "x"\t-F\tmsg.txt', 'git commit -m "x"\t-C\tHEAD',
-    "git add backend/x\t-A", "git add backend/x\t.github/y", "git add backend/x\t-f",
     "git status\t--output=/x", "git diff\t--output=/x", "git diff --stat\t--no-index\ta\tb", "git log\t-1\t--output=/x",
     "git diff\t-O/x", "git log -1\t--ext-diff",
 ]
@@ -184,11 +185,54 @@ TAB_SMUGGLED = [
 # tab and newline), so these are literal characters, harmless to git; the rules refuse them anyway for every allowed
 # git command. ToolPolicy is not asserted: it treats a tab between words as the shell does (a legitimate commit).
 CONTROL_WHITESPACE = [
-    'git commit\t-m "x"', 'git commit -m\t"x"', 'git commit -m "x\ty"', "git add\tbackend/x", "git status\t--short",
+    'git commit\t-m "x"', 'git commit -m\t"x"', "git add\tbackend/x", "git status\t--short",
     *[f'git commit -m "x"{c}-a{c}-m "y"' for c in ("\x0b", "\x0c", "\r")],
     *[f"git diff{c}--output=/x" for c in ("\x0b", "\x0c", "\r")],
-    *[f"git add backend/x{c}-A" for c in ("\x0b", "\x0c", "\r")],
 ]
+# Control whitespace after a `git add` path, or inside a commit message. The deny patterns that used to refuse these are
+# gone (the real CLI reads a control character in a pattern as a space, 2026-10-28 probe W1). A tab inside the quotes is
+# part of the message word (harmless). For `git add` the rules (as modelled: the command text is matched raw) allow the
+# form; whether the real CLI normalises a tab in the command before matching is unverified (VERIFY). ToolPolicy still
+# refuses it, and the runner's diff gate (publisher.py) refuses any path outside the writable roots, protected paths
+# and lockfiles whatever got staged: that gate is the only backstop for these forms. (VT and FF are not word separators in
+# bash: `git add backend/x<VT>-A` names one odd file under backend/, so it is not listed here.)
+DIFF_GATE_ONLY = [
+    "git add backend/x\t-A", "git add backend/x\t.github/y", "git add backend/x\t-f", "git add backend/x\r-A", "git add backend/x\t.github/workflows/x.yml",
+]
+
+
+@pytest.mark.parametrize("command", DIFF_GATE_ONLY)
+def test_control_whitespace_after_a_git_add_path_is_caught_only_by_the_policy_and_the_diff_gate(tmp_path, command):
+    assert not policy.ToolPolicy(tmp_path, "fp1").check("Bash", {"command": command}).allowed
+
+
+def test_a_tab_inside_the_commit_message_is_part_of_the_message(tmp_path):
+    assert check(tmp_path, "Bash", 'git commit -m "x\ty"').allowed
+
+
+def test_no_rule_pattern_contains_a_control_whitespace_character():
+    """Measured 2026-10-28 with the real claude 2.1.311 (probe W1): a control-whitespace character inside a rule
+    pattern is read as a space, so ``Bash(git commit *<TAB>*)`` denied every commit with a space in its message."""
+    bad = [r for r in (*cli_rules.build_rules().allowed, *cli_rules.build_rules().denied)
+           if any(c in r for c in "\t\x0b\x0c\r")]
+    assert not bad, bad[:5]
+
+
+@pytest.mark.parametrize("command", [
+    'git commit -m "Handle findings with no fixed version in owner notification"',
+    'git commit -m "Fix: don\'t fail for findings with no fix"', "git commit -m 'fix #123: retry the job'",
+    "git diff --cached tests/x.py", "git diff --stat backend tests", "git log -1 --oneline backend/a.py",
+    "git status --short backend", "git add backend/a.py", "git add tests/test_x.py"])
+def test_ordinary_commits_and_two_argument_reads_are_not_over_denied(tmp_path, command):
+    assert check(tmp_path, "Bash", command).allowed, command
+
+
+def test_the_model_reads_a_control_character_in_a_pattern_as_a_space():
+    """The model must reflect the CLI, so it would have caught the over-denial: this pattern is ``git commit * *``."""
+    rules = cli_rules.CliToolRules(("Bash",), ('Bash(git commit -m "*")',), ("Bash(git commit *\t*)",))
+    assert not cli_rules.evaluate(rules, Path("/x"), "Bash", 'git commit -m "a b"').allowed
+    assert cli_rules._command_pattern("git commit *\t*").pattern == cli_rules._command_pattern("git commit * *").pattern
+    assert cli_rules._command_pattern("git add *\x0b*").pattern == cli_rules._command_pattern("git add * *").pattern
 
 
 @pytest.mark.parametrize("command", TAB_SMUGGLED)

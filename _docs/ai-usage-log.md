@@ -2980,3 +2980,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): simulated the minimal fix (removed the `raise` branch in `backend/vulntriage/mail/message.py`) and ran `make backend-test`: 2 tests failed (`test_formatter_fails_only_for_no_fix_with_defect_on`, `test_demo_defect_no_fix_finding_fails_sends_nothing_and_logs_no_advisory_text`), 559 passed; the simulation was then reverted. The new prompt test failed first, then `make responder-test` was re-run (result in the hand-over). No model call was made.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 follow-up: remove the control-whitespace deny patterns that the real claude CLI read as spaces and denied every plain `git commit -m "..."`
+- agent role: Engineer (Claude Code subagent, branch `claude/260-drill-mandate`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's brief, based on the owner's probe results (V0/V1/V3/V8a/W1-W5). No new key prompt saved.
+- files changed: `responder/vt_responder/cli_rules.py`, `responder/tests/test_cli_rules.py`, `responder/tests/test_cli_rules_differential.py`, `_docs/responder-security-limits.md`, `_docs/responder-cli-runtime.md`, `_docs/drill-video-steps.md`; this entry.
+- verification (tests run, reviewer verdict): the new tests failed before the change (the model now reads a pattern control character as a space, which flagged the old patterns); then the rules and differential tests passed. `make responder-test` result is in the hand-over. No model call and no real claude run were made here; the real-CLI facts are the owner's probe results as reported to me.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.
