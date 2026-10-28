@@ -2950,3 +2950,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): tests were written alongside the code (the red run before the change was not separately captured); `make responder-test` 1006 passed; `make verify BASE=origin/main` PASS. Nothing run against a live `claude`.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-28
+- task/issue: #260 QA fix for ff691bc: F1 (ESCALATE and `no_change` text cut to 500 before redaction) and F2 (tests did not guard redact-before-cut)
+- agent role: Engineer (Claude Code subagent, branch `claude/260-cli-runtime`)
+- model: claude-sonnet-5-5
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the orchestrator's relay of the QA verdict. No new key prompt saved.
+- files changed: `responder/vt_responder/cli_session.py`, `responder/vt_responder/real_runner.py`, `responder/vt_responder/actlog.py`, `responder/tests/test_cli_runtime.py`, `_docs/responder-cli-runtime.md`; this entry.
+- verification (tests run, reviewer verdict): the new straddle tests were run on the unfixed code first and the escalation, false-positive and 800-bound tests failed; after the fix `make verify BASE=origin/main` PASS (responder 1387 passed). Seven mutants of the fix (`.scratch/mutate2.py`, on a copy) each fail the suite. Nothing run against a live `claude`.
+- new dependencies: none.
+- human review (what I checked or corrected, or `none`): none.

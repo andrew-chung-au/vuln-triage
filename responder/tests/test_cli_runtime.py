@@ -523,16 +523,80 @@ def test_the_final_message_tail_is_only_the_last_part_redacted_stripped_and_capp
     assert "\x1b" not in text and "\x00" not in text
 
 
-def test_a_secret_cut_by_the_tail_window_leaves_no_fragment(tmp_path):
-    secret = "ghp_PLANTEDsecretvalue123"
-    for pad in range(0, 40, 3):  # slide the secret across the session's cut point
-        body = "z" * 700 + "-" * pad + secret + " " + "q" * 60
-        here = tmp_path / f"p{pad}"
-        here.mkdir()
-        runner, lines, *_ = runner_rig(here, stdout=result_json(body))
-        runner.run("fp1", "42")
-        text = run_failed_events(lines)[0]["explanation"]
-        assert "ghp_PLANTED"[:6] not in text.replace("[REDACTED]", "") and "secretvalue" not in text
+SECRETS = {  # the three configured secrets of the responder: GitHub token, API token, webhook secret
+    "github": "ghp_PLANTEDsecretvalue123",
+    "api": "vt-api-PLANTED-0123456789abcdef",
+    "webhook": "whsec_PLANTED_0123456789",
+}
+
+
+def leaked(text, secret, size=8):
+    """True if any ``size`` consecutive characters of ``secret`` appear in ``text``."""
+    return any(secret[i:i + size] in text for i in range(len(secret) - size + 1))
+
+
+def straddle(cut, secret):
+    """Offsets that put ``secret`` before, across and after the character position ``cut``."""
+    return range(cut - len(secret) - 2, cut + 3)
+
+
+def case_grid(cut):
+    return [(name, off) for name, secret in SECRETS.items() for off in straddle(cut, secret)]
+
+
+def run_logged(tmp_path, body, secret):
+    runner, lines, *_ = runner_rig(tmp_path, stdout=result_json(body), secrets=(secret,))
+    runner.run("fp1", "42")
+    return run_failed_events(lines)[0]
+
+
+@pytest.mark.parametrize("name,pad", case_grid(500))
+def test_an_escalation_secret_across_the_500_character_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]
+    failed = run_logged(tmp_path, "RESULT: ESCALATE " + "x" * pad + secret + " and more text " + "y" * 600, secret)
+    assert failed["reason"] == "agent_escalated" and len(failed["explanation"]) <= 500
+    assert not leaked(failed["explanation"], secret) and secret not in json.dumps(failed)
+
+
+@pytest.mark.parametrize("name,after", case_grid(500))
+def test_a_secret_across_the_500_character_tail_cut_is_redacted_whole(tmp_path, name, after):
+    secret = SECRETS[name]  # `after` characters follow the secret, so the cut falls inside it
+    failed = run_logged(tmp_path, "z" * 900 + secret + "q" * after, secret)
+    assert failed["reason"] == "result_line_missing" and len(failed["explanation"]) <= 500
+    assert not leaked(failed["explanation"], secret)
+
+
+@pytest.mark.parametrize("name,after", case_grid(800))
+def test_a_secret_across_the_800_character_tail_window_is_never_kept_as_a_fragment(tmp_path, name, after):
+    secret = SECRETS[name]
+    failed = run_logged(tmp_path, "z" * 1200 + secret + "q" * after, secret)
+    assert not leaked(failed.get("explanation", ""), secret)
+
+
+@pytest.mark.parametrize("name,pad", case_grid(500))
+def test_a_false_positive_explanation_secret_across_the_500_cut_is_redacted_whole(tmp_path, name, pad):
+    secret = SECRETS[name]
+    runner, lines, *_ = runner_rig(
+        tmp_path, stdout=result_json("RESULT: FALSE_POSITIVE " + "x" * pad + secret + " tail " + "y" * 600),
+        secrets=(secret,))
+    assert runner.run("fp1", "42") == "no_change"
+    text = [e for e in events(lines) if e["event"] == "no_change"][-1]["explanation"]
+    assert len(text) <= 500 and not leaked(text, secret)
+
+
+def test_the_text_the_session_hands_over_is_bounded_at_800_characters():
+    huge = "w" * 5000
+    for body in ("RESULT: ESCALATE " + huge, "RESULT: FALSE_POSITIVE " + huge, "RESULT: FIXED " + huge, huge):
+        parsed = parse_output(result_json(body), MODEL)
+        assert parsed.explanation is not None and 500 < len(parsed.explanation) <= 800
+
+
+def test_a_non_zero_exit_logs_no_text_unless_the_message_is_a_failure_message(tmp_path):
+    out = result_json("RESULT: FALSE_POSITIVE the job simply passed on retry")
+    runner, lines, *_ = runner_rig(tmp_path, stdout=out, exit=1)
+    runner.run("fp1", "42")
+    (failed,) = run_failed_events(lines)
+    assert failed["reason"] == "cli_exit_nonzero" and "explanation" not in failed
 
 
 def test_stderr_is_never_logged(tmp_path):

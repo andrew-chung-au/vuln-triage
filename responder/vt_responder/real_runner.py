@@ -57,7 +57,7 @@ from .publisher import GitPublisher, PublishError, Snapshot
 
 _PR_NUMBER = re.compile(r"https://github\.com/[^/]+/[^/]+/pull/([0-9]+)")
 MAX_FAILURE_TEXT = 500  # most agent text a run_failed line carries
-_UNKNOWN = object() # the branch could not be inspected before the session: never delete it
+_UNKNOWN = object()  # the branch could not be inspected before the session: never delete it
 
 
 @dataclass(frozen=True)
@@ -360,16 +360,21 @@ class RealRunner:
         return self._error(fingerprint, finding_id, reason, model=model, explanation=explanation)
 
     def _no_change(self, fingerprint, finding_id, explanation, *, model=None) -> str:
+        # redact the whole text, then cut: the session hands over up to 800 characters
+        shown = (redact(explanation, self._secrets) or "")[:MAX_FAILURE_TEXT].strip()
         self._log.emit("no_change", outcome="no_change", fingerprint=fingerprint,
-                       finding_id=finding_id, explanation=redact(explanation, self._secrets),
+                       finding_id=finding_id, explanation=shown,
                        model=model or self._model)
         return "no_change"
 
     def _error(self, fingerprint, finding_id, reason, *, model=None, explanation: str | None = None) -> str:
         extra: dict[str, Any] = {}
         if explanation:
-            # Untrusted agent text: redacted first, then only the last MAX_FAILURE_TEXT characters.
-            shown = (redact(explanation, self._secrets) or "")[-MAX_FAILURE_TEXT:].strip()
+            # Untrusted agent text: redact the WHOLE window first, then cut (a secret straddling the cut
+            # must not survive as a fragment). The RESULT: line text keeps its start, a final-message tail its end.
+            whole = redact(explanation, self._secrets) or ""
+            shown = (whole[:MAX_FAILURE_TEXT] if reason == "agent_escalated"
+                     else whole[-MAX_FAILURE_TEXT:]).strip()
             if shown:
                 extra["explanation"] = shown
         self._log.emit("run_failed", outcome="error", fingerprint=fingerprint,

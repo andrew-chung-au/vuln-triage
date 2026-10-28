@@ -53,9 +53,11 @@ REQUIRED_HELP_FLAGS = (
 PLAN_AUTH_METHODS = ("claude.ai", "oauth_token")
 _MAX_OUTPUT_BYTES = 5_000_000  # per output file; more is a failed run (checked while the CLI runs, and after)
 _POLL_SECONDS = 0.25
-_MAX_EXPLANATION = 500
 _TEXT_REASONS = ("agent_cli_error", "result_line_missing", "agent_escalated")
-_MAX_TAIL = 800 # the runner keeps the last 500 of this after redacting (real_runner.MAX_FAILURE_TEXT)
+# Windows of agent text handed to the runner. The runner redacts a whole window, then keeps the first
+# (RESULT: line text) or last (final-message tail) real_runner.MAX_FAILURE_TEXT characters of it.
+_MAX_HEAD = 800
+_MAX_TAIL = 800
 _RESULT_LINE = re.compile(r"^RESULT:\s*(FIXED|FALSE_POSITIVE|ESCALATE)\b[ \t]*(.*)$", re.MULTILINE)
 # VERIFY: exact wording. The errors page lists "You've hit your session/weekly/Opus/Sonnet limit"; the
 # exit code and JSON shape of a headless run that hits one are not documented there.
@@ -154,7 +156,9 @@ def parse_output(text: str, model: str) -> AgentResult:
     if not found:
         return AgentResult("error", served, reason="result_line_missing", explanation=_tail(body))
     kind, rest = found[-1]
-    summary = "".join(c for c in rest if c.isprintable())[:_MAX_EXPLANATION].strip() or None
+    # A wider window than anything logs or publishes: the runner redacts the whole window FIRST and
+    # only then cuts it (to 500 characters), so a secret straddling the final cut is never half-kept.
+    summary = "".join(c for c in rest if c.isprintable())[:_MAX_HEAD].strip() or None
     if kind == "FIXED":
         return AgentResult("fixed", served, explanation=summary)
     if kind == "FALSE_POSITIVE":
