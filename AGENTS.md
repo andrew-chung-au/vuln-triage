@@ -3,7 +3,7 @@
 <!-- PROJECT: specific to this folder. Protected: changes need human approval. -->
 
 VulnTriage ranks vulnerable software dependencies by real-world exploit risk and routes each fix to its owner.
-Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `responder/` (the responder agent service and its tests), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/` (planning documents).
+Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `responder/` (the responder agent service and its tests), `_docs/agent-kit/` (agent kit, version 1.10), `_docs/` (planning documents).
 
 Where to read more:
 - `README.md`: the project in one page and the planning document index
