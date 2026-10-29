@@ -21,6 +21,7 @@
     "ask": [
       "Bash(make issue-close*)",
       "Bash(make *issue-close*)",
+      "Bash(git push -u origin *)",
       "Bash(gh issue create *)",
       "Bash(gh api *)",
       "Edit(/AGENTS.md)",
