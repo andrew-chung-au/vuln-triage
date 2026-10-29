@@ -132,7 +132,7 @@ FILE_AT = $(value FILE)
 FILE_AT_CHARS_LEFT = $(call strip_allowed,$(ISSUE_FILE_CHARS),$(value FILE))
 FILE_AT_DOTS = $(findstring ..,$(FILE_AT))
 FILE_AT_DASH = $(filter -%,$(FILE_AT))
-FILE_AT_SECRET = $(filter-out %.env.example,$(filter .env %.env %.env.% %.pem %.key %id_rsa% %id_ed25519%,$(FILE_AT)))
+FILE_AT_SECRET = $(filter-out %.env.example,$(filter .env %.env %.env.% %.pem %.key %id_rsa% %id_ed25519% id_rsa id_ed25519 %/id_rsa %/id_ed25519,$(FILE_AT)))
 
 .PHONY: branches ci ci-run file-at
 
