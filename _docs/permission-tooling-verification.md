@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-29
 **Scope:** the permission-tooling change tracked by issue #271: safe read-only allows, guarded issue writes, the five-group permission review, the optional cloud-session push module, and the top-level `agent-kit/` mirror.
-**Commits:** `e174151` (settings and guarded Make targets), `8778092` (docs, guard and kit copy), and the unprotected mirror commit that adds this file.
+**Commits:** `e174151` (settings and guarded Make targets), `8778092` (docs, guard and kit copy), and `5f9cd61` (the unprotected mirror, this file and the session summary).
 
 ## What was checked
 
@@ -11,12 +11,21 @@
 - `.scratch/check-guard.sh`: the mirrored `guard_git.py` allowed `git push -u origin claude/test` only with `AGENT_KIT_CLOUD_PUSH=1`, `CLAUDE_CODE_REMOTE=true` and the checked-out `claude/test` branch. The other three cases exited 2: no module, module outside a cloud session, and a push form other than `-u origin <current branch>`.
 - `make permission-report SINCE=9eb4071` and `SINCE=51bcf57`: ran read-only during the change; the five groups and the older three-group summaries were read, and the prompt log was read when present. No settings change was proposed from the counts.
 - `make branches`, `make ci LIMIT=3`, `make file-at`, and the `make issue-comment` path: validated wrappers ran; `DRY_RUN=1` posted nothing; the secret scan refused a test body with a match; invalid `CONTAINS`, `LIMIT`, `REF`, `FILE`, dash-led and single-quote values were refused. Details and the comment links are in the approval records on #271.
+- QA at `5f9cd61` (comment 6495904527): PASS on the issue's scope and decisions, with the same Verify result. It also ran the four guard cases, the guarded wrappers, the read-only helpers and `make permission-report`.
+
+## QA risks outside the scope
+
+- `make file-at`'s secret-name filter misses a bare `id_rsa`/`id_ed25519` and `keys/id_rsa`; `.pem` and `.key` are refused.
+- `AGENTS.md` still says the kit is version 1.9 while both READMEs say 1.10.
+- The project `.claude/settings.json` sets `AGENT_KIT_CLOUD_PUSH=1` but keeps the blanket `Bash(git push *)` deny; it is not a full merge of `cloud-session/settings.fragment.json`.
+- The Claude `make issue-close` ask rule depends on ask-over-allow precedence and was not verified live (#66).
+- `make file-at REF=... FILE=.env` is blocked by the tool's `*.env*` deny rule before `make` runs; this is the tool rule, not the Makefile filter.
 
 ## What is not checked
 
 - A real `git push` from a Claude Code cloud session. The guard's four decision paths are checked against a scratch repository; no push, remote or cloud session was used.
 - The live OpenCode prompt behaviour. OpenCode loads permission rules at session start, so the rules changed in `opencode.json` are not active in the session that wrote them. The human must restart OpenCode and check the rules in its permissions view.
-- The top-level `agent-kit/` mirror is for comparison, not a second executable kit. It carries the permission docs, the guard, the settings, the cloud-session module and `scan-issue-body.sh`, but not `permission-report.py` or the earlier project-only differences in `check-staged.sh`, `verify.sh`, `pre-push`, `asking-the-human.md` and `verify.md`. The project copy in `_docs/agent-kit/` is the one `make` targets run. The duplication remains tracked by #36 and #38.
+- The top-level `agent-kit/` mirror is for comparison, not a second executable kit. It carries the permission docs, the guard, the settings, the cloud-session module and `scan-issue-body.sh`, but not `permission-report.py` or the earlier project-only differences in `check-staged.sh`, `verify.sh`, `pre-push`, `asking-the-human.md` and `verify.md`. It also keeps a generic `cloud_session_start.sh` (the project copy installs dependencies and hooks) and the older `environments.md` pre-push line. The project copy in `_docs/agent-kit/` is the one `make` targets run. The duplication remains tracked by #36 and #38.
 
 ## Human steps
 
