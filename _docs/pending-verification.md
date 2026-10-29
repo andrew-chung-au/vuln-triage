@@ -100,6 +100,10 @@ PRs: #211 (stack starts without an override file) and #210 (metric panel plots a
 
 - [ ] **#211:** `make test-compose JOB=alert` still passes (the alert test's real `VT_ALERT_HUMAN_EMAIL` / `VT_RESPONDER_WEBHOOK_URL` must override the new defaults; checked statically only; the nightly `alert` workflow also runs it).
 
+## #271 — permission tooling (no cloud or host items)
+
+All checks ran in the local sandbox: `make verify BASE=51bcf57`, `make check-scripts`, the guard's four scratch-repo cases, and the read-only `make permission-report`. See `_docs/permission-tooling-verification.md`. The human restarts OpenCode so `opencode.json` reloads and reads the settings diff before merging. No Docker, network or AWS step.
+
 ---
 
 ## Convention

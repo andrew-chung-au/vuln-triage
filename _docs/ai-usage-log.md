@@ -3010,3 +3010,13 @@ Copy this template for each new entry:
 - verification (tests run, reviewer verdict): no test suite run and no live system touched. Read through the GitHub API: PR #265, PR #266, the `verify`, `deploy`, `responder` and `alert` workflow run lists. Opened with the image reader: `drill-b16` (table), `drill-b18`, `drill-b19` (email), `drill-b21`, `drill-b22`, `drill-b27` (Grafana and terminals), `drill-b30` (exemplar), `g5-github-settings-rulesets-protect-main.png`, `g9-grafana-dashboard-dev-local.png`. Not opened: the other drill screenshots, the YouTube video, issue comments. Result: 24 of 24 evidenced (On-Call Agent 0 to 2; criteria 9 and 10 unchanged at their maximum); the file lists the limits and six README claims that are stale or not fully supported. Independent QA of the final merged runtime code (#266) was not completed and is stated as such.
 - new dependencies: none.
 - human review (what I checked or corrected, or `none`): none.
+
+- date: 2026-10-29
+- task/issue: #271 (permission tooling: safe read-only allows, guarded issue writes, five-group review, optional cloud-session push, top-level kit mirror)
+- agent role: Orchestrator (OpenCode session on `main`)
+- model: deepseek-v4.1-flash-free
+- prompt or instruction given (or link to a file in `_docs/prompts/`): the human approved the plan and each protected diff ("Approve and commit"), then said "continue"; no new key prompt was saved.
+- files changed: `opencode.json`, `.claude/settings.json`, `Makefile`, `AGENTS.md`, `_docs/agent-kit/**`, `agent-kit/**` (mirror), `_docs/permission-tooling-verification.md` (new), `_docs/permission-sweeps.md`, `_docs/pending-verification.md`, `_docs/ai-usage-log.md`, `_session-summaries/issue-271-permission-tooling.md` (new). GitHub: issue #271; approval record 6470535173 for `e174151`, and record 6472423911 plus a second part for `8778092`.
+- verification (tests run, reviewer verdict): `make verify BASE=51bcf57` PASS (89 frontend, 563 backend with 14 deselected, 1638 responder; type check, whitespace and weakened-test checks PASS). `make check-scripts` PASS. `.scratch/check-guard.sh` gave the four expected guard decisions. `make permission-report SINCE=9eb4071` and `SINCE=51bcf57` ran read-only. No QA role ran on this tooling issue; the human reviews the diff.
+- new dependencies: none (the responder dependencies installed by `make install` were already locked).
+- human review (what I checked or corrected, or `none`): none in this session; the protected diffs were approved in chat before each commit.

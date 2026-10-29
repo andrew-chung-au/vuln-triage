@@ -42,6 +42,9 @@ Verify: PASS
 Other commands run
 - `make run`, then `make stop`; `make assert-clean` → PASS
 
+Commands and changes that required approval
+- Each command or change, what it was for, and its basis (a merits request or the matched `ask` rule), or "none"; do not record whether it was granted. Posting this comment is routine and is not an approval, so do not list it.
+
 Outside the criteria
 - Risks no criterion covers, each with how you found it, or "none"
 ```
@@ -53,6 +56,7 @@ On a re-check after a fix, say which commit you checked, what the fix changed, a
 - Every acceptance criterion has a verdict against it
 - Every FAIL says what you did and what happened
 - The verify result and every other command you ran are included, including how you stopped anything you started
+- Commands and changes that required approval are listed with their basis, or "none"; outcomes are not recorded
 - Risks outside the criteria are listed, or "none"
 - Nothing in the repository was changed
 

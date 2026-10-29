@@ -38,7 +38,7 @@ Each role follows its file in `_docs/agent-kit/team/`:
 
 How to run a role depends on the tool:
 
-- **If your tool can launch subagents,** the orchestrator launches each role as a subagent. If the project has role definitions for the tool (see Role definitions in `blueprints.md`), launch those. Otherwise subagents don't always receive the project's instructions automatically, so start every launch message with: "Read `AGENTS.md`, then `_docs/agent-kit/team/<role>.md`. Use your tool's built-in features to read, search and edit files, and put multi-step checks in `.scratch/` scripts. If something needs the human's approval, return the request to me instead of running it." Then give the issue number and the task.
+- **If your tool can launch subagents,** the orchestrator launches each role as a subagent. If the project has role definitions for the tool (see Role definitions in `blueprints.md`), launch those. Otherwise subagents don't always receive the project's instructions automatically, so start every launch message with: "Read `AGENTS.md`, then `_docs/agent-kit/team/<role>.md`. Read with the read tool and search with grep/glob, not shell `cat`/`grep`/`find`/`sed`; use `make` targets; put multi-step checks in `.scratch/` scripts. If something needs the human's approval, return the request to me instead of running it." Then give the issue number and the task.
 - **Otherwise,** run each role in a fresh session: "You are the QA engineer. Read `_docs/agent-kit/team/qa-engineer.md` and check issue #N." A fresh session is the point: the reviewer shouldn't share the context of the author.
 
 ## Orchestrator
@@ -73,8 +73,8 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
 4. The orchestrator notes the current commit (`git rev-parse --short HEAD`), then the QA engineer checks the issue.
 5. After QA, the orchestrator runs **Assert clean** and confirms HEAD hasn't moved. If either fails, QA changed something: discard QA's verdict and run QA again.
 6. On FAIL, go back to step 3 with the QA comment as input.
-7. On PASS, the **decision point**: gather everything waiting for the human into one message and ask once. That's proposed AGENTS.md changes, spec notes from any role, other protected-file changes, choices the Engineer made that the issue doesn't cover, and risks QA reported outside the criteria. Show each as a diff or a short description, using the layouts in `_docs/agent-kit/procedures/asking-the-human.md`, with your recommendation. Then:
-   - Apply approved AGENTS.md, spec and other protected-file changes in their own commits, with `HUMAN_APPROVED=1`.
+7. On PASS, the **decision point**: gather everything waiting for the human into one message and ask once. That's proposed AGENTS.md changes, spec notes from any role, other protected-file changes, choices the Engineer made that the issue doesn't cover, and risks QA reported outside the criteria. Routine issue comments and issue creation are allowed and are not decision-point items. Show each item as a diff or a short description, using the layouts in `_docs/agent-kit/procedures/asking-the-human.md`, with your recommendation. Then:
+   - Apply approved AGENTS.md, spec and other protected-file changes in their own commits, with `HUMAN_APPROVED=1`. After each commit, post its approval record on the issue, following `_docs/agent-kit/procedures/asking-the-human.md`.
    - If an approved change needs Engineer work, go back to step 3; QA re-checks only what changed.
    - For each risk the human wants handled later, the PM files a follow-up issue.
 8. Clean up, then write the session summary following `_docs/agent-kit/procedures/session-summary.md`:
@@ -82,7 +82,9 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
    - Confirm temporary system changes are undone, or that the human chose to keep them.
    - If a `.scratch/` script is worth keeping, propose it as a test or a make target at the decision point (step 7). Nothing in `.scratch/` survives cleanup.
    - Run `make clean-scratch`. It empties `.scratch/`, including session logs and test tokens, and refuses while a started process is still running. Record in the summary that it ran.
-9. Close the issue. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
+   - Name in the summary each approval record comment posted in step 7.
+   - Fill in the summary's Permission review section from every role comment's "Commands and changes that required approval" line, plus your own. Group each action as read-only, routine issue write (already allowed), protected record write, system or external change, or risky, and record its basis, not whether it was granted. Creating and commenting on issues is routine, so a summary lists one only if a role recorded it by mistake. Settings changes are not proposed per session; they come from a periodic permission sweep (`_docs/agent-kit/procedures/permission-sweep.md`).
+9. Close the issue, but only once the session summary is committed with its Permission review section. Only the orchestrator closes issues: after QA posts PASS, or as not planned after the human approves a backlog review.
 10. The human reviews the diff and pushes (see Commits).
 11. Repeat until the backlog is empty and every part of the spec is built.
 
@@ -91,7 +93,7 @@ Treat partial output as unverified. Relaunch the role with a note of what's alre
 - Small, focused commits at logical milestones; messages say what changed and why.
 - Attribution comes from the tool's settings (see Commit attribution in `blueprints.md`). Agents don't add their own co-author lines.
 - Staging, protected files and hooks follow the Conventions in `AGENTS.md`.
-- **Only the human pushes.** Before pushing, the human reads `git diff origin/main --stat -- .`, then the full diff, and asks about any changed file outside the issue's Constraints. A clean QA report is not proof of a clean diff. The pre-push hook then runs **Verify**. In the local sandbox profile, the human does all of this from the clean clone, and the push check runs **Verify** instead (`environments.md`).
+- **Only the human pushes,** except in a cloud session with the optional `claude-code/cloud-session/` module enabled. Then the agent may push only the current `claude/*` branch, with `git push -u origin <current branch>`; never `main`, force, delete or another ref. The human still reviews the PR and merges. Before any push, the human reads `git diff origin/main --stat -- .`, then the full diff, and asks about any changed file outside the issue's Constraints. A clean QA report is not proof of a clean diff. The pre-push hook then runs **Verify**. In the local sandbox profile, the human does all of this from the clean clone, and the push check runs **Verify** instead (`environments.md`).
 
 ## Keeping the setup current
 
@@ -104,7 +106,7 @@ An issue is done when:
 - **Verify** passes and QA has posted PASS, so every acceptance criterion is met.
 - The changes are committed.
 - Docs affected by the change are updated, and any AGENTS.md change has human approval.
-- The session summary is written.
+- The session summary is written, including its Permission review section.
 - The orchestrator has closed the issue.
 
 The human's diff review and push come after this, outside the agent's definition of done.
