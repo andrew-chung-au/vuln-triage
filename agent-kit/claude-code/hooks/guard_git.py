@@ -5,7 +5,10 @@ Blocks, with the reason and the allowed alternative:
 - broad staging: `git add .`, `-A`, `--all`, `-u`, `--update`, `:/`, `*`
 - `git commit -a` / `--all` (also in clusters such as `-am`)
 - skipping hooks: `--no-verify`, and `git commit -n` (also in clusters such as `-nm`)
-- `git push` (only the human pushes)
+- `git push`, except `git push -u origin <current branch>` when the optional
+  cloud-session module is enabled (`AGENT_KIT_CLOUD_PUSH=1`) in a Claude Code
+  cloud session (`CLAUDE_CODE_REMOTE=true`) on a `claude/*` branch other than
+  `main`
 - changing `core.hooksPath` (would switch off the kit's git hooks)
 
 `HUMAN_APPROVED=1 git commit ...` is allowed: Claude Code asks the human before
@@ -18,8 +21,10 @@ git hooks still apply. This is a guard against habits, not a security boundary.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
+import subprocess
 import sys
 
 OPERATOR_CHARS = ";&|\n()"
@@ -74,7 +79,51 @@ def short_cluster_has(args, letter: str) -> bool:
     return any(a.startswith("-") and not a.startswith("--") and letter in a[1:] for a in args)
 
 
-def check(sub: str, args) -> str | None:
+def current_branch(cwd):
+    """Return the checked-out branch, or None for a detached HEAD or no repo."""
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def push_reason(args, cwd) -> str:
+    """Allow only the cloud session pushing its own claude/* branch.
+
+    The exact form `git push -u origin <current branch>` is required, so force,
+    delete, refspec and extra-argument variants all fall through to a refusal.
+    """
+    if os.environ.get("AGENT_KIT_CLOUD_PUSH") != "1":
+        return (
+            "Don't push: pushing is off unless the project enables the optional "
+            "cloud-session module (AGENT_KIT_CLOUD_PUSH=1). The human reviews and pushes."
+        )
+    if os.environ.get("CLAUDE_CODE_REMOTE") != "true":
+        return "Don't push outside a Claude Code cloud session. The human reviews and pushes locally."
+    branch = current_branch(cwd)
+    if branch is None:
+        return "Don't push from a detached HEAD. Check out the session's claude/* branch first."
+    if branch == "main" or not branch.startswith("claude/"):
+        return f"Only the session's claude/* branch may be pushed, never '{branch}'."
+    if args != ["-u", "origin", branch]:
+        return (
+            f"Only `git push -u origin {branch}` (the current branch) is allowed; "
+            "never force, delete, or push another ref."
+        )
+    return None
+
+
+def check(sub: str, args, cwd=None) -> str | None:
     if "--no-verify" in args:
         return "Never skip git hooks (--no-verify). If a hook blocks you, fix the cause or ask the human."
     if sub == "add" and any(a in BROAD_ADD for a in args):
@@ -85,7 +134,7 @@ def check(sub: str, args) -> str | None:
         if short_cluster_has(args, "n"):
             return "Never skip git hooks (git commit -n). If a hook blocks you, fix the cause or ask the human."
     if sub == "push":
-        return "Don't push. The human reviews the diff and pushes; the pre-push hook runs make verify."
+        return push_reason(args, cwd)
     if sub == "config" and any(a.lower() == "core.hookspath" for a in args) and "--get" not in args:
         return "Don't change core.hooksPath: it switches off the kit's git hooks. Ask the human."
     return None
@@ -97,11 +146,12 @@ def main() -> None:
     except ValueError:
         sys.exit(0)
     command = (payload.get("tool_input") or {}).get("command") or ""
+    cwd = payload.get("cwd") or None
     for tokens in segments(command) or []:
         parts = git_parts(tokens)
         if not parts:
             continue
-        reason = check(*parts)
+        reason = check(*parts, cwd=cwd)
         if reason:
             print(f"Blocked by the agent kit: {reason}", file=sys.stderr)
             sys.exit(2)

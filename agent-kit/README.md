@@ -1,6 +1,13 @@
 # Agent kit
 
-**Version 1.9 (2026-10-10).** A tool-agnostic way to run a project with AI coding agents: a PM, Engineer and QA team working from GitHub issues, a verification gate that catches weakened tests, and git hooks as a safety net. It works with any agent that can read `AGENTS.md` and run shell commands, in a codespace, a local dev container sandbox or a local checkout.
+**Version 1.10 (2026-10-28).** A tool-agnostic way to run a project with AI coding agents: a PM, Engineer and QA team working from GitHub issues, a verification gate that catches weakened tests, and git hooks as a safety net. It works with any agent that can read `AGENTS.md` and run shell commands, in a codespace, a local dev container sandbox or a local checkout.
+
+## Changes in 1.10
+
+- Permission review separates routine issue writes (already allowed) from protected record writes and system changes (keep asking), so a sweep no longer treats a comment as a candidate.
+- The kit ships guarded `make issue-create` / `make issue-comment` wrappers and read-only `make branches`, `ci`, `ci-run` and `file-at` helpers.
+- The optional `claude-code/cloud-session/` module lets a cloud session push only its own `claude/*` branch; the core kit stays no-push.
+- `guard_git.py` requires `AGENT_KIT_CLOUD_PUSH=1` before it allows that push.
 
 The kit is one folder, `_docs/agent-kit/`, copied unchanged into each project. It holds three kinds of material:
 
@@ -34,13 +41,13 @@ _docs/agent-kit/
   blueprints.md      what a project needs, and when
   process.md         lifecycle: planning, backlog, roles, verification, handover
   team/              pm.md, software-engineer.md, qa-engineer.md
-  procedures/        verify.md, session-summary.md, asking-the-human.md
+  procedures/        verify.md, session-summary.md, asking-the-human.md, permission-sweep.md
   templates/         AGENTS.md, agent-kit.conf, Makefile, task, session-summary and CI templates
   scripts/           verify.sh, check-staged.sh, assert-clean.sh, install-hooks.sh, lib.sh
   githooks/          pre-commit, pre-push and a Git LFS pass-through, installed at the repo root
   environments.md    where agents run: Codespaces, local sandbox, local checkout
   environments/      local-sandbox/: push check, dev container recipe (reference copies)
-  claude-code/       optional Claude Code layer: START.md, role definitions, hooks, settings
+  claude-code/       optional Claude Code layer: START.md, role definitions, hooks, settings, cloud-session/
   opencode/          optional OpenCode layer: START.md, role definitions, permission settings
 ```
 

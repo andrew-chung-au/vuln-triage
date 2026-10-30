@@ -48,7 +48,7 @@ Layout: <top-level folders and key files>.
 - Keep all work inside this folder. Put scratch files in `.scratch/` here (git-ignored), never in `/tmp` or other outside locations.
 - Don't read the AI tool's settings, your home folder or environment variables. If something depends on how the tool or the machine is set up, ask the human, or report it as a finding.
 - Edit files only with your tool's editing feature, so every change shows as a diff. Never edit files from the shell (`sed -i`, `cat >> file <<EOF`, scripts that rewrite files).
-- Prefer your tool's built-in file reading and searching over shell commands, and `make` targets over raw commands. Run commands from this folder. Every command your tool can't check stops the human for approval, so avoid these forms:
+- Read with your tool's read feature and search with its grep/glob feature, and prefer `make` targets over raw commands. Don't use shell `cat`, `head`, `tail`, `grep`, `find` or `sed` to read files. Run commands from this folder. Every command your tool can't check stops the human for approval, so avoid these forms:
   - Shell variables and expansions (`$VAR`, `$(...)`, `$?`). Your tool already reports exit codes.
   - `cd` followed by other commands, and chains of several commands. Run one command, read the result, then run the next.
   - Environment variable prefixes. Write `make <target> VAR=value`, not `VAR=value make <target>`. The one exception is `HUMAN_APPROVED=1 git commit` for an approved protected change: your tool will ask the human first, and that's intended.
@@ -60,8 +60,8 @@ Layout: <top-level folders and key files>.
 - Start long-running processes (servers, watchers) only through `<name>-start` and `<name>-stop` make targets, or a `.scratch/` script that records the process ID it started and stops only that process. Wait for results with a timeout, never an open-ended loop. Never stop a process you didn't start; ask the human.
 - Don't type injection or bypass attempts as live shell commands. Put them in tests, or in a `.scratch/` script for a one-off check.
 - Don't change system configuration (firewall rules, installed packages, services, git config) without the human's approval, even temporarily. The approval request includes the command that undoes the change; record in the session summary whether it was undone.
-- Never edit or delete existing issue comments; post a new comment instead. Other roles' comments are part of the record.
+- Never edit or delete existing issue comments; post a new comment instead. Other roles' comments are part of the record. Creating an issue and posting a comment are routine and allowed through `make issue-create` and `make issue-comment`; editing or closing an issue asks.
 - Start every issue comment with your role (`PM:`, `Engineer:`, `QA:` or `Orchestrator:`). All roles usually share one GitHub account, so the label is the only way to tell them apart.
-- Don't push. The human reviews the diff and pushes; the pre-push hook runs `make verify`.
+- Don't push, except in a cloud session with the optional `claude-code/cloud-session/` module enabled: only the session's `claude/*` branch, only `git push -u origin <current branch>`, never `main`, never force or delete. The human reviews the diff and pushes; the pre-push hook runs `make verify`.
 - Work isn't done until `make verify` passes. Never weaken or skip a test to make it pass.
 - Working a GitHub issue → `_docs/agent-kit/process.md`. The main session orchestrates; each role follows its file in `_docs/agent-kit/team/`.

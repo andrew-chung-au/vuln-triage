@@ -3,7 +3,7 @@
 <!-- PROJECT: specific to this folder. Protected: changes need human approval. -->
 
 VulnTriage ranks vulnerable software dependencies by real-world exploit risk and routes each fix to its owner.
-Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `responder/` (the responder agent service and its tests), `_docs/agent-kit/` (agent kit, version 1.9), `_docs/` (planning documents).
+Layout: `AGENTS.md`, `CLAUDE.md`, `agent-kit.conf`, `Makefile`, `opencode.json`, `.opencode/agents/` (OpenCode role definitions), `.claude/agents/` (Claude Code role definitions), `responder/` (the responder agent service and its tests), `_docs/agent-kit/` (agent kit, version 1.10), `_docs/` (planning documents).
 
 Where to read more:
 - `README.md`: the project in one page and the planning document index
@@ -41,17 +41,20 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 - **Verify:** `make verify`: both test suites via `make test`, frontend type check, whitespace and weakened-test checks. How to use it: `_docs/agent-kit/procedures/verify.md`.
 - **Validate OpenAPI:** `make openapi-validate`: validates `_docs/openapi.yaml` with `uvx openapi-spec-validator==0.9.0` (VERIFY: package name and OpenAPI 3.1 support).
 - **Assert clean:** `make assert-clean`: confirms nothing in this folder changed (used after QA).
+- **Check kit scripts:** `make check-scripts`: bash syntax-checks the kit scripts and hooks, parses the Python hooks, and checks the settings files with `jq` (read-only).
 - **E2E:** `none`
 - **New migration:** `none` (no make target yet; Alembic migrations are in `backend/migrations/`, config in `backend/alembic.ini`)
 - **Fetch an issue:** `make issue-dump N=<number>`, then read `.scratch/issue-<number>.json` and `.scratch/issue-<number>-comments.json` with your read tool. Use this instead of shell redirects or scripts.
-- **Comment on an issue:** `make issue-comment N=<number> FILE=.scratch/<file>`: posts the file's contents as a comment through REST.
-- **Close an issue:** `make issue-close N=<number>`: closes the issue through REST.
+- **Comment on an issue:** `make issue-comment N=<number> FILE=.scratch/<file>`: posts the file through REST after checking the path, size (60 KB), secrets and symlinks; `DRY_RUN=1` prints what it would post. Routine and allowed.
+- **Create an issue:** `make issue-create TITLE="..." FILE=.scratch/<file>`: creates an issue after the same checks; direct `gh issue create` asks. Routine and allowed.
+- **Close an issue:** `make issue-close N=<number>`: closes the issue through REST. This asks, as do issue edits; neither is routine.
+- **Read-only git and GitHub:** `make branches [CONTAINS=<commit>]`, `make ci [WORKFLOW=<name>] [LIMIT=<1-100>]`, `make ci-run RUN=<id>`, `make file-at REF=<commit> FILE=<path>`: validated wrappers for branch lists, CI runs and a file at a commit.
 - **Permission report:** `make permission-report SINCE=<commit>`: read-only; counts the approvals recorded in `_session-summaries/` files changed after `SINCE` (exclusive), by command pattern and group. Used by the permission sweep (`_docs/agent-kit/procedures/permission-sweep.md`, last sweep in `_docs/permission-sweeps.md`).
 - **Tool versions:** `make tool-versions`: prints the version of node, npm, uv, python3 and docker, or `<tool>: missing` when a tool isn't installed. Use this instead of chained version commands.
 
 ## Project settings
 
-- **Environment:** local sandbox (Compose-based dev container) or a Claude Code cloud session (Docker and Postgres available). Local: the dev container is built from `.devcontainer/compose.yaml` with a sibling `db` (Postgres `16.4`) service the agent reaches at `DATABASE_URL=postgresql+psycopg://vt:vt@db:5432/vt` but cannot control (no Docker socket is mounted); the recipe installs Node.js `24.22.0` and uv `0.13.1`; `gh issue ...` works, and the GitHub token is read-only for code (you can't push). The agent cannot run `docker compose`, build images or control the daemon; the human runs the rebuild. Cloud: `gh` is limited to REST through the make targets (`make issue-dump`, `make issue-comment`, `make issue-close`), and the SessionStart hook prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. In both, the token is read/write for issues (you can post comments and close issues). See `_docs/agent-kit/environments.md`.
+- **Environment:** local sandbox (Compose-based dev container) or a Claude Code cloud session (Docker and Postgres available). Local: the dev container is built from `.devcontainer/compose.yaml` with a sibling `db` (Postgres `16.4`) service the agent reaches at `DATABASE_URL=postgresql+psycopg://vt:vt@db:5432/vt` but cannot control (no Docker socket is mounted); the recipe installs Node.js `24.22.0` and uv `0.13.1`; `gh issue ...` works, and the GitHub token is read-only for code (you can't push). The agent cannot run `docker compose`, build images or control the daemon; the human runs the rebuild. Cloud: `gh` is limited to REST through the make targets (`make issue-dump`, `make issue-comment`, `make issue-create`, `make issue-close`), and the SessionStart hook prints `Environment: Claude Code cloud session (Docker available; push only this session's branch)`. In both, the token is read/write for issues (you can post comments and close issues). See `_docs/agent-kit/environments.md`.
 - **Branching:** Local sandbox: commit directly to `main`; never push. Cloud session: commit on the session's branch; push only that branch; the human reviews the PR and merges it with a merge commit.
 - **Dependencies:** the frontend's dependencies are locked in `frontend/package-lock.json`; adding one still needs asking.
 - **Session summaries:** `_session-summaries/`, named `issue-<NNN>-<short-name>.md` for issue work and `planning-<YYYY-MM-DD>-<short-name>.md` for planning.
@@ -68,6 +71,10 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 - For data from GitHub issues, use `gh`'s `--json` and `--jq` options, or
   `make issue-dump` and your read tool. Write a `.scratch/` script only when
   neither works, and put one task's analysis in one script, not several.
+- Read files with your read tool and search with your grep/glob tools, not shell
+  `cat`, `head`, `tail`, `grep`, `find` or `sed`. Shell reads add prompts and
+  hide the diff. Use `make branches`, `make ci`, `make ci-run` and `make file-at`
+  for the read-only git and GitHub queries they cover.
 - To read web pages, package registries or APIs, use your web fetch tool,
   not curl or wget. Shell network commands always stop the human.
 - Check installed tools with `make tool-versions`, not chained version
@@ -79,20 +86,24 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 - Permission review: each role notes in its issue comment every command or
   change it had to ask approval for, whether or not the approval was granted.
   That means every merits-based approval request and every command matching an
-  `ask` rule; record the action and its basis, not the decision. At the end of
-  each session, the orchestrator lists them all in the session summary,
-  grouped as: read-only (propose allowing it), writes to the record (keep
-  asking), or risky (propose denying it). Sessions do not propose settings
-  changes: a permission sweep (`_docs/agent-kit/procedures/permission-sweep.md`)
-  counts the recorded approvals with `make permission-report` and proposes the
-  opencode.json and .claude/settings.json changes for my approval. A risky item
-  (a refused push, a destructive command) is not parked for the sweep: bring it
-  to me at the decision point of its own issue.
+  `ask` rule; record the action and its basis, not the decision. Creating or
+  commenting on an issue is routine and allowed, so do not record it. At the end
+  of each session, the orchestrator lists the recorded items in the session
+  summary, grouped as: read-only (propose allowing), routine issue writes
+  (already allowed; list only if a role recorded one), protected record writes
+  (keep asking), system and external changes (keep asking), or risky (propose
+  denying). Sessions do not propose settings changes: a permission sweep
+  (`_docs/agent-kit/procedures/permission-sweep.md`) counts the recorded
+  approvals with `make permission-report` and proposes the opencode.json and
+  .claude/settings.json changes for my approval. A risky item (a refused push, a
+  destructive command) is not parked for the sweep: bring it to me at the
+  decision point of its own issue.
 
 ## Project gotchas
 
 - The agent cannot control Docker in this container (no socket), so building images or running `docker compose` must happen in a codespace or on the human's host. The dev container's own `db` (Postgres) sibling service is the exception: it is started by the Compose dev-container recipe (`.devcontainer/compose.yaml`, #31) and reached at `DATABASE_URL`, but the agent cannot start, stop or rebuild it. See `_docs/agent-kit/environments.md`.
 - `make verify` needs `make install` first. The push check needs the image built from `ci/push-check/Dockerfile` (Node 24.22.0, npm 11.19.1, uv 0.13.1, Python 3.12, plus the tools listed in that file; set `AGENT_PUSH_CHECK_IMAGE`; see #32 and #112).
+- OpenCode loads permission rules at session start. After editing `opencode.json`, restart the session; the change is not active in the session that made it.
 
 <!-- SHARED: from _docs/agent-kit/templates/AGENTS.md.template. Change it there first, then copy it here. -->
 
@@ -115,7 +126,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 - You may read tracked project settings files (e.g. `opencode.json`, `.claude/settings.json`) but never edit them without approval. Never read user-level or home settings (`~/.claude/`, `~/.config/`). Tracked settings files must never contain secrets; secrets belong in `.env`, which you never read.
 - Don't read your home folder or environment variables. If something depends on how the tool or the machine is set up, ask the human, or report it as a finding.
 - Edit files only with your tool's editing feature, so every change shows as a diff. Never edit files from the shell (`sed -i`, `cat >> file <<EOF`, scripts that rewrite files).
-- Prefer your tool's built-in file reading and searching over shell commands, and `make` targets over raw commands. Run commands from this folder. Every command your tool can't check stops the human for approval, so avoid these forms:
+- Read with your tool's read feature and search with its grep/glob feature, and prefer `make` targets over raw commands. Don't use shell `cat`, `head`, `tail`, `grep`, `find` or `sed` to read files. Run commands from this folder. Every command your tool can't check stops the human for approval, so avoid these forms:
   - Shell variables and expansions (`$VAR`, `$(...)`, `$?`). Your tool already reports exit codes.
   - `cd` followed by other commands, and chains of several commands. Run one command, read the result, then run the next.
   - Environment variable prefixes. Write `make <target> VAR=value`, not `VAR=value make <target>`. The one exception is `HUMAN_APPROVED=1 git commit` for an approved protected change: your tool will ask the human first, and that's intended.
@@ -127,7 +138,7 @@ Current phase: BUILD (submission track, phase S1 first). The plan in _docs/ pass
 - Start long-running processes (servers, watchers) only through `<name>-start` and `<name>-stop` make targets, or a `.scratch/` script that records the process ID it started and stops only that process. Wait for results with a timeout, never an open-ended loop. Never stop a process you didn't start; ask the human.
 - Don't type injection or bypass attempts as live shell commands. Put them in tests, or in a `.scratch/` script for a one-off check.
 - Don't change system configuration (firewall rules, installed packages, services, git config) without the human's approval, even temporarily. The approval request includes the command that undoes the change; record in the session summary whether it was undone.
-- Never edit or delete existing issue comments; post a new comment instead. Other roles' comments are part of the record.
+- Never edit or delete existing issue comments; post a new comment instead. Other roles' comments are part of the record. Creating an issue and posting a comment are routine and allowed through `make issue-create` and `make issue-comment`; editing or closing an issue asks.
 - Start every issue comment with your role (`PM:`, `Engineer:`, `QA:` or `Orchestrator:`). All roles usually share one GitHub account, so the label is the only way to tell them apart.
 - Don't push, except in a cloud session: only the session's `claude/*` branch, only `git push -u origin <current branch>`, never `main`, never force or delete. The human reviews the diff and pushes; the pre-push hook runs `make verify`.
 - Work isn't done until `make verify` passes. Never weaken or skip a test to make it pass.

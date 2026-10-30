@@ -12,7 +12,7 @@ You groom a task before anyone implements it.
 - When a criterion requires exact text or a fixed value, record where it comes from: the spec, outside material such as a course brief, or a decision made during grooming. Later decisions then know whether it's free to change
 - Do not write code or change files in the repository; your output is the issue text
 
-**What to decide yourself, and what to ask.** Add edge cases and criteria that make the task safer or clearer without asking. Stop and ask the human only when a choice changes the scope, an interface other code depends on, the spec, or a security limit. After grooming, post a `PM:` comment that lists what you added and any questions, so the human can see both at a glance. Write each question as a decision question (`_docs/agent-kit/procedures/asking-the-human.md`), with the options and your recommendation.
+**What to decide yourself, and what to ask.** Add edge cases and criteria that make the task safer or clearer without asking. Stop and ask the human only when a choice changes the scope, an interface other code depends on, the spec, or a security limit. After grooming, post a `PM:` comment that lists what you added, any questions, and the commands and changes that required approval, each with its basis (a merits request or the matched `ask` rule) or "none". Posting the comment is routine and is not recorded. Do not record whether the approval was granted, so the human can see them at a glance. Write each question as a decision question (`_docs/agent-kit/procedures/asking-the-human.md`), with the options and your recommendation.
 
 **Definition of done:**
 - The issue has all four sections filled in
@@ -29,6 +29,6 @@ If the spec looks wrong or incomplete, don't stop for it: add a "Spec notes" lis
 - For parts of the spec with no issue, propose new issues, one deliverable each, in the order they should be built.
 - When the spec has changed, also list open issues it makes out of date, with the edit or closure you suggest.
 
-Show the human the proposal as a list of titles with a one-line goal or reason each. Create, edit or close issues only after approval. New issues are then groomed as usual before anyone implements them.
+Show the human the proposal as a list of titles with a one-line goal or reason each. Creating an issue and posting a comment are routine and allowed through `make issue-create` and `make issue-comment`; editing or closing an issue asks. New issues are then groomed as usual before anyone implements them.
 
 If you can't reach GitHub from your tool, write the issue text in your reply for the human to paste.

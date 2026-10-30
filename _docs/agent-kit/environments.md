@@ -26,6 +26,10 @@ This is the kit as the README describes it. Run `make hooks` once per codespace.
 
 The codespace's own token can push to the repo, so nothing technical stops an agent pushing; the rules and the Claude Code layer's git guard ask it not to. Your review before pushing is the real control. Codespaces stop after a period of inactivity, even while an agent is working.
 
+## Claude Code cloud session
+
+Claude Code can run in its own cloud session, with Docker and Postgres available. That session has its own branch and can push it, so the optional `claude-code/cloud-session/` module allows exactly one push form: `git push -u origin <current claude/* branch>`. The core kit still blocks every push without the module. Enable it only in that session; never enable `AGENT_KIT_CLOUD_PUSH=1` in the local sandbox or a local checkout. The human still reviews the pull request and merges it. Details: `claude-code/cloud-session/README.md`.
+
 ## Local sandbox
 
 The agent works in a dev container with a read-only GitHub token, in its own clone of the repo. You review its commits from a second, clean clone that is never opened in the container, and push from there. The guide that sets this up lives outside the kit. The kit supplies reference copies of its files in `environments/local-sandbox/`:
