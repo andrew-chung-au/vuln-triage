@@ -34,7 +34,7 @@ Layout: <top-level folders and key files>.
 
 ## Conventions
 
-- The product spec is `_docs/specs.md`. The human owns it: propose changes, and make them only after approval. If it doesn't exist yet, the project is in planning (see `_docs/agent-kit/process.md`).
+- The product spec is `docs/specs.md`. The human owns it: propose changes, and make them only after approval. If it doesn't exist yet, the project is in planning (see `_docs/agent-kit/process.md`).
 - Run project commands through `make`. If you need a command that has no target, propose a new Makefile target instead of documenting a raw command. When a target changes, propose the matching change to Commands above.
 - Change only files the current task needs. If you spot an unrelated problem, note it in the session summary instead of fixing it.
 - Don't delete files or data you didn't create in this task, including git-ignored files and Docker volumes, without the human's approval. The exception is `make clean-scratch` at the end of an issue, which the process calls for.

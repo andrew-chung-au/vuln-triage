@@ -6,13 +6,13 @@ How work moves from idea to done, with any AI coding tool. Project-specific valu
 
 Before picking up work, the orchestrator checks the spec:
 
-1. **No `_docs/specs.md`:** the project is in planning. See Planning.
-2. **The spec changed since the last session:** take the spec version recorded in the latest session summary and run `git log --oneline <version>..HEAD -- _docs/specs.md`. If that lists any commits, run a backlog review (see Backlog) before starting an issue. If no summary records a version yet, skip this check.
+1. **No `docs/specs.md`:** the project is in planning. See Planning.
+2. **The spec changed since the last session:** take the spec version recorded in the latest session summary and run `git log --oneline <version>..HEAD -- docs/specs.md`. If that lists any commits, run a backlog review (see Backlog) before starting an issue. If no summary records a version yet, skip this check.
 3. **Otherwise:** continue with the lifecycle.
 
 ## Planning
 
-Planning produces or revises `_docs/specs.md`. The human may write it outside the repo, or draft it with an agent (for example in a planning mode).
+Planning produces or revises `docs/specs.md`. The human may write it outside the repo, or draft it with an agent (for example in a planning mode).
 
 - An agent helping with planning proposes spec text; the human approves it before it's written.
 - No issues are created and no product code is written until the spec exists.

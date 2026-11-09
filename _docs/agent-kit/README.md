@@ -60,7 +60,7 @@ _docs/agent-kit/
 You need `git`, `make` and `bash`: WSL, macOS, Linux or Codespaces.
 
 1. Copy `_docs/agent-kit/` from your newest project into `<project>/_docs/agent-kit/`.
-2. Optional: put a product spec at `<project>/_docs/specs.md`. Without one, the project starts in planning.
+2. Optional: put a product spec at `<project>/docs/specs.md`. Without one, the project starts in planning.
 3. Start your AI coding tool in the project folder and say: "Set up this project using `_docs/agent-kit/setup.md`."
 4. Review what it proposes, approve or correct it, then approve the setup commit.
 5. Run `make hooks` once wherever agents commit: the codespace, the dev container or your local checkout. In the local sandbox profile, never run it (or any `make` target) in the clean clone; see `environments.md`.

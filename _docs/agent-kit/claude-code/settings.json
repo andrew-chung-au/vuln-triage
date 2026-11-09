@@ -26,7 +26,7 @@
       "Edit(/AGENTS.md)",
       "Edit(/CLAUDE.md)",
       "Edit(/agent-kit.conf)",
-      "Edit(/_docs/specs.md)",
+      "Edit(/docs/specs.md)",
       "Edit(/_docs/agent-kit/**)",
       "Edit(/.claude/**)"
     ],

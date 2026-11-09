@@ -25,7 +25,7 @@ What a project using this kit should have, when each piece applies, and how to c
 | Environment profile | Always, at setup | **Environment** setting in `AGENTS.md` | `environments.md` |
 | Git hooks | Always, at setup; once per repository | `.githooks/` at the repo root, activated by `make hooks` wherever agents commit (never in a clean clone) | `githooks/`, via `scripts/install-hooks.sh` |
 | Ignore rules | Always, at setup | Project `.gitignore` | See Ignore rules below |
-| Product spec | Planning; written or approved by the human | `_docs/specs.md` | Human-owned; see `process.md` |
+| Product spec | Planning; written or approved by the human | `docs/specs.md` | Human-owned; see `process.md` |
 | Session summaries folder | The first session summary | `_session-summaries/` | `procedures/session-summary.md` |
 | CI backstop | The human asks for it, or uses the local sandbox profile | `.github/workflows/` at the repo root | `templates/ci-verify.yml.template` |
 | Local sandbox files | The human uses the local sandbox profile | `.devcontainer/` at the repo root; the push check in `~/.agent-hooks/` | `environments/local-sandbox/`, copied by the human from a clean clone |
