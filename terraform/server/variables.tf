@@ -16,7 +16,7 @@ variable "data_volume_gb" {
 }
 
 variable "nightly_stop_enabled" {
-  description = "On by default. The human switches it off while graders may visit (aws-setup.md step 10)."
+  description = "On by default. The human switches it off while visitors are expected (docs/deployment.md, operating notes)."
   type        = bool
   default     = true
 }
@@ -24,13 +24,13 @@ variable "nightly_stop_enabled" {
 variable "nightly_stop_cron" {
   description = "EventBridge Scheduler cron (UTC) for stopping the server each night. VERIFY the expression."
   type        = string
-  default     = "cron(0 4 * * ? *)" # 04:00 UTC: after the US evening, before the EU morning (reviewers are in both); turn the stop off while graders may visit
+  default     = "cron(0 4 * * ? *)" # 04:00 UTC: after the US evening, before the EU morning (reviewers are in both); turn the stop off while visitors are expected
 }
 
 variable "secret_names" {
   description = <<-EOT
     Secrets Manager secret names (one JSON secret per environment). NAMES ONLY;
-    the human creates the values (aws-setup.md step 8). The instance role is
+    the human creates the values (docs/deployment.md). The instance role is
     granted read on exactly these.
   EOT
   type        = list(string)

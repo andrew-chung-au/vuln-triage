@@ -1,6 +1,6 @@
 """The on-call agent's instructions (the real runner, task 28d / #221).
 
-Adapted from the course's on-call-engineer prompt, fitted to this project's
+Adapted from a generic on-call-engineer prompt, fitted to this project's
 rules: the responder opens a *pull request* (it cannot push to ``main``, F3),
 and it must take the US-15 false-positive path (F1) when there is no
 reproducible defect rather than changing code.

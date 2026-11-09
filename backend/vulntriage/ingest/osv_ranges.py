@@ -2,8 +2,8 @@
 
 A pure module (no network, no DB), mirroring the parser design so the
 ``U-FIXED`` cases test it directly. It implements the five-step rule from
-``_docs/architecture.md`` § Ingestion and matching, which realises the defined
-term "fixed version for this dependency" in ``_docs/specs.md``.
+``docs/architecture.md`` § Ingestion and matching, which realises the defined
+term "fixed version for this dependency" in ``docs/specs.md``.
 
 OSV shape used (``affected[]`` entries of an advisory):
 - ``package``: ``{"ecosystem", "name"}``

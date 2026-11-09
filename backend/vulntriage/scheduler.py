@@ -1,6 +1,6 @@
 """The backend scheduler (task 38): the daily KEV/EPSS refresh and re-scan.
 
-Replaces the n8n schedule for submission (US-7, and the scheduled-re-scan clause
+Replaces the n8n schedule in v1 (US-7, and the scheduled-re-scan clause
 of US-10). Once a day at 06:00 UTC it runs the same work as
 ``POST /signals/refresh`` (``refresh_all``) then enqueues a ``schedule`` scan of
 every asset (the same as ``POST /scans``). A catch-up rule covers the server's

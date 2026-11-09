@@ -15,13 +15,13 @@
 # other's running containers.
 #
 # It runs the published GHCR images by tag (public, no registry credential;
-# aws-setup.md step 6.3) instead of building, and names the frontend container
+# docs/deployment.md) instead of building, and names the frontend container
 # `<env>-frontend` on the shared `vt-edge` network so the shared Caddy can reach
 # it. user-data.sh delivers no project files, so this script writes them all.
 #
 # Inputs (environment, set by the SSM command the workflow sends):
 #   DEPLOY_ENV        `dev` or `prod` — the project/environment to deploy
-#   IMAGE_TAG         the course image tag YYYYMMDD-HHMMSS-shortsha to deploy
+#   IMAGE_TAG         the image tag YYYYMMDD-HHMMSS-shortsha to deploy
 #   GHCR_REPO         ghcr.io/<owner>/<repo> (the image name prefix)
 #   EIP_DASHED        the Elastic IP with dots turned to dashes (for the hostname)
 #   APP_COMPOSE_B64   base64 of the committed compose.yaml
@@ -34,7 +34,7 @@
 # Secrets (the database password, the repository read token) are read HERE from
 # the AWS Secrets Manager secret `vuln-triage/<env>` using the server's instance
 # role — NOT passed from the workflow (the deploy OIDC role has no secrets
-# access; architecture.md Security boundaries, aws-setup.md step 8). The secret
+# access; architecture.md Security boundaries, docs/deployment.md). The secret
 # is one JSON object, e.g. {"POSTGRES_PASSWORD":"…","GITHUB_READ_TOKEN":"…"}.
 # For dev, if the secret is absent the script falls back to throwaway values so
 # the dev environment still stands up; for prod the secret (with at least
@@ -103,7 +103,7 @@ MAIL_SENDER="$(secret_get MAIL_SENDER)"
 if [ -z "$POSTGRES_PASSWORD" ]; then
   if [ "$DEPLOY_ENV" = "prod" ]; then
     echo "POSTGRES_PASSWORD missing from Secrets Manager secret $SECRET_ID." >&2
-    echo "Create the production secret before promoting (aws-setup.md step 8)." >&2
+    echo "Create the production secret before promoting (docs/deployment.md)." >&2
     exit 2
   fi
   POSTGRES_PASSWORD="devpw"

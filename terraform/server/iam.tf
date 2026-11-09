@@ -1,7 +1,7 @@
 # Instance role: SSM managed access (Session Manager + Run Command target),
 # read on exactly the named secrets, and (when supplied) send-only SES on the
 # one verified sender identity (architecture.md § Security boundaries;
-# aws-setup.md steps 5, 8, 9).
+# docs/deployment.md steps 5, 8, 9).
 
 data "aws_iam_policy_document" "instance_assume" {
   statement {

@@ -4,7 +4,7 @@
 # read-only by observability/compose.yaml), so adding this file needs no Compose
 # change.
 #
-# Design authority: _docs/architecture.md § Observability, "US-14 alert rule".
+# Design authority: docs/architecture.md § Observability, "US-14 alert rule".
 # In one line: `max by (finding_id, tier) (vt_top_tier_notification_overdue) == 1`,
 # evaluated every minute over a 30-minute window, one alert instance per finding;
 # a finding alert goes to the responder webhook *and* the human email, and the
@@ -127,7 +127,7 @@ groups:
             A top-tier owner notification is overdue for finding
             {{ $labels.finding_id }} (tier {{ $labels.tier }}).
           # Dashboard link, environment and version (task 26 acceptance). No
-          # owner annotation for submission (US-14 payload carries finding id
+          # owner annotation in v1 (US-14 payload carries finding id
           # and tier only; architecture § Security boundaries).
           # VERIFY: the exact dashboard URL path on 11.3.0 (/d/<uid>/<slug>).
           dashboard_url: /d/us13-journey/us-13-journey

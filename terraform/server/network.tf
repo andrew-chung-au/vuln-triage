@@ -1,7 +1,7 @@
 # Network: default VPC, a security group opening only 80 and 443, and an
 # Elastic IP kept across the nightly stop (architecture.md § Deployment, A36).
 # No SSH (port 22) and no key pair — access is AWS SSM Session Manager
-# (aws-setup.md step 5).
+# (docs/deployment.md).
 
 data "aws_vpc" "default" {
   default = true

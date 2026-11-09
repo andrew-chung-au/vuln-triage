@@ -227,10 +227,10 @@ def test_recorders_with_no_confirmed_inputs_return_2_and_make_no_request(monkeyp
     assert record_fixtures.record_epss() == 2
 
 
-def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
-    """`.env.example` (task 15) lists the submission setting/secret names only.
+def test_env_example_lists_the_v1_names_with_no_real_values() -> None:
+    """`.env.example` (task 15) lists v1 setting/secret names only.
 
-    It must name what the submission needs, must not name future-development-only
+    It must name what v1 needs, must not name future-development-only
     settings, and must carry no real values: every setting line is ``NAME=``
     (empty) or a stub default (``LLM_MODE=stub`` / ``RESPONDER_MODE=stub``).
     """
@@ -245,7 +245,7 @@ def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
     ]
     names = {line.split("=", 1)[0] for line in setting_lines}
 
-    # Required submission names (task 15 acceptance).
+    # Required v1 names (task 15 acceptance).
     assert {
         "POSTGRES_PASSWORD",
         "GITHUB_READ_TOKEN",
@@ -256,7 +256,7 @@ def test_env_example_lists_the_submission_names_with_no_real_values() -> None:
         "RESPONDER_MODE",
     } <= names
 
-    # Future-development-only settings must not appear in the submission file.
+    # Future-development-only settings must not appear in v1 file.
     assert names.isdisjoint(
         {"MCP_API_TOKEN", "N8N_API_TOKEN", "LLM_API_KEY", "SMTP_PASSWORD"}
     )

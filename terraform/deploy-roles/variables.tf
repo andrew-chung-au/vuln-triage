@@ -31,7 +31,7 @@ variable "create_oidc_provider" {
   description = <<-EOT
     Whether to create the GitHub OIDC provider. An account may hold only one
     provider per URL. Set false and pass existing_oidc_provider_arn when the
-    account already has one (aws-setup.md step 7.3).
+    account already has one (docs/deployment.md).
   EOT
   type        = bool
   default     = false
@@ -44,7 +44,7 @@ variable "existing_oidc_provider_arn" {
 }
 
 variable "dev_environment" {
-  description = "The GitHub Environment name the dev role's trust policy requires. The deploy-dev job declares it, so its token's sub claim is environment-based, not branch-based; limit that environment's deployment branches to main in GitHub (aws-setup.md step 6.1)."
+  description = "The GitHub Environment name the dev role's trust policy requires. The deploy-dev job declares it, so its token's sub claim is environment-based, not branch-based; limit that environment's deployment branches to main in GitHub (docs/deployment.md)."
   type        = string
   default     = "dev"
 }

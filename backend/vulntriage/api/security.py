@@ -3,8 +3,8 @@
 The frontend authenticates with the ``vt_session`` cookie (``cookieAuth``), set
 by ``POST /auth/login`` and cleared by ``POST /auth/logout``. There is no bearer
 token for the frontend; the service credentials (n8n, MCP, responder) are task
-10a/10b. All values are A30 (``_docs/architecture.md`` § Security boundaries) and
-``_docs/api.md`` § Authentication.
+10a/10b. All values are A30 (``docs/architecture.md`` § Security boundaries) and
+``docs/api.md`` § Authentication.
 
 Design:
 - The cookie carries a random 256-bit id (``secrets.token_urlsafe(32)``). Only
@@ -194,7 +194,7 @@ _SERVICE_SCHEMES = ("authorization",)  # a bearer token on a frontend op is 403,
 def require_session(request: Request) -> User:
     """FastAPI dependency: the signed-in user for a cookie-authenticated operation.
 
-    Order (``_docs/api.md`` § Status codes): ``401`` for no/expired/invalid
+    Order (``docs/api.md`` § Status codes): ``401`` for no/expired/invalid
     session; then ``403`` for a wrong-consumer credential or a missing/wrong CSRF
     header on a non-GET request (login and logout do not use this dependency).
     """

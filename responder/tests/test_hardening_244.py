@@ -61,7 +61,7 @@ def test_b1_only_an_allowlist_of_the_parent_environment_survives(monkeypatch, tm
 def test_b1_the_model_key_and_git_credentials_reach_the_cli(monkeypatch, tmp_path):
     env = agent_env(monkeypatch, tmp_path)
     assert env["ANTHROPIC_API_KEY"] == KEY  # the CLI needs it
-    # LIMIT (see _docs/responder-security-limits.md): the policy lets the agent run
+    # LIMIT (see docs/responder.md): the policy lets the agent run
     # `git push` and `gh pr create` through its Bash tool, and the SDK gives every Bash
     # child the CLI's environment, so these cannot be scoped to the runner's own calls.
     assert env["GH_TOKEN"] == TOKEN

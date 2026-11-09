@@ -33,7 +33,7 @@ _CLEAN = {
     ".env.example": "# VT_FEEDS=fixtures (in .env, not here)\nVT_FEEDS=\n",
     "terraform/server/deploy-env.sh": "# DEPLOYMENT_ENVIRONMENT=prod makes the VT_FEEDS=fixtures refusal fail closed\n",
     "responder/vt_responder/runner.py": 'INTENDED_TEST_FILE = "tests/test_notify_no_fixed_version.py"\n',
-    "_docs/testing.md": "VT_DEMO_DEFECT=notify_no_fix is described here; docs are not code.\n",
+    "docs/testing.md": "VT_DEMO_DEFECT=notify_no_fix is described here; docs are not code.\n",
     "README.md": "VT_DEMO_DEFECT and VT_FEEDS=fixtures are mentioned in prose.\n",
 }
 
@@ -106,7 +106,7 @@ def test_docs_and_records_are_not_scanned(clean_tree: pathlib.Path) -> None:
         clean_tree,
         {
             "_session-summaries/issue-1.md": "VT_DEMO_DEFECT=notify_no_fix\n",
-            "_docs/ai-usage-log.md": "VT_DEMO_DEFECT\n",
+            "_docs/notes.md": "VT_DEMO_DEFECT\n",
             "docs/notes.md": "notify_no_fix\n",
         },
     )

@@ -1,9 +1,9 @@
 // Real backend-backed implementation of the Services interface (task 11 / #133).
 //
 // Transport only: the backend returns the wire shapes defined in types.ts
-// (which follow _docs/openapi.yaml), so no field remapping happens here.
+// (which follow docs/openapi.yaml), so no field remapping happens here.
 //
-// Contract (_docs/openapi.yaml, _docs/api.md):
+// Contract (docs/openapi.yaml, docs/api.md):
 // - Same origin as the dashboard (server base "/"). In dev the Vite server
 //   proxies these paths to the backend; in Compose and on AWS a reverse proxy
 //   does. So requests are relative and never carry an absolute origin.

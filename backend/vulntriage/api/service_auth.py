@@ -1,7 +1,7 @@
 """Bearer service-token guards for the n8n, MCP and responder operations (#83).
 
 Each service operation lists exactly one credential. The guard enforces the
-contract's status order for service operations (``_docs/api.md`` § Status
+contract's status order for service operations (``docs/api.md`` § Status
 codes): ``401`` for a missing or invalid credential, then ``403`` for a valid
 credential the operation does not list (another service token, or a session
 cookie). There is no CSRF step for bearer operations.

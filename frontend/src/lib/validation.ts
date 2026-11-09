@@ -10,7 +10,7 @@ export function validateAssetName(name: string): string | null {
   return null;
 }
 
-// Contract pattern for repositoryUrl (_docs/openapi.yaml, NewAssetInput).
+// Contract pattern for repositoryUrl (docs/openapi.yaml, NewAssetInput).
 const REPOSITORY_URL = /^https:\/\/github\.com\/[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/(?!\.{1,2}$)(?!.*\.git$)[A-Za-z0-9_.-]{1,100}$/;
 
 export function validateRepositoryUrl(url: string): string | null {

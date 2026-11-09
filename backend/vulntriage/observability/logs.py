@@ -6,8 +6,8 @@
    (unchanged; the container's stdout stays human- and grep-friendly).
 2. Emits an OpenTelemetry **log record** so the log reaches the Collector over
    OTLP and then Loki, joining the US-13 journey by trace id. This is the leg
-   task 23 intended (``_docs/architecture.md`` § Observability: the Collector
-   "Receives OTLP from the backend"; `_docs/tasks.md` task 23: one trace, metric
+   task 23 intended (``docs/architecture.md`` § Observability: the Collector
+   "Receives OTLP from the backend"; build backlog task 23: one trace, metric
    and log with a shared trace ID) but that the original implementation left out
    — it only wrote stdout, so nothing reached Loki (#174).
 

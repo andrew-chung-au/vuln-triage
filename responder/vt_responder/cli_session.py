@@ -4,7 +4,7 @@ One ``claude -p`` process per alert, run from the fresh checkout, on the owner's
 API key). The agent only commits locally; the RUNNER checks the commits, pushes and opens the
 pull request (``publisher.py``), so no git credential is ever in the agent's environment.
 
-What was verified, and from where, is in ``_docs/responder-cli-runtime.md``. In short, from
+What was verified, and from where, is in ``docs/responder.md``. In short, from
 ``claude --help`` (2.1.311) and code.claude.com/docs (headless, cli-reference, permissions,
 authentication), read 2026-10-27 and never run against a login or a model:
 * ``-p`` reads the prompt from stdin; ``--output-format json`` prints one result object with

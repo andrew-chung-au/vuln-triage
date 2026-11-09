@@ -1,7 +1,7 @@
 """Service API: n8n/responder allowlists, top-tier jobs and idempotency (issue #83).
 
-Covers the submission scope of task 10a: the n8n and responder bearer
-allowlists (I-AUTH-N8N's submission subset and I-RESP-*), top-tier
+Covers the v1 scope of task 10a: the n8n and responder bearer
+allowlists (I-AUTH-N8N's v1 subset and I-RESP-*), top-tier
 NotificationJob creation with the lifecycle idempotency key, and I-OWNER-ONCE's
 job half (a second refresh creates no second job). The n8n claim/report/digest
 behaviour is future development; here those endpoints are contract-only stubs.
@@ -77,7 +77,7 @@ def _bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-# -- n8n allowlist (I-AUTH-N8N submission subset) ---------------------------
+# -- n8n allowlist (I-AUTH-N8N v1 subset) ---------------------------
 
 
 def test_signals_refresh_and_scans_need_the_n8n_token(factory, tokens) -> None:  # type: ignore[no-untyped-def]

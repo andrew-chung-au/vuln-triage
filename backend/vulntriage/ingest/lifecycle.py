@@ -1,7 +1,7 @@
 """Finding lifecycle transitions and the audit trail (issue #80, task 8).
 
 A scan (registration or re-scan) drives every finding through its status machine
-(``_docs/specs.md`` § Finding statuses, E4/E7/E8/US-10/US-11):
+(``docs/specs.md`` § Finding statuses, E4/E7/E8/US-10/US-11):
 
 - A new vulnerable dependency creates an ``open`` finding and its first
   ``Lifecycle``.

@@ -1,7 +1,7 @@
 """Read-only backend API client: exactly the two operations the responder token may call.
 
 ``GET /responder/findings/{id}`` and ``GET /responder/notification-jobs?findingId=``
-(`_docs/api.md` section Responder). There is no other method, so no write is possible
+(`docs/api.md` section Responder). There is no other method, so no write is possible
 from here. The token is sent as a bearer header and is never logged; error
 messages carry the status code only, never a response body (which could hold
 advisory-derived text).
