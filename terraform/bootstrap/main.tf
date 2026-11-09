@@ -1,4 +1,4 @@
-# State bucket (aws-setup.md step 7; architecture.md § Deployment).
+# State bucket (docs/deployment.md; architecture.md § Deployment).
 #
 # One S3 bucket holding Terraform state: versioned, private, encrypted. Created
 # once by the human with LOCAL state, then the state is moved into the bucket

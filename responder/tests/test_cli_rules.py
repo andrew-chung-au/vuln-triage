@@ -4,7 +4,7 @@ refused by the generated list.
 `cli_rules.evaluate` is this repository's model of the documented rule semantics (deny first, `Bash(x *)`
 prefix rules, `Edit(dir/**)` anchored at the working directory; code.claude.com/docs/en/permissions, read
 2026-10-27). The real CLI is the authority; whether the model matches it is a VERIFY item for the first
-live run (_docs/responder-cli-runtime.md). The same cases are checked against `ToolPolicy`, so the
+live run (docs/responder.md). The same cases are checked against `ToolPolicy`, so the
 generated rules and the policy cannot drift apart unnoticed.
 """
 
@@ -270,7 +270,7 @@ REFUSED_EDIT = [
     "backend/.env", "frontend/.env.local", "backend/.env.example", "Dockerfile", "backend/Dockerfile",
     "compose.yaml", "backend/compose.override.yml", "frontend/package-lock.json", "backend/uv.lock",
     "responder/uv.lock", "responder/vt_responder/policy.py", "responder/vt_responder/envscrub.py",
-    "responder/vt_responder/cli_session.py", "docs/notes.md", "README.md", "_docs/specs.md", "Makefile",
+    "responder/vt_responder/cli_session.py", "docs/notes.md", "README.md", "docs/specs.md", "Makefile",
     "../outside.py", "/etc/passwd", "/root/.claude/.credentials.json",
 ]
 

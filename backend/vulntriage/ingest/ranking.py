@@ -6,7 +6,7 @@ chosen rule are recorded on each finding as ``tier``, ``rank_inputs`` and
 ``rank_reason`` (US-5), so re-scoring the same inputs always gives the same
 result and every rank carries its reason.
 
-All values are from ``_docs/architecture.md`` § Prioritisation:
+All values are from ``docs/architecture.md`` § Prioritisation:
 - T = 0.10 (A18); "EPSS high" means the EPSS score is >= T.
 - "exposed" means the asset is internet-facing or its criticality is ``critical``
   (A17: only ``critical`` counts as critical).

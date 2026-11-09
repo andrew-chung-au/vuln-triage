@@ -18,7 +18,7 @@ List what exists, with evidence from the files themselves, not assumptions:
 
 - **Instructions:** `AGENTS.md`, `CLAUDE.md` and other tool instruction files, including nested ones such as `frontend/AGENTS.md`, and tool role definitions such as `.claude/agents/`.
 - **Process docs:** process files, role files, task templates, prompt collections.
-- **Spec:** `_docs/specs.md`, or wherever the product description lives.
+- **Spec:** `docs/specs.md`, or wherever the product description lives.
 - **Session summaries:** the folder and its naming scheme.
 - **Build and test:** Makefile targets, package managers and lock files, test frameworks and test layout, e2e tests, migrations, linters and type checkers, containers.
 - **Git:** `.gitignore` coverage, `git config core.hooksPath`, any hooks in `.git/hooks`, CI files and whether they're at the repo root.
@@ -27,7 +27,7 @@ List what exists, with evidence from the files themselves, not assumptions:
 
 For each existing item, choose one:
 
-- **Keep:** stays as is. Course material, prompts and history usually belong here.
+- **Keep:** stays as is. Reference material, prompts and history usually belong here.
 - **Merge:** its content moves into a kit file. For example, an existing `AGENTS.md` becomes the project half of the new one.
 - **Superseded:** the kit replaces it, for example old process or role files. Propose moving it to `_docs/archive/`; the human decides.
 - **Out of scope:** unrelated to the kit; leave it alone.

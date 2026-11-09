@@ -33,7 +33,7 @@ Two rules (issue #161, task 29; re-scoped from #172 by the owner on 2026-10-26):
 VERIFY: the wording of rule 2 (flag/value and gate, not module existence) is the
 owner's decision in #229; change this file only after that decision.
 
-Documentation and records (``*.md``, ``_docs/``, ``_session-summaries/``) are
+Documentation and records (``*.md``, ``docs/``, ``_docs/``, ``_session-summaries/``) are
 not code and are not scanned, nor are build output and dependency folders. The
 check and its own test mention the strings by necessity and are skipped by path.
 Standard library only.
@@ -61,7 +61,7 @@ SKIP_DIRS = {
     ".terraform",
 }
 # Documentation and records at the top of the tree (not code).
-DOC_TOP_DIRS = {"_docs", "_session-summaries"}
+DOC_TOP_DIRS = {"docs", "_docs", "_session-summaries"}
 DOC_SUFFIXES = {".md"}
 # The check and its test name the strings by necessity.
 SELF_PATHS = {"ci/check_flag_gone.py", "tests/test_flag_gone.py"}

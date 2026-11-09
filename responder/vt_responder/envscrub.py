@@ -10,7 +10,7 @@ the environment can be given whole (``subprocess.run(env=...)``).
 
 What this does NOT do: the model key and the git/``gh`` token the agent is given
 on purpose stay visible to everything the agent runs (see
-``_docs/responder-security-limits.md``). ``CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`` is
+``docs/responder.md``). ``CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`` is
 a name inside the bundled CLI, but it needs bubblewrap and a sandbox, and the
 responder does not rely on it.
 """

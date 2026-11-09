@@ -2,7 +2,7 @@
 
 When a finding is ``open`` and in the top tier (``P1``, US-8), the backend
 creates exactly one ``top tier`` ``NotificationJob`` per finding lifecycle, with
-the idempotency key from ``_docs/architecture.md`` § Routing and notifications:
+the idempotency key from ``docs/architecture.md`` § Routing and notifications:
 ``(lifecycle id, kind)`` for ``top tier``. A second refresh or a retry creates
 no duplicate (the ``idempotency_key`` unique constraint enforces it). Delivery
 (claim, email, ``sent``/``failed``) is the task-37 worker; this module only

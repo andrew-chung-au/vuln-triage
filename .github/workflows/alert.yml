@@ -1,12 +1,10 @@
 name: alert
 # The US-14 alert Compose job (issue #159, task 27): A-FIRE and its rule-absent
 # negative through real Grafana. It takes several minutes of Grafana timing per
-# pass, so it runs nightly and on demand (Actions -> alert -> Run workflow), not
-# on every push/PR (human decision, 2026-10-25). The other A-* cases are
-# unit/SQLite cases in verify.yml; see _docs/testing.md, "Where each case runs".
+# pass, so it runs on demand only (Actions -> alert -> Run workflow), not on every
+# push/PR; it was nightly while the project was in active development. The other A-* cases are
+# unit/SQLite cases in verify.yml; see docs/testing.md, "Where each case runs".
 on:
-  schedule:
-    - cron: "0 17 * * *" # 17:00 UTC daily
   workflow_dispatch:
 
 # No secret or live feed: the stack is local, with throwaway env set in

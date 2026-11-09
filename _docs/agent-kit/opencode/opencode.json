@@ -17,7 +17,7 @@
       "Makefile": "ask",
       "agent-kit.conf": "ask",
       "opencode.json": "ask",
-      "_docs/specs.md": "ask",
+      "docs/specs.md": "ask",
       "_docs/agent-kit/**": "ask",
       ".opencode/**": "ask",
       ".claude/**": "ask"

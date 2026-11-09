@@ -1,6 +1,6 @@
 """Service-token operations: n8n, responder and the future-development stubs (issue #83).
 
-Submission scope (real behaviour):
+v1 scope (real behaviour):
 - ``POST /signals/refresh`` — re-score every asset's findings and create
   ``top tier`` notification jobs (idempotent); ``202``.
 - ``POST /scans`` — start a re-scan of every registered asset; ``202``.
@@ -59,7 +59,7 @@ def _error(code: str, status_code: int) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"code": code, "message": messages[code]})
 
 
-# -- n8n submission operations ----------------------------------------------
+# -- n8n v1 operations ----------------------------------------------
 
 
 @router.post("/signals/refresh", status_code=202)
@@ -103,7 +103,7 @@ def scheduled_rescan(request: Request, _: None = Depends(require_n8n)) -> Respon
 @router.get("/notification-jobs")
 def list_notification_jobs(request: Request, _: None = Depends(require_n8n)) -> list[dict[str, Any]]:
     # Future development: the n8n delivery path is tasks 32-35. The backend delivers the
-    # owner notification itself in submission scope, so this returns no jobs.
+    # owner notification itself in v1 scope, so this returns no jobs.
     kinds = request.query_params.getlist("kind")
     for kind in kinds:
         if kind not in _JOB_KINDS:
@@ -139,7 +139,7 @@ def _current_iso_week() -> str:
     return f"{year:04d}-W{week:02d}"
 
 
-# -- responder submission operations ----------------------------------------
+# -- responder v1 operations ----------------------------------------
 
 
 @router.get("/responder/findings/{finding_id}")

@@ -28,7 +28,7 @@ _BAD_LOGIN = HTTPException(
 
 
 class LoginRequest(BaseModel):
-    """Strict ``{username, password}`` (``_docs/openapi.yaml``: LoginRequest)."""
+    """Strict ``{username, password}`` (``docs/openapi.yaml``: LoginRequest)."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 

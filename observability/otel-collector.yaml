@@ -40,7 +40,7 @@ processors:
       # VERIFY (confirmed in the alert Compose CI job): the US-14 overdue gauge
       # (backend/vulntriage/observability/metrics.py `_observe_overdue`) emits
       # its datapoint attributes with PLAIN keys `finding_id` and `tier` (the
-      # documented metric labels, _docs/architecture.md:
+      # documented metric labels, docs/architecture.md:
       # `vt_top_tier_notification_overdue{finding_id,tier}`), NOT the span key
       # `vt.tier`. So both plain keys must be on the datapoint keep_keys list
       # or the exported Prometheus series loses `tier` (A-TIER saw `{None}`

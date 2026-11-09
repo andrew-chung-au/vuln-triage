@@ -1,4 +1,4 @@
-# GitHub OIDC provider and the dev/prod deploy roles (aws-setup.md step 7;
+# GitHub OIDC provider and the dev/prod deploy roles (docs/deployment.md;
 # architecture.md § Security boundaries, the CI-deploy-credentials row).
 #
 # CI assumes these roles through OIDC with no long-lived AWS key. The trust
@@ -55,7 +55,7 @@ data "aws_iam_policy_document" "dev_trust" {
 }
 
 # Prod role: only tokens from this repo in the `production` GitHub Environment,
-# whose deployments the human must approve (aws-setup.md step 6.1).
+# whose deployments the human must approve (docs/deployment.md).
 data "aws_iam_policy_document" "prod_trust" {
   statement {
     effect  = "Allow"

@@ -23,7 +23,7 @@ clean-scratch: ## Empty .scratch/ at the end of an issue (refuses while a starte
 check-scripts: ## Syntax-check the kit scripts and the JSON settings (read-only)
 	@for f in _docs/agent-kit/scripts/*.sh _docs/agent-kit/claude-code/hooks/cloud_session_start.sh _docs/agent-kit/environments/local-sandbox/pre-push; do bash -n "$$f" || exit 1; done
 	@python3 -c 'import ast, sys; [ast.parse(open(f, encoding="utf-8").read(), f) for f in sys.argv[1:]]' _docs/agent-kit/claude-code/hooks/guard_git.py _docs/agent-kit/claude-code/hooks/verify_on_stop.py _docs/agent-kit/scripts/permission-report.py
-	@jq empty opencode.json .claude/settings.json agent-kit/claude-code/settings.json agent-kit/opencode/opencode.json
+	@jq empty opencode.json .claude/settings.json _docs/agent-kit/claude-code/settings.json _docs/agent-kit/opencode/opencode.json
 
 .PHONY: check-scripts
 
@@ -185,10 +185,10 @@ permission-report: ## Count approvals recorded in session summaries (read-only):
 
 # --- API contract (issue #23) --------------------------------------------
 
-# OPENAPI must stay a relative path under _docs/ or .scratch/ with only
+# OPENAPI must stay a relative path under docs/ or .scratch/ with only
 # letters, digits, '.', '_', '-', '/', and no '..'. These are pure make
 # functions, so a bad value stops make before any shell command runs.
-OPENAPI ?= _docs/openapi.yaml
+OPENAPI ?= docs/openapi.yaml
 OPENAPI_ALLOWED_CHARS = a b c d e f g h i j k l m n o p q r s t u v w x y z \
 	A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
 	0 1 2 3 4 5 6 7 8 9 . _ - /
@@ -196,14 +196,14 @@ OPENAPI_ALLOWED_CHARS = a b c d e f g h i j k l m n o p q r s t u v w x y z \
 strip_allowed = $(if $(1),$(call strip_allowed,$(wordlist 2,$(words $(1)),$(1)),$(subst $(firstword $(1)),,$(2))),$(2))
 
 OPENAPI_CHARS_LEFT = $(call strip_allowed,$(OPENAPI_ALLOWED_CHARS),$(value OPENAPI))
-OPENAPI_BAD_PREFIX = $(if $(filter _docs/% .scratch/%,$(value OPENAPI)),,$(value OPENAPI))
+OPENAPI_BAD_PREFIX = $(if $(filter docs/% .scratch/%,$(value OPENAPI)),,$(value OPENAPI))
 OPENAPI_BAD_DOTS = $(findstring ..,$(value OPENAPI))
 OPENAPI_INVALID = $(strip $(OPENAPI_CHARS_LEFT)$(OPENAPI_BAD_PREFIX)$(OPENAPI_BAD_DOTS))
 
 .PHONY: openapi-validate
 
 openapi-validate: ## Validate an OpenAPI contract: make openapi-validate [OPENAPI=<path>]
-	$(if $(OPENAPI_INVALID),$(error OPENAPI must stay under _docs/ or .scratch/, use only letters, digits, '.', '_', '-', '/', and contain no '..'; got '$(value OPENAPI)'))
+	$(if $(OPENAPI_INVALID),$(error OPENAPI must stay under docs/ or .scratch/, use only letters, digits, '.', '_', '-', '/', and contain no '..'; got '$(value OPENAPI)'))
 	@uvx openapi-spec-validator==0.9.0 "$(OPENAPI)"
 
 # --- Frontend (issue #15 E2) ---------------------------------------------

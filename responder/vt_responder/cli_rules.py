@@ -8,7 +8,7 @@ nothing prompts), so the allow list below is the whole grant. Reads inside the c
 no rule (a bare ``Read`` allow would also reach files OUTSIDE it, such as the login under
 ``HOME``, so it is deliberately absent). Rule syntax and precedence were read from
 code.claude.com/docs/en/permissions on 2026-10-27 and are written up in
-``_docs/responder-cli-runtime.md``: deny is evaluated first and always wins; ``Bash(x *)`` is a
+``docs/responder.md``: deny is evaluated first and always wins; ``Bash(x *)`` is a
 prefix rule; ``Edit(dir/**)`` is anchored at the working directory.
 
 What a CLI rule CANNOT express (so the runner's diff gate, ``publisher.py``, is the control):

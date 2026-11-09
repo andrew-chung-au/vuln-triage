@@ -14,7 +14,7 @@ Per alert: a fresh temporary checkout (``checkout.py``), a ``ToolPolicy`` for
 ``responder/<fingerprint>`` (``policy.py``), a turn limit and a wall-clock
 limit; an error, timeout or "no change" removes a remote branch only if this run
 created it. The tool policy is a guardrail for a confused agent, not a sandbox
-for a hostile one: see ``_docs/responder-security-limits.md``.
+for a hostile one: see ``docs/responder.md``.
 
 Two sessions sit behind the seam. ``sdk_session.SdkSession`` (``RESPONDER_RUNTIME=sdk``) opens the pull
 request itself. ``cli_session.CliSession`` (``cli``, the default, #260) runs headless ``claude -p`` and

@@ -4,7 +4,7 @@ Runs under ``make test-compose JOB=telemetry`` against the running observability
 stack (Collector -> Prometheus/Tempo/Loki). Marked ``compose`` and DESELECTED by
 ``make test`` / ``make verify`` (the default ``-m "not compose"``), so it never
 runs — and never *skips* — in the no-Docker gate. A missing service is a hard
-failure here, never a silent skip (``_docs/testing.md`` Telemetry: "A missing
+failure here, never a silent skip (``docs/testing.md`` Telemetry: "A missing
 required service fails the job").
 
 Cases (built across #157 and #172):
@@ -14,7 +14,7 @@ Cases (built across #157 and #172):
   while an allowlisted key survives — so a broken Collector config fails it.
 - ``T-JOURNEY-BE`` (#172 PR 2): drive one scan→notification journey through the
   *deployed backend container* (login + ``POST /assets`` over the published
-  port, ``VT_FEEDS=fixtures``). Assert the submission span list shares one trace
+  port, ``VT_FEEDS=fixtures``). Assert v1 span list shares one trace
   id in Tempo, the ``vt_notifications_total`` metric and the JSON log carry that
   id, and the owner email reaches MailHog.
 - ``I-OWNER-NOAWS`` / ``I-OWNER-SENDER`` MailHog forms (#172 PR 2): the container
@@ -79,7 +79,7 @@ _PYGOAT_ASSET = {
     "internetFacing": True,
     "repositoryUrl": "https://github.com/adeyosemanputra/pygoat",
 }
-# The submission backend span list for T-JOURNEY-BE (brief.generate is future development,
+# The v1 backend span list for T-JOURNEY-BE (brief.generate is future development,
 # not asserted).
 _JOURNEY_SPANS = {
     "scan.run", "repository.read", "osv.query", "signals.enrich",
@@ -182,7 +182,7 @@ def test_t_journey_be_one_trace_across_metric_trace_log_and_mailhog() -> None:
     """US-13: one scan->notification journey, one trace id in metric/trace/log.
 
     Drives the real backend container (login + POST /assets, VT_FEEDS=fixtures),
-    then asserts: the submission span list shares one trace id in Tempo; the
+    then asserts: v1 span list shares one trace id in Tempo; the
     vt_notifications_total metric exists; a JSON log carries that trace id; and
     the owner email reached MailHog.
     """
@@ -201,7 +201,7 @@ def test_t_journey_be_one_trace_across_metric_trace_log_and_mailhog() -> None:
     assert len(trace_id) == 32 and int(trace_id, 16) != 0
     print(f"T-JOURNEY-BE: journey trace id {trace_id}")
 
-    # Tempo: wait until the trace carries the full submission backend span list
+    # Tempo: wait until the trace carries the full v1 backend span list
     # (notification.deliver lands when the DeliveryWorker next polls, ~30s).
     trace = wait_for_trace_spans(trace_id, _JOURNEY_SPANS)
     names = span_names(trace)
@@ -254,4 +254,4 @@ def test_i_owner_noaws_container_delivers_to_mailhog() -> None:
 # tests/test_notifications.py::test_i_owner_sender_* (the backend's own guard,
 # under make test). The MailHog form is deferred to PR 3 / #159, where the demo
 # defect (task 28) gives a real in-container path that exercises a held/refused
-# delivery. Recorded in _docs/testing.md.
+# delivery. Recorded in docs/testing.md.

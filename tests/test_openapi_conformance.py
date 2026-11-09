@@ -1,7 +1,7 @@
 """OpenAPI conformance, I-CONTRACT (issue #88, task 14).
 
 Compares FastAPI's generated document (``app.openapi()``) with
-``_docs/openapi.yaml`` for every operation, at the granularity the hand-built
+``docs/openapi.yaml`` for every operation, at the granularity the hand-built
 routes actually express (human decision, 2026-10-23, Option A):
 
 - the path set (template variables normalised, so the contract's ``{id}`` and
@@ -39,7 +39,7 @@ from vulntriage.main import create_app
 
 pytestmark = pytest.mark.sqlite_integration
 
-CONTRACT = Path(__file__).resolve().parents[1] / "_docs" / "openapi.yaml"
+CONTRACT = Path(__file__).resolve().parents[1] / "docs" / "openapi.yaml"
 
 # GET /health is infrastructure outside the contract (api.md): excluded by name.
 EXCLUDED_PATHS = {"/health"}

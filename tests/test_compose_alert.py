@@ -6,7 +6,7 @@ stack + the observability stack + a stub webhook sink), brought up by
 ``make verify`` (the default ``-m "not compose"``), so it never runs — and never
 *skips* — in the no-Docker gate (the seam's own logic is unit-tested there, in
 ``tests/test_manage.py``). A missing required service is a hard failure here,
-never a silent skip (``_docs/testing.md`` § CI jobs).
+never a silent skip (``docs/testing.md`` § CI jobs).
 
 The firing is observed from **stored ``NotificationJob`` state** (the in-container
 ``manage.py alert-*`` seam writes the job into Postgres; the backend's overdue
@@ -27,11 +27,11 @@ Grafana notification (resolutions arrive minutes after a series goes). The
 gauge rules the other A-* cases checked (held jobs never emit, the recorded
 tier, the empty system's heartbeat, sent -> 0) are covered in seconds by
 ``tests/test_metrics_overdue.py``; the NoData gap (A-GAP part 2) is a manual
-check (``_docs/verify-locally.md`` §7b).
+check (``docs/development.md`` §7b).
 
 VERIFY (external Grafana/alerting behaviour — confirmed on the running stack, NOT
 asserted blind; see also ``observability/grafana/provisioning/alerting/
-us14-overdue.yaml`` and ``_docs/pending-verification.md`` #159):
+us14-overdue.yaml`` and issue #159):
 - Firing latency end-to-end (gauge scrape + >= one 1-minute rule evaluation +
   notification). ``VT_COMPOSE_POLL_TIMEOUT`` is set with headroom over 1 minute.
 - The webhook POST shape and that the recorded body carries ``finding_id`` /

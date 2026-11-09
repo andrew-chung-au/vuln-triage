@@ -1,6 +1,6 @@
 # Tempo config (issue #155, task 24): single-binary, local filesystem storage,
 # OTLP ingest from the Collector. 7-day-equivalent local retention
-# (architecture Cost controls); submission runs in local Compose only.
+# (architecture Cost controls); v1 runs in local Compose only.
 server:
   http_listen_port: 3200
 

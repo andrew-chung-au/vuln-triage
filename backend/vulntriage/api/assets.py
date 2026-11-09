@@ -53,7 +53,7 @@ def _lookup(session: Session, asset_id: str) -> Asset | None:
 
 
 class NewAssetInput(BaseModel):
-    """Strict body of ``POST /assets`` (``_docs/openapi.yaml``: NewAssetInput)."""
+    """Strict body of ``POST /assets`` (``docs/openapi.yaml``: NewAssetInput)."""
 
     model_config = ConfigDict(extra="forbid", strict=True, populate_by_name=False)
 
@@ -318,7 +318,7 @@ def _apply_update(session: Session, asset: Asset, provided: dict[str, Any], user
 def _release_held_jobs(session: Session, asset: Asset) -> None:
     """Release ownerless / owner-email-missing jobs once the asset has an owner email.
 
-    Submission scope has no notification jobs yet (tasks 10a/37), so this is a
+    v1 scope has no notification jobs yet (tasks 10a/37), so this is a
     no-op placeholder that the delivery work will fill in. Kept here so the
     release point is explicit in the update path.
     """

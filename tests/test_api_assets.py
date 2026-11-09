@@ -217,7 +217,7 @@ def assert_refused(factory, body: Any, secret: str | None = None) -> None:  # ty
 def test_openapi_document_has_no_local_path_or_upload_field() -> None:
     from pathlib import Path
 
-    text = (Path(__file__).resolve().parent.parent / "_docs" / "openapi.yaml").read_text()
+    text = (Path(__file__).resolve().parent.parent / "docs" / "openapi.yaml").read_text()
     start = text.index("    NewAssetInput:")
     block = text[start : text.index("    AssetUpdateInput:")]
     assert "additionalProperties: false" in block

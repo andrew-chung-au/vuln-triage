@@ -1,5 +1,5 @@
 """The owner-notification message: plain-text labelled fields, safe headers,
-defanged advisory text (task 37; ``_docs/architecture.md`` § Security
+defanged advisory text (task 37; ``docs/architecture.md`` § Security
 boundaries, A31).
 
 Two guardrails live here, both from the architecture's prompt-injection table:

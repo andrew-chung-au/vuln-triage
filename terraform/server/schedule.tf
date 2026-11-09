@@ -1,6 +1,6 @@
 # Nightly stop (architecture.md § Cost controls, A37). An EventBridge Scheduler
 # rule stops the instance each night; on by default, with an on/off variable the
-# human flips off while graders may visit (aws-setup.md step 10). The Elastic IP
+# human flips off while visitors are expected (docs/deployment.md, operating notes). The Elastic IP
 # is kept, so the hostnames survive the stop.
 # VERIFY: EventBridge Scheduler is the mechanism; the schedule's permission form.
 

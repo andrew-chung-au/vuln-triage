@@ -1,4 +1,4 @@
-// Wire shapes follow _docs/openapi.yaml (issue #45, D4 in _docs/api.md).
+// Wire shapes follow docs/openapi.yaml (issue #45, D4 in docs/api.md).
 export type Tier = "P1" | "P2" | "P3" | "P4";
 export type FindingStatus = "open" | "risk accepted" | "fixed" | "withdrawn";
 export type Criticality = "low" | "medium" | "high" | "critical";

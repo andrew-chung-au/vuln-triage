@@ -192,7 +192,7 @@ def create_app(
         directly (``:8000/health``); through the reverse proxy it is reached at
         ``/api/health`` (the proxy strips ``/api``). It needs no credential and
         returns no VulnTriage data. The task-14 conformance test excludes
-        ``/health`` by name (``_docs/api.md``).
+        ``/health`` by name (``docs/api.md``).
         """
         return {"status": "ok"}
 

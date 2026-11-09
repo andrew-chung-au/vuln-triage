@@ -18,7 +18,7 @@ How the allowlist is enforced (two layers, one policy: ``policy.ToolPolicy``):
 Limit: this policy guards a confused agent, not a hostile or prompt-injected one; the
 agent's own model key and git token stay visible to the code it runs. What bounds a
 hostile agent, and the owner's accepted residual risk, is in
-``_docs/responder-security-limits.md``.
+``docs/responder.md``.
 
 The agent ends its final message with one line, ``RESULT: PULL_REQUEST <url>``
 or ``RESULT: NO_CHANGE <explanation>`` (see ``prompt.py``); anything else, an

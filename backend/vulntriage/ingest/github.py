@@ -29,7 +29,7 @@ API_HOST = "api.github.com"
 API_BASE = f"https://{API_HOST}"
 TIMEOUT_SECONDS = 10.0
 
-# The pattern of _docs/openapi.yaml (NewAssetInput.repositoryUrl), kept case-sensitive.
+# The pattern of docs/openapi.yaml (NewAssetInput.repositoryUrl), kept case-sensitive.
 OWNER_PATTERN = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})"
 REPO_PATTERN = r"(?!\.{1,2}$)(?!.*\.git$)[A-Za-z0-9_.-]{1,100}"
 REPOSITORY_URL_RE = re.compile(rf"https://github\.com/({OWNER_PATTERN})/({REPO_PATTERN})")

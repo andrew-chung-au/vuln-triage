@@ -1,5 +1,5 @@
 variable "aws_region" {
-  description = "The single region for the state bucket, server and secrets (aws-setup.md step 2)."
+  description = "The single region for the state bucket, server and secrets (docs/deployment.md)."
   type        = string
   default     = "us-east-1"
 }
