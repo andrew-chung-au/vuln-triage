@@ -38,7 +38,8 @@ See the pull request for the full list. Protected files changed, each by the own
 
 ## Commands to validate
 
-- **Verify:** `make verify`. **Not run in this session**: the sandbox cannot install dependencies (PyPI and the Python download host were unreachable).
+- **Verify:** `make verify`. **Not run in the sandbox**: it cannot install dependencies (PyPI and the Python download host were unreachable). CI on PR #275 ran it: after one fix (below) all seven required checks pass.
+- **A miss CI caught:** two tests built the contract path from segments (`"_docs" / "openapi.yaml"`), which a text search for `_docs/openapi.yaml` did not find. `sqlite-integration`, `postgres-integration` and `openapi-validation` failed until they were pointed at `docs/openapi.yaml`.
 - Run instead: `tests/test_flag_gone.py` and `tests/test_marker_hygiene.py` (20 passed, with `--noconftest`); `bash -n` on every kit script and hook; JSON parse of the four settings files; Ruby YAML parse of the four workflows and `docs/openapi.yaml`; `py_compile` of every changed Python file; `git diff --check`; a script check that every relative link, image and anchor in the touched Markdown resolves.
 
 ## Proposed AGENTS.md changes
