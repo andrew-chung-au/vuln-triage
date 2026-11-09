@@ -39,7 +39,7 @@ from vulntriage.main import create_app
 
 pytestmark = pytest.mark.sqlite_integration
 
-CONTRACT = Path(__file__).resolve().parents[1] / "_docs" / "openapi.yaml"
+CONTRACT = Path(__file__).resolve().parents[1] / "docs" / "openapi.yaml"
 
 # GET /health is infrastructure outside the contract (api.md): excluded by name.
 EXCLUDED_PATHS = {"/health"}
