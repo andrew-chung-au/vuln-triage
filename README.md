@@ -160,6 +160,10 @@ Planned next, in themes: operations and hardening (one-command on-demand demo, l
 
 The planning, review and session record from the first build is preserved at the [`v1.0.0` tag](https://github.com/andrew-chung-au/vuln-triage/tree/v1.0.0).
 
+## License
+
+[MIT](LICENSE).
+
 ### Glossary
 
 **OSV** Open Source Vulnerabilities database (osv.dev) · **KEV** CISA Known Exploited Vulnerabilities catalog · **EPSS** FIRST Exploit Prediction Scoring System · **MCP** Model Context Protocol · **OTLP** OpenTelemetry Protocol · **SPA** single-page application · **GHCR** GitHub Container Registry.
