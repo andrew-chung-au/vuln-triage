@@ -1,13 +1,11 @@
-# Observability stack (task 24 / #155)
+# Observability stack
 
 A **separate** Docker Compose project from the application stack
 (`compose.yaml` at the repo root). It collects the US-13 telemetry the backend
-emits (task 23) and shows the trace, metric and logs side by side in Grafana.
+emits and shows the trace, metric and logs side by side in Grafana.
 
-For submission this runs in **local Compose only**; deploying it on AWS is
-future-development item X3 (`_docs/roadmap-future.md`). Needs Docker — run it in a
-GitHub Codespace, a Claude Code cloud session, CI, or any Docker host, not the
-agent sandbox.
+In v1 this runs in **local Compose only**; deploying it on AWS is
+on the [roadmap](../docs/roadmap.md#cloud-observability). Needs Docker: run it on any Docker host or in CI.
 
 ## Services
 
@@ -43,8 +41,8 @@ The **US-13 journey** dashboard (folder "VulnTriage") has three panels — a
 Prometheus metric pane, a Tempo trace pane and a Loki logs pane. It has no
 environment or version filter: the metric series carries no
 `deployment_environment` or `service_version` label, so such filters would
-filter nothing (dropped in #199; making them work is future work, X14 in
-`_docs/roadmap-future.md`).
+filter nothing (dropped in #199; making them work is on the
+[roadmap](../docs/roadmap.md#cloud-observability)).
 
 ## Point the backend at the Collector
 

@@ -1,16 +1,12 @@
-# Terraform (task 17 / #141)
+# Terraform
 
-The infrastructure for the one-server dev+prod deployment
-(`_docs/architecture.md` § Deployment, A36). The agent writes these files; the
-**human** installs Terraform, reviews the diff and runs every `terraform apply`
-(`_docs/aws-setup.md`). Agents hold no AWS credentials and never apply.
+The infrastructure for the one-server dev and prod deployment ([architecture](../docs/architecture.md), Deployment). The deployment is **taken down when idle**; these modules recreate it. How to apply them, what to check first and how to tear them down are in the [deployment guide](../docs/deployment.md), and the [security review](../docs/security-review.md) records what was found in a read-through before the first apply.
 
-Verify the modules with `_docs/terraform-verify.md` (static checks, the
-pre-apply security review, and the per-module and acceptance checks).
+Agents write these files; a **human** reviews the plan and runs every `terraform apply`. Agents hold no AWS credentials, and CI never applies Terraform. CI only deploys images onto the server through OIDC roles.
 
 ## Modules and apply order
 
-Apply once, by hand, in this order (`_docs/aws-setup.md` step 7):
+Apply once, by hand, in this order:
 
 | # | Module | What it creates | State |
 |---|---|---|---|
@@ -54,4 +50,4 @@ human checks IAM → Identity providers:
 - Reverse proxy: **Caddy** (automatic Let's Encrypt; `server/caddy/Caddyfile`).
 
 All AWS/Terraform/Let's Encrypt behaviours carry `VERIFY:` until checked at apply
-time (`_docs/terraform-verify.md` § Notes).
+time (`docs/deployment.md`).
