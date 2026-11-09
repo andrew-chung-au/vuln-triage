@@ -3,12 +3,14 @@ name: responder
 # reaches the responder (stub mode), and the P-DEMO-BE loop runs twice (the cases
 # in tests/test_compose_responder.py: P-DEMO-BE, P-PROD-REFUSAL, the Grafana body
 # shape, the 401 cases). It takes about 8 to 10 minutes per take and about 20 in
-# all, so it runs nightly and on demand (Actions -> responder -> Run workflow),
-# not on every push/PR, the same split as the alert job (alert.yml, human decision
-# 2026-10-25). The pull-request gate is the unit and SQLite cases in verify.yml.
+# all, so it runs on demand only (Actions -> responder -> Run workflow), not on
+# every push/PR, the same split as the alert job (alert.yml). The pull-request
+# gate is the unit and SQLite cases in verify.yml.
+#
+# KNOWN FAILING: this job injects the planted demo defect that the responder's
+# own fix (PR #265) removed. It stays manual until it is rebased on another way to
+# inject a failure (docs/roadmap.md, Known limitations).
 on:
-  schedule:
-    - cron: "30 17 * * *" # 17:30 UTC daily, after the alert job (17:00)
   workflow_dispatch:
 
 # No secret or live feed: the stack is local, with throwaway env set in

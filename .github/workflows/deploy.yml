@@ -11,13 +11,18 @@ name: deploy
 #     previous tag from the deploy log.
 #
 # Pull requests never get an AWS role or push images (that stays on verify.yml).
+#
+# Every job is gated on the repository variable DEPLOY_ENABLED == 'true'. The AWS
+# environment is torn down when idle (docs/deployment.md), so with the variable
+# unset a merge to main skips the build and deploy instead of failing. Set it to
+# 'true' once the infrastructure is up.
 on:
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to promote to prod (default: the tag running in dev). Course form YYYYMMDD-HHMMSS-shortsha."
+        description: "Image tag to promote to prod (default: the tag running in dev). Form YYYYMMDD-HHMMSS-shortsha."
         required: false
         type: string
 
@@ -36,7 +41,7 @@ jobs:
   # Build + push only on a push to main. A manual prod promotion rebuilds
   # nothing (it deploys an existing tag), so this job is skipped there.
   build-and-push:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
@@ -45,8 +50,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The course image tag: YYYYMMDD-HHMMSS-shortsha (roadmap D2), sortable
-      # and traceable to the commit.
+      # The image tag: YYYYMMDD-HHMMSS-shortsha, sortable and traceable to the
+      # commit.
       - id: meta
         run: echo "tag=$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -93,13 +98,13 @@ jobs:
   #     and ends with a visible "dev deploy skipped: server stopped" summary
   #     (not a pass-as-deployed and not a failure): the human starts the server
   #     and re-runs this workflow (architecture.md Cost controls (2),
-  #     aws-setup.md step 10);
+  #     docs/deployment.md);
   #   - when the server is running, delivers the dev project files and brings
   #     the `dev` Compose project up on the pushed image tag via SSM Run Command,
   #     then records the deployed tag and digests in the deploy log.
   # The production promotion (prod project) is task 18 (#143), not here.
   deploy-dev:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: dev
@@ -141,7 +146,7 @@ jobs:
           )
           if [ -z "${instance_id:-}" ]; then
             echo "No instance tagged project=vuln-triage / Name=vuln-triage-server was found." >&2
-            echo "Has the server module been applied (aws-setup.md step 7)?" >&2
+            echo "Has the server module been applied (docs/deployment.md)?" >&2
             exit 1
           fi
           echo "instance_id=$instance_id" >> "$GITHUB_OUTPUT"
@@ -240,14 +245,14 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # Manual production promotion (task 18 / #143). A workflow_dispatch run in the
-  # `production` environment — the human is the required reviewer (aws-setup.md
+  # `production` environment — the human is the required reviewer (docs/deployment.md
   # step 6.1), so the deploy pauses for approval before anything runs. It takes
   # an image tag (default: the tag currently running in dev), rebuilds nothing,
   # and deploys the `prod` Compose project at app.<eip>.sslip.io with that tag
   # and DEPLOYMENT_ENVIRONMENT=prod. Rollback is this same job re-run with the
   # previous tag from the deploy log (architecture.md § Deployment, Rollback).
   deploy-prod:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: production
     permissions:
