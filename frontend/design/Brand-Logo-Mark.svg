@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <polygon points="100,16 176,58 176,142 100,184 24,142 24,58" fill="#111111" stroke="#111111" stroke-width="14" stroke-linejoin="round"/>
+  <polygon points="100,22 168,60 100,98 32,60" fill="#FFD500" stroke="#111111" stroke-width="6" stroke-linejoin="round"/>
+  <text x="100" y="72" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-weight="800" font-size="38" fill="#111111">P1</text>
+  <polygon points="100,100 170,62 170,140 100,178" fill="#262626"/>
+  <line x1="100" y1="100" x2="100" y2="178" stroke="#F4F1EA" stroke-width="5"/>
+</svg>

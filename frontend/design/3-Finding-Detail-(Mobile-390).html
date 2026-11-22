@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CVE-2024-5535 — VulnTriage Mobile</title>
+  <link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FFD500',
+        'on-accent': '#111111',
+        'tier-p1': '#D7263D',
+        'on-tier-p1': '#FFFFFF',
+        'tier-p2': '#F26B21',
+        'on-tier-p2': '#111111',
+        'tier-p4': '#5E5E5A',
+        'status-fixed': '#2E9E5B',
+        'on-status-fixed': '#111111',
+        'status-accepted': '#F59E0B',
+        'on-status-accepted': '#111111',
+        'light-primary': '#FFD500',
+        'light-on-primary': '#111111',
+        'light-surface': '#F4F1EA',
+        'light-on-surface': '#111111',
+        'light-surface-card': '#FFFFFF',
+        'light-on-surface-card': '#111111',
+        'light-surface-subtle': '#EAE6DD',
+        'light-on-surface-subtle': '#111111',
+        'light-on-surface-muted': '#4A4A46',
+        'light-border': '#111111',
+        'light-border-muted': '#8C8980',
+        'light-warning-bg': '#FEF3C7',
+        'light-warning-fg': '#111111',
+        'light-kev-bg': '#D7263D',
+        'light-kev-fg': '#FFFFFF',
+        'dark-primary': '#FFD500',
+        'dark-on-primary': '#111111',
+        'dark-surface': '#111111',
+        'dark-on-surface': '#F4F1EA',
+        'dark-surface-card': '#1A1A1A',
+        'dark-on-surface-card': '#F4F1EA',
+        'dark-surface-subtle': '#262626',
+        'dark-on-surface-subtle': '#F4F1EA',
+        'dark-on-surface-muted': '#B5B2AA',
+        'dark-border': '#F4F1EA',
+        'dark-border-muted': '#52524E',
+        'dark-warning-bg': '#451A03',
+        'dark-warning-fg': '#FDE68A',
+        'dark-kev-bg': '#D7263D',
+        'dark-kev-fg': '#FFFFFF',
+      },
+      borderRadius: {
+        'sm': '2px',
+        'DEFAULT': '4px',
+        'md': '4px',
+        'lg': '4px',
+        'full': '9999px',
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '24px',
+        '2xl': '32px',
+        '3xl': '48px',
+      },
+      fontFamily: {
+        'display': ['"JetBrains Mono"', 'sans-serif'],
+        'headline': ['"JetBrains Mono"', 'sans-serif'],
+        'body': ['"Inter"', 'sans-serif'],
+        'label': ['"Inter"', 'sans-serif'],
+        'mono': ['"JetBrains Mono"', 'monospace'],
+      },
+      fontSize: {
+        'display-md': ['28px', { lineHeight: '34px', letterSpacing: '-0.02em', fontWeight: '800' }],
+        'headline-lg': ['22px', { lineHeight: '28px', letterSpacing: '-0.015em', fontWeight: '700' }],
+        'headline-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.01em', fontWeight: '600' }],
+        'mono-lg': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'mono-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'mono-sm': ['12px', { lineHeight: '16px', letterSpacing: '0px', fontWeight: '500' }],
+      },
+      transitionDuration: {
+        'state-change': '80ms',
+        'surface-enter': '140ms',
+        'surface-exit': '100ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'surface-enter': '0ms',
+        'surface-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'surface-enter': 'ease-out',
+        'surface-exit': 'ease-in',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .brutal-shadow { box-shadow: 4px 4px 0 #111111; }
+    .dark .brutal-shadow { box-shadow: 4px 4px 0 #FFD500; }
+  </style>
+</head>
+<body class="bg-light-surface dark:bg-dark-surface text-light-on-surface dark:text-dark-on-surface font-body antialiased">
+  <div class="min-h-[884px] flex flex-col" data-stitch-vh="min-h-[884px]===min-h-screen">
+    <header class="bg-light-surface-card dark:bg-dark-surface-card border-b-2 border-light-border dark:border-dark-border px-lg py-sm flex items-center justify-between">
+      <a href="../findings-dashboard-mobile/FindingsDashboardMobile.html" class="inline-flex items-center gap-xs font-mono text-mono-sm">
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
+        <span>Findings</span>
+      </a>
+      <button id="theme-toggle" type="button" aria-label="Toggle color theme" class="inline-flex items-center justify-center w-8 h-8 rounded border-2 border-light-border dark:border-dark-border">
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">dark_mode</span>
+      </button>
+    </header>
+
+    <main class="flex-1 p-lg flex flex-col gap-lg">
+      <section class="flex flex-col gap-sm">
+        <div class="flex flex-wrap items-center gap-sm">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-tier-p1 text-on-tier-p1 border-2 border-light-border font-mono text-mono-md">P1</span>
+          <h1 class="font-mono text-headline-md">openssl · CVE-2024-5535</h1>
+        </div>
+        <div class="flex items-center gap-sm">
+          <span class="px-2 py-0.5 rounded-sm border-2 border-light-border dark:border-dark-border font-mono text-mono-sm">Open</span>
+          <span class="px-2 py-0.5 rounded-sm bg-tier-p1 text-on-tier-p1 font-mono text-mono-sm">KEV listed</span>
+        </div>
+      </section>
+
+      <div class="flex flex-col gap-xs">
+        <a href="../accept-risk-mobile/AcceptRiskMobile.html" class="inline-flex items-center justify-center h-10 px-lg rounded border-2 border-light-border dark:border-dark-border bg-light-primary text-light-on-primary font-mono text-mono-md brutal-shadow">Accept risk</a>
+        <span class="text-body-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">Human decision recorded in the audit trail.</span>
+      </div>
+
+      <section class="rounded bg-light-surface-card dark:bg-dark-surface-card border-2 border-light-border dark:border-dark-border p-lg brutal-shadow flex flex-col gap-sm">
+        <h2 class="font-headline text-headline-md">Why this rank</h2>
+        <ul class="flex flex-col gap-xs font-mono text-mono-sm">
+          <li class="flex items-center gap-sm"><span class="material-symbols-outlined text-[16px] text-tier-p1" aria-hidden="true">check_box</span>In CISA KEV</li>
+          <li class="flex items-center gap-sm"><span class="material-symbols-outlined text-[16px] text-tier-p1" aria-hidden="true">check_box</span>EPSS 0.87 (99th pct)</li>
+          <li class="flex items-center gap-sm"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">check_box</span>Internet-facing</li>
+          <li class="flex items-center gap-sm"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">check_box</span>Critical asset</li>
+        </ul>
+      </section>
+
+      <section class="rounded bg-light-surface-card dark:bg-dark-surface-card border-2 border-light-border dark:border-dark-border p-lg brutal-shadow flex flex-col gap-sm">
+        <h2 class="font-headline text-headline-md">Version (before → after)</h2>
+        <div class="grid grid-cols-2 gap-sm font-mono text-mono-sm">
+          <div class="p-sm rounded border-2 border-light-border dark:border-dark-border">
+            <div class="text-light-on-surface-muted dark:text-dark-on-surface-muted">INSTALLED</div>
+            <div class="text-tier-p1 font-bold">3.0.12</div>
+          </div>
+          <div class="p-sm rounded border-2 border-light-border bg-status-fixed text-on-status-fixed">
+            <div>FIXED</div>
+            <div class="font-bold">3.0.14</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded bg-light-surface-card dark:bg-dark-surface-card border-2 border-light-border dark:border-dark-border p-lg brutal-shadow flex flex-col gap-md">
+        <h2 class="font-headline text-headline-md">Audit trail</h2>
+        <ol class="flex flex-col gap-md border-l-2 border-light-border dark:border-dark-border ml-1.5 pl-md">
+          <li class="flex flex-col gap-xs">
+            <span class="font-mono text-mono-sm font-bold">Maya Chen routed owner</span>
+            <span class="font-mono text-mono-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">Nov 21, 14:10 UTC · Unassigned → Maya Chen</span>
+          </li>
+          <li class="flex flex-col gap-xs">
+            <span class="font-mono text-mono-sm font-bold">System escalated tier</span>
+            <span class="font-mono text-mono-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">Nov 21, 09:04 UTC · P2 → P1</span>
+          </li>
+        </ol>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+  </script>
+
+
+</body></html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assets — VulnTriage</title>
+  <link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FFD500',
+        'on-accent': '#111111',
+        'tier-p1': '#D7263D',
+        'on-tier-p1': '#FFFFFF',
+        'tier-p2': '#F26B21',
+        'on-tier-p2': '#111111',
+        'tier-p4': '#5E5E5A',
+        'status-fixed': '#2E9E5B',
+        'on-status-fixed': '#111111',
+        'status-accepted': '#F59E0B',
+        'on-status-accepted': '#111111',
+        'light-primary': '#FFD500',
+        'light-on-primary': '#111111',
+        'light-surface': '#F4F1EA',
+        'light-on-surface': '#111111',
+        'light-surface-card': '#FFFFFF',
+        'light-on-surface-card': '#111111',
+        'light-surface-subtle': '#EAE6DD',
+        'light-on-surface-subtle': '#111111',
+        'light-on-surface-muted': '#4A4A46',
+        'light-border': '#111111',
+        'light-border-muted': '#8C8980',
+        'light-warning-bg': '#FEF3C7',
+        'light-warning-fg': '#111111',
+        'light-kev-bg': '#D7263D',
+        'light-kev-fg': '#FFFFFF',
+        'dark-primary': '#FFD500',
+        'dark-on-primary': '#111111',
+        'dark-surface': '#111111',
+        'dark-on-surface': '#F4F1EA',
+        'dark-surface-card': '#1A1A1A',
+        'dark-on-surface-card': '#F4F1EA',
+        'dark-surface-subtle': '#262626',
+        'dark-on-surface-subtle': '#F4F1EA',
+        'dark-on-surface-muted': '#B5B2AA',
+        'dark-border': '#F4F1EA',
+        'dark-border-muted': '#52524E',
+        'dark-warning-bg': '#451A03',
+        'dark-warning-fg': '#FDE68A',
+        'dark-kev-bg': '#D7263D',
+        'dark-kev-fg': '#FFFFFF',
+      },
+      borderRadius: {
+        'sm': '2px',
+        'DEFAULT': '4px',
+        'md': '4px',
+        'lg': '4px',
+        'full': '9999px',
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '24px',
+        '2xl': '32px',
+        '3xl': '48px',
+      },
+      fontFamily: {
+        'display': ['"JetBrains Mono"', 'sans-serif'],
+        'headline': ['"JetBrains Mono"', 'sans-serif'],
+        'body': ['"Inter"', 'sans-serif'],
+        'label': ['"Inter"', 'sans-serif'],
+        'mono': ['"JetBrains Mono"', 'monospace'],
+      },
+      fontSize: {
+        'display-md': ['28px', { lineHeight: '34px', letterSpacing: '-0.02em', fontWeight: '800' }],
+        'headline-lg': ['22px', { lineHeight: '28px', letterSpacing: '-0.015em', fontWeight: '700' }],
+        'headline-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.01em', fontWeight: '600' }],
+        'mono-lg': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'mono-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'mono-sm': ['12px', { lineHeight: '16px', letterSpacing: '0px', fontWeight: '500' }],
+      },
+      transitionDuration: {
+        'state-change': '80ms',
+        'surface-enter': '140ms',
+        'surface-exit': '100ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'surface-enter': '0ms',
+        'surface-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'surface-enter': 'ease-out',
+        'surface-exit': 'ease-in',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .brutal-shadow { box-shadow: 4px 4px 0 #111111; }
+    .dark .brutal-shadow { box-shadow: 4px 4px 0 #FFD500; }
+    .vuln-outline { -webkit-text-stroke: 1px #111111; color: transparent; }
+    .dark .vuln-outline { -webkit-text-stroke: 1px #F4F1EA; color: transparent; }
+  </style>
+</head>
+<body class="bg-light-surface dark:bg-dark-surface text-light-on-surface dark:text-dark-on-surface font-body antialiased">
+  <div class="min-h-[1024px] flex flex-col" data-stitch-vh="min-h-[1024px]===min-h-screen">
+    <!-- Top Bar Shell -->
+    <header class="bg-light-surface-card dark:bg-dark-surface-card border-b-2 border-light-border dark:border-dark-border px-2xl py-md">
+      <div class="max-w-[1360px] mx-auto flex items-center justify-between gap-xl">
+        <div class="flex items-center gap-2xl">
+          <a href="../findings-dashboard-desktop/FindingsDashboard.html" class="flex items-center gap-sm shrink-0">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIiBmaWxsPSJub25lIj4KICA8cG9seWdvbiBwb2ludHM9IjEwMCwxNiAxNzYsNTggMTc2LDE0MiAxMDAsMTg0IDI0LDE0MiAyNCw1OCIgZmlsbD0iIzExMTExMSIgc3Ryb2tlPSIjMTExMTExIiBzdHJva2Utd2lkdGg9IjE0IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIxMDAsMjIgMTY4LDYwIDEwMCw5OCAzMiw2MCIgZmlsbD0iI0ZGRDUwMCIgc3Ryb2tlPSIjMTExMTExIiBzdHJva2Utd2lkdGg9IjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8dGV4dCB4PSIxMDAiIHk9IjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iJ0pldEJyYWlucyBNb25vJywgbW9ub3NwYWNlIiBmb250LXdlaWdodD0iODAwIiBmb250LXNpemU9IjM4IiBmaWxsPSIjMTExMTExIj5QMTwvdGV4dD4KICA8cG9seWdvbiBwb2ludHM9IjEwMCwxMDAgMTcwLDYyIDE3MCwxNDAgMTAwLDE3OCIgZmlsbD0iIzI2MjYyNiIvPgogIDxsaW5lIHgxPSIxMDAiIHkxPSIxMDAiIHgyPSIxMDAiIHkyPSIxNzgiIHN0cm9rZT0iI0Y0RjFFQSIgc3Ryb2tlLXdpZHRoPSI1Ii8+Cjwvc3ZnPgo=" alt="VulnTriage cube" class="w-9 h-9">
+            <div class="flex flex-col leading-none">
+              <span class="font-mono font-extrabold text-[15px] leading-none vuln-outline">Vuln</span>
+              <span class="font-mono font-extrabold text-[15px] leading-tight px-1 bg-accent text-on-accent rounded-sm">Triage</span>
+            </div>
+          </a>
+          <nav aria-label="Primary" class="flex items-center gap-sm">
+            <a href="../findings-dashboard-desktop/FindingsDashboard.html" class="px-md py-1.5 rounded border-2 border-transparent hover:border-light-border dark:hover:border-dark-border font-mono text-mono-md">Findings</a>
+            <a href="../assets-desktop/Assets.html" aria-current="page" class="px-md py-1.5 rounded bg-accent text-on-accent border-2 border-light-border dark:border-dark-border font-mono text-mono-md">Assets</a>
+          </nav>
+        </div>
+        <div class="flex items-center gap-md">
+          <span class="font-mono text-mono-sm">Maya Chen</span>
+          <button id="theme-toggle" type="button" aria-label="Toggle color theme" class="inline-flex items-center justify-center w-9 h-9 rounded border-2 border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">dark_mode</span>
+          </button>
+          <a href="../login-desktop/Login.html" class="inline-flex items-center h-9 px-md rounded border-2 border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface font-mono text-mono-sm">Sign out</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-[1360px] mx-auto p-2xl flex flex-col gap-xl">
+      <div class="flex items-center justify-between gap-lg">
+        <div>
+          <h1 class="font-headline text-headline-lg">Assets</h1>
+          <p class="text-body-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">Services and repositories monitored for vulnerable dependencies.</p>
+        </div>
+        <button id="open-add-asset" type="button" class="inline-flex items-center gap-xs h-10 px-lg rounded border-2 border-light-border dark:border-dark-border bg-light-primary text-light-on-primary font-mono text-mono-md brutal-shadow shrink-0 whitespace-nowrap">
+          <span class="material-symbols-outlined text-[16px]" aria-hidden="true">add</span>
+          <span>Add asset</span>
+        </button>
+      </div>
+
+      <!-- Prominent Amber Banner on Ownerless Assets -->
+      <div role="status" class="flex items-center justify-between gap-md p-md rounded border-2 border-light-border bg-light-warning-bg text-light-warning-fg brutal-shadow">
+        <div class="flex items-center gap-sm">
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">warning</span>
+          <span class="font-mono text-mono-sm">2 assets have no owner (auth-gateway, docs-portal). Assign owners to enable automatic routing.</span>
+        </div>
+      </div>
+
+      <!-- Assets Table -->
+      <section aria-label="Assets table" class="rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card brutal-shadow overflow-x-auto">
+        <table class="w-full border-collapse text-left">
+          <thead class="bg-light-surface-subtle dark:bg-dark-surface-subtle border-b-2 border-light-border dark:border-dark-border">
+            <tr>
+              <th scope="col" class="px-lg py-3 font-mono text-mono-sm">Asset</th>
+              <th scope="col" class="px-lg py-3 font-mono text-mono-sm">Scan status</th>
+              <th scope="col" class="px-lg py-3 font-mono text-mono-sm">Criticality</th>
+              <th scope="col" class="px-lg py-3 font-mono text-mono-sm">Exposure</th>
+              <th scope="col" class="px-lg py-3 font-mono text-mono-sm">Owner</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y-2 divide-light-border dark:divide-dark-border">
+            <tr>
+              <td class="px-lg py-md font-mono text-mono-md">payments-api</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-status-fixed text-on-status-fixed border-2 border-light-border font-mono text-mono-sm">Scanned</span></td>
+              <td class="px-lg py-md font-mono text-mono-sm">Critical</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-tier-p1 text-on-tier-p1 font-mono text-mono-sm">internet-facing</span></td>
+              <td class="px-lg py-md text-body-sm">Maya Chen</td>
+            </tr>
+            <tr class="bg-light-warning-bg/50">
+              <td class="px-lg py-md font-mono text-mono-md">auth-gateway</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-status-accepted text-on-status-accepted border-2 border-light-border font-mono text-mono-sm">Incomplete</span></td>
+              <td class="px-lg py-md font-mono text-mono-sm">Critical</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-tier-p1 text-on-tier-p1 font-mono text-mono-sm">internet-facing</span></td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-light-warning-bg text-light-warning-fg border-2 border-light-border font-mono text-mono-sm">No owner</span></td>
+            </tr>
+            <tr>
+              <td class="px-lg py-md font-mono text-mono-md">checkout-web</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-status-fixed text-on-status-fixed border-2 border-light-border font-mono text-mono-sm">Scanned</span></td>
+              <td class="px-lg py-md font-mono text-mono-sm">High</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-tier-p1 text-on-tier-p1 font-mono text-mono-sm">internet-facing</span></td>
+              <td class="px-lg py-md text-body-sm">Liam Patel</td>
+            </tr>
+            <tr class="bg-light-warning-bg/50">
+              <td class="px-lg py-md font-mono text-mono-md">docs-portal</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm border-2 border-dashed border-tier-p4 text-tier-p4 font-mono text-mono-sm">Never</span></td>
+              <td class="px-lg py-md font-mono text-mono-sm">Low</td>
+              <td class="px-lg py-md text-body-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">Internal</td>
+              <td class="px-lg py-md"><span class="px-2 py-0.5 rounded-sm bg-light-warning-bg text-light-warning-fg border-2 border-light-border font-mono text-mono-sm">No owner</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- New-Asset Form -->
+      <section aria-label="New asset form" class="rounded bg-light-surface-card dark:bg-dark-surface-card border-2 border-light-border dark:border-dark-border p-xl brutal-shadow flex flex-col gap-lg">
+        <h2 class="font-headline text-headline-md">Add new asset</h2>
+        <form class="grid grid-cols-1 md:grid-cols-4 gap-md items-end" onsubmit="return false;">
+          <label class="flex flex-col gap-1">
+            <span class="font-mono text-mono-sm">Asset slug</span>
+            <input type="text" placeholder="ledger-service" class="h-10 px-md rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card font-mono text-mono-sm">
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="font-mono text-mono-sm">Owner</span>
+            <input type="text" placeholder="Maya Chen" class="h-10 px-md rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card text-body-sm">
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="font-mono text-mono-sm">Criticality</span>
+            <select class="h-10 px-md rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card font-mono text-mono-sm">
+              <option>Critical</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+          </label>
+          <button type="submit" class="h-10 px-lg rounded border-2 border-light-border dark:border-dark-border bg-light-primary text-light-on-primary font-mono text-mono-md brutal-shadow">Save asset</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+  </script>
+
+
+</body></html>
