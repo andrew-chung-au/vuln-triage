@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accept Risk — VulnTriage</title>
+  <link rel="icon" type="image/svg+xml" href="../../images/favicon.svg">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FFD500',
+        'on-accent': '#111111',
+        'tier-p1': '#D7263D',
+        'on-tier-p1': '#FFFFFF',
+        'tier-p2': '#F26B21',
+        'on-tier-p2': '#111111',
+        'tier-p4': '#5E5E5A',
+        'status-fixed': '#2E9E5B',
+        'on-status-fixed': '#111111',
+        'status-accepted': '#F59E0B',
+        'on-status-accepted': '#111111',
+        'light-primary': '#FFD500',
+        'light-on-primary': '#111111',
+        'light-surface': '#F4F1EA',
+        'light-on-surface': '#111111',
+        'light-surface-card': '#FFFFFF',
+        'light-on-surface-card': '#111111',
+        'light-surface-subtle': '#EAE6DD',
+        'light-on-surface-subtle': '#111111',
+        'light-on-surface-muted': '#4A4A46',
+        'light-border': '#111111',
+        'light-border-muted': '#8C8980',
+        'light-warning-bg': '#FEF3C7',
+        'light-warning-fg': '#111111',
+        'light-kev-bg': '#D7263D',
+        'light-kev-fg': '#FFFFFF',
+        'dark-primary': '#FFD500',
+        'dark-on-primary': '#111111',
+        'dark-surface': '#111111',
+        'dark-on-surface': '#F4F1EA',
+        'dark-surface-card': '#1A1A1A',
+        'dark-on-surface-card': '#F4F1EA',
+        'dark-surface-subtle': '#262626',
+        'dark-on-surface-subtle': '#F4F1EA',
+        'dark-on-surface-muted': '#B5B2AA',
+        'dark-border': '#F4F1EA',
+        'dark-border-muted': '#52524E',
+        'dark-warning-bg': '#451A03',
+        'dark-warning-fg': '#FDE68A',
+        'dark-kev-bg': '#D7263D',
+        'dark-kev-fg': '#FFFFFF',
+      },
+      borderRadius: {
+        'sm': '2px',
+        'DEFAULT': '4px',
+        'md': '4px',
+        'lg': '4px',
+        'full': '9999px',
+      },
+      spacing: {
+        'xs': '4px',
+        'sm': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '24px',
+        '2xl': '32px',
+        '3xl': '48px',
+      },
+      fontFamily: {
+        'display': ['"JetBrains Mono"', 'sans-serif'],
+        'headline': ['"JetBrains Mono"', 'sans-serif'],
+        'body': ['"Inter"', 'sans-serif'],
+        'label': ['"Inter"', 'sans-serif'],
+        'mono': ['"JetBrains Mono"', 'monospace'],
+      },
+      fontSize: {
+        'display-md': ['28px', { lineHeight: '34px', letterSpacing: '-0.02em', fontWeight: '800' }],
+        'headline-lg': ['22px', { lineHeight: '28px', letterSpacing: '-0.015em', fontWeight: '700' }],
+        'headline-md': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '400' }],
+        'label-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.01em', fontWeight: '600' }],
+        'mono-lg': ['16px', { lineHeight: '22px', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'mono-md': ['13px', { lineHeight: '18px', letterSpacing: '0px', fontWeight: '600' }],
+        'mono-sm': ['12px', { lineHeight: '16px', letterSpacing: '0px', fontWeight: '500' }],
+      },
+      transitionDuration: {
+        'state-change': '80ms',
+        'surface-enter': '140ms',
+        'surface-exit': '100ms',
+      },
+      transitionDelay: {
+        'state-change': '0ms',
+        'surface-enter': '0ms',
+        'surface-exit': '0ms',
+      },
+      transitionTimingFunction: {
+        'state-change': 'ease-out',
+        'surface-enter': 'ease-out',
+        'surface-exit': 'ease-in',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .brutal-shadow { box-shadow: 4px 4px 0 #111111; }
+    .dark .brutal-shadow { box-shadow: 4px 4px 0 #FFD500; }
+  </style>
+</head>
+<body class="bg-light-surface dark:bg-dark-surface text-light-on-surface dark:text-dark-on-surface font-body antialiased">
+  <div class="min-h-[1024px] flex flex-col" data-stitch-vh="min-h-[1024px]===min-h-screen">
+    <header class="bg-light-surface-card dark:bg-dark-surface-card border-b-2 border-light-border dark:border-dark-border px-2xl py-md flex items-center justify-between">
+      <a href="../finding-detail-desktop/FindingDetail.html" class="inline-flex items-center gap-xs font-mono text-mono-sm">
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
+        <span>Back to CVE-2024-5535</span>
+      </a>
+      <button id="theme-toggle" type="button" aria-label="Toggle color theme" class="inline-flex items-center justify-center w-9 h-9 rounded border-2 border-light-border dark:border-dark-border">
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">dark_mode</span>
+      </button>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center p-2xl">
+      <article class="w-full max-w-lg rounded bg-light-surface-card dark:bg-dark-surface-card border-2 border-light-border dark:border-dark-border p-2xl brutal-shadow flex flex-col gap-xl">
+        <header class="flex items-center justify-between gap-md">
+          <div class="flex flex-col gap-xs">
+            <h1 class="font-headline text-headline-lg">Accept risk</h1>
+            <span class="font-mono text-mono-sm text-light-on-surface-muted dark:text-dark-on-surface-muted">openssl@3.0.12 · CVE-2024-5535</span>
+          </div>
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-sm bg-tier-p1 text-on-tier-p1 border-2 border-light-border font-mono text-mono-md">P1</span>
+        </header>
+
+        <div role="alert" class="flex items-start gap-sm p-md rounded border-2 border-light-border bg-light-warning-bg text-light-warning-fg">
+          <span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5" aria-hidden="true">warning</span>
+          <p class="text-body-sm font-medium">This is a human decision recorded permanently in the audit trail with your identity and timestamp.</p>
+        </div>
+
+        <form class="flex flex-col gap-lg" onsubmit="return false;">
+          <label class="flex flex-col gap-1.5">
+            <span class="font-mono text-mono-sm">Reason (required) *</span>
+            <textarea rows="4" required class="p-md rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card text-body-md focus:outline-none focus:ring-2 focus:ring-accent">ALPN negotiation disabled at Envoy ingress; vulnerable code path unreachable in payments-api.</textarea>
+          </label>
+
+          <footer class="flex items-center justify-end gap-sm pt-md border-t-2 border-light-border dark:border-dark-border">
+            <a href="../finding-detail-desktop/FindingDetail.html" class="inline-flex items-center h-10 px-lg rounded border-2 border-light-border dark:border-dark-border bg-light-surface-card dark:bg-dark-surface-card font-mono text-mono-sm">Cancel</a>
+            <button type="submit" class="inline-flex items-center h-10 px-lg rounded border-2 border-light-border dark:border-dark-border bg-light-primary text-light-on-primary font-mono text-mono-md brutal-shadow">Confirm</button>
+          </footer>
+        </form>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+  </script>
+
+
+</body></html>
